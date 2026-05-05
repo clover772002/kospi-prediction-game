@@ -93,8 +93,8 @@ export default function SetupPage() {
       {/* 헤더 */}
       <div className="pt-8 pb-6 flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-black">📱 텔레그램 연동</h1>
-          <p className="text-xs text-gray-400 mt-1">설문 수신을 위해 봇을 연동해주세요</p>
+          <h1 className="text-xl font-black">🔔 알림 설정</h1>
+          <p className="text-xs text-gray-400 mt-1">08:48 설문을 받을 방법을 연결해주세요</p>
         </div>
         <button onClick={handleLogout} className="text-xs text-gray-500 hover:text-gray-300 transition-colors">
           로그아웃
@@ -172,9 +172,20 @@ export default function SetupPage() {
           {!botOpened ? (
             /* ── STEP 1: 봇 열기 ── */
             <>
+              {/* 거부감 해소 안내 */}
+              <div className="bg-[#1A1A1A] rounded-2xl p-4 border border-[#2A2A2A] space-y-2">
+                <p className="text-xs text-gray-300 font-bold">📌 텔레그램 봇이란?</p>
+                <ul className="space-y-1.5 text-xs text-gray-400">
+                  <li>✅ <span className="text-white">사람이 아닌 자동 프로그램</span>입니다 — 채팅 상대가 없어요</li>
+                  <li>✅ 매일 아침 설문 1개를 보내고, 결과를 알려주는 게 전부예요</li>
+                  <li>✅ 내 연락처·채팅 내용은 전혀 보이지 않아요</li>
+                  <li>✅ 언제든 봇 차단 한 번으로 알림을 끌 수 있어요</li>
+                </ul>
+              </div>
+
               <div className="bg-[#1A1A1A] rounded-2xl p-5 border border-[#2A2A2A] space-y-3">
                 <p className="text-xs text-gray-500 font-bold tracking-widest uppercase">1단계</p>
-                <p className="font-bold text-white">아래 버튼을 눌러 텔레그램 봇을 여세요</p>
+                <p className="font-bold text-white">아래 버튼을 눌러 알림 봇을 연결하세요</p>
                 <p className="text-xs text-gray-400">봇이 열리면 <span className="text-white font-bold">'시작' 또는 '/start'</span> 버튼을 눌러주세요.</p>
               </div>
 
@@ -187,7 +198,7 @@ export default function SetupPage() {
                 style={{ backgroundColor: "#0088CC", color: "#fff" }}
               >
                 <span className="text-2xl">✈️</span>
-                텔레그램 봇 열기
+                알림 봇 연결하기
               </a>
 
               <button
