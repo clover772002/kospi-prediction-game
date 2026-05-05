@@ -314,7 +314,7 @@ export default function DashboardPage() {
                 <div className="bg-[#111] border border-yellow-500/20 rounded-2xl p-4 space-y-3">
                   <div className="flex items-center gap-1.5">
                     <span className="text-base">👑</span>
-                    <span className="text-xs text-yellow-400 font-bold">고수</span>
+                    <span className="text-xs text-yellow-400 font-bold">맞춤 고수</span>
                     <span className="text-xs text-gray-600 ml-auto">{today.top_predictor.accuracy}% · {today.top_predictor.total_predictions}일</span>
                   </div>
                   <p className="text-white font-bold text-sm">{today.top_predictor.masked_name}</p>
@@ -339,7 +339,7 @@ export default function DashboardPage() {
                 <div className="bg-[#111] border border-blue-500/20 rounded-2xl p-4 space-y-3">
                   <div className="flex items-center gap-1.5">
                     <span className="text-base">🤡</span>
-                    <span className="text-xs text-blue-400 font-bold">하수</span>
+                    <span className="text-xs text-blue-400 font-bold">못맞춤 고수</span>
                     <span className="text-xs text-gray-600 ml-auto">{today.worst_predictor.accuracy}% · {today.worst_predictor.total_predictions}일</span>
                   </div>
                   <p className="text-white font-bold text-sm">{today.worst_predictor.masked_name}</p>
@@ -360,7 +360,7 @@ export default function DashboardPage() {
                 </div>
               )}
             </div>
-            <p className="text-xs text-gray-600 text-center mt-3">하수 예측은 반대 신호로 활용하세요 😏</p>
+            <p className="text-xs text-gray-600 text-center mt-3">못맞춤 고수 예측은 반대 신호로 활용하세요 😏</p>
             <p className="text-xs text-gray-700 text-center mt-1">동률일 땐 예측 횟수가 많은 사람이 우선돼요</p>
           </div>
         )}
