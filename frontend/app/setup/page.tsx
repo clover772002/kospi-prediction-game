@@ -124,12 +124,19 @@ export default function SetupPage() {
       {/* 유저 정보 */}
       {user && (
         <div className="flex items-center gap-3 bg-[#1A1A1A] rounded-xl px-4 py-3 border border-[#2A2A2A] mb-6">
-          <div>
-            <p className="font-bold text-sm">{user.name || user.email}</p>
-            <p className="text-xs text-gray-400">{user.email}</p>
+          <div className="flex-1 min-w-0">
+            <p className="font-bold text-sm truncate">{user.name || user.email}</p>
+            <p className="text-xs text-gray-400 truncate">{user.email}</p>
           </div>
-          {linked && (
-            <span className="ml-auto text-xs text-green-400 font-bold">✅ 연동됨</span>
+          {(linked || pushLinked) ? (
+            <div className="flex flex-col items-end gap-0.5 flex-shrink-0">
+              <span className="text-xs text-green-400 font-bold">✅ 연동됨</span>
+              <span className="text-xs text-gray-500">
+                {linked && pushLinked ? "텔레그램 · 브라우저" : linked ? "텔레그램" : "브라우저 알림"}
+              </span>
+            </div>
+          ) : (
+            <span className="ml-auto text-xs text-gray-500 flex-shrink-0">미연동</span>
           )}
         </div>
       )}
