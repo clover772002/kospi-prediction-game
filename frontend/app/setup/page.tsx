@@ -236,91 +236,147 @@ export default function SetupPage() {
         </div>
       ) : tab === "webpush" ? (
         /* 웹 푸시 연동 안내 */
-        <div className="space-y-4">
-          <div className="bg-[#1A1A1A] rounded-2xl p-4 border border-[#2A2A2A] space-y-2">
-            <p className="text-xs text-gray-300 font-bold">🔔 브라우저 알림이란?</p>
-            <ul className="space-y-1.5 text-xs text-gray-400">
-              <li>✅ 텔레그램 설치 없이 <span className="text-white">앱처럼 알림</span>을 받아요</li>
-              <li>✅ "알림 허용" 한 번이면 끝이에요</li>
-              <li>⚠️ iPhone은 Safari에서 홈 화면에 추가 후 사용 가능</li>
-            </ul>
-          </div>
+        (() => {
+          const isIOS = typeof navigator !== "undefined" && /iPhone|iPad|iPod/i.test(navigator.userAgent);
+          const isStandalone = typeof window !== "undefined" && window.matchMedia("(display-mode: standalone)").matches;
+          const isInApp = typeof navigator !== "undefined" && /KAKAOTALK|Instagram|FBAN|FBAV|Line\//i.test(navigator.userAgent);
 
-          {/* 인앱 브라우저 경고 */}
-          {typeof navigator !== "undefined" && /KAKAOTALK|Instagram|FBAN|FBAV|Line\//i.test(navigator.userAgent) && (
-            <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-4 space-y-3">
-              <p className="text-yellow-400 text-sm font-bold">⚠️ 앱 내에서는 브라우저 알림 사용 불가</p>
-              <p className="text-xs text-gray-400">브라우저 알림은 Chrome / Safari에서만 작동해요.</p>
-              <button
-                onClick={openInExternalBrowser}
-                className="w-full py-3 bg-white text-gray-900 font-bold rounded-xl text-sm active:scale-95 transition-all"
-              >
-                🌐 Chrome / Safari로 열기
-              </button>
-              <p className="text-xs text-gray-600 text-center">버튼이 안 되면 텔레그램 봇 탭을 이용해주세요</p>
-            </div>
-          )}
+          return (
+            <div className="space-y-4">
+              {/* 안내: 설문은 앱에서 직접 */}
+              <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-3 flex gap-2 items-start">
+                <span className="text-base flex-shrink-0">💡</span>
+                <p className="text-xs text-blue-300 leading-relaxed">
+                  브라우저 알림은 설문 시간을 <span className="text-white font-bold">알려주는 역할</span>만 해요.<br />
+                  알림을 탭하면 앱으로 이동하고, <span className="text-white font-bold">설문 탭에서 예측</span>하면 돼요.
+                </p>
+              </div>
 
-          <button
-            onClick={async () => {
-              if (!token) return;
-              setPushLoading(true);
-              setPushError(null);
-              try {
-                if (typeof window === "undefined" || !("Notification" in window)) {
-                  setPushError("이 브라우저는 알림을 지원하지 않아요. Chrome 또는 Edge를 사용해주세요.");
-                  return;
-                }
-                if (!("serviceWorker" in navigator)) {
-                  setPushError("이 브라우저는 Service Worker를 지원하지 않아요.");
-                  return;
-                }
-                const permission = await window.Notification.requestPermission();
-                if (permission !== "granted") {
-                  setPushError("알림 권한이 거부됐어요. 브라우저 설정에서 허용해주세요.");
-                  return;
-                }
-                const reg = await navigator.serviceWorker.register("/sw.js");
-                await navigator.serviceWorker.ready;
-                const vapidKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
-                  || await getVapidPublicKey();
-                if (!vapidKey) {
-                  setPushError("서버 설정 오류입니다. 잠시 후 다시 시도해주세요.");
-                  return;
-                }
-                const keyBytes = Uint8Array.from(
-                  atob(vapidKey.replace(/-/g, "+").replace(/_/g, "/")),
-                  (c) => c.charCodeAt(0)
-                );
-                const sub = await reg.pushManager.subscribe({
-                  userVisibleOnly: true,
-                  applicationServerKey: keyBytes,
-                });
-                await savePushSubscription(token, sub.toJSON());
-                setPushLinked(true);
-              } catch (e: unknown) {
-                const msg = e instanceof Error ? e.message : String(e);
-                setPushError("알림 연결에 실패했어요: " + msg);
-              } finally {
-                setPushLoading(false);
-              }
-            }}
-            disabled={pushLoading}
-            className="w-full py-5 bg-purple-600 hover:bg-purple-500 disabled:bg-[#333] disabled:text-gray-500 text-white font-black text-xl rounded-2xl transition-all active:scale-95"
-          >
-            {pushLoading ? (
-              <span className="flex items-center justify-center gap-2">
-                <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                연결 중...
-              </span>
-            ) : "🔔 브라우저 알림 허용하기"}
-          </button>
-          {pushError && (
-            <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-3">
-              <p className="text-red-400 text-xs">{pushError}</p>
+              {/* 인앱 브라우저 경고 */}
+              {isInApp && (
+                <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-4 space-y-3">
+                  <p className="text-yellow-400 text-sm font-bold">⚠️ 앱 내에서는 브라우저 알림 사용 불가</p>
+                  <p className="text-xs text-gray-400">Chrome 또는 Safari에서만 작동해요.</p>
+                  <button
+                    onClick={openInExternalBrowser}
+                    className="w-full py-3 bg-white text-gray-900 font-bold rounded-xl text-sm active:scale-95 transition-all"
+                  >
+                    🌐 Chrome / Safari로 열기
+                  </button>
+                  <p className="text-xs text-gray-600 text-center">버튼이 안 되면 텔레그램 봇 탭을 이용해주세요</p>
+                </div>
+              )}
+
+              {/* iPhone — 아직 홈 화면에 추가 안 된 경우 */}
+              {isIOS && !isStandalone && !isInApp && (
+                <div className="bg-[#1A1A1A] border border-orange-500/30 rounded-2xl p-5 space-y-4">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xl">🍎</span>
+                    <p className="font-bold text-orange-300 text-sm">iPhone 사용자 필독</p>
+                  </div>
+                  <p className="text-xs text-gray-400 leading-relaxed">
+                    iPhone은 Safari에서 <span className="text-white font-bold">홈 화면에 추가</span>한 뒤 앱을 열어야 브라우저 알림을 사용할 수 있어요.
+                  </p>
+                  <ol className="space-y-3 text-xs text-gray-300">
+                    <li className="flex gap-3 items-start">
+                      <span className="bg-orange-500 text-white rounded-full w-5 h-5 flex items-center justify-center font-bold flex-shrink-0 text-xs">1</span>
+                      <span>Safari 하단 가운데 <span className="text-white font-bold">공유 버튼</span> (□↑) 탭</span>
+                    </li>
+                    <li className="flex gap-3 items-start">
+                      <span className="bg-orange-500 text-white rounded-full w-5 h-5 flex items-center justify-center font-bold flex-shrink-0 text-xs">2</span>
+                      <span>스크롤해서 <span className="text-white font-bold">홈 화면에 추가</span> 선택 → 추가</span>
+                    </li>
+                    <li className="flex gap-3 items-start">
+                      <span className="bg-orange-500 text-white rounded-full w-5 h-5 flex items-center justify-center font-bold flex-shrink-0 text-xs">3</span>
+                      <span>홈 화면에 생긴 <span className="text-white font-bold">앱 아이콘</span>으로 접속</span>
+                    </li>
+                    <li className="flex gap-3 items-start">
+                      <span className="bg-orange-500 text-white rounded-full w-5 h-5 flex items-center justify-center font-bold flex-shrink-0 text-xs">4</span>
+                      <span>설정 → 브라우저 알림 탭에서 <span className="text-white font-bold">알림 허용</span></span>
+                    </li>
+                  </ol>
+                  <button
+                    onClick={() => {
+                      if (typeof navigator !== "undefined") {
+                        navigator.clipboard.writeText(window.location.href).catch(() => {});
+                        alert("주소가 복사됐어요!\nSafari 주소창에 붙여넣기 후 홈 화면에 추가해주세요 📱");
+                      }
+                    }}
+                    className="w-full py-3 bg-orange-500 hover:bg-orange-400 text-white font-bold rounded-xl text-sm active:scale-95 transition-all"
+                  >
+                    📋 이 페이지 주소 복사하기
+                  </button>
+                  <p className="text-xs text-gray-600 text-center">복사 후 Safari 주소창에 붙여넣기 → 홈 화면에 추가</p>
+                </div>
+              )}
+
+              {/* 알림 허용 버튼 — iOS 홈화면 앱이거나 Android/PC */}
+              {(!isIOS || isStandalone) && !isInApp && (
+                <>
+                  <button
+                    onClick={async () => {
+                      if (!token) return;
+                      setPushLoading(true);
+                      setPushError(null);
+                      try {
+                        if (typeof window === "undefined" || !("Notification" in window)) {
+                          setPushError("이 브라우저는 알림을 지원하지 않아요. Chrome 또는 Edge를 사용해주세요.");
+                          return;
+                        }
+                        if (!("serviceWorker" in navigator)) {
+                          setPushError("이 브라우저는 Service Worker를 지원하지 않아요.");
+                          return;
+                        }
+                        const permission = await window.Notification.requestPermission();
+                        if (permission !== "granted") {
+                          setPushError("알림 권한이 거부됐어요. 브라우저 설정에서 허용해주세요.");
+                          return;
+                        }
+                        const reg = await navigator.serviceWorker.register("/sw.js");
+                        await navigator.serviceWorker.ready;
+                        const vapidKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
+                          || await getVapidPublicKey();
+                        if (!vapidKey) {
+                          setPushError("서버 설정 오류입니다. 잠시 후 다시 시도해주세요.");
+                          return;
+                        }
+                        const keyBytes = Uint8Array.from(
+                          atob(vapidKey.replace(/-/g, "+").replace(/_/g, "/")),
+                          (c) => c.charCodeAt(0)
+                        );
+                        const sub = await reg.pushManager.subscribe({
+                          userVisibleOnly: true,
+                          applicationServerKey: keyBytes,
+                        });
+                        await savePushSubscription(token, sub.toJSON());
+                        setPushLinked(true);
+                      } catch (e: unknown) {
+                        const msg = e instanceof Error ? e.message : String(e);
+                        setPushError("알림 연결에 실패했어요: " + msg);
+                      } finally {
+                        setPushLoading(false);
+                      }
+                    }}
+                    disabled={pushLoading}
+                    className="w-full py-5 bg-purple-600 hover:bg-purple-500 disabled:bg-[#333] disabled:text-gray-500 text-white font-black text-xl rounded-2xl transition-all active:scale-95"
+                  >
+                    {pushLoading ? (
+                      <span className="flex items-center justify-center gap-2">
+                        <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                        연결 중...
+                      </span>
+                    ) : "🔔 브라우저 알림 허용하기"}
+                  </button>
+                  {pushError && (
+                    <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-3">
+                      <p className="text-red-400 text-xs">{pushError}</p>
+                    </div>
+                  )}
+                </>
+              )}
             </div>
-          )}
-        </div>
+          );
+        })()
       ) : (
         /* 연동 안내 — 2단계 UI */
         <div className="space-y-4">
