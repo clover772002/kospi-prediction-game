@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { getMe, getToday, getDashboard, UserProfile, TodaySurvey, DashboardData } from "@/lib/api";
 import FlipClock from "@/components/FlipClock";
+import FloatingShareBanner from "@/components/FloatingShareBanner";
 
 function SentimentBar({ label, pct, result }: { label: string; pct: number | null; result?: boolean | null }) {
   const displayPct = pct ?? 0;
@@ -551,6 +552,7 @@ export default function DashboardPage() {
           </button>
         </div>
       </nav>
+      <FloatingShareBanner />
     </main>
   );
 }
