@@ -23,12 +23,9 @@ export default function FloatingShareBanner() {
           boxShadow: "0 8px 32px rgba(0,0,0,0.7)",
         }}
       >
-        <div className="flex-1 min-w-0 space-y-1">
+        <div className="flex-1 min-w-0">
           <p className="text-xs font-bold text-white leading-snug">
-            정확도를 높여요. 누가 더 고수인지 확인해봐요
-          </p>
-          <p className="text-[10px] text-gray-400 leading-snug">
-            사람이 많을수록 정확도가 올라가요 · 친구를 불러 함께 겨루세요
+            친구를 초대해 정확도를 높이고 누가 더 고수인지 확인해봐요
           </p>
         </div>
 
