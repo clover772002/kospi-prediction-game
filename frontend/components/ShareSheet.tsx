@@ -82,7 +82,7 @@ export default function ShareSheet({ url, title, text, renderTrigger }: ShareShe
   const [copied, setCopied] = useState(false);
   const sheetRef = useRef<HTMLDivElement>(null);
   const shareUrl = url ?? (typeof window !== "undefined" ? window.location.href : "");
-  const shareTitle = title ?? "투자자 층간소음 — 코스피 예측";
+  const shareTitle = title ?? "매일 코스피 예측 — 투자자 층간소음";
   const shareText =
     text ??
     "같이 코스피 맞히고 고수 자리 붙자 — 매일 08:48, 랭킹으로 정확도 겨루기";
