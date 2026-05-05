@@ -1,13 +1,31 @@
 """웹 푸시 알림 발송 헬퍼"""
 import os
 import json
+import base64
 import logging
 from pywebpush import webpush, WebPushException
 
 logger = logging.getLogger(__name__)
 
-VAPID_PRIVATE_KEY = os.getenv("VAPID_PRIVATE_KEY", "")
 VAPID_CLAIMS_EMAIL = os.getenv("VAPID_CLAIMS_EMAIL", "mailto:forsmartonly@gmail.com")
+
+def _load_vapid_private_key() -> str:
+    """환경변수에서 VAPID 개인키를 읽어 PEM 문자열로 반환.
+    base64로 인코딩된 PEM이면 자동으로 디코딩한다."""
+    key = os.getenv("VAPID_PRIVATE_KEY", "")
+    if not key:
+        return key
+    if key.startswith("-----"):
+        return key
+    try:
+        decoded = base64.b64decode(key).decode("utf-8")
+        if decoded.startswith("-----"):
+            return decoded
+    except Exception:
+        pass
+    return key
+
+VAPID_PRIVATE_KEY = _load_vapid_private_key()
 
 
 def send_web_push(subscription_info: dict, title: str, body: str, url: str = "/dashboard") -> bool:
