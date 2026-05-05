@@ -220,18 +220,36 @@ async def get_me(
     try:
         existing = supabase.table("users").select("*").eq("id", user_id).execute()
         if not existing.data:
-            supabase.table("users").insert({
-                "id": user_id,
-                "email": current_user.email,
-                "name": meta.get("full_name", ""),
-            }).execute()
-            return {
-                "id": user_id,
-                "email": current_user.email,
-                "name": meta.get("full_name", ""),
-                "telegram_chat_id": None,
-                "has_push": False,
-            }
+            # 같은 이메일로 다른 OAuth 제공자로 가입한 계정이 있는지 확인
+            email_match = supabase.table("users").select("*").eq("email", current_user.email).execute()
+            if email_match.data:
+                # 기존 계정의 데이터(텔레그램, 푸시 등)를 새 계정에 복사
+                old = email_match.data[0]
+                supabase.table("users").insert({
+                    "id": user_id,
+                    "email": current_user.email,
+                    "name": meta.get("full_name", old.get("name", "")),
+                    "telegram_chat_id": old.get("telegram_chat_id"),
+                    "push_subscription": old.get("push_subscription"),
+                }).execute()
+                row = old.copy()
+                row["id"] = user_id
+                row["has_push"] = bool(row.get("push_subscription"))
+                logger.info(f"중복 이메일 감지 — 기존 계정 데이터 복사: {current_user.email}")
+                return row
+            else:
+                supabase.table("users").insert({
+                    "id": user_id,
+                    "email": current_user.email,
+                    "name": meta.get("full_name", ""),
+                }).execute()
+                return {
+                    "id": user_id,
+                    "email": current_user.email,
+                    "name": meta.get("full_name", ""),
+                    "telegram_chat_id": None,
+                    "has_push": False,
+                }
         else:
             # 이름 최신화
             supabase.table("users").update({
