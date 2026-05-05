@@ -53,6 +53,10 @@ export default function SetupPage() {
           if (profile.telegram_chat_id) {
             setLinked(true);
           }
+          if (profile.has_push) {
+            setPushLinked(true);
+            setTab("webpush");
+          }
         } catch (e) {
           console.error(e);
         } finally {
