@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 
 const FEATURES = [
@@ -394,7 +395,11 @@ export default function LoginPage() {
       </div>
 
       <p className="text-xs text-gray-600 text-center mt-4">
-        소셜 계정으로 간편하게 시작할 수 있어요
+        시작하면{" "}
+        <Link href="/privacy" className="underline text-gray-500 hover:text-gray-300">
+          개인정보처리방침
+        </Link>
+        에 동의한 것으로 간주됩니다
       </p>
 
       {/* FAQ */}
@@ -412,7 +417,7 @@ export default function LoginPage() {
             },
             {
               q: "개인정보가 수집되나요?",
-              a: "로그인 시 이름과 이메일만 저장됩니다. 채팅 내용·연락처·위치는 전혀 수집하지 않아요. 언제든지 탈퇴할 수 있어요.",
+              a: "소셜 로그인 시 이름·이메일·프로필 사진이 저장됩니다. 채팅 내용·연락처·위치는 수집하지 않아요. 자세한 내용은 개인정보처리방침을 확인해 주세요.",
             },
             {
               q: "정확도가 낮으면 불이익이 있나요?",
