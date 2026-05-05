@@ -336,8 +336,9 @@ def _calc_weighted_pct(responses_with_users: list, accuracy_map: dict) -> tuple[
         acc = accuracy_map.get(uid, 0.5)
         weight = (acc - 0.5) * 2  # -1 ~ +1
 
-        if abs(weight) < 0.05:  # 거의 50%에 가까운 유저는 노이즈로 제외
-            continue
+        # 정확도 기록이 없는 유저(acc=0.5, weight=0)는 weight=1로 동등하게 반영
+        if weight == 0.0:
+            weight = 1.0
 
         kospi_vote  = 1 if r["kospi_answer"]  else -1
         kosdaq_vote = 1 if r["kosdaq_answer"] else -1

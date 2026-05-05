@@ -265,8 +265,8 @@ def _calc_weighted_pct_tg(responses_data: list, accuracy_map: dict) -> tuple[int
     for r in responses_data:
         acc = accuracy_map.get(r["user_id"], 0.5)
         weight = (acc - 0.5) * 2
-        if abs(weight) < 0.05:
-            continue
+        if weight == 0.0:
+            weight = 1.0
         kospi_vote  = 1 if r["kospi_answer"]  else -1
         kosdaq_vote = 1 if r["kosdaq_answer"] else -1
         kospi_score  += weight * kospi_vote;  kospi_w  += abs(weight)
