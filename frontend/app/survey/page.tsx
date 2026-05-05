@@ -105,19 +105,36 @@ export default function SurveyPage() {
         </div>
       </div>
 
-      {/* 설문 시간이 아닐 때 */}
-      {status === "no_survey" && (
-        <div className="flex flex-col gap-5 mt-10">
-          <div className="flex flex-col items-center gap-3 text-center">
-            <div className="text-5xl">📅</div>
-            <p className="text-xl font-bold text-white">오늘은 설문이 없어요</p>
-            <p className="text-sm text-gray-400">주말·공휴일에는 장이 열리지 않아요</p>
+      {/* 설문 없음 — 대기중 vs 휴장일 구분 */}
+      {status === "no_survey" && (() => {
+        const kst = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Seoul" }));
+        const day = kst.getDay();
+        const mins = kst.getHours() * 60 + kst.getMinutes();
+        const isWeekend = day === 0 || day === 6;
+        const isPreSurvey = !isWeekend && mins < 8 * 60 + 48;
+        return (
+          <div className="flex flex-col gap-5 mt-10">
+            <div className="flex flex-col items-center gap-3 text-center">
+              {isPreSurvey ? (
+                <>
+                  <div className="text-5xl">⏳</div>
+                  <p className="text-xl font-bold text-white">설문 시작 전이에요</p>
+                  <p className="text-sm text-gray-400">
+                    <span className="text-white font-bold">08:48</span>에 오늘 코스피 예측 설문이 시작돼요
+                  </p>
+                </>
+              ) : (
+                <>
+                  <div className="text-5xl">🏖️</div>
+                  <p className="text-xl font-bold text-white">오늘은 설문이 없어요</p>
+                  <p className="text-sm text-gray-400">주말·공휴일에는 장이 열리지 않아요</p>
+                </>
+              )}
+            </div>
+            <FlipClock />
           </div>
-          <FlipClock />
-        </div>
-      )}
-
-      {/* 설문 시간 전 (설문은 있지만 08:48 이전 — 현재 구조상 open과 동일하게 취급) */}
+        );
+      })()}
 
       {/* 설문 진행 중 */}
       {status === "open" && !submitted && (
