@@ -16,6 +16,7 @@ const FEATURES = [
         "① 앱스토어에서 'Telegram' 검색 후 설치",
         "② 로그인 후 봇 연동 버튼 클릭",
         "③ 매일 아침 설문 메시지 수신",
+        "💡 텔레그램 봇이 부담된다면? 브라우저 알림으로도 받을 수 있으니 안심하세요",
       ],
       mockup: (
         <div className="bg-[#212d3b] rounded-2xl p-4 mt-3 text-sm">
@@ -354,8 +355,8 @@ export default function LoginPage() {
                     <p className="text-gray-300 text-xs leading-relaxed mb-2">{item.detail.summary}</p>
                     {item.detail.steps && (
                       <div className="space-y-1 mb-2">
-                        {item.detail.steps.map((s) => (
-                          <p key={s} className="text-xs text-blue-400">{s}</p>
+                        {item.detail.steps.map((s, i) => (
+                          <p key={s} className={`text-xs ${i === item.detail.steps!.length - 1 && s.startsWith("💡") ? "text-yellow-400/80" : "text-blue-400"}`}>{s}</p>
                         ))}
                       </div>
                     )}
