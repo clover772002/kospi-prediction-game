@@ -18,11 +18,14 @@ def _load_vapid_private_key() -> str:
     if key.startswith("-----"):
         return key
     try:
-        decoded = base64.b64decode(key).decode("utf-8")
+        # 패딩 부족 시 자동 보정
+        padding = (4 - len(key) % 4) % 4
+        decoded = base64.b64decode(key + "=" * padding).decode("utf-8")
         if decoded.startswith("-----"):
+            logger.info("VAPID 개인키 base64 디코딩 성공")
             return decoded
-    except Exception:
-        pass
+    except Exception as e:
+        logger.error(f"VAPID 개인키 base64 디코딩 실패: {e}")
     return key
 
 VAPID_PRIVATE_KEY = _load_vapid_private_key()
