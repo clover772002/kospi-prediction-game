@@ -404,6 +404,13 @@ export default function SetupPage() {
       <nav className="fixed bottom-0 left-0 right-0 bg-[#111] border-t border-[#222] z-50">
         <div className="max-w-md mx-auto flex">
           <button
+            onClick={() => router.push("/survey")}
+            className="flex-1 flex flex-col items-center py-3 gap-1 text-gray-500 hover:text-gray-300 transition-colors"
+          >
+            <span className="text-xl">📝</span>
+            <span className="text-xs font-medium">설문</span>
+          </button>
+          <button
             onClick={() => router.push("/dashboard")}
             className="flex-1 flex flex-col items-center py-3 gap-1 text-gray-500 hover:text-gray-300 transition-colors"
           >
@@ -412,7 +419,7 @@ export default function SetupPage() {
           </button>
           <button className="flex-1 flex flex-col items-center py-3 gap-1 text-blue-400">
             <span className="text-xl">⚙️</span>
-            <span className="text-xs font-medium">설정</span>
+            <span className="text-xs font-bold">설정</span>
           </button>
         </div>
       </nav>

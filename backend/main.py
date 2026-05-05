@@ -91,7 +91,7 @@ async def job_08_50():
         sb,
         title="📊 오늘 장 예측 — 사고 팔자!",
         body=f"코스피·코스닥 오르나 내리나? 탭해서 지금 예측하세요 👆 (마감 09:00)",
-        url="/dashboard",
+        url="/survey",
     )
 
 
@@ -415,6 +415,45 @@ async def get_today(supabase: Client = Depends(get_supabase)):
     return base
 
 
+@app.post("/api/survey/respond")
+async def web_survey_respond(
+    request: Request,
+    current_user=Depends(get_current_user),
+    supabase: Client = Depends(get_supabase),
+):
+    """웹에서 설문 응답 제출"""
+    from datetime import datetime, timezone
+    import pytz
+
+    user_id = str(current_user.id)
+    today_str = date.today().isoformat()
+
+    # 설문 존재 여부 확인
+    survey_res = supabase.table("daily_surveys").select("*").eq("survey_date", today_str).execute()
+    if not survey_res.data:
+        raise HTTPException(status_code=400, detail="오늘 설문이 없습니다.")
+
+    survey = survey_res.data[0]
+    if survey.get("is_closed"):
+        raise HTTPException(status_code=400, detail="설문이 마감됐습니다.")
+
+    body = await request.json()
+    kospi_answer = body.get("kospi_answer")
+    kosdaq_answer = body.get("kosdaq_answer")
+
+    if kospi_answer is None or kosdaq_answer is None:
+        raise HTTPException(status_code=422, detail="kospi_answer와 kosdaq_answer가 필요합니다.")
+
+    supabase.table("survey_responses").upsert({
+        "user_id": user_id,
+        "survey_date": today_str,
+        "kospi_answer": bool(kospi_answer),
+        "kosdaq_answer": bool(kosdaq_answer),
+    }).execute()
+
+    return {"success": True}
+
+
 @app.get("/api/dashboard")
 async def get_dashboard(
     current_user=Depends(get_current_user),
@@ -553,7 +592,7 @@ async def test_webpush(
         supabase,
         title="📊 테스트 알림",
         body=f"웹 푸시 정상 작동 중! ({now})",
-        url="/dashboard",
+        url="/survey",
     )
     return {"success": True, "sent": sent}
 
