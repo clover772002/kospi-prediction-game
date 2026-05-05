@@ -396,7 +396,7 @@ export default function SetupPage() {
                       onClick={() => setTab("webpush")}
                       className="text-purple-400 hover:text-purple-300 underline underline-offset-2 transition-colors"
                     >
-                      텔레그램이 부담되요 → 브라우저 알림으로!
+                      그래도 텔레그램이 부담되요 → 브라우저 알림으로!
                     </button>
                   </li>
                 </ul>
