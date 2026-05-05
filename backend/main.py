@@ -239,6 +239,47 @@ async def get_me(
         raise HTTPException(status_code=500, detail="유저 정보 처리 중 오류가 발생했습니다.")
 
 
+def _calc_weighted_pct(responses_with_users: list, accuracy_map: dict) -> tuple[int | None, int | None]:
+    """응답자별 누적 정확도를 가중치로 적용한 가중예측치 계산"""
+    if not responses_with_users:
+        return None, None
+
+    kospi_w_sum = kospi_w_yes = 0.0
+    kosdaq_w_sum = kosdaq_w_yes = 0.0
+
+    for r in responses_with_users:
+        uid = r["user_id"]
+        acc = accuracy_map.get(uid, 0.5)  # 이력 없으면 중립 가중치 0.5
+        weight = max(0.1, acc)            # 최소 0.1 보장
+
+        kospi_w_sum  += weight
+        kosdaq_w_sum += weight
+        if r["kospi_answer"]:
+            kospi_w_yes += weight
+        if r["kosdaq_answer"]:
+            kosdaq_w_yes += weight
+
+    kospi_wpct  = round(kospi_w_yes  / kospi_w_sum  * 100) if kospi_w_sum  > 0 else None
+    kosdaq_wpct = round(kosdaq_w_yes / kosdaq_w_sum * 100) if kosdaq_w_sum > 0 else None
+    return kospi_wpct, kosdaq_wpct
+
+
+def _build_user_accuracy_map(supabase: Client) -> dict:
+    """모든 유저의 누적 정확도 딕셔너리 반환 {user_id: accuracy_rate}"""
+    all_acc = supabase.table("accuracy_records").select("user_id, kospi_correct, kosdaq_correct").execute()
+    user_scores: dict = {}
+    for r in all_acc.data:
+        uid = r["user_id"]
+        if uid not in user_scores:
+            user_scores[uid] = {"correct": 0, "total": 0}
+        user_scores[uid]["correct"] += (1 if r.get("kospi_correct") else 0) + (1 if r.get("kosdaq_correct") else 0)
+        user_scores[uid]["total"] += 2
+    return {
+        uid: s["correct"] / s["total"]
+        for uid, s in user_scores.items() if s["total"] > 0
+    }
+
+
 @app.get("/api/today")
 async def get_today(supabase: Client = Depends(get_supabase)):
     """오늘의 설문 집계 결과 조회 (인증 불필요)"""
@@ -251,7 +292,7 @@ async def get_today(supabase: Client = Depends(get_supabase)):
     survey = survey_res.data[0]
     responses = (
         supabase.table("survey_responses")
-        .select("kospi_answer, kosdaq_answer")
+        .select("user_id, kospi_answer, kosdaq_answer")
         .eq("survey_date", today_str)
         .execute()
     )
@@ -265,6 +306,8 @@ async def get_today(supabase: Client = Depends(get_supabase)):
         "total_responses": total,
         "kospi_yes_pct": None,
         "kosdaq_yes_pct": None,
+        "kospi_weighted_pct": None,
+        "kosdaq_weighted_pct": None,
         "kospi_result": survey.get("kospi_result"),
         "kosdaq_result": survey.get("kosdaq_result"),
         "kospi_change_pct": survey.get("kospi_change_pct"),
@@ -276,6 +319,10 @@ async def get_today(supabase: Client = Depends(get_supabase)):
         kosdaq_yes = sum(1 for r in responses.data if r["kosdaq_answer"])
         base["kospi_yes_pct"]  = round(kospi_yes  / total * 100)
         base["kosdaq_yes_pct"] = round(kosdaq_yes / total * 100)
+
+        # 가중예측치 계산
+        acc_map = _build_user_accuracy_map(supabase)
+        base["kospi_weighted_pct"], base["kosdaq_weighted_pct"] = _calc_weighted_pct(responses.data, acc_map)
 
     return base
 
@@ -353,9 +400,15 @@ async def get_dashboard(
     total_users = len(user_scores)
     top_pct = round((1 - users_with_lower / total_users) * 100) if total_users > 1 else 100
 
+    # 내 가중치 기여도: 내 정확도 / 전체 평균 정확도 (1.0이면 평균, >1이면 평균 이상)
+    all_rates = [s["correct"] / s["total"] for s in user_scores.values() if s["total"] > 0]
+    avg_rate = sum(all_rates) / len(all_rates) if all_rates else 0.5
+    contribution = round(my_rate / avg_rate * 100) if avg_rate > 0 else 100
+
     return {
         "accuracy": {"kospi": kospi_acc, "kosdaq": kosdaq_acc, "overall": overall_acc},
         "percentile": top_pct,
+        "contribution": contribution,
         "history": history,
         "total_predictions": len(my_responses.data),
     }

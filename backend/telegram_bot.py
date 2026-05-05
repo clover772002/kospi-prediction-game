@@ -256,6 +256,20 @@ async def send_daily_survey_to_all(supabase, date_str: str) -> None:
     logger.info(f"설문 발송 완료: {sent}명")
 
 
+def _calc_weighted_pct_tg(responses_data: list, accuracy_map: dict) -> tuple[int, int]:
+    """텔레그램용 가중예측치 계산"""
+    kospi_w = kospi_wy = kosdaq_w = kosdaq_wy = 0.0
+    for r in responses_data:
+        w = max(0.1, accuracy_map.get(r["user_id"], 0.5))
+        kospi_w += w
+        kosdaq_w += w
+        if r["kospi_answer"]:  kospi_wy += w
+        if r["kosdaq_answer"]: kosdaq_wy += w
+    k = round(kospi_wy / kospi_w * 100) if kospi_w > 0 else 50
+    q = round(kosdaq_wy / kosdaq_w * 100) if kosdaq_w > 0 else 50
+    return k, q
+
+
 async def announce_results(supabase, date_str: str) -> None:
     """09:00 - 집계 결과 발표 (응답자 전원에게)"""
     responses = (
@@ -275,6 +289,18 @@ async def announce_results(supabase, date_str: str) -> None:
     kospi_pct = round(kospi_yes / total * 100)
     kosdaq_pct = round(kosdaq_yes / total * 100)
 
+    # 가중예측치 계산
+    all_acc = supabase.table("accuracy_records").select("user_id, kospi_correct, kosdaq_correct").execute()
+    user_scores: dict = {}
+    for r in all_acc.data:
+        uid = r["user_id"]
+        if uid not in user_scores:
+            user_scores[uid] = {"correct": 0, "total": 0}
+        user_scores[uid]["correct"] += (1 if r.get("kospi_correct") else 0) + (1 if r.get("kosdaq_correct") else 0)
+        user_scores[uid]["total"] += 2
+    acc_map = {uid: s["correct"] / s["total"] for uid, s in user_scores.items() if s["total"] > 0}
+    kospi_wpct, kosdaq_wpct = _calc_weighted_pct_tg(responses.data, acc_map)
+
     def bar(pct: int) -> str:
         filled = pct // 10
         return "█" * filled + "░" * (10 - filled)
@@ -284,10 +310,13 @@ async def announce_results(supabase, date_str: str) -> None:
         f"총 <b>{total}명</b> 참여\n\n"
         f"<b>📈 코스피</b>\n"
         f"{bar(kospi_pct)}\n"
-        f"오른다 <b>{kospi_pct}%</b> vs 내린다 <b>{100 - kospi_pct}%</b>\n\n"
+        f"오른다 <b>{kospi_pct}%</b> vs 내린다 <b>{100 - kospi_pct}%</b>\n"
+        f"⭐ 고수 가중예측: 오른다 <b>{kospi_wpct}%</b>\n\n"
         f"<b>📈 코스닥</b>\n"
         f"{bar(kosdaq_pct)}\n"
-        f"오른다 <b>{kosdaq_pct}%</b> vs 내린다 <b>{100 - kosdaq_pct}%</b>\n\n"
+        f"오른다 <b>{kosdaq_pct}%</b> vs 내린다 <b>{100 - kosdaq_pct}%</b>\n"
+        f"⭐ 고수 가중예측: 오른다 <b>{kosdaq_wpct}%</b>\n\n"
+        f"💡 <i>가중예측치는 정확도 높은 고수들의 의견을 더 반영한 예측입니다.</i>\n"
         f"⏳ 실제 결과는 장 마감 후 알려드립니다."
     )
 

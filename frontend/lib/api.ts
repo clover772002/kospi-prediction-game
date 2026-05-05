@@ -32,6 +32,8 @@ export interface TodaySurvey {
   total_responses: number;
   kospi_yes_pct: number | null;
   kosdaq_yes_pct: number | null;
+  kospi_weighted_pct: number | null;
+  kosdaq_weighted_pct: number | null;
   kospi_result: boolean | null;
   kosdaq_result: boolean | null;
   kospi_change_pct: number | null;
@@ -53,6 +55,7 @@ export interface DashboardData {
     overall: number | null;
   };
   percentile: number | null;
+  contribution: number | null;
   history: HistoryItem[];
   total_predictions: number;
 }
