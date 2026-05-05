@@ -235,7 +235,8 @@ export default function SetupPage() {
                 }
                 const reg = await navigator.serviceWorker.register("/sw.js");
                 await navigator.serviceWorker.ready;
-                const vapidKey = await getVapidPublicKey();
+                const vapidKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
+                  || await getVapidPublicKey();
                 const keyBytes = Uint8Array.from(
                   atob(vapidKey.replace(/-/g, "+").replace(/_/g, "/")),
                   (c) => c.charCodeAt(0)
