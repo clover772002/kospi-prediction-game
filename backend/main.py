@@ -540,6 +540,19 @@ async def test_webpush(
     return {"success": True, "sent": sent}
 
 
+@app.get("/api/admin/push-subscribers")
+async def list_push_subscribers(
+    supabase: Client = Depends(get_supabase),
+):
+    """웹 푸시 구독자 목록 확인"""
+    rows = supabase.table("users").select("id,name,push_subscription").execute()
+    result = [
+        {"id": r["id"], "name": r["name"], "has_push": bool(r.get("push_subscription"))}
+        for r in rows.data
+    ]
+    return {"total": len(result), "users": result}
+
+
 @app.post("/api/admin/inject-result")
 async def inject_result(
     kospi_up: bool,
