@@ -259,18 +259,22 @@ export default function DashboardPage() {
               {status === "result" && today.kospi_change_pct !== null && (
                 <div className="flex gap-3">
                   <div className="flex-1 bg-[#111] rounded-xl p-3 text-center">
-                    <p className="text-xs text-gray-500 mb-1">코스피 실적</p>
-                    <p className={`text-lg font-black ${today.kospi_change_pct! >= 0 ? "text-green-400" : "text-red-400"}`}>
+                    <p className="text-xs text-gray-500 mb-1">코스피</p>
+                    <p className={`text-2xl font-black ${today.kospi_result ? "text-green-400" : "text-red-400"}`}>
+                      {today.kospi_result ? "📈 상승" : "📉 하락"}
+                    </p>
+                    <p className={`text-xs mt-1 ${today.kospi_change_pct! >= 0 ? "text-green-400/60" : "text-red-400/60"}`}>
                       {today.kospi_change_pct! >= 0 ? "+" : ""}{today.kospi_change_pct?.toFixed(2)}%
                     </p>
-                    <p className="text-xs mt-0.5">{today.kospi_result ? "📈 상승" : "📉 하락"}</p>
                   </div>
                   <div className="flex-1 bg-[#111] rounded-xl p-3 text-center">
-                    <p className="text-xs text-gray-500 mb-1">코스닥 실적</p>
-                    <p className={`text-lg font-black ${today.kosdaq_change_pct! >= 0 ? "text-green-400" : "text-red-400"}`}>
+                    <p className="text-xs text-gray-500 mb-1">코스닥</p>
+                    <p className={`text-2xl font-black ${today.kosdaq_result ? "text-green-400" : "text-red-400"}`}>
+                      {today.kosdaq_result ? "📈 상승" : "📉 하락"}
+                    </p>
+                    <p className={`text-xs mt-1 ${today.kosdaq_change_pct! >= 0 ? "text-green-400/60" : "text-red-400/60"}`}>
                       {today.kosdaq_change_pct! >= 0 ? "+" : ""}{today.kosdaq_change_pct?.toFixed(2)}%
                     </p>
-                    <p className="text-xs mt-0.5">{today.kosdaq_result ? "📈 상승" : "📉 하락"}</p>
                   </div>
                 </div>
               )}
