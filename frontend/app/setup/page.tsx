@@ -338,11 +338,6 @@ export default function SetupPage() {
                 </ul>
               </div>
 
-              <div className="bg-[#1A1A1A] rounded-2xl p-5 border border-[#2A2A2A] space-y-3">
-                <p className="text-xs text-gray-500 font-bold tracking-widest uppercase">1단계</p>
-                <p className="font-bold text-white">아래 버튼을 눌러 알림 봇을 연결하세요</p>
-                <p className="text-xs text-gray-400">봇이 열리면 <span className="text-white font-bold">'시작' 또는 '/start'</span> 버튼을 눌러주세요.</p>
-              </div>
 
               <a
                 href={botLink}
