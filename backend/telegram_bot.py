@@ -129,7 +129,7 @@ async def handle_start(chat_id: int, user_id_param: str, supabase) -> None:
             )
     except Exception as e:
         logger.error(f"텔레그램 연동 오류: {e}")
-        await send_message(chat_id, f"❌ 연동 오류: {str(e)[:200]}")
+        await send_message(chat_id, "❌ 연동 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.")
 
 
 async def handle_callback_query(callback_query: dict, supabase) -> None:
