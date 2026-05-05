@@ -19,6 +19,7 @@ from telegram_bot import (
     announce_results,
     send_accuracy_notifications,
 )
+from webpush_helper import send_web_push_to_all
 
 load_dotenv()
 logging.basicConfig(level=logging.INFO)
@@ -86,6 +87,12 @@ async def job_08_50():
     logger.info(f"설문 생성: {today_str}")
 
     await send_daily_survey_to_all(sb, today_str)
+    await send_web_push_to_all(
+        sb,
+        title="📊 오늘 장 예측 — 사고 팔자!",
+        body=f"08:48 설문이 열렸어요. 09:00 전까지 예측해주세요 ({today_str})",
+        url="/dashboard",
+    )
 
 
 async def job_09_00():
@@ -234,6 +241,45 @@ async def get_me(
     except Exception as e:
         logger.error(f"유저 처리 오류: {e}")
         raise HTTPException(status_code=500, detail="유저 정보 처리 중 오류가 발생했습니다.")
+
+
+@app.get("/api/vapid-public-key")
+async def get_vapid_public_key():
+    """웹 푸시 VAPID 공개키 반환"""
+    key = os.getenv("VAPID_PUBLIC_KEY", "")
+    if not key:
+        raise HTTPException(status_code=503, detail="VAPID 키 미설정")
+    return {"public_key": key}
+
+
+@app.post("/api/me/push-subscription")
+async def save_push_subscription(
+    request: Request,
+    current_user=Depends(get_current_user),
+    supabase: Client = Depends(get_supabase),
+):
+    """웹 푸시 구독 정보 저장"""
+    try:
+        body = await request.json()
+        supabase.table("users").update({"push_subscription": body}).eq("id", str(current_user.id)).execute()
+        return {"success": True}
+    except Exception as e:
+        logger.error(f"푸시 구독 저장 오류: {e}")
+        raise HTTPException(status_code=500, detail="구독 저장 실패")
+
+
+@app.delete("/api/me/push-subscription")
+async def delete_push_subscription(
+    current_user=Depends(get_current_user),
+    supabase: Client = Depends(get_supabase),
+):
+    """웹 푸시 구독 해제"""
+    try:
+        supabase.table("users").update({"push_subscription": None}).eq("id", str(current_user.id)).execute()
+        return {"success": True}
+    except Exception as e:
+        logger.error(f"푸시 구독 해제 오류: {e}")
+        raise HTTPException(status_code=500, detail="구독 해제 실패")
 
 
 @app.delete("/api/me/telegram")

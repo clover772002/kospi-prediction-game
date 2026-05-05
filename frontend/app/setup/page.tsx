@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
-import { getMe, unlinkTelegram, UserProfile } from "@/lib/api";
+import { getMe, unlinkTelegram, getVapidPublicKey, savePushSubscription, deletePushSubscription, UserProfile } from "@/lib/api";
 
 const BOT_USERNAME = process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME || "Profitchat123bot";
 
@@ -18,6 +18,10 @@ export default function SetupPage() {
   const [botOpened, setBotOpened] = useState(false);
   const [checkFailed, setCheckFailed] = useState(false);
   const [unlinking, setUnlinking] = useState(false);
+  const [tab, setTab] = useState<"telegram" | "webpush">("telegram");
+  const [pushLinked, setPushLinked] = useState(false);
+  const [pushLoading, setPushLoading] = useState(false);
+  const [pushError, setPushError] = useState<string | null>(null);
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
@@ -114,6 +118,24 @@ export default function SetupPage() {
         </div>
       )}
 
+      {/* 알림 방식 탭 */}
+      {!linked && !pushLinked && (
+        <div className="flex gap-2 mb-2">
+          <button
+            onClick={() => setTab("telegram")}
+            className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all ${tab === "telegram" ? "bg-blue-600 text-white" : "bg-[#1A1A1A] text-gray-400 border border-[#2A2A2A]"}`}
+          >
+            ✈️ 텔레그램 봇
+          </button>
+          <button
+            onClick={() => setTab("webpush")}
+            className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all ${tab === "webpush" ? "bg-purple-600 text-white" : "bg-[#1A1A1A] text-gray-400 border border-[#2A2A2A]"}`}
+          >
+            🔔 브라우저 알림
+          </button>
+        </div>
+      )}
+
       {linked ? (
         /* 연동 완료 상태 */
         <div className="space-y-5">
@@ -165,6 +187,83 @@ export default function SetupPage() {
           >
             {unlinking ? "해제 중..." : "텔레그램 연동 해제"}
           </button>
+        </div>
+      ) : pushLinked ? (
+        /* 웹 푸시 연동 완료 */
+        <div className="space-y-5">
+          <div className="bg-purple-500/10 border border-purple-500/30 rounded-2xl p-6 text-center space-y-3">
+            <div className="text-5xl">🔔</div>
+            <p className="font-black text-lg text-purple-400">브라우저 알림 연결 완료!</p>
+            <p className="text-sm text-gray-400">매일 <span className="text-white font-bold">08:48</span>에 알림이 도착합니다.</p>
+          </div>
+          <button onClick={() => router.push("/dashboard")} className="w-full py-4 bg-blue-600 hover:bg-blue-500 text-white font-black text-lg rounded-2xl transition-all active:scale-95">
+            대시보드로 이동 →
+          </button>
+          <button
+            onClick={async () => {
+              if (!token) return;
+              if (!confirm("브라우저 알림 연결을 해제할까요?")) return;
+              await deletePushSubscription(token);
+              setPushLinked(false);
+            }}
+            className="w-full py-3 bg-[#1A1A1A] border border-red-500/20 text-red-400/60 hover:text-red-400 rounded-xl text-sm transition-all"
+          >
+            브라우저 알림 해제
+          </button>
+        </div>
+      ) : tab === "webpush" ? (
+        /* 웹 푸시 연동 안내 */
+        <div className="space-y-4">
+          <div className="bg-[#1A1A1A] rounded-2xl p-4 border border-[#2A2A2A] space-y-2">
+            <p className="text-xs text-gray-300 font-bold">🔔 브라우저 알림이란?</p>
+            <ul className="space-y-1.5 text-xs text-gray-400">
+              <li>✅ 텔레그램 설치 없이 <span className="text-white">앱처럼 알림</span>을 받아요</li>
+              <li>✅ "알림 허용" 한 번이면 끝이에요</li>
+              <li>⚠️ iPhone은 Safari에서 홈 화면에 추가 후 사용 가능</li>
+            </ul>
+          </div>
+          <button
+            onClick={async () => {
+              if (!token) return;
+              setPushLoading(true);
+              setPushError(null);
+              try {
+                const permission = await Notification.requestPermission();
+                if (permission !== "granted") {
+                  setPushError("알림 권한이 거부됐어요. 브라우저 설정에서 허용해주세요.");
+                  return;
+                }
+                const reg = await navigator.serviceWorker.register("/sw.js");
+                await navigator.serviceWorker.ready;
+                const vapidKey = await getVapidPublicKey();
+                const sub = await reg.pushManager.subscribe({
+                  userVisibleOnly: true,
+                  applicationServerKey: vapidKey,
+                });
+                await savePushSubscription(token, sub.toJSON());
+                setPushLinked(true);
+              } catch (e: unknown) {
+                const msg = e instanceof Error ? e.message : String(e);
+                setPushError("알림 연결에 실패했어요: " + msg);
+              } finally {
+                setPushLoading(false);
+              }
+            }}
+            disabled={pushLoading}
+            className="w-full py-5 bg-purple-600 hover:bg-purple-500 disabled:bg-[#333] disabled:text-gray-500 text-white font-black text-xl rounded-2xl transition-all active:scale-95"
+          >
+            {pushLoading ? (
+              <span className="flex items-center justify-center gap-2">
+                <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                연결 중...
+              </span>
+            ) : "🔔 브라우저 알림 허용하기"}
+          </button>
+          {pushError && (
+            <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-3">
+              <p className="text-red-400 text-xs">{pushError}</p>
+            </div>
+          )}
         </div>
       ) : (
         /* 연동 안내 — 2단계 UI */

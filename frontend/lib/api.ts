@@ -79,3 +79,21 @@ export async function getDashboard(token: string): Promise<DashboardData> {
 export async function unlinkTelegram(token: string): Promise<void> {
   await authFetch<{ success: boolean }>("/api/me/telegram", token, { method: "DELETE" });
 }
+
+export async function getVapidPublicKey(): Promise<string> {
+  const res = await fetch(`${API_BASE}/api/vapid-public-key`);
+  if (!res.ok) throw new Error("VAPID 키 조회 실패");
+  const data = await res.json();
+  return data.public_key;
+}
+
+export async function savePushSubscription(token: string, subscription: PushSubscriptionJSON): Promise<void> {
+  await authFetch<{ success: boolean }>("/api/me/push-subscription", token, {
+    method: "POST",
+    body: JSON.stringify(subscription),
+  });
+}
+
+export async function deletePushSubscription(token: string): Promise<void> {
+  await authFetch<{ success: boolean }>("/api/me/push-subscription", token, { method: "DELETE" });
+}

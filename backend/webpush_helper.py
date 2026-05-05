@@ -1,0 +1,57 @@
+"""웹 푸시 알림 발송 헬퍼"""
+import os
+import json
+import logging
+from pywebpush import webpush, WebPushException
+
+logger = logging.getLogger(__name__)
+
+VAPID_PRIVATE_KEY = os.getenv("VAPID_PRIVATE_KEY", "")
+VAPID_CLAIMS_EMAIL = os.getenv("VAPID_CLAIMS_EMAIL", "mailto:forsmartonly@gmail.com")
+
+
+def send_web_push(subscription_info: dict, title: str, body: str, url: str = "/dashboard") -> bool:
+    """단일 구독자에게 웹 푸시 전송. 성공 시 True, 실패 시 False 반환."""
+    if not VAPID_PRIVATE_KEY:
+        logger.warning("VAPID_PRIVATE_KEY 미설정 — 웹 푸시 생략")
+        return False
+    try:
+        webpush(
+            subscription_info=subscription_info,
+            data=json.dumps({"title": title, "body": body, "url": url}),
+            vapid_private_key=VAPID_PRIVATE_KEY,
+            vapid_claims={"sub": VAPID_CLAIMS_EMAIL},
+        )
+        return True
+    except WebPushException as e:
+        status = e.response.status_code if e.response else "N/A"
+        logger.error(f"웹 푸시 실패 (status={status}): {e}")
+        return False
+    except Exception as e:
+        logger.error(f"웹 푸시 오류: {e}")
+        return False
+
+
+async def send_web_push_to_all(supabase, title: str, body: str, url: str = "/dashboard") -> int:
+    """push_subscription이 있는 모든 유저에게 웹 푸시 전송. 성공 수 반환."""
+    try:
+        users = supabase.table("users").select("id, push_subscription").not_.is_("push_subscription", "null").execute()
+    except Exception as e:
+        logger.error(f"웹 푸시 구독자 조회 오류: {e}")
+        return 0
+
+    sent = 0
+    for user in users.data:
+        sub = user.get("push_subscription")
+        if not sub:
+            continue
+        if isinstance(sub, str):
+            try:
+                sub = json.loads(sub)
+            except Exception:
+                continue
+        if send_web_push(sub, title, body, url):
+            sent += 1
+
+    logger.info(f"웹 푸시 발송 완료: {sent}명")
+    return sent
