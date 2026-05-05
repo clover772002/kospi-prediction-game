@@ -15,6 +15,8 @@ export default function SetupPage() {
   const [checking, setChecking] = useState(false);
   const [linked, setLinked] = useState(false);
   const [copyDone, setCopyDone] = useState(false);
+  const [botOpened, setBotOpened] = useState(false);
+  const [checkFailed, setCheckFailed] = useState(false);
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
@@ -55,14 +57,18 @@ export default function SetupPage() {
   const checkLink = useCallback(async () => {
     if (!token) return;
     setChecking(true);
+    setCheckFailed(false);
     try {
       const profile = await getMe(token);
       if (profile.telegram_chat_id) {
         setLinked(true);
         setUser(profile);
+      } else {
+        setCheckFailed(true);
       }
     } catch (e) {
       console.error(e);
+      setCheckFailed(true);
     } finally {
       setChecking(false);
     }
@@ -97,9 +103,6 @@ export default function SetupPage() {
       {/* 유저 정보 */}
       {user && (
         <div className="flex items-center gap-3 bg-[#1A1A1A] rounded-xl px-4 py-3 border border-[#2A2A2A] mb-6">
-          {user.picture && (
-            <img src={user.picture} alt="프로필" className="w-9 h-9 rounded-full" />
-          )}
           <div>
             <p className="font-bold text-sm">{user.name || user.email}</p>
             <p className="text-xs text-gray-400">{user.email}</p>
@@ -139,74 +142,77 @@ export default function SetupPage() {
           </div>
         </div>
       ) : (
-        /* 연동 안내 */
-        <div className="space-y-5">
-          {/* 단계별 안내 */}
-          {[
-            {
-              step: "1",
-              title: "아래 버튼으로 봇 열기",
-              desc: "텔레그램 앱이 열리면서 봇 채팅창이 시작됩니다.",
-            },
-            {
-              step: "2",
-              title: "시작 버튼 누르기",
-              desc: "텔레그램에서 '시작' 또는 '/start' 버튼을 눌러주세요.",
-            },
-            {
-              step: "3",
-              title: "연동 확인",
-              desc: "봇이 환영 메시지를 보내면 아래 '연동 확인' 버튼을 눌러주세요.",
-            },
-          ].map((item) => (
-            <div key={item.step} className="flex gap-4 bg-[#1A1A1A] rounded-xl px-4 py-4 border border-[#2A2A2A]">
-              <div className="w-7 h-7 rounded-full bg-blue-600 flex items-center justify-center text-xs font-black flex-shrink-0">
-                {item.step}
+        /* 연동 안내 — 2단계 UI */
+        <div className="space-y-4">
+          {!botOpened ? (
+            /* ── STEP 1: 봇 열기 ── */
+            <>
+              <div className="bg-[#1A1A1A] rounded-2xl p-5 border border-[#2A2A2A] space-y-3">
+                <p className="text-xs text-gray-500 font-bold tracking-widest uppercase">1단계</p>
+                <p className="font-bold text-white">아래 버튼을 눌러 텔레그램 봇을 여세요</p>
+                <p className="text-xs text-gray-400">봇이 열리면 <span className="text-white font-bold">'시작' 또는 '/start'</span> 버튼을 눌러주세요.</p>
               </div>
-              <div>
-                <p className="font-bold text-sm">{item.title}</p>
-                <p className="text-xs text-gray-400 mt-0.5">{item.desc}</p>
+
+              <a
+                href={botLink}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => setBotOpened(true)}
+                className="flex items-center justify-center gap-2 w-full py-5 rounded-2xl font-black text-xl transition-all active:scale-95"
+                style={{ backgroundColor: "#0088CC", color: "#fff" }}
+              >
+                <span className="text-2xl">✈️</span>
+                텔레그램 봇 열기
+              </a>
+
+              <button
+                onClick={handleCopy}
+                className="w-full py-3 bg-[#1A1A1A] border border-[#333] text-gray-500 hover:text-white rounded-xl text-sm transition-all"
+              >
+                {copyDone ? "✅ 링크 복사됨" : "🔗 링크가 안 열리면 → 복사하기"}
+              </button>
+            </>
+          ) : (
+            /* ── STEP 2: 연동 확인 ── */
+            <>
+              <div className="bg-blue-500/10 border border-blue-500/30 rounded-2xl p-5 space-y-2">
+                <p className="text-xs text-blue-400 font-bold tracking-widest uppercase">2단계</p>
+                <p className="font-bold text-white">텔레그램에서 '시작'을 눌렀나요?</p>
+                <p className="text-xs text-gray-400">봇이 환영 메시지를 보냈으면 아래 버튼을 눌러주세요.</p>
               </div>
-            </div>
-          ))}
 
-          {/* 봇 연동 버튼 */}
-          <a
-            href={botLink}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center justify-center gap-2 w-full py-4 rounded-2xl font-black text-lg transition-all active:scale-95"
-            style={{ backgroundColor: "#0088CC", color: "#fff" }}
-          >
-            <span className="text-2xl">✈️</span>
-            텔레그램 봇 열기
-          </a>
+              <button
+                onClick={checkLink}
+                disabled={checking}
+                className="w-full py-5 bg-green-600 hover:bg-green-500 disabled:bg-[#333] disabled:text-gray-500 text-white font-black text-xl rounded-2xl transition-all active:scale-95"
+              >
+                {checking ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    확인 중...
+                  </span>
+                ) : "✅ 연동 확인하기"}
+              </button>
 
-          {/* 링크 복사 (백업) */}
-          <button
-            onClick={handleCopy}
-            className="w-full py-3 bg-[#1A1A1A] border border-[#333] text-gray-400 hover:text-white rounded-xl text-sm transition-all"
-          >
-            {copyDone ? "✅ 링크 복사됨" : "🔗 링크 복사하기"}
-          </button>
+              {checkFailed && (
+                <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4 space-y-2">
+                  <p className="text-red-400 text-sm font-bold">아직 연동이 안 됐어요</p>
+                  <ul className="text-xs text-gray-400 space-y-1">
+                    <li>① 텔레그램에서 '시작' 버튼을 눌렀는지 확인하세요</li>
+                    <li>② 봇이 환영 메시지를 보냈는지 확인하세요</li>
+                    <li>③ 안 열렸다면 아래에서 다시 시도해보세요</li>
+                  </ul>
+                </div>
+              )}
 
-          {/* 연동 확인 버튼 */}
-          <button
-            onClick={checkLink}
-            disabled={checking}
-            className="w-full py-4 bg-green-600 hover:bg-green-500 disabled:bg-[#333] disabled:text-gray-500 text-white font-bold rounded-2xl transition-all"
-          >
-            {checking ? (
-              <span className="flex items-center justify-center gap-2">
-                <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                확인 중...
-              </span>
-            ) : "✅ 연동 확인하기"}
-          </button>
-
-          <p className="text-xs text-gray-600 text-center">
-            봇에서 환영 메시지를 받은 후 위 버튼을 눌러주세요
-          </p>
+              <button
+                onClick={() => { setBotOpened(false); setCheckFailed(false); }}
+                className="w-full py-3 bg-[#1A1A1A] border border-[#333] text-gray-500 hover:text-white rounded-xl text-sm transition-all"
+              >
+                ← 봇 다시 열기
+              </button>
+            </>
+          )}
         </div>
       )}
 
