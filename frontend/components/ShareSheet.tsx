@@ -83,7 +83,7 @@ export default function ShareSheet({ url, title, text, renderTrigger }: ShareShe
   const sheetRef = useRef<HTMLDivElement>(null);
   const shareUrl = url ?? (typeof window !== "undefined" ? window.location.href : "");
   const shareTitle = title ?? "주식장 직전 8:48, 코스피 예측";
-  const shareText = text ?? "집단지성으로 성투하자";
+  const shareText = text ?? "설문 빅데이터 집단지성으로 성투하자";
   /** 네이티브 공유는 title/text 분리, 단일 본문만 지원하는 앱용 */
   const combinedShareText = `${shareTitle}\n${shareText}`;
 

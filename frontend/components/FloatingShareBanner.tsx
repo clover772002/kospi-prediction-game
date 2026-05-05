@@ -31,7 +31,7 @@ export default function FloatingShareBanner() {
 
         <ShareSheet
           title="주식장 직전 8:48, 코스피 예측"
-          text="집단지성으로 성투하자"
+          text="설문 빅데이터 집단지성으로 성투하자"
           renderTrigger={(onClick) => (
             <button
               type="button"
