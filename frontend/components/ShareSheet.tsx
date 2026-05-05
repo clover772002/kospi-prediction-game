@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef } from "react";
 
 interface ShareSheetProps {
   url?: string;
   title?: string;
   text?: string;
+  renderTrigger?: (onClick: () => void) => React.ReactNode;
 }
 
 interface ShareApp {
@@ -76,7 +77,7 @@ const SHARE_APPS: ShareApp[] = [
   },
 ];
 
-export default function ShareSheet({ url, title, text }: ShareSheetProps) {
+export default function ShareSheet({ url, title, text, renderTrigger }: ShareSheetProps) {
   const [open, setOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const sheetRef = useRef<HTMLDivElement>(null);
@@ -126,20 +127,24 @@ export default function ShareSheet({ url, title, text }: ShareSheetProps) {
 
   return (
     <>
-      <button
-        onClick={handleShareClick}
-        className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#1E1E1E] hover:bg-[#2A2A2A] border border-[#333] text-gray-300 hover:text-white transition-all active:scale-95 text-sm font-semibold"
-        aria-label="공유하기"
-      >
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-          <circle cx="18" cy="5" r="3" />
-          <circle cx="6" cy="12" r="3" />
-          <circle cx="18" cy="19" r="3" />
-          <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" />
-          <line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
-        </svg>
-        공유
-      </button>
+      {renderTrigger ? (
+        renderTrigger(handleShareClick)
+      ) : (
+        <button
+          onClick={handleShareClick}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#1E1E1E] hover:bg-[#2A2A2A] border border-[#333] text-gray-300 hover:text-white transition-all active:scale-95 text-sm font-semibold"
+          aria-label="공유하기"
+        >
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="18" cy="5" r="3" />
+            <circle cx="6" cy="12" r="3" />
+            <circle cx="18" cy="19" r="3" />
+            <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" />
+            <line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
+          </svg>
+          공유
+        </button>
+      )}
 
       {open && (
         <div className="fixed inset-0 z-[100] flex items-end justify-center" style={{ backgroundColor: "rgba(0,0,0,0.7)" }}>

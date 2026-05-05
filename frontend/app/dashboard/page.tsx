@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { getMe, getToday, getDashboard, UserProfile, TodaySurvey, DashboardData } from "@/lib/api";
 import FlipClock from "@/components/FlipClock";
-import ShareSheet from "@/components/ShareSheet";
 
 function SentimentBar({ label, pct, result }: { label: string; pct: number | null; result?: boolean | null }) {
   const displayPct = pct ?? 0;
@@ -278,15 +277,9 @@ export default function DashboardPage() {
             </p>
           )}
         </div>
-        <div className="flex items-center gap-2">
-          <ShareSheet
-            title="투자자 층간소음 — 코스피 예측 게임"
-            text="코스피 오를지 내릴지 맞혀보세요! 같이 해봐요 📊"
-          />
-          <button onClick={handleLogout} className="text-xs text-gray-500 hover:text-gray-300 transition-colors">
-            로그아웃
-          </button>
-        </div>
+        <button onClick={handleLogout} className="text-xs text-gray-500 hover:text-gray-300 transition-colors">
+          로그아웃
+        </button>
       </div>
 
       <div className="space-y-4">
