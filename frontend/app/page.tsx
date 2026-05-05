@@ -102,11 +102,11 @@ const FEATURES = [
     },
   },
   {
-    icon: "🎯",
-    title: "고수 예측이 실제로 더 잘 맞아요",
-    desc: "단순 다수결보다 고수 가중예측의 실제 적중률이 높아요",
+    icon: "🤡",
+    title: "맨날 틀린다면, 당신도 고수입니다",
+    desc: "항상 틀리는 사람의 예측도 역방향 신호로 정확도에 기여해요",
     detail: {
-      summary: "잘 맞추는 사람은 가중치 UP, 항상 틀리는 사람은 반대 방향 신호로 활용합니다. 틀리는 것도 데이터가 되는 구조 덕분에 단순 다수결보다 훨씬 정교한 예측이 만들어집니다.",
+      summary: "잘 맞추는 사람만큼, 항상 틀리는 사람도 소중한 데이터입니다. 틀린 예측은 반대 방향 신호로 자동 변환되어 가중예측의 정확도를 높여줘요. 주변에 맨날 틀리는 친구가 있다면 얼른 초대해서 적중률을 올려주세요 🙏",
       steps: null,
       mockup: (
         <div className="mt-3 space-y-3">
@@ -146,9 +146,13 @@ const FEATURES = [
                 </div>
               ))}
             </div>
-            <p className="text-xs text-gray-600 mt-3">
-              항상 틀리는 사람이 "오른다"고 하면 → 시스템은 <span className="text-red-400">내린다</span> 신호로 해석합니다
+            <p className="text-xs text-gray-500 mt-3">
+              항상 틀리는 친구가 "오른다"고 하면 → 시스템은 <span className="text-red-400 font-bold">내린다</span> 신호로 해석합니다
             </p>
+            <div className="mt-3 bg-purple-500/10 rounded-xl p-3 border border-purple-500/20">
+              <p className="text-xs text-purple-300 font-bold">💡 친구 초대 꿀팁</p>
+              <p className="text-xs text-gray-400 mt-1">주변에 주식 예측 맨날 틀리는 친구 있으신가요?<br />얼른 초대해서 우리 적중률 올려주세요 😂</p>
+            </div>
           </div>
         </div>
       ),
