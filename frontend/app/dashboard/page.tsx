@@ -283,16 +283,8 @@ export default function DashboardPage() {
               {/* 2. 단순 집계 */}
               <div className="space-y-3">
                 <p className="text-xs text-gray-500">📊 단순 집계</p>
-                <SentimentBar
-                  label="코스피"
-                  pct={today.kospi_yes_pct}
-                  result={status === "result" ? today.kospi_result : undefined}
-                />
-                <SentimentBar
-                  label="코스닥"
-                  pct={today.kosdaq_yes_pct}
-                  result={status === "result" ? today.kosdaq_result : undefined}
-                />
+                <SentimentBar label="코스피" pct={today.kospi_yes_pct} />
+                <SentimentBar label="코스닥" pct={today.kosdaq_yes_pct} />
               </div>
 
               {/* 3. 고수 가중예측 */}
