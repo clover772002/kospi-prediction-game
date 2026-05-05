@@ -83,18 +83,14 @@ const FEATURES = [
             <div className="bg-[#1A1A1A] rounded-2xl p-4 border border-[#2A2A2A]">
               <div className="text-white text-xs font-bold mb-3">📊 단순 집계 <span className="text-gray-500 font-normal">총 128명</span></div>
               <div className="space-y-3">
-                {([{ label: "KOSPI", yes: 72, no: 28 }, { label: "KOSDAQ", yes: 45, no: 55 }] as {label:string;yes:number;no:number}[]).map((item) => (
-                  <div key={item.label}><p className="text-xs text-gray-400 mb-1">{item.label}</p><Bar yes={item.yes} no={item.no} /></div>
-                ))}
+                <div><p className="text-xs text-gray-400 mb-1">KOSPI</p><Bar yes={72} no={28} /></div>
               </div>
             </div>
             <div className="bg-[#1A1A1A] rounded-2xl p-4 border border-yellow-500/30">
               <div className="text-yellow-400 text-xs font-bold mb-1">⭐ 고수 가중예측 <span className="text-gray-500 font-normal">누적 정확도 반영</span></div>
               <p className="text-gray-600 text-xs mb-3">다수결과 다를 때가 진짜 신호</p>
               <div className="space-y-3">
-                {([{ label: "KOSPI", yes: 61, no: 39 }, { label: "KOSDAQ", yes: 38, no: 62 }] as {label:string;yes:number;no:number}[]).map((item) => (
-                  <div key={item.label}><p className="text-xs text-gray-400 mb-1">{item.label}</p><Bar yes={item.yes} no={item.no} /></div>
-                ))}
+                <div><p className="text-xs text-gray-400 mb-1">KOSPI</p><Bar yes={61} no={39} /></div>
               </div>
             </div>
           </div>
