@@ -9,7 +9,7 @@ const FEATURES = [
   {
     icon: "📱",
     title: "텔레그램 설문",
-    desc: "매일 08:50 O/X 설문이 텔레그램으로 발송돼요",
+    desc: "매일 08:48 O/X 설문이 텔레그램으로 발송돼요",
     detail: {
       summary: "텔레그램은 전 세계 9억 명이 사용하는 메신저로, 별도 앱 설치만 하면 끝입니다. 복잡한 가입 없이 봇 하나로 설문을 받고 결과를 받아볼 수 있어요.",
       steps: [
@@ -42,8 +42,8 @@ const FEATURES = [
       mockup: (
         <div className="mt-3 space-y-2">
           {[
-            { time: "08:50", label: "설문 발송", color: "bg-blue-500", active: true },
-            { time: "08:50~09:00", label: "응답 가능 시간", color: "bg-green-500", active: true },
+            { time: "08:48", label: "설문 발송 (사고팔자!)", color: "bg-blue-500", active: true },
+            { time: "08:48~09:00", label: "응답 가능 시간 (12분)", color: "bg-green-500", active: true },
             { time: "09:00", label: "응답 마감 & 집계 공개", color: "bg-yellow-500", active: true },
             { time: "09:00~", label: "장 시작 (응답 불가)", color: "bg-gray-600", active: false },
             { time: "15:35", label: "정확도 알림 발송", color: "bg-purple-500", active: true },
@@ -267,10 +267,11 @@ export default function LoginPage() {
       {/* 로고 */}
       <div className="text-center mb-10">
         <div className="text-6xl mb-4">📊</div>
-        <h1 className="text-2xl font-black text-white mb-2">오늘 장 예측</h1>
+        <h1 className="text-2xl font-black text-white mb-1">8:48 — 사고 팔자!</h1>
+        <p className="text-yellow-400 text-xs font-bold mb-3 tracking-wide">매일 아침 8시 48분, 오늘 장을 예측하세요</p>
         <p className="text-gray-400 text-sm leading-relaxed">
-          매일 아침 코스피·코스닥이 오를지 내릴지<br />
-          예측하고, 내 정확도와 순위를 확인하세요.
+          코스피·코스닥이 오를지 내릴지 O/X 하나만.<br />
+          맞출수록 가중치가 쌓여 커뮤니티 예측을 움직입니다.
         </p>
       </div>
 
@@ -283,10 +284,10 @@ export default function LoginPage() {
           <div className="space-y-0">
             {[
               {
-                time: "08:50",
+                time: "08:48",
                 dot: "bg-blue-500",
                 title: "텔레그램 설문 발송",
-                desc: "코스피·코스닥 O/X 설문이 텔레그램으로 도착",
+                desc: "\"사고 팔자!\" 08:48, 코스피·코스닥 O/X 설문이 텔레그램으로 도착",
               },
               {
                 time: "09:00",
@@ -460,7 +461,7 @@ export default function LoginPage() {
             },
             {
               q: "설문이 안 왔어요 / 봇이 메시지를 안 보내요",
-              a: "① 대시보드에서 텔레그램 연동이 완료됐는지 확인해주세요. ② 텔레그램에서 봇을 차단했는지 확인해주세요. ③ 설문은 평일 08:50에만 발송됩니다 (주말·공휴일 제외). 그래도 해결이 안 되면 forsmartonly@gmail.com으로 문의해 주세요.",
+              a: "① 대시보드에서 텔레그램 연동이 완료됐는지 확인해주세요. ② 텔레그램에서 봇을 차단했는지 확인해주세요. ③ 설문은 평일 08:48에만 발송됩니다 (주말·공휴일 제외). 그래도 해결이 안 되면 forsmartonly@gmail.com으로 문의해 주세요.",
             },
           ].map((item, i) => (
             <FaqItem key={i} q={item.q} a={item.a} />

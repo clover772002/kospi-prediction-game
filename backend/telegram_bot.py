@@ -2,7 +2,7 @@
 """
 텔레그램 봇 모듈 v3
 - /start {user_uuid} → 텔레그램 chat_id와 구글 계정 연동
-- 매일 08:50 코스피/코스닥 O/X 설문 발송
+- 매일 08:48 코스피/코스닥 O/X 설문 발송
 - 09:00 집계 결과 발표
 - 15:35 개인별 정확도 알림
 """
@@ -117,7 +117,7 @@ async def handle_start(chat_id: int, user_id_param: str, supabase) -> None:
             await send_message(chat_id,
                 f"✅ <b>연동 완료!</b>\n\n"
                 f"안녕하세요, {name}님!\n\n"
-                f"📊 매일 <b>08:50</b>에 코스피·코스닥 예측 설문이 발송됩니다.\n"
+                f"📊 매일 <b>08:48</b>에 코스피·코스닥 예측 설문이 발송됩니다.\n"
                 f"⏰ <b>09:00</b>까지만 응답 가능합니다.\n"
                 f"📈 장 마감 후 정확도와 순위를 알려드릴게요!"
             )
@@ -229,7 +229,7 @@ async def handle_webhook(update: dict, supabase) -> None:
 # ─────────────────────────────────────────────────────────────
 
 async def send_daily_survey_to_all(supabase, date_str: str) -> None:
-    """08:50 - 텔레그램 연동 유저 전원에게 코스피 예측 설문 발송"""
+    """08:48 - 텔레그램 연동 유저 전원에게 코스피 예측 설문 발송"""
     users = (
         supabase.table("users")
         .select("telegram_chat_id")
