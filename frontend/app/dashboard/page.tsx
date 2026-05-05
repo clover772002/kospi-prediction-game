@@ -174,13 +174,6 @@ export default function DashboardPage() {
     );
   }
 
-  const statusLabel: Record<string, string> = {
-    no_survey: "오늘은 설문 없음",
-    open: "설문 진행 중 · 09:00 마감",
-    closed: "집계 완료 · 결과 대기 중",
-    result: "오늘 결과 공개",
-  };
-
   const statusColor: Record<string, string> = {
     no_survey: "#6B7280",
     open: "#F59E0B",
@@ -190,12 +183,27 @@ export default function DashboardPage() {
 
   const status = today?.status ?? "no_survey";
 
+  // 현재 시각 기준 장 상태 배너
+  function getMarketStatus(): { label: string; color: string } {
+    const now = new Date();
+    const kst = new Date(now.toLocaleString("en-US", { timeZone: "Asia/Seoul" }));
+    const h = kst.getHours();
+    const m = kst.getMinutes();
+    const mins = h * 60 + m;
+    if (mins < 9 * 60) return { label: "장시작전", color: "#6B7280" };
+    if (mins < 15 * 60 + 30) return { label: "장중", color: "#F59E0B" };
+    return { label: "장마감", color: "#22C55E" };
+  }
+  const marketStatus = getMarketStatus();
+
   return (
     <main className="max-w-md mx-auto min-h-screen pb-24 px-5">
       {/* 헤더 */}
       <div className="pt-8 pb-5 flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-black">📊 오늘 장 예측</h1>
+          <h1 className="text-xl font-black">
+            📊 {today?.survey_date ? today.survey_date.slice(5).replace("-", "/") + " 예측결과" : "예측결과"}
+          </h1>
           {user && (
             <p className="text-xs text-gray-400 mt-0.5">
               {user.name || user.email}
@@ -217,12 +225,12 @@ export default function DashboardPage() {
           }}
         >
           <div className="flex items-center justify-between mb-4">
-            <p className="font-bold text-sm">오늘의 집계</p>
+            <p className="font-bold text-sm">실적 / 전망</p>
             <span
               className="text-xs px-2.5 py-1 rounded-full font-bold"
-              style={{ backgroundColor: `${statusColor[status]}20`, color: statusColor[status] }}
+              style={{ backgroundColor: `${marketStatus.color}20`, color: marketStatus.color }}
             >
-              {statusLabel[status]}
+              {marketStatus.label}
             </span>
           </div>
 
