@@ -175,7 +175,7 @@ export default function SetupPage() {
             onClick={() => router.push("/dashboard")}
             className="w-full py-4 bg-blue-600 hover:bg-blue-500 text-white font-black text-lg rounded-2xl transition-all active:scale-95"
           >
-            대시보드로 이동 →
+            ← 대시보드로 이동
           </button>
 
           <div className="bg-[#1A1A1A] rounded-2xl p-4 border border-[#2A2A2A] space-y-2 text-sm text-gray-400">
@@ -220,7 +220,7 @@ export default function SetupPage() {
             <p className="text-sm text-gray-400">매일 <span className="text-white font-bold">08:48</span>에 알림이 도착합니다.</p>
           </div>
           <button onClick={() => router.push("/dashboard")} className="w-full py-4 bg-blue-600 hover:bg-blue-500 text-white font-black text-lg rounded-2xl transition-all active:scale-95">
-            대시보드로 이동 →
+            ← 대시보드로 이동
           </button>
           <button
             onClick={async () => {
