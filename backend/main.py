@@ -1,7 +1,14 @@
 ﻿# -*- coding: utf-8 -*-
 import os
 import logging
-from datetime import date, timedelta
+from datetime import date, timedelta, datetime, timezone
+from zoneinfo import ZoneInfo
+
+KST = ZoneInfo("Asia/Seoul")
+
+def today_kst() -> str:
+    """KST 기준 오늘 날짜 (Railway는 UTC이므로 명시적으로 변환)"""
+    return datetime.now(KST).date().isoformat()
 from contextlib import asynccontextmanager
 
 import yfinance as yf
@@ -88,7 +95,7 @@ async def job_08_45():
 async def job_08_50():
     """매일 08:48 - 설문 생성 및 텔레그램 발송"""
     sb = _supabase_direct()
-    today_str = date.today().isoformat()
+    today_str = today_kst()
 
     existing = sb.table("daily_surveys").select("id").eq("survey_date", today_str).execute()
     if existing.data:
@@ -110,7 +117,7 @@ async def job_08_50():
 async def job_09_00():
     """매일 09:00 - 설문 마감 및 집계 결과 발표"""
     sb = _supabase_direct()
-    today_str = date.today().isoformat()
+    today_str = today_kst()
 
     sb.table("daily_surveys").update({"is_closed": True}).eq("survey_date", today_str).execute()
     logger.info(f"설문 마감: {today_str}")
@@ -121,7 +128,7 @@ async def job_09_00():
 async def job_15_35():
     """매일 15:35 - 종가 조회 → 정확도 계산 → 개인별 알림"""
     sb = _supabase_direct()
-    today_str = date.today().isoformat()
+    today_str = today_kst()
 
     survey = sb.table("daily_surveys").select("is_closed, kospi_result").eq("survey_date", today_str).execute()
     if not survey.data:
@@ -368,7 +375,7 @@ def _build_user_accuracy_map(supabase: Client) -> dict:
 @app.get("/api/today")
 async def get_today(supabase: Client = Depends(get_supabase)):
     """오늘의 설문 집계 결과 조회 (인증 불필요)"""
-    today_str = date.today().isoformat()
+    today_str = today_kst()
 
     survey_res = supabase.table("daily_surveys").select("*").eq("survey_date", today_str).execute()
     if not survey_res.data:
@@ -454,7 +461,7 @@ async def web_survey_respond(
     import pytz
 
     user_id = str(current_user.id)
-    today_str = date.today().isoformat()
+    today_str = today_kst()
 
     # 설문 존재 여부 확인
     survey_res = supabase.table("daily_surveys").select("*").eq("survey_date", today_str).execute()
@@ -651,7 +658,7 @@ async def inject_result(
 ):
     """휴장일 테스트용: 가짜 장 결과를 직접 입력하고 정확도 계산"""
     sb = _supabase_direct()
-    today_str = date.today().isoformat()
+    today_str = today_kst()
 
     sb.table("daily_surveys").update({
         "kospi_result": kospi_up,

@@ -101,7 +101,12 @@ export default function SurveyPage() {
       <div className="pt-10 pb-6 flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-black text-white">오늘 장 예측</h1>
-          <p className="text-xs text-gray-500 mt-1">{today?.survey_date ?? ""}</p>
+          <p className="text-xs text-gray-500 mt-1">
+            {(() => {
+              const kst = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Seoul" }));
+              return `${kst.getFullYear()}.${String(kst.getMonth()+1).padStart(2,"0")}.${String(kst.getDate()).padStart(2,"0")} (KST)`;
+            })()}
+          </p>
         </div>
       </div>
 
