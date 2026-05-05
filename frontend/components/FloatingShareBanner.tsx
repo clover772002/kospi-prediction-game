@@ -1,73 +1,21 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
 import { usePathname } from "next/navigation";
 import ShareSheet from "@/components/ShareSheet";
 
-const SHOW_DELAY_MS = 4000;   // 페이지 진입 후 4초 뒤 등장
-const SCROLL_THRESHOLD = 100; // 스크롤이 있으면 100px 내려도 등장
-const SESSION_KEY = "share_banner_dismissed";
-
 export default function FloatingShareBanner() {
-  const [visible, setVisible] = useState(false);
-  const [dismissed, setDismissed] = useState(false);
   const pathname = usePathname();
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // 로그인 페이지(/)에서는 표시 안 함
-  const isLoginPage = pathname === "/";
-
-  useEffect(() => {
-    if (isLoginPage) return;
-
-    // 세션에서 이미 닫은 경우 표시 안 함
-    if (sessionStorage.getItem(SESSION_KEY)) {
-      setDismissed(true);
-      return;
-    }
-
-    setVisible(false);
-
-    // 타이머 트리거: 4초 뒤 등장
-    timerRef.current = setTimeout(() => {
-      setVisible(true);
-    }, SHOW_DELAY_MS);
-
-    // 스크롤 트리거: 100px 이상이면 즉시 등장
-    function onScroll() {
-      if (window.scrollY > SCROLL_THRESHOLD) {
-        setVisible(true);
-        if (timerRef.current) clearTimeout(timerRef.current);
-      }
-    }
-    window.addEventListener("scroll", onScroll, { passive: true });
-
-    return () => {
-      if (timerRef.current) clearTimeout(timerRef.current);
-      window.removeEventListener("scroll", onScroll);
-    };
-  }, [pathname, isLoginPage]);
-
-  function handleDismiss() {
-    setVisible(false);
-    setDismissed(true);
-    sessionStorage.setItem(SESSION_KEY, "1");
-  }
-
-  if (isLoginPage || dismissed) return null;
+  // 로그인 페이지에서는 표시 안 함
+  if (pathname === "/") return null;
 
   return (
     <div
-      className="fixed z-40 left-0 right-0 flex justify-center pointer-events-none px-4"
-      style={{
-        bottom: "72px",
-        transition: "transform 0.35s cubic-bezier(0.34,1.56,0.64,1), opacity 0.25s ease",
-        transform: visible ? "translateY(0)" : "translateY(28px)",
-        opacity: visible ? 1 : 0,
-      }}
+      className="fixed z-40 left-0 right-0 flex justify-center px-4"
+      style={{ bottom: "72px" }} // BottomNav(56px) 위에 여유 공간
     >
       <div
-        className="pointer-events-auto flex items-center gap-3 pl-4 pr-2 py-2.5 rounded-2xl shadow-2xl w-full max-w-sm"
+        className="flex items-center gap-3 pl-4 pr-3 py-2.5 rounded-2xl w-full max-w-sm"
         style={{
           background: "linear-gradient(135deg, #1C1C1C 0%, #252525 100%)",
           border: "1px solid rgba(255,255,255,0.08)",
@@ -95,20 +43,12 @@ export default function FloatingShareBanner() {
           renderTrigger={(onClick) => (
             <button
               onClick={onClick}
-              className="shrink-0 px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-xl active:scale-95 transition-all"
+              className="shrink-0 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-xl active:scale-95 transition-all"
             >
               공유
             </button>
           )}
         />
-
-        {/* 닫기 */}
-        <button
-          onClick={handleDismiss}
-          className="shrink-0 w-7 h-7 flex items-center justify-center text-gray-600 hover:text-gray-400 transition-colors text-lg leading-none"
-        >
-          ×
-        </button>
       </div>
     </div>
   );

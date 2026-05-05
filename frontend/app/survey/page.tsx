@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
@@ -24,7 +24,7 @@ export default function SurveyPage() {
       const data = await getToday();
       setToday(data);
     } catch {
-      setError("설문 정보를 불러오지 못했습니다.");
+      setError("?ㅻЦ ?뺣낫瑜?遺덈윭?ㅼ? 紐삵뻽?듬땲??");
     } finally {
       setLoading(false);
     }
@@ -58,12 +58,12 @@ export default function SurveyPage() {
         body: JSON.stringify({ kospi_answer: kospiAnswer }),
       });
       if (!res.ok) {
-        const err = await res.json().catch(() => ({ detail: "오류가 발생했습니다." }));
+        const err = await res.json().catch(() => ({ detail: "?ㅻ쪟媛 諛쒖깮?덉뒿?덈떎." }));
         throw new Error(err.detail);
       }
       setSubmitted(true);
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "오류가 발생했습니다.");
+      setError(e instanceof Error ? e.message : "?ㅻ쪟媛 諛쒖깮?덉뒿?덈떎.");
     } finally {
       setSubmitting(false);
     }
@@ -72,16 +72,16 @@ export default function SurveyPage() {
   const BottomNav = () => (
     <nav className="fixed bottom-0 left-0 right-0 bg-[#111] border-t border-[#222] flex max-w-md mx-auto">
       <button onClick={() => router.push("/survey")} className="flex-1 flex flex-col items-center py-3 gap-1 text-white">
-        <span className="text-xl">📝</span>
-        <span className="text-xs font-bold">설문</span>
+        <span className="text-xl">?뱷</span>
+        <span className="text-xs font-bold">?ㅻЦ</span>
       </button>
       <button onClick={() => router.push("/dashboard")} className="flex-1 flex flex-col items-center py-3 gap-1 text-gray-500 hover:text-gray-300 transition-colors">
-        <span className="text-xl">📊</span>
-        <span className="text-xs font-medium">대시보드</span>
+        <span className="text-xl">?뱤</span>
+        <span className="text-xs font-medium">??쒕낫??/span>
       </button>
       <button onClick={() => router.push("/setup")} className="flex-1 flex flex-col items-center py-3 gap-1 text-gray-500 hover:text-gray-300 transition-colors">
-        <span className="text-xl">⚙️</span>
-        <span className="text-xs font-medium">설정</span>
+        <span className="text-xl">?숋툘</span>
+        <span className="text-xs font-medium">?ㅼ젙</span>
       </button>
     </nav>
   );
@@ -97,10 +97,10 @@ export default function SurveyPage() {
   const status = today?.status ?? "no_survey";
 
   return (
-    <main className="max-w-md mx-auto min-h-screen pb-24 px-5">
+    <main className="max-w-md mx-auto min-h-screen pb-36 px-5">
       <div className="pt-10 pb-6 flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-black text-white">오늘 장 예측</h1>
+          <h1 className="text-2xl font-black text-white">?ㅻ뒛 ???덉륫</h1>
           <p className="text-xs text-gray-500 mt-1">
             {(() => {
               const kst = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Seoul" }));
@@ -110,7 +110,7 @@ export default function SurveyPage() {
         </div>
       </div>
 
-      {/* 설문 없음 — 대기중 vs 휴장일 구분 */}
+      {/* ?ㅻЦ ?놁쓬 ???湲곗쨷 vs ?댁옣??援щ텇 */}
       {status === "no_survey" && (() => {
         const kst = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Seoul" }));
         const day = kst.getDay();
@@ -122,17 +122,17 @@ export default function SurveyPage() {
             <div className="flex flex-col items-center gap-3 text-center">
               {isPreSurvey ? (
                 <>
-                  <div className="text-5xl">⏳</div>
-                  <p className="text-xl font-bold text-white">설문 시작 전이에요</p>
+                  <div className="text-5xl">??/div>
+                  <p className="text-xl font-bold text-white">?ㅻЦ ?쒖옉 ?꾩씠?먯슂</p>
                   <p className="text-sm text-gray-400">
-                    <span className="text-white font-bold">08:48</span>에 오늘 코스피 예측 설문이 시작돼요
+                    <span className="text-white font-bold">08:48</span>???ㅻ뒛 肄붿뒪???덉륫 ?ㅻЦ???쒖옉?쇱슂
                   </p>
                 </>
               ) : (
                 <>
-                  <div className="text-5xl">🏖️</div>
-                  <p className="text-xl font-bold text-white">오늘은 설문이 없어요</p>
-                  <p className="text-sm text-gray-400">주말·공휴일에는 장이 열리지 않아요</p>
+                  <div className="text-5xl">?룚截?/div>
+                  <p className="text-xl font-bold text-white">?ㅻ뒛? ?ㅻЦ???놁뼱??/p>
+                  <p className="text-sm text-gray-400">二쇰쭚쨌怨듯쑕?쇱뿉???μ씠 ?대━吏 ?딆븘??/p>
                 </>
               )}
             </div>
@@ -141,16 +141,16 @@ export default function SurveyPage() {
         );
       })()}
 
-      {/* 설문 진행 중 */}
+      {/* ?ㅻЦ 吏꾪뻾 以?*/}
       {status === "open" && !submitted && (
         <div className="space-y-6 mt-4">
           <div className="bg-amber-500/10 border border-amber-500/30 rounded-2xl p-4 text-center">
-            <p className="text-amber-400 font-bold text-sm">⏰ 설문 진행 중 · 09:00 마감</p>
+            <p className="text-amber-400 font-bold text-sm">???ㅻЦ 吏꾪뻾 以?쨌 09:00 留덇컧</p>
           </div>
 
-          {/* 코스피 단일 질문 */}
+          {/* 肄붿뒪???⑥씪 吏덈Ц */}
           <div className="bg-[#1A1A1A] rounded-2xl p-5 space-y-4 border border-[#2A2A2A]">
-            <p className="font-bold text-white text-base">📈 코스피 오늘 어떨까요?</p>
+            <p className="font-bold text-white text-base">?뱢 肄붿뒪???ㅻ뒛 ?대뼥源뚯슂?</p>
             <div className="grid grid-cols-2 gap-3">
               <button
                 onClick={() => setKospiAnswer(true)}
@@ -160,8 +160,7 @@ export default function SurveyPage() {
                     : "bg-[#111] border-[#333] text-gray-400 hover:border-green-600"
                 }`}
               >
-                📈 오른다
-              </button>
+                ?뱢 ?ㅻⅨ??              </button>
               <button
                 onClick={() => setKospiAnswer(false)}
                 className={`py-5 rounded-2xl font-black text-xl transition-all active:scale-95 border-2 ${
@@ -170,8 +169,7 @@ export default function SurveyPage() {
                     : "bg-[#111] border-[#333] text-gray-400 hover:border-red-600"
                 }`}
               >
-                📉 내린다
-              </button>
+                ?뱣 ?대┛??              </button>
             </div>
           </div>
 
@@ -189,56 +187,56 @@ export default function SurveyPage() {
             {submitting ? (
               <span className="flex items-center justify-center gap-2">
                 <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                제출 중...
+                ?쒖텧 以?..
               </span>
-            ) : "예측 제출하기"}
+            ) : "?덉륫 ?쒖텧?섍린"}
           </button>
 
           {kospiAnswer === null && (
-            <p className="text-center text-xs text-gray-600">오른다 / 내린다 중 하나를 선택해주세요</p>
+            <p className="text-center text-xs text-gray-600">?ㅻⅨ??/ ?대┛??以??섎굹瑜??좏깮?댁＜?몄슂</p>
           )}
         </div>
       )}
 
-      {/* 제출 완료 */}
+      {/* ?쒖텧 ?꾨즺 */}
       {status === "open" && submitted && (
         <div className="flex flex-col items-center justify-center gap-5 mt-20 text-center">
-          <div className="text-6xl">✅</div>
-          <p className="text-xl font-bold text-white">예측 완료!</p>
+          <div className="text-6xl">??/div>
+          <p className="text-xl font-bold text-white">?덉륫 ?꾨즺!</p>
           <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-2xl p-5 w-full space-y-2">
-            <p className="text-sm text-gray-400">내 예측</p>
+            <p className="text-sm text-gray-400">???덉륫</p>
             <p className="text-white font-bold text-lg">
-              코스피 {kospiAnswer ? "📈 오른다" : "📉 내린다"}
+              肄붿뒪??{kospiAnswer ? "?뱢 ?ㅻⅨ?? : "?뱣 ?대┛??}
             </p>
           </div>
-          <p className="text-xs text-gray-500">09:00에 집계 결과가 공개돼요</p>
+          <p className="text-xs text-gray-500">09:00??吏묎퀎 寃곌낵媛 怨듦컻?쇱슂</p>
           <button
             onClick={() => router.push("/dashboard")}
             className="w-full py-4 bg-[#1A1A1A] border border-[#2A2A2A] text-gray-300 font-bold rounded-2xl"
           >
-            대시보드로 이동
+            ??쒕낫?쒕줈 ?대룞
           </button>
         </div>
       )}
 
-      {/* 설문 마감 후 */}
+      {/* ?ㅻЦ 留덇컧 ??*/}
       {(status === "closed" || status === "result") && (
         <div className="flex flex-col gap-5 mt-8">
           <div className="flex flex-col items-center gap-3 text-center">
-            <div className="text-5xl">{status === "result" ? "📊" : "🔒"}</div>
+            <div className="text-5xl">{status === "result" ? "?뱤" : "?뵏"}</div>
             <p className="text-xl font-bold text-white">
-              {status === "result" ? "오늘 결과 공개됐어요" : "설문이 마감됐어요"}
+              {status === "result" ? "?ㅻ뒛 寃곌낵 怨듦컻?먯뼱?? : "?ㅻЦ??留덇컧?먯뼱??}
             </p>
             <p className="text-sm text-gray-400">
               {status === "result"
-                ? "대시보드에서 결과와 내 정확도를 확인하세요"
-                : "09:00에 집계가 끝났어요. 15:35에 결과가 공개돼요"}
+                ? "??쒕낫?쒖뿉??寃곌낵? ???뺥솗?꾨? ?뺤씤?섏꽭??
+                : "09:00??吏묎퀎媛 ?앸궗?댁슂. 15:35??寃곌낵媛 怨듦컻?쇱슂"}
             </p>
             <button
               onClick={() => router.push("/dashboard")}
               className="w-full py-4 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-2xl transition-all"
             >
-              대시보드에서 결과 보기
+              ??쒕낫?쒖뿉??寃곌낵 蹂닿린
             </button>
           </div>
           <FlipClock />
