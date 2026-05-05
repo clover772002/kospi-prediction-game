@@ -25,7 +25,7 @@ export default function FloatingShareBanner() {
       >
         <div className="flex-1 min-w-0">
           <p className="text-xs font-bold text-white leading-snug">
-            투자를 정말 잘하거나 정말 못하는 친구가 있나요?
+            투자를 정말 잘하거나 못하는 친구가 있나요?
           </p>
         </div>
 
