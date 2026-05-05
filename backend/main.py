@@ -73,6 +73,18 @@ async def get_current_user(request: Request, supabase: Client = Depends(get_supa
 # 스케줄러 작업
 # ─────────────────────────────────────────────────────────────
 
+async def job_08_45():
+    """매일 08:45 - 브라우저 알림 예령 (3분 전 준비 알림)"""
+    sb = _supabase_direct()
+    await send_web_push_to_all(
+        sb,
+        title="⏰ 3분 후 설문이 시작돼요!",
+        body="08:48에 오늘 코스피 예측 설문이 발송됩니다. 준비하세요 📊",
+        url="/survey",
+    )
+    logger.info("08:45 예령 웹푸시 발송 완료")
+
+
 async def job_08_50():
     """매일 08:48 - 설문 생성 및 텔레그램 발송"""
     sb = _supabase_direct()
@@ -167,11 +179,12 @@ scheduler = AsyncIOScheduler(timezone="Asia/Seoul")
 
 @asynccontextmanager
 async def lifespan(app_instance):
-    scheduler.add_job(job_08_50, CronTrigger(hour=8,  minute=48, timezone="Asia/Seoul"), id="survey_open",   replace_existing=True)
-    scheduler.add_job(job_09_00, CronTrigger(hour=9,  minute=0,  timezone="Asia/Seoul"), id="survey_close",  replace_existing=True)
-    scheduler.add_job(job_15_35, CronTrigger(hour=15, minute=35, timezone="Asia/Seoul"), id="market_result", replace_existing=True)
+    scheduler.add_job(job_08_45, CronTrigger(hour=8,  minute=45, timezone="Asia/Seoul"), id="survey_prebell",  replace_existing=True)
+    scheduler.add_job(job_08_50, CronTrigger(hour=8,  minute=48, timezone="Asia/Seoul"), id="survey_open",      replace_existing=True)
+    scheduler.add_job(job_09_00, CronTrigger(hour=9,  minute=0,  timezone="Asia/Seoul"), id="survey_close",     replace_existing=True)
+    scheduler.add_job(job_15_35, CronTrigger(hour=15, minute=35, timezone="Asia/Seoul"), id="market_result",    replace_existing=True)
     scheduler.start()
-    logger.info("스케줄러 시작: 08:48(설문 발송) / 09:00(마감+발표) / 15:35(정확도 알림)")
+    logger.info("스케줄러 시작: 08:45(예령) / 08:48(설문 발송) / 09:00(마감+발표) / 15:35(정확도 알림)")
     yield
     scheduler.shutdown()
 
