@@ -540,6 +540,21 @@ async def test_webpush(
     return {"success": True, "sent": sent}
 
 
+@app.get("/api/admin/vapid-debug")
+async def vapid_debug():
+    """VAPID 키 상태 확인"""
+    from webpush_helper import VAPID_PRIVATE_KEY, _load_vapid_private_key
+    raw = os.getenv("VAPID_PRIVATE_KEY", "")
+    loaded = VAPID_PRIVATE_KEY
+    return {
+        "raw_length": len(raw),
+        "raw_starts_with": raw[:20] if raw else "",
+        "loaded_length": len(loaded),
+        "loaded_starts_with": loaded[:30] if loaded else "",
+        "is_pem": loaded.startswith("-----"),
+    }
+
+
 @app.get("/api/admin/push-subscribers")
 async def list_push_subscribers(
     supabase: Client = Depends(get_supabase),
