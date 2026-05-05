@@ -270,7 +270,7 @@ export default function LoginPage() {
         <h1 className="text-2xl font-black text-white mb-1">8:48 — 사고 팔자!</h1>
         <p className="text-yellow-400 text-xs font-bold mb-3 tracking-wide">매일 아침 8시 48분, 오늘 장을 예측하세요</p>
         <p className="text-gray-400 text-sm leading-relaxed">
-          코스피·코스닥이 오를지 내릴지 O/X 하나만.<br />
+          코스피가 오를지 내릴지 O/X 하나만.<br />
           맞출수록 가중치가 쌓여 커뮤니티 예측을 움직입니다.
         </p>
       </div>
@@ -287,7 +287,7 @@ export default function LoginPage() {
                 time: "08:48",
                 dot: "bg-blue-500",
                 title: "설문 발송 (사고팔자!)",
-                desc: "\"사고 팔자!\" 08:48, 코스피·코스닥 O/X 설문이 텔레그램으로 도착",
+                desc: "\"사고 팔자!\" 08:48, 코스피 O/X 설문이 발송됩니다",
               },
               {
                 time: "09:00",
@@ -445,7 +445,7 @@ export default function LoginPage() {
             },
             {
               q: "예측 결과가 조작될 수 있나요?",
-              a: "장 마감 후 코스피·코스닥 등락은 외부 금융 데이터(yfinance)에서 자동으로 가져옵니다. 운영자가 임의로 결과를 수정할 수 없는 구조예요.",
+              a: "장 마감 후 코스피 등락은 외부 금융 데이터(yfinance)에서 자동으로 가져옵니다. 운영자가 임의로 결과를 수정할 수 없는 구조예요.",
             },
             {
               q: "개인정보가 수집되나요?",

@@ -160,7 +160,7 @@ export default function SetupPage() {
             <p className="font-black text-lg text-green-400">텔레그램 연동 완료!</p>
             <p className="text-sm text-gray-400">
               매일 <span className="text-white font-bold">08:48</span>에<br />
-              코스피·코스닥 예측 설문이 발송됩니다.
+              코스피 예측 설문이 발송됩니다.
             </p>
           </div>
 
@@ -174,7 +174,7 @@ export default function SetupPage() {
           <div className="bg-[#1A1A1A] rounded-2xl p-4 border border-[#2A2A2A] space-y-2 text-sm text-gray-400">
             <p className="font-bold text-white">설문 일정</p>
             <div className="space-y-1">
-              <p>🕛 <span className="text-white">08:48</span> - 코스피·코스닥 예측 설문 발송</p>
+              <p>🕛 <span className="text-white">08:48</span> - 코스피 예측 설문 발송</p>
               <p>🕘 <span className="text-white">09:00</span> - 설문 마감 + 집계 결과 공개</p>
               <p>🕒 <span className="text-white">15:35</span> - 실제 결과 + 내 정확도 알림</p>
             </div>
