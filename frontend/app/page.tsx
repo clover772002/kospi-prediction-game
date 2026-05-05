@@ -119,10 +119,26 @@ const FEATURES = [
   },
 ];
 
-function isInAppBrowser(): boolean {
-  if (typeof navigator === "undefined") return false;
+function detectBrowser(): "kakao" | "inapp" | "normal" {
+  if (typeof navigator === "undefined") return "normal";
   const ua = navigator.userAgent || "";
-  return /KAKAOTALK|Instagram|FBAN|FBAV|Line\/|Twitter|Snapchat|TikTok|NaverApp|DaumApps|MicroMessenger/i.test(ua);
+  if (/KAKAOTALK/i.test(ua)) return "kakao";
+  if (/Instagram|FBAN|FBAV|Line\/|Twitter|Snapchat|TikTok|NaverApp|DaumApps|MicroMessenger/i.test(ua)) return "inapp";
+  return "normal";
+}
+
+function openInExternalBrowser() {
+  const url = window.location.href;
+  const ua = navigator.userAgent || "";
+  const isAndroid = /Android/i.test(ua);
+  if (isAndroid) {
+    window.location.href = `intent://${url.replace(/^https?:\/\//, "")}#Intent;scheme=https;package=com.android.chrome;end`;
+  } else {
+    window.location.href = `googlechrome://${url.replace(/^https?:\/\//, "")}`;
+    setTimeout(() => {
+      window.location.href = url;
+    }, 1000);
+  }
 }
 
 export default function LoginPage() {
@@ -130,11 +146,12 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(true);
   const [signing, setSigning] = useState<"google" | "kakao" | null>(null);
   const [openIdx, setOpenIdx] = useState<number | null>(null);
-  const [inAppBrowser, setInAppBrowser] = useState(false);
+  const [browserType, setBrowserType] = useState<"kakao" | "inapp" | "normal">("normal");
 
   useEffect(() => {
-    if (isInAppBrowser()) {
-      setInAppBrowser(true);
+    const type = detectBrowser();
+    setBrowserType(type);
+    if (type === "inapp") {
       setLoading(false);
       return;
     }
@@ -169,39 +186,35 @@ export default function LoginPage() {
     );
   }
 
-  if (inAppBrowser) {
+  if (browserType === "inapp") {
     return (
       <main className="max-w-md mx-auto min-h-screen flex flex-col items-center justify-center px-6 text-center">
         <div className="text-5xl mb-6">🌐</div>
-        <h1 className="text-xl font-black text-white mb-3">브라우저에서 열어주세요</h1>
+        <h1 className="text-xl font-black text-white mb-3">외부 브라우저에서 열어주세요</h1>
         <p className="text-gray-400 text-sm leading-relaxed mb-6">
-          카카오톡·인스타그램 등 앱 내 브라우저에서는<br />
-          Google 로그인이 차단됩니다.
+          앱 내 브라우저에서는 Google 로그인이 차단됩니다.<br />
+          아래 버튼을 눌러 Chrome/Safari로 여세요.
         </p>
-        <div className="w-full bg-[#1A1A1A] rounded-2xl border border-[#2A2A2A] p-5 space-y-4 text-left">
-          <p className="text-white font-bold text-sm">아래 방법으로 접속해 주세요</p>
-          <div className="space-y-3">
-            <div className="flex items-start gap-3">
-              <span className="text-xl">📱</span>
-              <div>
-                <p className="text-white text-sm font-bold">iPhone</p>
-                <p className="text-gray-400 text-xs">우측 하단 공유 버튼 → Safari에서 열기</p>
-              </div>
-            </div>
-            <div className="flex items-start gap-3">
-              <span className="text-xl">🤖</span>
-              <div>
-                <p className="text-white text-sm font-bold">Android</p>
-                <p className="text-gray-400 text-xs">우측 상단 메뉴(⋮) → Chrome에서 열기</p>
-              </div>
-            </div>
-            <div className="flex items-start gap-3">
-              <span className="text-xl">🔗</span>
-              <div>
-                <p className="text-white text-sm font-bold">직접 주소 입력</p>
-                <p className="text-gray-400 text-xs select-all font-mono">kospi-prediction-game.vercel.app</p>
-              </div>
-            </div>
+        <button
+          onClick={openInExternalBrowser}
+          className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-4 rounded-2xl mb-4 transition-all active:scale-95"
+        >
+          🌐 Chrome / Safari로 열기
+        </button>
+        <div className="w-full bg-[#1A1A1A] rounded-2xl border border-[#2A2A2A] p-4 text-left space-y-3">
+          <p className="text-gray-400 text-xs font-bold">버튼이 안 되면 직접 입력해 주세요</p>
+          <div className="flex items-center gap-2">
+            <p className="text-blue-400 text-xs font-mono flex-1">kospi-prediction-game.vercel.app</p>
+            <button
+              onClick={() => navigator.clipboard?.writeText("https://kospi-prediction-game.vercel.app")}
+              className="text-xs text-gray-500 bg-[#2A2A2A] px-2 py-1 rounded"
+            >
+              복사
+            </button>
+          </div>
+          <div className="space-y-2 pt-1 border-t border-[#2A2A2A]">
+            <p className="text-gray-500 text-xs">📱 iPhone: 공유 버튼 → Safari에서 열기</p>
+            <p className="text-gray-500 text-xs">🤖 Android: 메뉴(⋮) → Chrome에서 열기</p>
           </div>
         </div>
       </main>
@@ -265,10 +278,15 @@ export default function LoginPage() {
 
       {/* 로그인 버튼 그룹 */}
       <div className="w-full space-y-3">
+        {browserType === "kakao" && (
+          <p className="text-center text-xs text-yellow-400 mb-1">
+            카카오톡에서는 카카오 로그인을 이용해 주세요
+          </p>
+        )}
         <button
           onClick={() => handleLogin("google")}
-          disabled={signing !== null}
-          className="w-full flex items-center justify-center gap-3 bg-white hover:bg-gray-100 disabled:opacity-60 text-gray-800 font-bold py-4 rounded-2xl transition-all active:scale-95"
+          disabled={signing !== null || browserType === "kakao"}
+          className={`w-full flex items-center justify-center gap-3 bg-white hover:bg-gray-100 disabled:opacity-30 text-gray-800 font-bold py-4 rounded-2xl transition-all active:scale-95 ${browserType === "kakao" ? "hidden" : ""}`}
         >
           {signing === "google" ? (
             <div className="w-5 h-5 border-2 border-gray-400/30 border-t-gray-600 rounded-full animate-spin" />
