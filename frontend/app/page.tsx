@@ -47,7 +47,7 @@ const FEATURES = [
             { time: "08:48~09:00", label: "응답 가능 시간 (12분)", color: "bg-green-500", active: true },
             { time: "09:00", label: "응답 마감 & 집계 공개", color: "bg-yellow-500", active: true },
             { time: "09:00~", label: "장 시작 (응답 불가)", color: "bg-gray-600", active: false },
-            { time: "15:35", label: "정확도 알림 발송", color: "bg-purple-500", active: true },
+            { time: "15:35", label: "실적/예측 분석 알림", color: "bg-purple-500", active: true },
           ].map((item) => (
             <div key={item.time} className="flex items-center gap-3">
               <div className={`w-2 h-2 rounded-full flex-shrink-0 ${item.color}`} />
