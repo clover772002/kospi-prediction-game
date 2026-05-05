@@ -399,3 +399,34 @@ async def trigger_close():
 async def trigger_results():
     await job_15_35()
     return {"success": True, "message": "정확도 계산 완료"}
+
+
+@app.post("/api/admin/inject-result")
+async def inject_result(
+    kospi_up: bool,
+    kospi_pct: float,
+    kosdaq_up: bool,
+    kosdaq_pct: float,
+):
+    """휴장일 테스트용: 가짜 장 결과를 직접 입력하고 정확도 계산"""
+    sb = _supabase_direct()
+    today_str = date.today().isoformat()
+
+    sb.table("daily_surveys").update({
+        "kospi_result": kospi_up,
+        "kosdaq_result": kosdaq_up,
+        "kospi_change_pct": kospi_pct,
+        "kosdaq_change_pct": kosdaq_pct,
+    }).eq("survey_date", today_str).execute()
+
+    responses = sb.table("survey_responses").select("user_id, kospi_answer, kosdaq_answer").eq("survey_date", today_str).execute()
+    for resp in responses.data:
+        sb.table("accuracy_records").upsert({
+            "user_id": resp["user_id"],
+            "survey_date": today_str,
+            "kospi_correct": resp["kospi_answer"] == kospi_up,
+            "kosdaq_correct": resp["kosdaq_answer"] == kosdaq_up,
+        }).execute()
+
+    await send_accuracy_notifications(sb, today_str, kospi_up, kospi_pct, kosdaq_up, kosdaq_pct)
+    return {"success": True, "message": f"결과 입력 완료: 코스피{'▲' if kospi_up else '▼'}{kospi_pct}% 코스닥{'▲' if kosdaq_up else '▼'}{kosdaq_pct}%"}
