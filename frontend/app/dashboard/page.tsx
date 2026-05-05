@@ -304,9 +304,60 @@ export default function DashboardPage() {
           )}
         </div>
 
+        {/* ── 최고 고수의 예측 ──────────────────────────────── */}
+        {today?.top_predictor && (
+          <div className="bg-[#1A1A1A] rounded-2xl p-5 border border-yellow-500/20">
+            <div className="flex items-center gap-2 mb-4">
+              <p className="font-bold text-sm">🏆 오늘의 고수 예측</p>
+              <span className="text-xs bg-yellow-500/10 text-yellow-400 px-2 py-0.5 rounded-full font-bold">
+                누적 적중률 {today.top_predictor.accuracy}%
+              </span>
+            </div>
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-9 h-9 rounded-full bg-yellow-500/20 flex items-center justify-center text-lg">👑</div>
+              <p className="text-white font-bold">{today.top_predictor.masked_name}</p>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="bg-[#111] rounded-xl p-3 text-center">
+                <p className="text-xs text-gray-500 mb-1">코스피</p>
+                <p className={`font-black text-base ${today.top_predictor.kospi_answer ? "text-green-400" : "text-red-400"}`}>
+                  {today.top_predictor.kospi_answer ? "📈 오른다" : "📉 내린다"}
+                </p>
+              </div>
+              <div className="bg-[#111] rounded-xl p-3 text-center">
+                <p className="text-xs text-gray-500 mb-1">코스닥</p>
+                <p className={`font-black text-base ${today.top_predictor.kosdaq_answer ? "text-green-400" : "text-red-400"}`}>
+                  {today.top_predictor.kosdaq_answer ? "📈 오른다" : "📉 내린다"}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* ── 내 통계 ──────────────────────────────────────── */}
         <div className="bg-[#1A1A1A] rounded-2xl p-5 border border-[#2A2A2A]">
           <p className="font-bold text-sm mb-4">내 통계</p>
+
+          {/* 오늘 내 선택 */}
+          {dash && dash.history.length > 0 && dash.history[0].date === today?.survey_date && (
+            <div className="mb-4 pb-4 border-b border-[#2A2A2A]">
+              <p className="text-xs text-gray-500 mb-2">오늘 내 예측</p>
+              <div className="grid grid-cols-2 gap-2">
+                <div className="bg-[#111] rounded-xl p-2.5 text-center">
+                  <p className="text-xs text-gray-500 mb-0.5">코스피</p>
+                  <p className={`font-bold text-sm ${dash.history[0].kospi_answer ? "text-green-400" : "text-red-400"}`}>
+                    {dash.history[0].kospi_answer ? "📈 오른다" : "📉 내린다"}
+                  </p>
+                </div>
+                <div className="bg-[#111] rounded-xl p-2.5 text-center">
+                  <p className="text-xs text-gray-500 mb-0.5">코스닥</p>
+                  <p className={`font-bold text-sm ${dash.history[0].kosdaq_answer ? "text-green-400" : "text-red-400"}`}>
+                    {dash.history[0].kosdaq_answer ? "📈 오른다" : "📉 내린다"}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
 
           {dash && dash.total_predictions === 0 ? (
             <div className="text-center py-4 space-y-2">

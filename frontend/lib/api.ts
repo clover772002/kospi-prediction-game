@@ -27,6 +27,13 @@ export interface UserProfile {
   has_push: boolean;
 }
 
+export interface TopPredictor {
+  masked_name: string;
+  kospi_answer: boolean;
+  kosdaq_answer: boolean;
+  accuracy: number;
+}
+
 export interface TodaySurvey {
   status: "no_survey" | "open" | "closed" | "result";
   survey_date: string;
@@ -39,6 +46,7 @@ export interface TodaySurvey {
   kosdaq_result: boolean | null;
   kospi_change_pct: number | null;
   kosdaq_change_pct: number | null;
+  top_predictor?: TopPredictor;
 }
 
 export interface HistoryItem {
