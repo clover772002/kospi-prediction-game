@@ -202,7 +202,14 @@ export default function DashboardPage() {
       <div className="pt-8 pb-5 flex items-center justify-between">
         <div>
           <h1 className="text-xl font-black">
-            📊 {today?.survey_date ? today.survey_date.slice(5).replace("-", "/") + " 예측결과" : "예측결과"}
+            {(() => {
+              const kst = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Seoul" }));
+              const mm = String(kst.getMonth() + 1).padStart(2, "0");
+              const dd = String(kst.getDate()).padStart(2, "0");
+              const dateStr = `${mm}/${dd}`;
+              if (status === "no_survey") return `📊 ${dateStr} 휴장일`;
+              return `📊 ${dateStr} 예측결과`;
+            })()}
           </h1>
           {user && (
             <p className="text-xs text-gray-400 mt-0.5">
@@ -225,19 +232,26 @@ export default function DashboardPage() {
           }}
         >
           <div className="flex items-center justify-between mb-4">
-            <p className="font-bold text-sm">실적 / 전망</p>
-            <span
-              className="text-xs px-2.5 py-1 rounded-full font-bold"
-              style={{ backgroundColor: `${marketStatus.color}20`, color: marketStatus.color }}
-            >
-              {marketStatus.label}
-            </span>
+            <p className="font-bold text-sm">{status === "no_survey" ? "오늘 휴장" : "실적 / 전망"}</p>
+            {status !== "no_survey" && (
+              <span
+                className="text-xs px-2.5 py-1 rounded-full font-bold"
+                style={{ backgroundColor: `${marketStatus.color}20`, color: marketStatus.color }}
+              >
+                {marketStatus.label}
+              </span>
+            )}
           </div>
 
           {status === "no_survey" && (
-            <p className="text-gray-500 text-sm text-center py-4">
-              오늘은 설문이 없습니다. (주말·공휴일)
-            </p>
+            <div className="flex flex-col items-center gap-3 py-6 text-center">
+              <span className="text-4xl">🏖️</span>
+              <p className="text-white font-bold">오늘은 장이 열리지 않아요</p>
+              <p className="text-sm text-gray-400">주말·공휴일엔 설문이 발송되지 않습니다</p>
+              <p className="text-xs text-gray-600 mt-1">
+                다음 영업일 <span className="text-white font-bold">08:48</span>에 알림이 발송돼요
+              </p>
+            </div>
           )}
 
           {(status === "open" || status === "closed" || status === "result") && today && (
