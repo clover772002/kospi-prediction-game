@@ -524,6 +524,22 @@ async def trigger_results():
     return {"success": True, "message": "정확도 계산 완료"}
 
 
+@app.post("/api/admin/test-webpush")
+async def test_webpush(
+    supabase: Client = Depends(get_supabase),
+):
+    """웹 푸시 테스트 발송 (구독자 전원)"""
+    from datetime import datetime
+    now = datetime.now().strftime("%H:%M")
+    sent = await send_web_push_to_all(
+        supabase,
+        title="📊 테스트 알림",
+        body=f"웹 푸시 정상 작동 중! ({now})",
+        url="/dashboard",
+    )
+    return {"success": True, "sent": sent}
+
+
 @app.post("/api/admin/inject-result")
 async def inject_result(
     kospi_up: bool,
