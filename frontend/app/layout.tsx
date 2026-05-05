@@ -1,5 +1,6 @@
 ﻿import type { Metadata } from "next";
 import "./globals.css";
+import InAppBrowserGate from "@/components/InAppBrowserGate";
 
 export const metadata: Metadata = {
   title: "오늘 장 예측 | 코스피·코스닥 집단지성",
@@ -14,7 +15,7 @@ export default function RootLayout({
   return (
     <html lang="ko">
       <body className="bg-[#0D0D0D] text-white min-h-screen">
-        {children}
+        <InAppBrowserGate>{children}</InAppBrowserGate>
       </body>
     </html>
   );
