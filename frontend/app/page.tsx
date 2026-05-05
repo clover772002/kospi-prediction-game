@@ -396,6 +396,61 @@ export default function LoginPage() {
       <p className="text-xs text-gray-600 text-center mt-4">
         소셜 계정으로 간편하게 시작할 수 있어요
       </p>
+
+      {/* FAQ */}
+      <div className="w-full mt-10">
+        <p className="text-xs text-gray-500 font-bold mb-3 tracking-widest uppercase">자주 묻는 질문</p>
+        <div className="space-y-2">
+          {[
+            {
+              q: "텔레그램이 꼭 있어야 하나요?",
+              a: "설문은 텔레그램으로만 받을 수 있어요. 하지만 설치가 1분도 안 걸리고, 광고·스팸 없이 봇 메시지만 오기 때문에 부담 없이 사용할 수 있어요.",
+            },
+            {
+              q: "매일 해야 하나요? 빠지면 어떻게 되나요?",
+              a: "안 해도 됩니다. 빠진 날은 그냥 기록이 없는 것뿐이에요. 정확도는 응답한 날만 누적되니까 부담 없이 가능한 날만 해도 괜찮아요.",
+            },
+            {
+              q: "개인정보가 수집되나요?",
+              a: "로그인 시 이름과 이메일만 저장됩니다. 채팅 내용·연락처·위치는 전혀 수집하지 않아요. 언제든지 탈퇴할 수 있어요.",
+            },
+            {
+              q: "정확도가 낮으면 불이익이 있나요?",
+              a: "없어요. 고수 가중예측에 반영되는 가중치가 낮아질 뿐, 서비스 이용에는 아무 제한이 없습니다.",
+            },
+            {
+              q: "완전 무료인가요?",
+              a: "지금은 모든 기능이 무료입니다. 고수 가중예측 열람, 정확도 확인, 순위 모두 무료예요.",
+            },
+          ].map((item, i) => (
+            <FaqItem key={i} q={item.q} a={item.a} />
+          ))}
+        </div>
+      </div>
+
+      <p className="text-xs text-gray-700 text-center mt-10 pb-6">
+        © 2026 오늘 장 예측
+      </p>
     </main>
+  );
+}
+
+function FaqItem({ q, a }: { q: string; a: string }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="bg-[#1A1A1A] rounded-2xl border border-[#2A2A2A] overflow-hidden">
+      <button
+        className="w-full flex items-center justify-between gap-3 px-4 py-3 text-left"
+        onClick={() => setOpen(!open)}
+      >
+        <span className="text-sm text-white font-medium">{q}</span>
+        <span className={`text-gray-500 text-lg flex-shrink-0 transition-transform duration-200 ${open ? "rotate-180" : ""}`}>▾</span>
+      </button>
+      {open && (
+        <div className="px-4 pb-4 border-t border-[#2A2A2A] pt-3">
+          <p className="text-xs text-gray-400 leading-relaxed">{a}</p>
+        </div>
+      )}
+    </div>
   );
 }
