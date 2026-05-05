@@ -90,7 +90,7 @@ async def job_08_50():
     await send_web_push_to_all(
         sb,
         title="📊 오늘 장 예측 — 사고 팔자!",
-        body=f"08:48 설문이 열렸어요. 09:00 전까지 예측해주세요 ({today_str})",
+        body=f"코스피·코스닥 오르나 내리나? 탭해서 지금 예측하세요 👆 (마감 09:00)",
         url="/dashboard",
     )
 
