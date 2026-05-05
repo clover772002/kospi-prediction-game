@@ -413,6 +413,14 @@ export default function SetupPage() {
               >
                 {copyDone ? "✅ 링크 복사됨" : "🔗 링크가 안 열리면 → 복사하기"}
               </button>
+
+              {/* 텔레그램 거부감 유저 → 브라우저 알림 유도 */}
+              <button
+                onClick={() => setTab("webpush")}
+                className="w-full py-3 border border-dashed border-[#333] text-gray-500 hover:text-purple-400 hover:border-purple-500/40 rounded-xl text-sm transition-all"
+              >
+                텔레그램이 껄끄럽다면? → 브라우저 알림으로 받기 🔔
+              </button>
             </>
           ) : (
             /* ── STEP 2: 연동 확인 ── */
