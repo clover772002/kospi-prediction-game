@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
-import { getMe, UserProfile } from "@/lib/api";
+import { getMe, unlinkTelegram, UserProfile } from "@/lib/api";
 
 const BOT_USERNAME = process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME || "Profitchat123bot";
 
@@ -17,6 +17,7 @@ export default function SetupPage() {
   const [copyDone, setCopyDone] = useState(false);
   const [botOpened, setBotOpened] = useState(false);
   const [checkFailed, setCheckFailed] = useState(false);
+  const [unlinking, setUnlinking] = useState(false);
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
@@ -140,6 +141,30 @@ export default function SetupPage() {
               <p>🕒 <span className="text-white">15:35</span> - 실제 결과 + 내 정확도 알림</p>
             </div>
           </div>
+
+          <button
+            onClick={async () => {
+              if (!token) return;
+              if (!confirm("텔레그램 연동을 해제하면 설문을 받을 수 없어요. 해제할까요?")) return;
+              setUnlinking(true);
+              try {
+                await unlinkTelegram(token);
+                setLinked(false);
+                setBotOpened(false);
+                setCheckFailed(false);
+                setUser(prev => prev ? { ...prev, telegram_chat_id: null } : prev);
+              } catch (e) {
+                console.error(e);
+                alert("해제 중 오류가 발생했습니다. 다시 시도해주세요.");
+              } finally {
+                setUnlinking(false);
+              }
+            }}
+            disabled={unlinking}
+            className="w-full py-3 bg-[#1A1A1A] border border-red-500/20 text-red-400/60 hover:text-red-400 hover:border-red-500/40 rounded-xl text-sm transition-all disabled:opacity-40"
+          >
+            {unlinking ? "해제 중..." : "텔레그램 연동 해제"}
+          </button>
         </div>
       ) : (
         /* 연동 안내 — 2단계 UI */

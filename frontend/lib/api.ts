@@ -75,3 +75,7 @@ export async function getToday(): Promise<TodaySurvey> {
 export async function getDashboard(token: string): Promise<DashboardData> {
   return authFetch<DashboardData>("/api/dashboard", token);
 }
+
+export async function unlinkTelegram(token: string): Promise<void> {
+  await authFetch<{ success: boolean }>("/api/me/telegram", token, { method: "DELETE" });
+}

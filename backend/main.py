@@ -236,6 +236,20 @@ async def get_me(
         raise HTTPException(status_code=500, detail="유저 정보 처리 중 오류가 발생했습니다.")
 
 
+@app.delete("/api/me/telegram")
+async def unlink_telegram(
+    current_user=Depends(get_current_user),
+    supabase: Client = Depends(get_supabase),
+):
+    """텔레그램 연동 해제"""
+    try:
+        supabase.table("users").update({"telegram_chat_id": None}).eq("id", str(current_user.id)).execute()
+        return {"success": True}
+    except Exception as e:
+        logger.error(f"텔레그램 연동 해제 오류: {e}")
+        raise HTTPException(status_code=500, detail="연동 해제 중 오류가 발생했습니다.")
+
+
 def _calc_weighted_pct(responses_with_users: list, accuracy_map: dict) -> tuple[int | None, int | None]:
     """
     누적 정확도 기반 가중예측치 계산.
