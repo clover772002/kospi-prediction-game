@@ -4,10 +4,126 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 
+const FEATURES = [
+  {
+    icon: "📱",
+    title: "텔레그램 설문",
+    desc: "매일 08:50 O/X 설문이 텔레그램으로 발송돼요",
+    detail: {
+      summary: "텔레그램은 전 세계 9억 명이 사용하는 메신저로, 별도 앱 설치만 하면 끝입니다. 복잡한 가입 없이 봇 하나로 설문을 받고 결과를 받아볼 수 있어요.",
+      steps: [
+        "① 앱스토어에서 'Telegram' 검색 후 설치",
+        "② 로그인 후 봇 연동 버튼 클릭",
+        "③ 매일 아침 설문 메시지 수신",
+      ],
+      mockup: (
+        <div className="bg-[#212d3b] rounded-2xl p-4 mt-3 text-sm">
+          <div className="text-gray-400 text-xs mb-3">📨 오늘 장 예측 봇</div>
+          <div className="bg-[#2b5278] rounded-xl p-3 mb-2 text-white">
+            📊 <b>오늘 장 예측 설문</b><br />
+            <span className="text-gray-300 text-xs">코스피(KOSPI)는 오늘 어떻게 될까요?</span>
+          </div>
+          <div className="flex gap-2">
+            <div className="flex-1 bg-[#2b5278] rounded-lg py-2 text-center text-green-400 text-xs font-bold">📈 오른다</div>
+            <div className="flex-1 bg-[#2b5278] rounded-lg py-2 text-center text-red-400 text-xs font-bold">📉 내린다</div>
+          </div>
+        </div>
+      ),
+    },
+  },
+  {
+    icon: "⏰",
+    title: "10분 타임어택",
+    desc: "09:00까지만 응답 가능. 늦으면 기회 없음!",
+    detail: {
+      summary: "장 시작 10분 전에만 응답할 수 있어요. 시장이 열리기 전 순수한 예측만 반영되기 때문에 진짜 실력을 측정할 수 있습니다.",
+      steps: null,
+      mockup: (
+        <div className="mt-3 space-y-2">
+          {[
+            { time: "08:50", label: "설문 발송", color: "bg-blue-500", active: true },
+            { time: "08:50~09:00", label: "응답 가능 시간", color: "bg-green-500", active: true },
+            { time: "09:00", label: "응답 마감 & 집계 공개", color: "bg-yellow-500", active: true },
+            { time: "09:00~", label: "장 시작 (응답 불가)", color: "bg-gray-600", active: false },
+            { time: "15:35", label: "정확도 알림 발송", color: "bg-purple-500", active: true },
+          ].map((item) => (
+            <div key={item.time} className="flex items-center gap-3">
+              <div className={`w-2 h-2 rounded-full flex-shrink-0 ${item.color}`} />
+              <span className="text-gray-400 text-xs w-24 flex-shrink-0">{item.time}</span>
+              <span className={`text-xs ${item.active ? "text-white" : "text-gray-600"}`}>{item.label}</span>
+            </div>
+          ))}
+        </div>
+      ),
+    },
+  },
+  {
+    icon: "📈",
+    title: "실시간 집단지성",
+    desc: "09:00에 다른 사람들 예측 결과가 공개돼요",
+    detail: {
+      summary: "09:00이 되면 오늘 참여자 전체의 예측 결과가 공개됩니다. '오늘 72%가 코스피 상승을 예측했다' 같은 집단지성을 확인하고, 다수 의견이 맞는지 틀리는지 추적할 수 있어요.",
+      steps: null,
+      mockup: (
+        <div className="bg-[#1A1A1A] rounded-2xl p-4 mt-3 border border-[#2A2A2A]">
+          <div className="text-white text-xs font-bold mb-3">📊 오늘의 집단지성</div>
+          {[
+            { label: "KOSPI", yes: 72, no: 28 },
+            { label: "KOSDAQ", yes: 45, no: 55 },
+          ].map((item) => (
+            <div key={item.label} className="mb-3">
+              <div className="flex justify-between text-xs text-gray-400 mb-1">
+                <span>{item.label}</span>
+                <span>총 128명 참여</span>
+              </div>
+              <div className="flex rounded-full overflow-hidden h-5 text-xs font-bold">
+                <div className="bg-green-500 flex items-center justify-center text-white" style={{ width: `${item.yes}%` }}>
+                  {item.yes}%
+                </div>
+                <div className="bg-red-500 flex items-center justify-center text-white" style={{ width: `${item.no}%` }}>
+                  {item.no}%
+                </div>
+              </div>
+              <div className="flex justify-between text-xs text-gray-500 mt-1">
+                <span>📈 오른다</span>
+                <span>📉 내린다</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      ),
+    },
+  },
+  {
+    icon: "🏆",
+    title: "정확도 랭킹",
+    desc: "장 마감 후 내 정확도와 상위 % 순위를 알려줘요",
+    detail: {
+      summary: "장 마감(15:30) 후 실제 코스피·코스닥 등락을 자동으로 가져와 내 예측과 비교합니다. 누적 정확도와 전체 참여자 중 상위 몇 %인지 확인할 수 있어요.",
+      steps: null,
+      mockup: (
+        <div className="bg-[#1A1A1A] rounded-2xl p-4 mt-3 border border-[#2A2A2A] space-y-3">
+          <div className="text-white text-xs font-bold">📨 오늘의 결과 알림 예시</div>
+          <div className="bg-[#0d1117] rounded-xl p-3 text-xs space-y-1">
+            <p className="text-gray-300">📊 <b className="text-white">오늘 장 결과</b></p>
+            <p className="text-green-400">KOSPI ▲ +0.8% → 내 예측: ✅ 정답</p>
+            <p className="text-red-400">KOSDAQ ▼ -0.3% → 내 예측: ❌ 오답</p>
+            <div className="border-t border-gray-700 pt-2 mt-2">
+              <p className="text-gray-300">🎯 누적 정확도: <b className="text-white">68%</b></p>
+              <p className="text-gray-300">🏅 상위 <b className="text-yellow-400">23%</b></p>
+            </div>
+          </div>
+        </div>
+      ),
+    },
+  },
+];
+
 export default function LoginPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [signing, setSigning] = useState<"google" | "kakao" | null>(null);
+  const [openIdx, setOpenIdx] = useState<number | null>(null);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -42,7 +158,7 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="max-w-md mx-auto min-h-screen flex flex-col items-center justify-center px-6">
+    <main className="max-w-md mx-auto min-h-screen flex flex-col items-center justify-center px-6 py-12">
       {/* 로고 */}
       <div className="text-center mb-10">
         <div className="text-6xl mb-4">📊</div>
@@ -53,30 +169,51 @@ export default function LoginPage() {
         </p>
       </div>
 
-      {/* 설명 카드 */}
-      <div className="w-full space-y-3 mb-10">
-        {[
-          { icon: "📱", title: "텔레그램 설문", desc: "매일 08:50 O/X 설문이 텔레그램으로 발송돼요" },
-          { icon: "⏰", title: "10분 타임어택", desc: "09:00까지만 응답 가능. 늦으면 기회 없음!" },
-          { icon: "📈", title: "실시간 집단지성", desc: "09:00에 다른 사람들 예측 결과가 공개돼요" },
-          { icon: "🏆", title: "정확도 랭킹", desc: "장 마감 후 내 정확도와 상위 % 순위를 알려줘요" },
-        ].map((item) => (
-          <div
-            key={item.title}
-            className="flex items-center gap-4 bg-[#1A1A1A] rounded-xl px-4 py-3 border border-[#2A2A2A]"
-          >
-            <span className="text-2xl flex-shrink-0">{item.icon}</span>
-            <div>
-              <p className="font-bold text-sm text-white">{item.title}</p>
-              <p className="text-xs text-gray-400">{item.desc}</p>
+      {/* 아코디언 설명 카드 */}
+      <div className="w-full space-y-2 mb-10">
+        {FEATURES.map((item, idx) => {
+          const isOpen = openIdx === idx;
+          return (
+            <div
+              key={item.title}
+              className="bg-[#1A1A1A] rounded-2xl border border-[#2A2A2A] overflow-hidden transition-all"
+            >
+              <button
+                className="w-full flex items-center gap-4 px-4 py-3 text-left"
+                onClick={() => setOpenIdx(isOpen ? null : idx)}
+              >
+                <span className="text-2xl flex-shrink-0">{item.icon}</span>
+                <div className="flex-1">
+                  <p className="font-bold text-sm text-white">{item.title}</p>
+                  <p className="text-xs text-gray-400">{item.desc}</p>
+                </div>
+                <span className={`text-gray-500 text-lg transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`}>
+                  ▾
+                </span>
+              </button>
+
+              {isOpen && (
+                <div className="px-4 pb-4">
+                  <div className="border-t border-[#2A2A2A] pt-3">
+                    <p className="text-gray-300 text-xs leading-relaxed mb-2">{item.detail.summary}</p>
+                    {item.detail.steps && (
+                      <div className="space-y-1 mb-2">
+                        {item.detail.steps.map((s) => (
+                          <p key={s} className="text-xs text-blue-400">{s}</p>
+                        ))}
+                      </div>
+                    )}
+                    {item.detail.mockup}
+                  </div>
+                </div>
+              )}
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {/* 로그인 버튼 그룹 */}
       <div className="w-full space-y-3">
-        {/* 구글 로그인 */}
         <button
           onClick={() => handleLogin("google")}
           disabled={signing !== null}
@@ -95,7 +232,6 @@ export default function LoginPage() {
           {signing === "google" ? "로그인 중..." : "Google로 시작하기"}
         </button>
 
-        {/* 카카오 로그인 */}
         <button
           onClick={() => handleLogin("kakao")}
           disabled={signing !== null}
