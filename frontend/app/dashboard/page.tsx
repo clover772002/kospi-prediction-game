@@ -49,20 +49,11 @@ function HistoryRow({ item }: { item: DashboardData["history"][0] }) {
             {item.kospi_answer ? "📈 오름" : "📉 내림"}
           </p>
         </div>
-        <div className="text-center">
-          <p className="text-gray-500 mb-0.5">코스닥</p>
-          <p className={item.kosdaq_answer ? "text-green-400" : "text-red-400"}>
-            {item.kosdaq_answer ? "📈 오름" : "📉 내림"}
-          </p>
-        </div>
       </div>
 
       <div className="flex gap-2 flex-shrink-0 text-sm">
         {hasResult ? (
-          <>
-            <span title="코스피">{item.kospi_correct ? "✅" : "❌"}</span>
-            <span title="코스닥">{item.kosdaq_correct ? "✅" : "❌"}</span>
-          </>
+          <span title="코스피">{item.kospi_correct ? "✅" : "❌"}</span>
         ) : (
           <span className="text-xs text-gray-600">결과 대기</span>
         )}
@@ -267,15 +258,6 @@ export default function DashboardPage() {
                       {today.kospi_change_pct! >= 0 ? "+" : ""}{today.kospi_change_pct?.toFixed(2)}%
                     </p>
                   </div>
-                  <div className="flex-1 bg-[#111] rounded-xl p-3 text-center">
-                    <p className="text-xs text-gray-500 mb-1">코스닥</p>
-                    <p className={`text-2xl font-black ${today.kosdaq_result ? "text-green-400" : "text-red-400"}`}>
-                      {today.kosdaq_result ? "📈 상승" : "📉 하락"}
-                    </p>
-                    <p className={`text-xs mt-1 ${today.kosdaq_change_pct! >= 0 ? "text-green-400/60" : "text-red-400/60"}`}>
-                      {today.kosdaq_change_pct! >= 0 ? "+" : ""}{today.kosdaq_change_pct?.toFixed(2)}%
-                    </p>
-                  </div>
                 </div>
               )}
               {status === "closed" && (
@@ -288,15 +270,13 @@ export default function DashboardPage() {
               <div className="space-y-3">
                 <p className="text-xs text-gray-500">📊 단순 집계</p>
                 <SentimentBar label="코스피" pct={today.kospi_yes_pct} />
-                <SentimentBar label="코스닥" pct={today.kosdaq_yes_pct} />
               </div>
 
               {/* 3. 고수 가중예측 */}
-              {(today.kospi_weighted_pct !== null || today.kosdaq_weighted_pct !== null) && (
+              {today.kospi_weighted_pct !== null && (
                 <div className="bg-yellow-500/5 border border-yellow-500/20 rounded-xl p-3 space-y-3">
                   <p className="text-xs text-yellow-400 font-bold">⭐ 고수 가중예측 (누적 정확도 반영)</p>
                   <SentimentBar label="코스피" pct={today.kospi_weighted_pct} />
-                  <SentimentBar label="코스닥" pct={today.kosdaq_weighted_pct} />
                   <p className="text-xs text-gray-600">정확도 높은 유저의 예측에 더 높은 가중치를 부여합니다</p>
                 </div>
               )}
@@ -325,12 +305,6 @@ export default function DashboardPage() {
                         {today.top_predictor.kospi_answer ? "📈 오른다" : "📉 내린다"}
                       </span>
                     </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-xs text-gray-500">코스닥</span>
-                      <span className={`text-xs font-bold ${today.top_predictor.kosdaq_answer ? "text-green-400" : "text-red-400"}`}>
-                        {today.top_predictor.kosdaq_answer ? "📈 오른다" : "📉 내린다"}
-                      </span>
-                    </div>
                   </div>
                 </div>
               )}
@@ -350,12 +324,6 @@ export default function DashboardPage() {
                         {today.worst_predictor.kospi_answer ? "📈 오른다" : "📉 내린다"}
                       </span>
                     </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-xs text-gray-500">코스닥</span>
-                      <span className={`text-xs font-bold ${today.worst_predictor.kosdaq_answer ? "text-green-400" : "text-red-400"}`}>
-                        {today.worst_predictor.kosdaq_answer ? "📈 오른다" : "📉 내린다"}
-                      </span>
-                    </div>
                   </div>
                 </div>
               )}
@@ -373,19 +341,11 @@ export default function DashboardPage() {
           {dash && dash.history.length > 0 && dash.history[0].date === today?.survey_date && (
             <div className="mb-4 pb-4 border-b border-[#2A2A2A]">
               <p className="text-xs text-gray-500 mb-2">오늘 내 예측</p>
-              <div className="grid grid-cols-2 gap-2">
-                <div className="bg-[#111] rounded-xl p-2.5 text-center">
-                  <p className="text-xs text-gray-500 mb-0.5">코스피</p>
-                  <p className={`font-bold text-sm ${dash.history[0].kospi_answer ? "text-green-400" : "text-red-400"}`}>
-                    {dash.history[0].kospi_answer ? "📈 오른다" : "📉 내린다"}
-                  </p>
-                </div>
-                <div className="bg-[#111] rounded-xl p-2.5 text-center">
-                  <p className="text-xs text-gray-500 mb-0.5">코스닥</p>
-                  <p className={`font-bold text-sm ${dash.history[0].kosdaq_answer ? "text-green-400" : "text-red-400"}`}>
-                    {dash.history[0].kosdaq_answer ? "📈 오른다" : "📉 내린다"}
-                  </p>
-                </div>
+              <div className="bg-[#111] rounded-xl p-2.5 text-center w-full">
+                <p className="text-xs text-gray-500 mb-0.5">코스피</p>
+                <p className={`font-bold text-sm ${dash.history[0].kospi_answer ? "text-green-400" : "text-red-400"}`}>
+                  {dash.history[0].kospi_answer ? "📈 오른다" : "📉 내린다"}
+                </p>
               </div>
             </div>
           )}
@@ -438,20 +398,12 @@ export default function DashboardPage() {
                 </div>
               </div>
 
-              {/* 코스피 vs 코스닥 정확도 */}
-              <div className="flex gap-3">
-                <div className="flex-1 bg-[#111] rounded-xl p-3 text-center">
-                  <p className="text-xs text-gray-500 mb-1">코스피</p>
-                  <p className="text-xl font-black text-green-400">
-                    {dash.accuracy.kospi !== null ? `${dash.accuracy.kospi}%` : "-"}
-                  </p>
-                </div>
-                <div className="flex-1 bg-[#111] rounded-xl p-3 text-center">
-                  <p className="text-xs text-gray-500 mb-1">코스닥</p>
-                  <p className="text-xl font-black text-green-400">
-                    {dash.accuracy.kosdaq !== null ? `${dash.accuracy.kosdaq}%` : "-"}
-                  </p>
-                </div>
+              {/* 코스피 정확도 */}
+              <div className="bg-[#111] rounded-xl p-3 text-center">
+                <p className="text-xs text-gray-500 mb-1">코스피 적중률</p>
+                <p className="text-xl font-black text-green-400">
+                  {dash.accuracy.kospi !== null ? `${dash.accuracy.kospi}%` : "-"}
+                </p>
               </div>
             </div>
           ) : null}

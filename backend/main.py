@@ -123,9 +123,8 @@ async def job_15_35():
     try:
         tomorrow = (date.today() + timedelta(days=1)).isoformat()
         k_hist = yf.Ticker("^KS11").history(start=today_str, end=tomorrow)
-        q_hist = yf.Ticker("^KQ11").history(start=today_str, end=tomorrow)
 
-        if k_hist.empty or q_hist.empty:
+        if k_hist.empty:
             logger.warning("yfinance 데이터 없음 - 장이 없는 날(휴장)일 수 있음")
             return
 
@@ -134,12 +133,7 @@ async def job_15_35():
         kospi_up    = kospi_close > kospi_open
         kospi_pct   = round((kospi_close / kospi_open - 1) * 100, 2)
 
-        kosdaq_open  = float(q_hist["Open"].iloc[-1])
-        kosdaq_close = float(q_hist["Close"].iloc[-1])
-        kosdaq_up    = kosdaq_close > kosdaq_open
-        kosdaq_pct   = round((kosdaq_close / kosdaq_open - 1) * 100, 2)
-
-        logger.info(f"코스피 {'▲' if kospi_up else '▼'}{kospi_pct}%  코스닥 {'▲' if kosdaq_up else '▼'}{kosdaq_pct}%")
+        logger.info(f"코스피 {'▲' if kospi_up else '▼'}{kospi_pct}%")
 
     except Exception as e:
         logger.error(f"yfinance 조회 오류: {e}")
@@ -148,23 +142,20 @@ async def job_15_35():
     # DB에 실제 결과 저장
     sb.table("daily_surveys").update({
         "kospi_result": kospi_up,
-        "kosdaq_result": kosdaq_up,
         "kospi_change_pct": kospi_pct,
-        "kosdaq_change_pct": kosdaq_pct,
     }).eq("survey_date", today_str).execute()
 
     # 응답자별 정확도 계산
-    responses = sb.table("survey_responses").select("user_id, kospi_answer, kosdaq_answer").eq("survey_date", today_str).execute()
+    responses = sb.table("survey_responses").select("user_id, kospi_answer").eq("survey_date", today_str).execute()
     for resp in responses.data:
         sb.table("accuracy_records").upsert({
             "user_id": resp["user_id"],
             "survey_date": today_str,
             "kospi_correct": resp["kospi_answer"] == kospi_up,
-            "kosdaq_correct": resp["kosdaq_answer"] == kosdaq_up,
         }).execute()
 
     # 개인별 텔레그램 알림
-    await send_accuracy_notifications(sb, today_str, kospi_up, kospi_pct, kosdaq_up, kosdaq_pct)
+    await send_accuracy_notifications(sb, today_str, kospi_up, kospi_pct)
 
 
 # ─────────────────────────────────────────────────────────────
@@ -317,7 +308,7 @@ async def unlink_telegram(
         raise HTTPException(status_code=500, detail="연동 해제 중 오류가 발생했습니다.")
 
 
-def _calc_weighted_pct(responses_with_users: list, accuracy_map: dict) -> tuple[int | None, int | None]:
+def _calc_weighted_pct(responses_with_users: list, accuracy_map: dict) -> int | None:
     """
     누적 정확도 기반 가중예측치 계산.
     - 정확도 > 50%: 양의 가중치 (예측 그대로 반영)
@@ -326,43 +317,35 @@ def _calc_weighted_pct(responses_with_users: list, accuracy_map: dict) -> tuple[
     weight = (accuracy - 0.5) * 2  →  범위: -1.0 ~ +1.0
     """
     if not responses_with_users:
-        return None, None
+        return None
 
     kospi_score = kospi_w = 0.0
-    kosdaq_score = kosdaq_w = 0.0
 
     for r in responses_with_users:
         uid = r["user_id"]
         acc = accuracy_map.get(uid, 0.5)
         weight = (acc - 0.5) * 2  # -1 ~ +1
 
-        # 정확도 기록이 없는 유저(acc=0.5, weight=0)는 weight=1로 동등하게 반영
         if weight == 0.0:
             weight = 1.0
 
-        kospi_vote  = 1 if r["kospi_answer"]  else -1
-        kosdaq_vote = 1 if r["kosdaq_answer"] else -1
+        kospi_vote = 1 if r["kospi_answer"] else -1
+        kospi_score += weight * kospi_vote
+        kospi_w     += abs(weight)
 
-        kospi_score  += weight * kospi_vote
-        kospi_w      += abs(weight)
-        kosdaq_score += weight * kosdaq_vote
-        kosdaq_w     += abs(weight)
-
-    kospi_wpct  = round((kospi_score  / kospi_w  + 1) / 2 * 100) if kospi_w  > 0 else None
-    kosdaq_wpct = round((kosdaq_score / kosdaq_w + 1) / 2 * 100) if kosdaq_w > 0 else None
-    return kospi_wpct, kosdaq_wpct
+    return round((kospi_score / kospi_w + 1) / 2 * 100) if kospi_w > 0 else None
 
 
 def _build_user_accuracy_map(supabase: Client) -> dict:
     """모든 유저의 누적 정확도 딕셔너리 반환 {user_id: accuracy_rate}"""
-    all_acc = supabase.table("accuracy_records").select("user_id, kospi_correct, kosdaq_correct").execute()
+    all_acc = supabase.table("accuracy_records").select("user_id, kospi_correct").execute()
     user_scores: dict = {}
     for r in all_acc.data:
         uid = r["user_id"]
         if uid not in user_scores:
             user_scores[uid] = {"correct": 0, "total": 0}
-        user_scores[uid]["correct"] += (1 if r.get("kospi_correct") else 0) + (1 if r.get("kosdaq_correct") else 0)
-        user_scores[uid]["total"] += 2
+        user_scores[uid]["correct"] += 1 if r.get("kospi_correct") else 0
+        user_scores[uid]["total"] += 1
     return {
         uid: s["correct"] / s["total"]
         for uid, s in user_scores.items() if s["total"] > 0
@@ -381,7 +364,7 @@ async def get_today(supabase: Client = Depends(get_supabase)):
     survey = survey_res.data[0]
     responses = (
         supabase.table("survey_responses")
-        .select("user_id, kospi_answer, kosdaq_answer")
+        .select("user_id, kospi_answer")
         .eq("survey_date", today_str)
         .execute()
     )
@@ -394,24 +377,18 @@ async def get_today(supabase: Client = Depends(get_supabase)):
         "survey_date": today_str,
         "total_responses": total,
         "kospi_yes_pct": None,
-        "kosdaq_yes_pct": None,
         "kospi_weighted_pct": None,
-        "kosdaq_weighted_pct": None,
         "kospi_result": survey.get("kospi_result"),
-        "kosdaq_result": survey.get("kosdaq_result"),
         "kospi_change_pct": survey.get("kospi_change_pct"),
-        "kosdaq_change_pct": survey.get("kosdaq_change_pct"),
     }
 
     if total > 0:
-        kospi_yes  = sum(1 for r in responses.data if r["kospi_answer"])
-        kosdaq_yes = sum(1 for r in responses.data if r["kosdaq_answer"])
-        base["kospi_yes_pct"]  = round(kospi_yes  / total * 100)
-        base["kosdaq_yes_pct"] = round(kosdaq_yes / total * 100)
+        kospi_yes = sum(1 for r in responses.data if r["kospi_answer"])
+        base["kospi_yes_pct"] = round(kospi_yes / total * 100)
 
         # 가중예측치 계산
         acc_map = _build_user_accuracy_map(supabase)
-        base["kospi_weighted_pct"], base["kosdaq_weighted_pct"] = _calc_weighted_pct(responses.data, acc_map)
+        base["kospi_weighted_pct"] = _calc_weighted_pct(responses.data, acc_map)
 
         # 최고 고수 / 최고 하수 예측 (오늘 응답한 유저 중)
         try:
@@ -440,7 +417,6 @@ async def get_today(supabase: Client = Depends(get_supabase)):
                 return {
                     "masked_name": masked,
                     "kospi_answer": r["kospi_answer"],
-                    "kosdaq_answer": r["kosdaq_answer"],
                     "accuracy": round(acc_map[uid] * 100),
                     "total_predictions": pred_count.get(uid, 0),
                 }
@@ -478,16 +454,14 @@ async def web_survey_respond(
 
     body = await request.json()
     kospi_answer = body.get("kospi_answer")
-    kosdaq_answer = body.get("kosdaq_answer")
 
-    if kospi_answer is None or kosdaq_answer is None:
-        raise HTTPException(status_code=422, detail="kospi_answer와 kosdaq_answer가 필요합니다.")
+    if kospi_answer is None:
+        raise HTTPException(status_code=422, detail="kospi_answer가 필요합니다.")
 
     supabase.table("survey_responses").upsert({
         "user_id": user_id,
         "survey_date": today_str,
         "kospi_answer": bool(kospi_answer),
-        "kosdaq_answer": bool(kosdaq_answer),
     }).execute()
 
     return {"success": True}
@@ -503,7 +477,7 @@ async def get_dashboard(
 
     my_responses = (
         supabase.table("survey_responses")
-        .select("survey_date, kospi_answer, kosdaq_answer")
+        .select("survey_date, kospi_answer")
         .eq("user_id", user_id)
         .order("survey_date", desc=True)
         .limit(30)
@@ -512,7 +486,7 @@ async def get_dashboard(
 
     my_accuracy_res = (
         supabase.table("accuracy_records")
-        .select("survey_date, kospi_correct, kosdaq_correct")
+        .select("survey_date, kospi_correct")
         .eq("user_id", user_id)
         .execute()
     )
@@ -526,39 +500,33 @@ async def get_dashboard(
         history.append({
             "date": d,
             "kospi_answer": resp["kospi_answer"],
-            "kosdaq_answer": resp["kosdaq_answer"],
             "kospi_correct": acc.get("kospi_correct"),
-            "kosdaq_correct": acc.get("kosdaq_correct"),
         })
 
     total_with_result = sum(1 for h in history if h["kospi_correct"] is not None)
 
     if total_with_result == 0:
         return {
-            "accuracy": {"kospi": None, "kosdaq": None, "overall": None},
+            "accuracy": {"kospi": None, "overall": None},
             "percentile": None,
             "history": history,
             "total_predictions": len(my_responses.data),
         }
 
-    kospi_correct_cnt  = sum(1 for h in history if h["kospi_correct"])
-    kosdaq_correct_cnt = sum(1 for h in history if h["kosdaq_correct"])
-
-    kospi_acc   = round(kospi_correct_cnt  / total_with_result * 100)
-    kosdaq_acc  = round(kosdaq_correct_cnt / total_with_result * 100)
-    overall_acc = round((kospi_correct_cnt + kosdaq_correct_cnt) / (total_with_result * 2) * 100)
+    kospi_correct_cnt = sum(1 for h in history if h["kospi_correct"])
+    kospi_acc = round(kospi_correct_cnt / total_with_result * 100)
 
     # 상위 퍼센트 계산
-    all_acc = supabase.table("accuracy_records").select("user_id, kospi_correct, kosdaq_correct").execute()
+    all_acc = supabase.table("accuracy_records").select("user_id, kospi_correct").execute()
     user_scores: dict = {}
     for r in all_acc.data:
         uid = r["user_id"]
         if uid not in user_scores:
             user_scores[uid] = {"correct": 0, "total": 0}
-        user_scores[uid]["correct"] += (1 if r.get("kospi_correct") else 0) + (1 if r.get("kosdaq_correct") else 0)
-        user_scores[uid]["total"] += 2
+        user_scores[uid]["correct"] += 1 if r.get("kospi_correct") else 0
+        user_scores[uid]["total"] += 1
 
-    my_rate = (kospi_correct_cnt + kosdaq_correct_cnt) / (total_with_result * 2)
+    my_rate = kospi_correct_cnt / total_with_result
     users_with_lower = sum(
         1 for uid, s in user_scores.items()
         if s["total"] > 0 and s["correct"] / s["total"] < my_rate
@@ -566,13 +534,12 @@ async def get_dashboard(
     total_users = len(user_scores)
     top_pct = round((1 - users_with_lower / total_users) * 100) if total_users > 1 else 100
 
-    # 내 가중치 기여도: 내 정확도 / 전체 평균 정확도 (1.0이면 평균, >1이면 평균 이상)
     all_rates = [s["correct"] / s["total"] for s in user_scores.values() if s["total"] > 0]
     avg_rate = sum(all_rates) / len(all_rates) if all_rates else 0.5
     contribution = round(my_rate / avg_rate * 100) if avg_rate > 0 else 100
 
     return {
-        "accuracy": {"kospi": kospi_acc, "kosdaq": kosdaq_acc, "overall": overall_acc},
+        "accuracy": {"kospi": kospi_acc, "overall": kospi_acc},
         "percentile": top_pct,
         "contribution": contribution,
         "history": history,
@@ -668,8 +635,6 @@ async def list_push_subscribers(
 async def inject_result(
     kospi_up: bool,
     kospi_pct: float,
-    kosdaq_up: bool,
-    kosdaq_pct: float,
 ):
     """휴장일 테스트용: 가짜 장 결과를 직접 입력하고 정확도 계산"""
     sb = _supabase_direct()
@@ -677,19 +642,16 @@ async def inject_result(
 
     sb.table("daily_surveys").update({
         "kospi_result": kospi_up,
-        "kosdaq_result": kosdaq_up,
         "kospi_change_pct": kospi_pct,
-        "kosdaq_change_pct": kosdaq_pct,
     }).eq("survey_date", today_str).execute()
 
-    responses = sb.table("survey_responses").select("user_id, kospi_answer, kosdaq_answer").eq("survey_date", today_str).execute()
+    responses = sb.table("survey_responses").select("user_id, kospi_answer").eq("survey_date", today_str).execute()
     for resp in responses.data:
         sb.table("accuracy_records").upsert({
             "user_id": resp["user_id"],
             "survey_date": today_str,
             "kospi_correct": resp["kospi_answer"] == kospi_up,
-            "kosdaq_correct": resp["kosdaq_answer"] == kosdaq_up,
         }).execute()
 
-    await send_accuracy_notifications(sb, today_str, kospi_up, kospi_pct, kosdaq_up, kosdaq_pct)
-    return {"success": True, "message": f"결과 입력 완료: 코스피{'▲' if kospi_up else '▼'}{kospi_pct}% 코스닥{'▲' if kosdaq_up else '▼'}{kosdaq_pct}%"}
+    await send_accuracy_notifications(sb, today_str, kospi_up, kospi_pct)
+    return {"success": True, "message": f"결과 입력 완료: 코스피{'▲' if kospi_up else '▼'}{kospi_pct}%"}

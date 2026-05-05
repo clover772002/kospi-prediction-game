@@ -14,9 +14,7 @@ from dotenv import load_dotenv
 load_dotenv()
 logger = logging.getLogger(__name__)
 
-# 임시 응답 저장소: "{chat_id}:{date_str}" → {"kospi": bool|None, "kosdaq": bool|None}
-# 두 답변이 모두 완료되면 DB에 저장 후 삭제
-pending_answers: dict = {}
+pending_answers: dict = {}  # 미사용 (단일 질문 전환 후 즉시 저장)
 
 
 def _token() -> str:
@@ -132,13 +130,13 @@ async def handle_start(chat_id: int, user_id_param: str, supabase) -> None:
 
 
 async def handle_callback_query(callback_query: dict, supabase) -> None:
-    """인라인 버튼 응답 처리 (코스피/코스닥 O/X)"""
+    """인라인 버튼 응답 처리 (코스피 단일 질문)"""
     query_id = callback_query["id"]
     chat_id = callback_query["from"]["id"]
     message_id = callback_query["message"]["message_id"]
     data = callback_query.get("data", "")
 
-    # data format: "kospi:yes:2026-05-05" or "kosdaq:no:2026-05-05"
+    # data format: "kospi:yes:2026-05-05"
     parts = data.split(":")
     if len(parts) != 3:
         await answer_callback_query(query_id, "알 수 없는 응답입니다.")
@@ -147,7 +145,6 @@ async def handle_callback_query(callback_query: dict, supabase) -> None:
     market, answer, date_str = parts
     is_yes = (answer == "yes")
     label = "📈 오른다" if is_yes else "📉 내린다"
-    market_label = "코스피" if market == "kospi" else "코스닥"
 
     # 설문 마감 여부 확인
     survey = supabase.table("daily_surveys").select("is_closed").eq("survey_date", date_str).execute()
@@ -162,50 +159,24 @@ async def handle_callback_query(callback_query: dict, supabase) -> None:
         return
 
     user_id = user_res.data[0]["id"]
-    key = f"{chat_id}:{date_str}"
 
-    if key not in pending_answers:
-        pending_answers[key] = {"kospi": None, "kosdaq": None}
+    try:
+        supabase.table("survey_responses").upsert({
+            "user_id": user_id,
+            "survey_date": date_str,
+            "kospi_answer": is_yes,
+        }).execute()
 
-    pending_answers[key][market] = is_yes
-
-    # 선택 완료 표시로 메시지 수정
-    seq = "1️⃣" if market == "kospi" else "2️⃣"
-    await edit_message_text(chat_id, message_id, f"{seq} <b>{market_label}</b> → {label} ✅")
-    await answer_callback_query(query_id, f"{market_label}: {label}")
-
-    # 코스피 응답 후 코스닥 질문 발송
-    if market == "kospi" and pending_answers[key]["kosdaq"] is None:
+        await edit_message_text(chat_id, message_id, f"✅ <b>코스피</b> → {label}")
+        await answer_callback_query(query_id, f"코스피: {label}")
         await send_message(chat_id,
-            "2️⃣ <b>코스닥</b>이 오늘 오를까요?",
-            _survey_keyboard("kosdaq", date_str)
+            f"✅ <b>예측 완료!</b>\n\n"
+            f"코스피: {label}\n\n"
+            f"📊 09:00에 집계 결과를 알려드립니다!"
         )
-
-    # 두 답변 모두 완료 시 DB 저장
-    answers = pending_answers[key]
-    if answers["kospi"] is not None and answers["kosdaq"] is not None:
-        try:
-            supabase.table("survey_responses").upsert({
-                "user_id": user_id,
-                "survey_date": date_str,
-                "kospi_answer": answers["kospi"],
-                "kosdaq_answer": answers["kosdaq"],
-            }).execute()
-
-            k_label = "📈 오른다" if answers["kospi"] else "📉 내린다"
-            q_label = "📈 오른다" if answers["kosdaq"] else "📉 내린다"
-
-            await send_message(chat_id,
-                f"✅ <b>예측 완료!</b>\n\n"
-                f"코스피: {k_label}\n"
-                f"코스닥: {q_label}\n\n"
-                f"📊 09:00에 집계 결과를 알려드립니다!"
-            )
-            del pending_answers[key]
-
-        except Exception as e:
-            logger.error(f"응답 저장 오류: {e}")
-            await send_message(chat_id, "❌ 응답 저장 중 오류가 발생했습니다. 다시 시도해주세요.")
+    except Exception as e:
+        logger.error(f"응답 저장 오류: {e}")
+        await send_message(chat_id, "❌ 응답 저장 중 오류가 발생했습니다. 다시 시도해주세요.")
 
 
 async def handle_webhook(update: dict, supabase) -> None:
@@ -245,7 +216,7 @@ async def send_daily_survey_to_all(supabase, date_str: str) -> None:
                 chat_id,
                 f"📊 <b>오늘의 장 예측</b> ({date_str})\n"
                 f"⏰ 설문 마감: 09:00\n\n"
-                f"1️⃣ <b>코스피</b>가 오늘 오를까요?",
+                f"<b>코스피</b>가 오늘 오를까요?",
                 _survey_keyboard("kospi", date_str)
             )
             sent += 1
@@ -255,32 +226,25 @@ async def send_daily_survey_to_all(supabase, date_str: str) -> None:
     logger.info(f"설문 발송 완료: {sent}명")
 
 
-def _calc_weighted_pct_tg(responses_data: list, accuracy_map: dict) -> tuple[int, int]:
-    """
-    텔레그램용 가중예측치 계산.
-    정확도 < 50% 유저는 음의 가중치(역방향)로 반영.
-    weight = (accuracy - 0.5) * 2  →  범위: -1.0 ~ +1.0
-    """
-    kospi_score = kospi_w = kosdaq_score = kosdaq_w = 0.0
+def _calc_weighted_pct_tg(responses_data: list, accuracy_map: dict) -> int:
+    """가중예측치 계산 (코스피 단일)"""
+    kospi_score = kospi_w = 0.0
     for r in responses_data:
         acc = accuracy_map.get(r["user_id"], 0.5)
         weight = (acc - 0.5) * 2
         if weight == 0.0:
             weight = 1.0
-        kospi_vote  = 1 if r["kospi_answer"]  else -1
-        kosdaq_vote = 1 if r["kosdaq_answer"] else -1
-        kospi_score  += weight * kospi_vote;  kospi_w  += abs(weight)
-        kosdaq_score += weight * kosdaq_vote; kosdaq_w += abs(weight)
-    k = round((kospi_score  / kospi_w  + 1) / 2 * 100) if kospi_w  > 0 else 50
-    q = round((kosdaq_score / kosdaq_w + 1) / 2 * 100) if kosdaq_w > 0 else 50
-    return k, q
+        kospi_vote = 1 if r["kospi_answer"] else -1
+        kospi_score += weight * kospi_vote
+        kospi_w += abs(weight)
+    return round((kospi_score / kospi_w + 1) / 2 * 100) if kospi_w > 0 else 50
 
 
 async def announce_results(supabase, date_str: str) -> None:
     """09:00 - 집계 결과 발표 (응답자 전원에게)"""
     responses = (
         supabase.table("survey_responses")
-        .select("user_id, kospi_answer, kosdaq_answer")
+        .select("user_id, kospi_answer")
         .eq("survey_date", date_str)
         .execute()
     )
@@ -291,21 +255,18 @@ async def announce_results(supabase, date_str: str) -> None:
         return
 
     kospi_yes = sum(1 for r in responses.data if r["kospi_answer"])
-    kosdaq_yes = sum(1 for r in responses.data if r["kosdaq_answer"])
     kospi_pct = round(kospi_yes / total * 100)
-    kosdaq_pct = round(kosdaq_yes / total * 100)
 
-    # 가중예측치 계산
-    all_acc = supabase.table("accuracy_records").select("user_id, kospi_correct, kosdaq_correct").execute()
+    all_acc = supabase.table("accuracy_records").select("user_id, kospi_correct").execute()
     user_scores: dict = {}
     for r in all_acc.data:
         uid = r["user_id"]
         if uid not in user_scores:
             user_scores[uid] = {"correct": 0, "total": 0}
-        user_scores[uid]["correct"] += (1 if r.get("kospi_correct") else 0) + (1 if r.get("kosdaq_correct") else 0)
-        user_scores[uid]["total"] += 2
+        user_scores[uid]["correct"] += 1 if r.get("kospi_correct") else 0
+        user_scores[uid]["total"] += 1
     acc_map = {uid: s["correct"] / s["total"] for uid, s in user_scores.items() if s["total"] > 0}
-    kospi_wpct, kosdaq_wpct = _calc_weighted_pct_tg(responses.data, acc_map)
+    kospi_wpct = _calc_weighted_pct_tg(responses.data, acc_map)
 
     def bar(pct: int) -> str:
         filled = pct // 10
@@ -318,10 +279,6 @@ async def announce_results(supabase, date_str: str) -> None:
         f"{bar(kospi_pct)}\n"
         f"오른다 <b>{kospi_pct}%</b> vs 내린다 <b>{100 - kospi_pct}%</b>\n"
         f"⭐ 고수 가중예측: 오른다 <b>{kospi_wpct}%</b>\n\n"
-        f"<b>📈 코스닥</b>\n"
-        f"{bar(kosdaq_pct)}\n"
-        f"오른다 <b>{kosdaq_pct}%</b> vs 내린다 <b>{100 - kosdaq_pct}%</b>\n"
-        f"⭐ 고수 가중예측: 오른다 <b>{kosdaq_wpct}%</b>\n\n"
         f"💡 <i>가중예측치는 정확도 높은 고수들의 의견을 더 반영한 예측입니다.</i>\n"
         f"⏳ 실제 결과는 장 마감 후 알려드립니다."
     )
@@ -345,13 +302,11 @@ async def send_accuracy_notifications(
     date_str: str,
     kospi_up: bool,
     kospi_pct: float,
-    kosdaq_up: bool,
-    kosdaq_pct: float,
 ) -> None:
     """15:35 - 장 마감 후 개인별 정확도 및 순위 알림"""
     accuracy_records = (
         supabase.table("accuracy_records")
-        .select("user_id, kospi_correct, kosdaq_correct")
+        .select("user_id, kospi_correct")
         .eq("survey_date", date_str)
         .execute()
     )
@@ -359,22 +314,18 @@ async def send_accuracy_notifications(
     if not accuracy_records.data:
         return
 
-    # 전체 유저 누적 정확도 계산 (상위 퍼센트 계산용)
-    all_acc = supabase.table("accuracy_records").select("user_id, kospi_correct, kosdaq_correct").execute()
+    all_acc = supabase.table("accuracy_records").select("user_id, kospi_correct").execute()
     user_scores: dict = {}
     for r in all_acc.data:
         uid = r["user_id"]
         if uid not in user_scores:
             user_scores[uid] = {"correct": 0, "total": 0}
-        user_scores[uid]["correct"] += (1 if r.get("kospi_correct") else 0) + (1 if r.get("kosdaq_correct") else 0)
-        user_scores[uid]["total"] += 2
+        user_scores[uid]["correct"] += 1 if r.get("kospi_correct") else 0
+        user_scores[uid]["total"] += 1
 
     total_users = len(user_scores)
-
     kospi_sign = "+" if kospi_up else ""
-    kosdaq_sign = "+" if kosdaq_up else ""
     kospi_dir = "▲" if kospi_up else "▼"
-    kosdaq_dir = "▲" if kosdaq_up else "▼"
 
     for record in accuracy_records.data:
         user_id = record["user_id"]
@@ -384,7 +335,6 @@ async def send_accuracy_notifications(
 
         chat_id = user.data[0]["telegram_chat_id"]
         kospi_correct = record["kospi_correct"]
-        kosdaq_correct = record["kosdaq_correct"]
 
         my_score = user_scores.get(user_id, {"correct": 0, "total": 0})
         my_rate = my_score["correct"] / my_score["total"] if my_score["total"] > 0 else 0
@@ -397,17 +347,12 @@ async def send_accuracy_notifications(
         overall_pct = round(my_rate * 100)
 
         k_emoji = "✅" if kospi_correct else "❌"
-        q_emoji = "✅" if kosdaq_correct else "❌"
         k_result = "맞음" if kospi_correct else "틀림"
-        q_result = "맞음" if kosdaq_correct else "틀림"
 
         text = (
             f"📈 <b>오늘 장 마감 결과</b>\n\n"
-            f"코스피 {kospi_dir} {kospi_sign}{kospi_pct}%\n"
-            f"코스닥 {kosdaq_dir} {kosdaq_sign}{kosdaq_pct}%\n\n"
-            f"<b>내 예측</b>\n"
-            f"코스피: {k_emoji} {k_result}\n"
-            f"코스닥: {q_emoji} {q_result}\n\n"
+            f"코스피 {kospi_dir} {kospi_sign}{kospi_pct}%\n\n"
+            f"<b>내 예측:</b> {k_emoji} {k_result}\n\n"
             f"📊 누적 정확도: <b>{overall_pct}%</b>\n"
             f"🏆 현재 순위: <b>상위 {top_pct}%</b>"
         )

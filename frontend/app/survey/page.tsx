@@ -17,7 +17,6 @@ export default function SurveyPage() {
   const [error, setError] = useState<string | null>(null);
 
   const [kospiAnswer, setKospiAnswer] = useState<boolean | null>(null);
-  const [kosdaqAnswer, setKosdaqAnswer] = useState<boolean | null>(null);
 
   const loadToday = useCallback(async () => {
     try {
@@ -45,7 +44,7 @@ export default function SurveyPage() {
   }, [router, loadToday]);
 
   const handleSubmit = async () => {
-    if (!token || kospiAnswer === null || kosdaqAnswer === null) return;
+    if (!token || kospiAnswer === null) return;
     setSubmitting(true);
     setError(null);
     try {
@@ -55,7 +54,7 @@ export default function SurveyPage() {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ kospi_answer: kospiAnswer, kosdaq_answer: kosdaqAnswer }),
+        body: JSON.stringify({ kospi_answer: kospiAnswer }),
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({ detail: "오류가 발생했습니다." }));
@@ -124,7 +123,7 @@ export default function SurveyPage() {
             <p className="text-amber-400 font-bold text-sm">⏰ 설문 진행 중 · 09:00 마감</p>
           </div>
 
-          {/* 코스피 */}
+          {/* 코스피 단일 질문 */}
           <div className="bg-[#1A1A1A] rounded-2xl p-5 space-y-4 border border-[#2A2A2A]">
             <p className="font-bold text-white text-base">📈 코스피 오늘 어떨까요?</p>
             <div className="grid grid-cols-2 gap-3">
@@ -151,33 +150,6 @@ export default function SurveyPage() {
             </div>
           </div>
 
-          {/* 코스닥 */}
-          <div className="bg-[#1A1A1A] rounded-2xl p-5 space-y-4 border border-[#2A2A2A]">
-            <p className="font-bold text-white text-base">📈 코스닥 오늘 어떨까요?</p>
-            <div className="grid grid-cols-2 gap-3">
-              <button
-                onClick={() => setKosdaqAnswer(true)}
-                className={`py-5 rounded-2xl font-black text-xl transition-all active:scale-95 border-2 ${
-                  kosdaqAnswer === true
-                    ? "bg-green-500 border-green-400 text-white"
-                    : "bg-[#111] border-[#333] text-gray-400 hover:border-green-600"
-                }`}
-              >
-                📈 오른다
-              </button>
-              <button
-                onClick={() => setKosdaqAnswer(false)}
-                className={`py-5 rounded-2xl font-black text-xl transition-all active:scale-95 border-2 ${
-                  kosdaqAnswer === false
-                    ? "bg-red-500 border-red-400 text-white"
-                    : "bg-[#111] border-[#333] text-gray-400 hover:border-red-600"
-                }`}
-              >
-                📉 내린다
-              </button>
-            </div>
-          </div>
-
           {error && (
             <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-3 text-red-400 text-sm text-center">
               {error}
@@ -186,7 +158,7 @@ export default function SurveyPage() {
 
           <button
             onClick={handleSubmit}
-            disabled={kospiAnswer === null || kosdaqAnswer === null || submitting}
+            disabled={kospiAnswer === null || submitting}
             className="w-full py-5 bg-blue-600 hover:bg-blue-500 disabled:bg-[#333] disabled:text-gray-500 text-white font-black text-xl rounded-2xl transition-all active:scale-95"
           >
             {submitting ? (
@@ -197,8 +169,8 @@ export default function SurveyPage() {
             ) : "예측 제출하기"}
           </button>
 
-          {(kospiAnswer === null || kosdaqAnswer === null) && (
-            <p className="text-center text-xs text-gray-600">코스피와 코스닥 모두 선택해야 제출할 수 있어요</p>
+          {kospiAnswer === null && (
+            <p className="text-center text-xs text-gray-600">오른다 / 내린다 중 하나를 선택해주세요</p>
           )}
         </div>
       )}
@@ -210,8 +182,8 @@ export default function SurveyPage() {
           <p className="text-xl font-bold text-white">예측 완료!</p>
           <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-2xl p-5 w-full space-y-2">
             <p className="text-sm text-gray-400">내 예측</p>
-            <p className="text-white font-bold">
-              코스피 {kospiAnswer ? "📈 오른다" : "📉 내린다"} &nbsp;·&nbsp; 코스닥 {kosdaqAnswer ? "📈 오른다" : "📉 내린다"}
+            <p className="text-white font-bold text-lg">
+              코스피 {kospiAnswer ? "📈 오른다" : "📉 내린다"}
             </p>
           </div>
           <p className="text-xs text-gray-500">09:00에 집계 결과가 공개돼요</p>

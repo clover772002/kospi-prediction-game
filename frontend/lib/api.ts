@@ -30,7 +30,6 @@ export interface UserProfile {
 export interface TopPredictor {
   masked_name: string;
   kospi_answer: boolean;
-  kosdaq_answer: boolean;
   accuracy: number;
   total_predictions: number;
 }
@@ -40,13 +39,9 @@ export interface TodaySurvey {
   survey_date: string;
   total_responses: number;
   kospi_yes_pct: number | null;
-  kosdaq_yes_pct: number | null;
   kospi_weighted_pct: number | null;
-  kosdaq_weighted_pct: number | null;
   kospi_result: boolean | null;
-  kosdaq_result: boolean | null;
   kospi_change_pct: number | null;
-  kosdaq_change_pct: number | null;
   top_predictor?: TopPredictor;
   worst_predictor?: TopPredictor;
 }
@@ -54,15 +49,12 @@ export interface TodaySurvey {
 export interface HistoryItem {
   date: string;
   kospi_answer: boolean;
-  kosdaq_answer: boolean;
   kospi_correct: boolean | null;
-  kosdaq_correct: boolean | null;
 }
 
 export interface DashboardData {
   accuracy: {
     kospi: number | null;
-    kosdaq: number | null;
     overall: number | null;
   };
   percentile: number | null;
