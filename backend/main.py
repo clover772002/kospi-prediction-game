@@ -416,10 +416,21 @@ async def get_today(supabase: Client = Depends(get_supabase)):
         # 최고 고수 / 최고 하수 예측 (오늘 응답한 유저 중)
         try:
             resp_map = {r["user_id"]: r for r in responses.data}
-            ranked = sorted(
-                (uid for uid in acc_map if uid in resp_map),
-                key=lambda uid: acc_map[uid],
-            )
+
+            # 예측 횟수 집계 (동률 시 tiebreaker)
+            all_acc_rows = supabase.table("accuracy_records").select("user_id").execute()
+            pred_count: dict = {}
+            for row in all_acc_rows.data:
+                pred_count[row["user_id"]] = pred_count.get(row["user_id"], 0) + 1
+
+            candidates = [uid for uid in acc_map if uid in resp_map]
+            if not candidates:
+                raise ValueError("후보 없음")
+
+            # 정확도 높은 순, 동률이면 예측 횟수 많은 순
+            top_uid = max(candidates, key=lambda uid: (acc_map[uid], pred_count.get(uid, 0)))
+            # 정확도 낮은 순, 동률이면 예측 횟수 많은 순
+            worst_uid = min(candidates, key=lambda uid: (acc_map[uid], -pred_count.get(uid, 0)))
 
             def _predictor_info(uid):
                 user_row = supabase.table("users").select("name").eq("id", uid).execute()
@@ -431,12 +442,12 @@ async def get_today(supabase: Client = Depends(get_supabase)):
                     "kospi_answer": r["kospi_answer"],
                     "kosdaq_answer": r["kosdaq_answer"],
                     "accuracy": round(acc_map[uid] * 100),
+                    "total_predictions": pred_count.get(uid, 0),
                 }
 
-            if ranked:
-                base["top_predictor"]   = _predictor_info(ranked[-1])  # 정확도 최고
-                if len(ranked) >= 2:
-                    base["worst_predictor"] = _predictor_info(ranked[0])   # 정확도 최저
+            base["top_predictor"] = _predictor_info(top_uid)
+            if len(candidates) >= 2 and worst_uid != top_uid:
+                base["worst_predictor"] = _predictor_info(worst_uid)
         except Exception as e:
             logger.warning(f"고수/하수 조회 실패: {e}")
 

@@ -32,6 +32,7 @@ export interface TopPredictor {
   kospi_answer: boolean;
   kosdaq_answer: boolean;
   accuracy: number;
+  total_predictions: number;
 }
 
 export interface TodaySurvey {
