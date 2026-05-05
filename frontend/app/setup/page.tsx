@@ -391,11 +391,18 @@ export default function SetupPage() {
                   <li>✅ 매일 아침 설문 1개를 보내고, 결과를 알려주는 게 전부예요</li>
                   <li>✅ 내 연락처·채팅 내용은 전혀 보이지 않아요</li>
                   <li>✅ 언제든 봇 차단 한 번으로 알림을 끌 수 있어요</li>
+                  <li>
+                    <button
+                      onClick={() => setTab("webpush")}
+                      className="text-purple-400 hover:text-purple-300 underline underline-offset-2 transition-colors"
+                    >
+                      텔레그램이 부담되요 → 브라우저 알림으로!
+                    </button>
+                  </li>
                 </ul>
               </div>
 
-
-              <a
+              <
                 href={botLink}
                 target="_blank"
                 rel="noopener noreferrer"
@@ -414,13 +421,6 @@ export default function SetupPage() {
                 {copyDone ? "✅ 링크 복사됨" : "🔗 링크가 안 열리면 → 복사하기"}
               </button>
 
-              {/* 텔레그램 거부감 유저 → 브라우저 알림 유도 */}
-              <button
-                onClick={() => setTab("webpush")}
-                className="w-full py-3 border border-dashed border-[#333] text-gray-500 hover:text-purple-400 hover:border-purple-500/40 rounded-xl text-sm transition-all"
-              >
-                텔레그램이 껄끄럽다면? → 브라우저 알림으로 받기 🔔
-              </button>
             </>
           ) : (
             /* ── STEP 2: 연동 확인 ── */
