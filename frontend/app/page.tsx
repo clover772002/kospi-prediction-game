@@ -258,6 +258,56 @@ export default function LoginPage() {
         </p>
       </div>
 
+      {/* 하루 흐름 타임라인 */}
+      <div className="w-full mb-8">
+        <p className="text-xs text-gray-500 font-bold mb-3 tracking-widest uppercase">하루 흐름</p>
+        <div className="relative">
+          {/* 세로 연결선 */}
+          <div className="absolute left-[19px] top-4 bottom-4 w-px bg-[#2A2A2A]" />
+          <div className="space-y-0">
+            {[
+              {
+                time: "08:50",
+                dot: "bg-blue-500",
+                title: "텔레그램 설문 발송",
+                desc: "코스피·코스닥 O/X 설문이 텔레그램으로 도착",
+              },
+              {
+                time: "09:00",
+                dot: "bg-yellow-400",
+                title: "마감 → 집계 공개",
+                desc: "단순 집계 + 고수 가중예측이 동시에 열려요",
+              },
+              {
+                time: "15:35",
+                dot: "bg-green-400",
+                title: "장 마감 결과 집계",
+                desc: "실제 등락과 내 예측을 비교해 정확도 기록",
+              },
+              {
+                time: "다음날",
+                dot: "bg-purple-400",
+                title: "누적 정확도 반영",
+                desc: "쌓인 적중률이 내일 고수 가중예측 계산에 반영",
+              },
+            ].map((step, i) => (
+              <div key={i} className="flex gap-4 pb-5 last:pb-0">
+                <div className="flex flex-col items-center flex-shrink-0 w-10">
+                  <div className={`w-4 h-4 rounded-full border-2 border-[#111] ${step.dot} z-10 mt-1`} />
+                </div>
+                <div className="flex-1 pb-1">
+                  <div className="flex items-baseline gap-2 mb-0.5">
+                    <span className="text-xs font-black text-white">{step.time}</span>
+                    <span className="text-xs font-bold text-gray-300">{step.title}</span>
+                  </div>
+                  <p className="text-xs text-gray-500">{step.desc}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
       {/* 아코디언 설명 카드 */}
       <div className="w-full space-y-2 mb-10">
         {FEATURES.map((item, idx) => {
