@@ -40,16 +40,21 @@ async def send_web_push_to_all(supabase, title: str, body: str, url: str = "/das
         logger.error(f"웹 푸시 구독자 조회 오류: {e}")
         return 0
 
+    logger.info(f"웹 푸시 구독자 {len(users.data)}명 발견")
+
     sent = 0
     for user in users.data:
         sub = user.get("push_subscription")
         if not sub:
+            logger.warning(f"유저 {user.get('id')}: push_subscription 비어있음")
             continue
         if isinstance(sub, str):
             try:
                 sub = json.loads(sub)
-            except Exception:
+            except Exception as e:
+                logger.error(f"유저 {user.get('id')}: push_subscription JSON 파싱 오류 {e}")
                 continue
+        logger.info(f"유저 {user.get('id')} 푸시 발송 시도, sub keys={list(sub.keys()) if isinstance(sub, dict) else type(sub)}")
         if send_web_push(sub, title, body, url):
             sent += 1
 
