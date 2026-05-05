@@ -56,7 +56,12 @@ export default function PrivacyPage() {
             언제든지 개인정보 열람, 수정, 삭제(탈퇴)를 요청할 수 있습니다.
             탈퇴를 원하시면 아래 이메일로 문의 주세요.
           </p>
-          <p className="mt-2 text-blue-400 text-xs">문의: 서비스 운영자 이메일로 탈퇴 요청 가능</p>
+          <p className="mt-2 text-xs">
+            문의:{" "}
+            <a href="mailto:forsmartonly@gmail.com" className="text-blue-400 hover:underline">
+              forsmartonly@gmail.com
+            </a>
+          </p>
         </section>
 
         <section>
