@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { getToday, TodaySurvey } from "@/lib/api";
+import FlipClock from "@/components/FlipClock";
 
 const API_BASE = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
 
@@ -106,11 +107,13 @@ export default function SurveyPage() {
 
       {/* 설문 시간이 아닐 때 */}
       {status === "no_survey" && (
-        <div className="flex flex-col items-center justify-center gap-4 mt-20 text-center">
-          <div className="text-6xl">📅</div>
-          <p className="text-xl font-bold text-white">오늘은 설문이 없어요</p>
-          <p className="text-sm text-gray-400">주말·공휴일에는 장이 열리지 않아요</p>
-          <p className="text-xs text-gray-600 mt-2">다음 영업일 <span className="text-white font-bold">08:48</span>에 알림이 와요</p>
+        <div className="flex flex-col gap-5 mt-10">
+          <div className="flex flex-col items-center gap-3 text-center">
+            <div className="text-5xl">📅</div>
+            <p className="text-xl font-bold text-white">오늘은 설문이 없어요</p>
+            <p className="text-sm text-gray-400">주말·공휴일에는 장이 열리지 않아요</p>
+          </div>
+          <FlipClock />
         </div>
       )}
 
@@ -198,22 +201,25 @@ export default function SurveyPage() {
 
       {/* 설문 마감 후 */}
       {(status === "closed" || status === "result") && (
-        <div className="flex flex-col items-center justify-center gap-4 mt-20 text-center">
-          <div className="text-6xl">{status === "result" ? "📊" : "🔒"}</div>
-          <p className="text-xl font-bold text-white">
-            {status === "result" ? "오늘 결과 공개됐어요" : "설문이 마감됐어요"}
-          </p>
-          <p className="text-sm text-gray-400">
-            {status === "result"
-              ? "대시보드에서 결과와 내 정확도를 확인하세요"
-              : "09:00에 집계가 끝났어요. 15:35에 결과가 공개돼요"}
-          </p>
-          <button
-            onClick={() => router.push("/dashboard")}
-            className="w-full max-w-xs py-4 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-2xl transition-all"
-          >
-            대시보드에서 결과 보기
-          </button>
+        <div className="flex flex-col gap-5 mt-8">
+          <div className="flex flex-col items-center gap-3 text-center">
+            <div className="text-5xl">{status === "result" ? "📊" : "🔒"}</div>
+            <p className="text-xl font-bold text-white">
+              {status === "result" ? "오늘 결과 공개됐어요" : "설문이 마감됐어요"}
+            </p>
+            <p className="text-sm text-gray-400">
+              {status === "result"
+                ? "대시보드에서 결과와 내 정확도를 확인하세요"
+                : "09:00에 집계가 끝났어요. 15:35에 결과가 공개돼요"}
+            </p>
+            <button
+              onClick={() => router.push("/dashboard")}
+              className="w-full py-4 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-2xl transition-all"
+            >
+              대시보드에서 결과 보기
+            </button>
+          </div>
+          <FlipClock />
         </div>
       )}
 

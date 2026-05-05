@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { getMe, getToday, getDashboard, UserProfile, TodaySurvey, DashboardData } from "@/lib/api";
+import FlipClock from "@/components/FlipClock";
 
 function SentimentBar({ label, pct, result }: { label: string; pct: number | null; result?: boolean | null }) {
   const displayPct = pct ?? 0;
@@ -244,13 +245,10 @@ export default function DashboardPage() {
           </div>
 
           {status === "no_survey" && (
-            <div className="flex flex-col items-center gap-3 py-6 text-center">
+            <div className="flex flex-col items-center gap-3 py-4 text-center">
               <span className="text-4xl">🏖️</span>
               <p className="text-white font-bold">오늘은 장이 열리지 않아요</p>
               <p className="text-sm text-gray-400">주말·공휴일엔 설문이 발송되지 않습니다</p>
-              <p className="text-xs text-gray-600 mt-1">
-                다음 영업일 <span className="text-white font-bold">08:48</span>에 알림이 발송돼요
-              </p>
             </div>
           )}
 
@@ -296,6 +294,9 @@ export default function DashboardPage() {
             </div>
           )}
         </div>
+
+        {/* ── 카운트다운 ────────────────────────────────────── */}
+        <FlipClock />
 
         {/* ── 고수 vs 하수 예측 ────────────────────────────── */}
         {(today?.top_predictor || today?.worst_predictor) && (

@@ -73,3 +73,22 @@ body {
 .tabular-nums {
   font-variant-numeric: tabular-nums;
 }
+
+/* 플립 클락 애니메이션 */
+@keyframes flipTop {
+  0%   { transform: rotateX(0deg); }
+  100% { transform: rotateX(-90deg); }
+}
+@keyframes flipBottom {
+  0%   { transform: rotateX(90deg); }
+  100% { transform: rotateX(0deg); }
+}
+.flip-top {
+  animation: flipTop 0.15s ease-in forwards;
+  transform-origin: bottom center;
+}
+.flip-bottom {
+  animation: flipBottom 0.15s ease-out forwards;
+  animation-delay: 0.15s;
+  transform-origin: top center;
+}
