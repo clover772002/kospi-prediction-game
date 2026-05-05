@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import FloatingShareBanner from "@/components/FloatingShareBanner";
 
 function isInAppBrowser(): boolean {
   if (typeof navigator === "undefined") return false;
@@ -39,7 +40,12 @@ export default function InAppBrowserGate({ children }: { children: React.ReactNo
     }
   }, []);
 
-  if (!blocked) return <>{children}</>;
+  if (!blocked) return (
+    <>
+      {children}
+      <FloatingShareBanner />
+    </>
+  );
 
   return (
     <div className="fixed inset-0 bg-[#0D0D0D] flex flex-col items-center justify-center px-6 text-center z-[9999]">
