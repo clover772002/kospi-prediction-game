@@ -85,6 +85,29 @@ async def handle_start(chat_id: int, user_id_param: str, supabase) -> None:
         return
 
     try:
+        # 먼저 대상 유저가 users 테이블에 없으면 Supabase Auth에서 가져와 삽입
+        existing = supabase.table("users").select("id").eq("id", user_id_param).execute()
+        if not existing.data:
+            try:
+                auth_user = supabase.auth.admin.get_user_by_id(user_id_param)
+                if auth_user and auth_user.user:
+                    u = auth_user.user
+                    meta = u.user_metadata or {}
+                    supabase.table("users").upsert({
+                        "id": str(u.id),
+                        "email": u.email or "",
+                        "name": meta.get("full_name") or meta.get("name") or "",
+                        "picture": meta.get("avatar_url") or meta.get("picture") or "",
+                    }).execute()
+            except Exception as e2:
+                logger.warning(f"Auth 유저 조회 실패: {e2}")
+
+        # 기존에 같은 telegram_chat_id를 가진 다른 유저의 연동 해제
+        supabase.table("users").update(
+            {"telegram_chat_id": None}
+        ).eq("telegram_chat_id", chat_id).neq("id", user_id_param).execute()
+
+        # 현재 유저에 telegram_chat_id 연동
         result = supabase.table("users").update(
             {"telegram_chat_id": chat_id}
         ).eq("id", user_id_param).execute()
