@@ -240,39 +240,30 @@ export default function DashboardPage() {
             </p>
           )}
 
-          {status === "open" && (
-            <div className="text-center py-4 space-y-2">
-              <p className="text-3xl">⏰</p>
-              <p className="font-bold">텔레그램에서 응답해주세요!</p>
-              <p className="text-sm text-gray-400">09:00까지만 응답 가능합니다</p>
-            </div>
-          )}
-
-          {(status === "closed" || status === "result") && today && (
+          {(status === "open" || status === "closed" || status === "result") && today && (
             <div className="space-y-4">
               <p className="text-xs text-gray-500 text-right">
                 총 <span className="text-white font-bold">{today.total_responses}명</span> 참여
               </p>
 
-              {/* 1. 실제 실적 (결과 공개 시 최상단) */}
-              {status === "result" && today.kospi_change_pct !== null && (
-                <div className="flex gap-3">
-                  <div className="flex-1 bg-[#111] rounded-xl p-3 text-center">
-                    <p className="text-xs text-gray-500 mb-1">코스피</p>
-                    <p className={`text-2xl font-black ${today.kospi_result ? "text-green-400" : "text-red-400"}`}>
-                      {today.kospi_result ? "📈 상승" : "📉 하락"}
-                    </p>
-                    <p className={`text-xs mt-1 ${today.kospi_change_pct! >= 0 ? "text-green-400/60" : "text-red-400/60"}`}>
-                      {today.kospi_change_pct! >= 0 ? "+" : ""}{today.kospi_change_pct?.toFixed(2)}%
-                    </p>
-                  </div>
+              {/* 1. 실적 표시 */}
+              <div className="flex gap-3">
+                <div className="flex-1 bg-[#111] rounded-xl p-3 text-center">
+                  <p className="text-xs text-gray-500 mb-1">실적</p>
+                  {today.kospi_result !== null && today.kospi_change_pct !== null ? (
+                    <>
+                      <p className={`text-2xl font-black ${today.kospi_result ? "text-green-400" : "text-red-400"}`}>
+                        {today.kospi_result ? "📈 상승" : "📉 하락"}
+                      </p>
+                      <p className={`text-xs mt-1 ${today.kospi_change_pct >= 0 ? "text-green-400/60" : "text-red-400/60"}`}>
+                        {today.kospi_change_pct >= 0 ? "+" : ""}{today.kospi_change_pct.toFixed(2)}%
+                      </p>
+                    </>
+                  ) : (
+                    <p className="text-lg font-black text-gray-500">장마감전</p>
+                  )}
                 </div>
-              )}
-              {status === "closed" && (
-                <p className="text-xs text-gray-600 text-center">
-                  실제 결과는 15:35 이후 공개됩니다
-                </p>
-              )}
+              </div>
 
               {/* 2. 단순 집계 */}
               <div className="space-y-3">
