@@ -260,7 +260,7 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="max-w-md mx-auto min-h-screen flex flex-col items-center justify-center px-6 py-12">
+    <main className="max-w-md mx-auto min-h-screen flex flex-col items-center justify-center px-6 py-12 pb-24">
       {/* 로고 */}
       <div className="text-center mb-10">
         <div className="text-6xl mb-4">📊</div>
