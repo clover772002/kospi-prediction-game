@@ -255,7 +255,32 @@ export default function DashboardPage() {
                 총 <span className="text-white font-bold">{today.total_responses}명</span> 참여
               </p>
 
-              {/* 단순 집계 */}
+              {/* 1. 실제 실적 (결과 공개 시 최상단) */}
+              {status === "result" && today.kospi_change_pct !== null && (
+                <div className="flex gap-3">
+                  <div className="flex-1 bg-[#111] rounded-xl p-3 text-center">
+                    <p className="text-xs text-gray-500 mb-1">코스피 실적</p>
+                    <p className={`text-lg font-black ${today.kospi_change_pct! >= 0 ? "text-green-400" : "text-red-400"}`}>
+                      {today.kospi_change_pct! >= 0 ? "+" : ""}{today.kospi_change_pct?.toFixed(2)}%
+                    </p>
+                    <p className="text-xs mt-0.5">{today.kospi_result ? "📈 상승" : "📉 하락"}</p>
+                  </div>
+                  <div className="flex-1 bg-[#111] rounded-xl p-3 text-center">
+                    <p className="text-xs text-gray-500 mb-1">코스닥 실적</p>
+                    <p className={`text-lg font-black ${today.kosdaq_change_pct! >= 0 ? "text-green-400" : "text-red-400"}`}>
+                      {today.kosdaq_change_pct! >= 0 ? "+" : ""}{today.kosdaq_change_pct?.toFixed(2)}%
+                    </p>
+                    <p className="text-xs mt-0.5">{today.kosdaq_result ? "📈 상승" : "📉 하락"}</p>
+                  </div>
+                </div>
+              )}
+              {status === "closed" && (
+                <p className="text-xs text-gray-600 text-center">
+                  실제 결과는 15:35 이후 공개됩니다
+                </p>
+              )}
+
+              {/* 2. 단순 집계 */}
               <div className="space-y-3">
                 <p className="text-xs text-gray-500">📊 단순 집계</p>
                 <SentimentBar
@@ -270,41 +295,14 @@ export default function DashboardPage() {
                 />
               </div>
 
-              {/* 고수 가중예측 */}
+              {/* 3. 고수 가중예측 */}
               {(today.kospi_weighted_pct !== null || today.kosdaq_weighted_pct !== null) && (
                 <div className="bg-yellow-500/5 border border-yellow-500/20 rounded-xl p-3 space-y-3">
                   <p className="text-xs text-yellow-400 font-bold">⭐ 고수 가중예측 (누적 정확도 반영)</p>
-                  <SentimentBar
-                    label="코스피"
-                    pct={today.kospi_weighted_pct}
-                  />
-                  <SentimentBar
-                    label="코스닥"
-                    pct={today.kosdaq_weighted_pct}
-                  />
+                  <SentimentBar label="코스피" pct={today.kospi_weighted_pct} />
+                  <SentimentBar label="코스닥" pct={today.kosdaq_weighted_pct} />
                   <p className="text-xs text-gray-600">정확도 높은 유저의 예측에 더 높은 가중치를 부여합니다</p>
                 </div>
-              )}
-              {status === "result" && today.kospi_change_pct !== null && (
-                <div className="flex gap-3 pt-1">
-                  <div className="flex-1 bg-[#111] rounded-lg p-2.5 text-center">
-                    <p className="text-xs text-gray-500">코스피</p>
-                    <p className={`text-sm font-black ${today.kospi_change_pct! >= 0 ? "text-green-400" : "text-red-400"}`}>
-                      {today.kospi_change_pct! >= 0 ? "+" : ""}{today.kospi_change_pct?.toFixed(2)}%
-                    </p>
-                  </div>
-                  <div className="flex-1 bg-[#111] rounded-lg p-2.5 text-center">
-                    <p className="text-xs text-gray-500">코스닥</p>
-                    <p className={`text-sm font-black ${today.kosdaq_change_pct! >= 0 ? "text-green-400" : "text-red-400"}`}>
-                      {today.kosdaq_change_pct! >= 0 ? "+" : ""}{today.kosdaq_change_pct?.toFixed(2)}%
-                    </p>
-                  </div>
-                </div>
-              )}
-              {status === "closed" && (
-                <p className="text-xs text-gray-600 text-center">
-                  실제 결과는 15:35 이후 공개됩니다
-                </p>
               )}
             </div>
           )}
