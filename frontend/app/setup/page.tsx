@@ -402,7 +402,7 @@ export default function SetupPage() {
                 </ul>
               </div>
 
-              <
+              <a
                 href={botLink}
                 target="_blank"
                 rel="noopener noreferrer"
