@@ -25,7 +25,7 @@ export default function FloatingShareBanner() {
       >
         <div className="flex-1 min-w-0">
           <p className="text-xs font-bold text-white leading-snug">
-            친구를 초대해 정확도를 높이고 누가 더 고수인지 확인해봐요
+            투자를 정말 잘하거나 정말 못하는 친구들을 찾아 공유하면 정확도가 올라가요!
           </p>
         </div>
 
