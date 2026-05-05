@@ -236,9 +236,13 @@ export default function SetupPage() {
                 const reg = await navigator.serviceWorker.register("/sw.js");
                 await navigator.serviceWorker.ready;
                 const vapidKey = await getVapidPublicKey();
+                const keyBytes = Uint8Array.from(
+                  atob(vapidKey.replace(/-/g, "+").replace(/_/g, "/")),
+                  (c) => c.charCodeAt(0)
+                );
                 const sub = await reg.pushManager.subscribe({
                   userVisibleOnly: true,
-                  applicationServerKey: vapidKey,
+                  applicationServerKey: keyBytes,
                 });
                 await savePushSubscription(token, sub.toJSON());
                 setPushLinked(true);
