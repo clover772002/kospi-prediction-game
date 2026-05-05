@@ -97,10 +97,6 @@ export default function DashboardPage() {
         setUser(profile);
         setToday(todayData);
         setDash(dashData);
-        if (!profile.telegram_chat_id && !profile.has_push) {
-          router.replace("/setup");
-          return;
-        }
       } catch (e: unknown) {
         const msg = e instanceof Error ? e.message : String(e);
         console.error("데이터 로딩 오류:", msg);
@@ -175,6 +171,20 @@ export default function DashboardPage() {
     );
   }
 
+  // ── 블러 게이트 판정 ─────────────────────────────
+  const isConnected = !!(user?.telegram_chat_id || user?.has_push);
+  const surveyDay = today?.status !== "no_survey";
+  const respondedToday = !!(
+    dash?.history?.length &&
+    today?.survey_date &&
+    dash.history[0].date === today.survey_date
+  );
+  // 연동 안 됨 → 최우선
+  const gateType: "not_connected" | "no_survey" | null =
+    !isConnected ? "not_connected" :
+    surveyDay && !respondedToday ? "no_survey" :
+    null;
+
   const statusColor: Record<string, string> = {
     no_survey: "#6B7280",
     open: "#F59E0B",
@@ -198,7 +208,49 @@ export default function DashboardPage() {
   const marketStatus = getMarketStatus();
 
   return (
-    <main className="max-w-md mx-auto min-h-screen pb-24 px-5">
+    <main className="max-w-md mx-auto min-h-screen pb-24 px-5 relative">
+      {/* ── 블러 게이트 오버레이 ── */}
+      {gateType && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center px-6" style={{ backdropFilter: "blur(12px)", backgroundColor: "rgba(0,0,0,0.6)" }}>
+          <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-3xl p-7 w-full max-w-sm text-center space-y-5 shadow-2xl">
+            {gateType === "not_connected" ? (
+              <>
+                <div className="text-5xl">🔔</div>
+                <p className="font-black text-xl text-white">알림 연동이 필요해요</p>
+                <p className="text-sm text-gray-400 leading-relaxed">
+                  텔레그램 또는 브라우저 알림을 연결해야<br />대시보드를 볼 수 있어요.
+                </p>
+                <button
+                  onClick={() => router.push("/setup")}
+                  className="w-full py-4 bg-blue-600 hover:bg-blue-500 text-white font-black text-base rounded-2xl transition-all active:scale-95"
+                >
+                  알림 연동하러 가기 →
+                </button>
+              </>
+            ) : (
+              <>
+                <div className="text-5xl">📝</div>
+                <p className="font-black text-xl text-white">오늘 설문을 해야 볼 수 있어요</p>
+                <p className="text-sm text-gray-400 leading-relaxed">
+                  오늘의 코스피 예측에 먼저 참여해야<br />집계 결과와 고수 예측을 확인할 수 있어요.
+                </p>
+                <button
+                  onClick={() => router.push("/survey")}
+                  className="w-full py-4 bg-amber-500 hover:bg-amber-400 text-white font-black text-base rounded-2xl transition-all active:scale-95"
+                >
+                  설문하러 가기 →
+                </button>
+              </>
+            )}
+            <button
+              onClick={handleLogout}
+              className="block w-full text-xs text-gray-600 hover:text-gray-400 transition-colors"
+            >
+              로그아웃
+            </button>
+          </div>
+        </div>
+      )}
       {/* 헤더 */}
       <div className="pt-8 pb-5 flex items-center justify-between">
         <div>
