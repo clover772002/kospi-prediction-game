@@ -19,7 +19,6 @@ CREATE TABLE users (
     id               UUID PRIMARY KEY,
     email            TEXT UNIQUE NOT NULL,
     name             TEXT,
-    picture          TEXT,
     telegram_chat_id BIGINT UNIQUE,
     created_at       TIMESTAMPTZ DEFAULT NOW()
 );

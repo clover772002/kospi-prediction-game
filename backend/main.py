@@ -217,20 +217,17 @@ async def get_me(
                 "id": user_id,
                 "email": current_user.email,
                 "name": meta.get("full_name", ""),
-                "picture": meta.get("avatar_url", ""),
             }).execute()
             return {
                 "id": user_id,
                 "email": current_user.email,
                 "name": meta.get("full_name", ""),
-                "picture": meta.get("avatar_url", ""),
                 "telegram_chat_id": None,
             }
         else:
-            # 이름/사진 최신화
+            # 이름 최신화
             supabase.table("users").update({
                 "name": meta.get("full_name", existing.data[0].get("name", "")),
-                "picture": meta.get("avatar_url", existing.data[0].get("picture", "")),
             }).eq("id", user_id).execute()
             return existing.data[0]
 

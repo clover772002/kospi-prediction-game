@@ -97,7 +97,6 @@ async def handle_start(chat_id: int, user_id_param: str, supabase) -> None:
                         "id": str(u.id),
                         "email": u.email or "",
                         "name": meta.get("full_name") or meta.get("name") or "",
-                        "picture": meta.get("avatar_url") or meta.get("picture") or "",
                     }).execute()
             except Exception as e2:
                 logger.warning(f"Auth 유저 조회 실패: {e2}")

@@ -16,10 +16,9 @@ export default function PrivacyPage() {
           <ul className="mt-2 space-y-1 text-gray-400">
             <li>· 이름 (닉네임)</li>
             <li>· 이메일 주소</li>
-            <li>· 프로필 사진 URL</li>
             <li>· 텔레그램 연동 시: 텔레그램 채팅 ID</li>
           </ul>
-          <p className="mt-2 text-gray-500 text-xs">채팅 내용, 연락처, 위치정보는 수집하지 않습니다.</p>
+          <p className="mt-2 text-gray-500 text-xs">채팅 내용, 연락처, 위치정보, 프로필 사진은 수집하지 않습니다.</p>
         </section>
 
         <section>
