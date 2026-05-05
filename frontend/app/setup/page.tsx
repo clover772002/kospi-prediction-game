@@ -228,7 +228,15 @@ export default function SetupPage() {
               setPushLoading(true);
               setPushError(null);
               try {
-                const permission = await Notification.requestPermission();
+                if (typeof window === "undefined" || !("Notification" in window)) {
+                  setPushError("이 브라우저는 알림을 지원하지 않아요. Chrome 또는 Edge를 사용해주세요.");
+                  return;
+                }
+                if (!("serviceWorker" in navigator)) {
+                  setPushError("이 브라우저는 Service Worker를 지원하지 않아요.");
+                  return;
+                }
+                const permission = await window.Notification.requestPermission();
                 if (permission !== "granted") {
                   setPushError("알림 권한이 거부됐어요. 브라우저 설정에서 허용해주세요.");
                   return;
@@ -237,6 +245,10 @@ export default function SetupPage() {
                 await navigator.serviceWorker.ready;
                 const vapidKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
                   || await getVapidPublicKey();
+                if (!vapidKey) {
+                  setPushError("서버 설정 오류입니다. 잠시 후 다시 시도해주세요.");
+                  return;
+                }
                 const keyBytes = Uint8Array.from(
                   atob(vapidKey.replace(/-/g, "+").replace(/_/g, "/")),
                   (c) => c.charCodeAt(0)
