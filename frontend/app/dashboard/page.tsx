@@ -105,7 +105,7 @@ export default function DashboardPage() {
         setUser(profile);
         setToday(todayData);
         setDash(dashData);
-        if (!profile.telegram_chat_id) {
+        if (!profile.telegram_chat_id && !profile.has_push) {
           router.replace("/setup");
           return;
         }

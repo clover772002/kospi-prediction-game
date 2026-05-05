@@ -24,6 +24,7 @@ export interface UserProfile {
   name: string;
   picture: string;
   telegram_chat_id: number | null;
+  has_push: boolean;
 }
 
 export interface TodaySurvey {

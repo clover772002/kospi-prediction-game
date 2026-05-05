@@ -230,13 +230,16 @@ async def get_me(
                 "email": current_user.email,
                 "name": meta.get("full_name", ""),
                 "telegram_chat_id": None,
+                "has_push": False,
             }
         else:
             # 이름 최신화
             supabase.table("users").update({
                 "name": meta.get("full_name", existing.data[0].get("name", "")),
             }).eq("id", user_id).execute()
-            return existing.data[0]
+            row = existing.data[0]
+            row["has_push"] = bool(row.get("push_subscription"))
+            return row
 
     except Exception as e:
         logger.error(f"유저 처리 오류: {e}")
