@@ -180,7 +180,7 @@ async def lifespan(app_instance):
 
 app = FastAPI(title="주식 예측 봇 API", version="3.0.0", lifespan=lifespan)
 
-_raw_origins = os.getenv("ALLOWED_ORIGINS", "http://localhost:3000")
+_raw_origins = os.getenv("ALLOWED_ORIGINS", "http://localhost:3000,https://kospi-prediction-game.vercel.app")
 _allowed_origins = [o.strip() for o in _raw_origins.split(",") if o.strip()]
 
 app.add_middleware(
