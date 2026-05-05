@@ -25,12 +25,11 @@ export default function FloatingShareBanner() {
       >
         <div className="flex-1 min-w-0">
           <p className="text-xs font-bold text-white leading-tight">친구에게 공유하기</p>
-          <p className="text-[10px] text-gray-500 leading-tight mt-0.5 truncate">코스피 예측 같이 해봐요 📊</p>
         </div>
 
         <ShareSheet
           title="투자자 층간소음 — 코스피 예측 게임"
-          text="코스피 오를지 내릴지 맞혀보세요! 같이 해봐요 📊"
+          text="코스피 오를지 내릴지 맞혀보세요!"
           renderTrigger={(onClick) => (
             <button
               type="button"
