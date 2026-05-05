@@ -304,33 +304,63 @@ export default function DashboardPage() {
           )}
         </div>
 
-        {/* ── 최고 고수의 예측 ──────────────────────────────── */}
-        {today?.top_predictor && (
-          <div className="bg-[#1A1A1A] rounded-2xl p-5 border border-yellow-500/20">
-            <div className="flex items-center gap-2 mb-4">
-              <p className="font-bold text-sm">🏆 오늘의 고수 예측</p>
-              <span className="text-xs bg-yellow-500/10 text-yellow-400 px-2 py-0.5 rounded-full font-bold">
-                누적 적중률 {today.top_predictor.accuracy}%
-              </span>
-            </div>
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-9 h-9 rounded-full bg-yellow-500/20 flex items-center justify-center text-lg">👑</div>
-              <p className="text-white font-bold">{today.top_predictor.masked_name}</p>
-            </div>
+        {/* ── 고수 vs 하수 예측 ────────────────────────────── */}
+        {(today?.top_predictor || today?.worst_predictor) && (
+          <div className="bg-[#1A1A1A] rounded-2xl p-5 border border-[#2A2A2A]">
+            <p className="font-bold text-sm mb-4">오늘의 예측</p>
             <div className="grid grid-cols-2 gap-3">
-              <div className="bg-[#111] rounded-xl p-3 text-center">
-                <p className="text-xs text-gray-500 mb-1">코스피</p>
-                <p className={`font-black text-base ${today.top_predictor.kospi_answer ? "text-green-400" : "text-red-400"}`}>
-                  {today.top_predictor.kospi_answer ? "📈 오른다" : "📉 내린다"}
-                </p>
-              </div>
-              <div className="bg-[#111] rounded-xl p-3 text-center">
-                <p className="text-xs text-gray-500 mb-1">코스닥</p>
-                <p className={`font-black text-base ${today.top_predictor.kosdaq_answer ? "text-green-400" : "text-red-400"}`}>
-                  {today.top_predictor.kosdaq_answer ? "📈 오른다" : "📉 내린다"}
-                </p>
-              </div>
+              {/* 고수 */}
+              {today.top_predictor && (
+                <div className="bg-[#111] border border-yellow-500/20 rounded-2xl p-4 space-y-3">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-base">👑</span>
+                    <span className="text-xs text-yellow-400 font-bold">고수</span>
+                    <span className="text-xs text-gray-600 ml-auto">{today.top_predictor.accuracy}%</span>
+                  </div>
+                  <p className="text-white font-bold text-sm">{today.top_predictor.masked_name}</p>
+                  <div className="space-y-1.5">
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs text-gray-500">코스피</span>
+                      <span className={`text-xs font-bold ${today.top_predictor.kospi_answer ? "text-green-400" : "text-red-400"}`}>
+                        {today.top_predictor.kospi_answer ? "📈 오른다" : "📉 내린다"}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs text-gray-500">코스닥</span>
+                      <span className={`text-xs font-bold ${today.top_predictor.kosdaq_answer ? "text-green-400" : "text-red-400"}`}>
+                        {today.top_predictor.kosdaq_answer ? "📈 오른다" : "📉 내린다"}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
+              {/* 하수 */}
+              {today.worst_predictor && (
+                <div className="bg-[#111] border border-blue-500/20 rounded-2xl p-4 space-y-3">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-base">🤡</span>
+                    <span className="text-xs text-blue-400 font-bold">하수</span>
+                    <span className="text-xs text-gray-600 ml-auto">{today.worst_predictor.accuracy}%</span>
+                  </div>
+                  <p className="text-white font-bold text-sm">{today.worst_predictor.masked_name}</p>
+                  <div className="space-y-1.5">
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs text-gray-500">코스피</span>
+                      <span className={`text-xs font-bold ${today.worst_predictor.kospi_answer ? "text-green-400" : "text-red-400"}`}>
+                        {today.worst_predictor.kospi_answer ? "📈 오른다" : "📉 내린다"}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs text-gray-500">코스닥</span>
+                      <span className={`text-xs font-bold ${today.worst_predictor.kosdaq_answer ? "text-green-400" : "text-red-400"}`}>
+                        {today.worst_predictor.kosdaq_answer ? "📈 오른다" : "📉 내린다"}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
+            <p className="text-xs text-gray-600 text-center mt-3">하수 예측은 반대 신호로 활용하세요 😏</p>
           </div>
         )}
 

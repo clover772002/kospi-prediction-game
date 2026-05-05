@@ -47,6 +47,7 @@ export interface TodaySurvey {
   kospi_change_pct: number | null;
   kosdaq_change_pct: number | null;
   top_predictor?: TopPredictor;
+  worst_predictor?: TopPredictor;
 }
 
 export interface HistoryItem {

@@ -413,27 +413,32 @@ async def get_today(supabase: Client = Depends(get_supabase)):
         acc_map = _build_user_accuracy_map(supabase)
         base["kospi_weighted_pct"], base["kosdaq_weighted_pct"] = _calc_weighted_pct(responses.data, acc_map)
 
-        # 최고 고수 예측 (누적 정확도 1위 유저, 오늘 응답한 경우)
+        # 최고 고수 / 최고 하수 예측 (오늘 응답한 유저 중)
         try:
             resp_map = {r["user_id"]: r for r in responses.data}
-            best_uid = max(
+            ranked = sorted(
                 (uid for uid in acc_map if uid in resp_map),
                 key=lambda uid: acc_map[uid],
-                default=None,
             )
-            if best_uid:
-                user_row = supabase.table("users").select("name").eq("id", best_uid).execute()
+
+            def _predictor_info(uid):
+                user_row = supabase.table("users").select("name").eq("id", uid).execute()
                 name = user_row.data[0]["name"] if user_row.data else "익명"
-                masked = name[0] + "**" if name else "익명"
-                best_resp = resp_map[best_uid]
-                base["top_predictor"] = {
+                masked = (name[0] + "**") if name else "익명"
+                r = resp_map[uid]
+                return {
                     "masked_name": masked,
-                    "kospi_answer": best_resp["kospi_answer"],
-                    "kosdaq_answer": best_resp["kosdaq_answer"],
-                    "accuracy": round(acc_map[best_uid] * 100),
+                    "kospi_answer": r["kospi_answer"],
+                    "kosdaq_answer": r["kosdaq_answer"],
+                    "accuracy": round(acc_map[uid] * 100),
                 }
+
+            if ranked:
+                base["top_predictor"]   = _predictor_info(ranked[-1])  # 정확도 최고
+                if len(ranked) >= 2:
+                    base["worst_predictor"] = _predictor_info(ranked[0])   # 정확도 최저
         except Exception as e:
-            logger.warning(f"최고 고수 조회 실패: {e}")
+            logger.warning(f"고수/하수 조회 실패: {e}")
 
     return base
 
