@@ -319,7 +319,7 @@ export default function DashboardPage() {
               <p className="text-3xl">📭</p>
               <p className="text-sm text-gray-400">
                 아직 예측 이력이 없어요.<br />
-                텔레그램 설문에 응답해보세요!
+                설문에 응답해보세요!
               </p>
             </div>
           ) : dash ? (

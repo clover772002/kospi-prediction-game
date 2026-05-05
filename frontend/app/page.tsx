@@ -8,7 +8,7 @@ import { supabase } from "@/lib/supabase";
 const FEATURES = [
   {
     icon: "📱",
-    title: "텔레그램 설문",
+    title: "설문",
     desc: "매일 08:48 O/X 설문이 텔레그램으로 발송돼요",
     detail: {
       summary: "텔레그램은 전 세계 9억 명이 사용하는 메신저로, 별도 앱 설치만 하면 끝입니다. 복잡한 가입 없이 봇 하나로 설문을 받고 결과를 받아볼 수 있어요.",
@@ -286,7 +286,7 @@ export default function LoginPage() {
               {
                 time: "08:48",
                 dot: "bg-blue-500",
-                title: "텔레그램 설문 발송",
+                title: "설문 발송 (사고팔자!)",
                 desc: "\"사고 팔자!\" 08:48, 코스피·코스닥 O/X 설문이 텔레그램으로 도착",
               },
               {

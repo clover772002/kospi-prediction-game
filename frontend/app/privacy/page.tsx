@@ -25,7 +25,7 @@ export default function PrivacyPage() {
           <h2 className="text-white font-bold mb-2">2. 수집 목적</h2>
           <ul className="space-y-1 text-gray-400">
             <li>· 서비스 회원 식별 및 로그인</li>
-            <li>· 텔레그램 설문 발송 및 결과 알림</li>
+            <li>· 설문 발송 및 결과 알림 (알림 봇 이용)</li>
             <li>· 예측 정확도 기록 및 순위 산정</li>
           </ul>
         </section>
