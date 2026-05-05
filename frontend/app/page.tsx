@@ -119,13 +119,25 @@ const FEATURES = [
   },
 ];
 
+function isInAppBrowser(): boolean {
+  if (typeof navigator === "undefined") return false;
+  const ua = navigator.userAgent || "";
+  return /KAKAOTALK|Instagram|FBAN|FBAV|Line\/|Twitter|Snapchat|TikTok|NaverApp|DaumApps|MicroMessenger/i.test(ua);
+}
+
 export default function LoginPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [signing, setSigning] = useState<"google" | "kakao" | null>(null);
   const [openIdx, setOpenIdx] = useState<number | null>(null);
+  const [inAppBrowser, setInAppBrowser] = useState(false);
 
   useEffect(() => {
+    if (isInAppBrowser()) {
+      setInAppBrowser(true);
+      setLoading(false);
+      return;
+    }
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
         router.replace("/dashboard");
@@ -153,6 +165,45 @@ export default function LoginPage() {
     return (
       <main className="max-w-md mx-auto min-h-screen flex items-center justify-center">
         <div className="w-8 h-8 border-2 border-blue-500/30 border-t-blue-500 rounded-full animate-spin" />
+      </main>
+    );
+  }
+
+  if (inAppBrowser) {
+    return (
+      <main className="max-w-md mx-auto min-h-screen flex flex-col items-center justify-center px-6 text-center">
+        <div className="text-5xl mb-6">🌐</div>
+        <h1 className="text-xl font-black text-white mb-3">브라우저에서 열어주세요</h1>
+        <p className="text-gray-400 text-sm leading-relaxed mb-6">
+          카카오톡·인스타그램 등 앱 내 브라우저에서는<br />
+          Google 로그인이 차단됩니다.
+        </p>
+        <div className="w-full bg-[#1A1A1A] rounded-2xl border border-[#2A2A2A] p-5 space-y-4 text-left">
+          <p className="text-white font-bold text-sm">아래 방법으로 접속해 주세요</p>
+          <div className="space-y-3">
+            <div className="flex items-start gap-3">
+              <span className="text-xl">📱</span>
+              <div>
+                <p className="text-white text-sm font-bold">iPhone</p>
+                <p className="text-gray-400 text-xs">우측 하단 공유 버튼 → Safari에서 열기</p>
+              </div>
+            </div>
+            <div className="flex items-start gap-3">
+              <span className="text-xl">🤖</span>
+              <div>
+                <p className="text-white text-sm font-bold">Android</p>
+                <p className="text-gray-400 text-xs">우측 상단 메뉴(⋮) → Chrome에서 열기</p>
+              </div>
+            </div>
+            <div className="flex items-start gap-3">
+              <span className="text-xl">🔗</span>
+              <div>
+                <p className="text-white text-sm font-bold">직접 주소 입력</p>
+                <p className="text-gray-400 text-xs select-all font-mono">kospi-prediction-game.vercel.app</p>
+              </div>
+            </div>
+          </div>
+        </div>
       </main>
     );
   }
