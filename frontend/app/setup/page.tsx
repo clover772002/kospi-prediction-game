@@ -7,6 +7,18 @@ import { getMe, unlinkTelegram, getVapidPublicKey, savePushSubscription, deleteP
 
 const BOT_USERNAME = process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME || "Profitchat123bot";
 
+function openInExternalBrowser() {
+  const url = window.location.href;
+  const ua = navigator.userAgent || "";
+  const isAndroid = /Android/i.test(ua);
+  if (isAndroid) {
+    window.location.href = `intent://${url.replace(/^https?:\/\//, "")}#Intent;scheme=https;package=com.android.chrome;end`;
+  } else {
+    window.location.href = `googlechrome://${url.replace(/^https?:\/\//, "")}`;
+    setTimeout(() => { window.location.href = url; }, 1000);
+  }
+}
+
 export default function SetupPage() {
   const router = useRouter();
   const [user, setUser] = useState<UserProfile | null>(null);
@@ -225,13 +237,16 @@ export default function SetupPage() {
 
           {/* 인앱 브라우저 경고 */}
           {typeof navigator !== "undefined" && /KAKAOTALK|Instagram|FBAN|FBAV|Line\//i.test(navigator.userAgent) && (
-            <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-4 space-y-2">
-              <p className="text-yellow-400 text-sm font-bold">⚠️ 카카오톡 내에서는 사용 불가</p>
-              <p className="text-xs text-gray-400">브라우저 알림은 카카오톡 앱 내에서 작동하지 않아요.<br />아래 방법 중 하나를 선택해주세요.</p>
-              <ul className="text-xs text-gray-400 space-y-1 mt-1">
-                <li>① <span className="text-white">텔레그램 봇</span> 탭으로 연동 (권장)</li>
-                <li>② 주소창 링크를 복사해서 <span className="text-white">Chrome/Safari</span>로 직접 열기</li>
-              </ul>
+            <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-4 space-y-3">
+              <p className="text-yellow-400 text-sm font-bold">⚠️ 앱 내에서는 브라우저 알림 사용 불가</p>
+              <p className="text-xs text-gray-400">브라우저 알림은 Chrome / Safari에서만 작동해요.</p>
+              <button
+                onClick={openInExternalBrowser}
+                className="w-full py-3 bg-white text-gray-900 font-bold rounded-xl text-sm active:scale-95 transition-all"
+              >
+                🌐 Chrome / Safari로 열기
+              </button>
+              <p className="text-xs text-gray-600 text-center">버튼이 안 되면 텔레그램 봇 탭을 이용해주세요</p>
             </div>
           )}
 
