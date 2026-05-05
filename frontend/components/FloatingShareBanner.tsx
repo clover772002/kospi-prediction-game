@@ -30,8 +30,8 @@ export default function FloatingShareBanner() {
         </div>
 
         <ShareSheet
-          title="8:48 코스피 예측 - 집단지성으로 성투하자"
-          text="같이 코스피 맞히고 고수 자리 붙자 — 매일 08:48, 랭킹으로 정확도 겨루기"
+          title="주식장 직전 8:48, 코스피 예측"
+          text="집단지성으로 성투하자"
           renderTrigger={(onClick) => (
             <button
               type="button"

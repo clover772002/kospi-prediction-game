@@ -82,10 +82,10 @@ export default function ShareSheet({ url, title, text, renderTrigger }: ShareShe
   const [copied, setCopied] = useState(false);
   const sheetRef = useRef<HTMLDivElement>(null);
   const shareUrl = url ?? (typeof window !== "undefined" ? window.location.href : "");
-  const shareTitle = title ?? "8:48 코스피 예측 - 집단지성으로 성투하자";
-  const shareText =
-    text ??
-    "같이 코스피 맞히고 고수 자리 붙자 — 매일 08:48, 랭킹으로 정확도 겨루기";
+  const shareTitle = title ?? "주식장 직전 8:48, 코스피 예측";
+  const shareText = text ?? "집단지성으로 성투하자";
+  /** 네이티브 공유는 title/text 분리, 단일 본문만 지원하는 앱용 */
+  const combinedShareText = `${shareTitle}\n${shareText}`;
 
   const canNativeShare =
     typeof navigator !== "undefined" && !!navigator.share;
@@ -172,7 +172,7 @@ export default function ShareSheet({ url, title, text, renderTrigger }: ShareShe
                 <button
                   key={app.name}
                   onClick={() => {
-                    window.open(app.getUrl(shareUrl, shareText), "_blank");
+                    window.open(app.getUrl(shareUrl, combinedShareText), "_blank");
                   }}
                   className="flex flex-col items-center gap-2 active:scale-90 transition-transform"
                 >
