@@ -23,13 +23,18 @@ export default function FloatingShareBanner() {
           boxShadow: "0 8px 32px rgba(0,0,0,0.7)",
         }}
       >
-        <div className="flex-1 min-w-0">
-          <p className="text-xs font-bold text-white leading-tight">친구에게 공유하기</p>
+        <div className="flex-1 min-w-0 space-y-1">
+          <p className="text-xs font-bold text-white leading-snug">
+            친구 초대하고 정확도 겨루기
+          </p>
+          <p className="text-[10px] text-gray-400 leading-snug">
+            매일 맞히면 정확도가 쌓여요. 친구도 참여하면 대시보드 고수 랭킹에서 누가 더 잘 맞히는지 겨룰 수 있어요
+          </p>
         </div>
 
         <ShareSheet
-          title="투자자 층간소음 — 코스피 예측 게임"
-          text="코스피 오를지 내릴지 맞혀보세요!"
+          title="투자자 층간소음 — 코스피 예측"
+          text="같이 코스피 맞히고 랭킹에서 정확도 붙자. 매일 08:48 한 판 · 대시보드에서 고수 순위로 대결"
           renderTrigger={(onClick) => (
             <button
               type="button"

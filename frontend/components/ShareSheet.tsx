@@ -82,8 +82,10 @@ export default function ShareSheet({ url, title, text, renderTrigger }: ShareShe
   const [copied, setCopied] = useState(false);
   const sheetRef = useRef<HTMLDivElement>(null);
   const shareUrl = url ?? (typeof window !== "undefined" ? window.location.href : "");
-  const shareTitle = title ?? "투자자 층간소음 - 코스피 예측 게임";
-  const shareText = text ?? "내가 코스피 예측하는 곳! 같이 해봐요 🎯";
+  const shareTitle = title ?? "투자자 층간소음 — 코스피 예측";
+  const shareText =
+    text ??
+    "같이 코스피 맞히고 랭킹에서 정확도 붙자. 매일 08:48 한 판 — 대시보드 고수 순위로 대결";
 
   const canNativeShare =
     typeof navigator !== "undefined" && !!navigator.share;
