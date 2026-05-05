@@ -25,52 +25,143 @@ function pad(n: number) {
   return String(n).padStart(2, "0");
 }
 
+const CARD_H = 56;
+const HALF_H = CARD_H / 2;
+
+function HalfDigit({
+  value,
+  half,
+  dim = false,
+}: {
+  value: string;
+  half: "top" | "bottom";
+  dim?: boolean;
+}) {
+  return (
+    <div
+      style={{
+        height: HALF_H,
+        overflow: "hidden",
+        position: "relative",
+      }}
+      className={half === "top" ? "rounded-t-md bg-[#1E1E1E]" : "rounded-b-md bg-[#181818]"}
+    >
+      {/* 전체 높이 div 안에 숫자를 센터 정렬 — overflow:hidden이 절반만 보이게 함 */}
+      <div
+        style={{
+          height: CARD_H,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          marginTop: half === "bottom" ? -HALF_H : 0,
+        }}
+      >
+        <span
+          className="tabular-nums font-black select-none"
+          style={{
+            fontSize: 26,
+            lineHeight: 1,
+            color: dim ? "rgba(255,255,255,0.55)" : "#fff",
+            fontVariantNumeric: "tabular-nums",
+          }}
+        >
+          {value}
+        </span>
+      </div>
+    </div>
+  );
+}
+
 function FlipCard({ digit, prevDigit }: { digit: string; prevDigit: string }) {
   const [animating, setAnimating] = useState(false);
   const prevRef = useRef(prevDigit);
+  const savedPrev = prevRef.current;
 
   useEffect(() => {
     if (digit !== prevRef.current) {
       setAnimating(true);
       prevRef.current = digit;
-      const t = setTimeout(() => setAnimating(false), 320);
+      const t = setTimeout(() => setAnimating(false), 300);
       return () => clearTimeout(t);
     }
   }, [digit]);
 
   return (
     <div
-      className="relative w-9 h-12 rounded-md overflow-hidden select-none"
-      style={{ perspective: "200px" }}
+      className="relative select-none rounded-md"
+      style={{ width: 36, height: CARD_H, perspective: 300 }}
     >
-      {/* 상단 고정 (현재값) */}
-      <div className="absolute inset-x-0 top-0 h-1/2 bg-[#1C1C1C] flex items-end justify-center overflow-hidden rounded-t-md border-b border-black/60">
-        <span className="text-2xl font-black text-white tabular-nums leading-none pb-0.5">{digit}</span>
-      </div>
-      {/* 하단 고정 (현재값) */}
-      <div className="absolute inset-x-0 bottom-0 h-1/2 bg-[#161616] flex items-start justify-center overflow-hidden rounded-b-md">
-        <span className="text-2xl font-black text-white/80 tabular-nums leading-none -mt-[14px]">{digit}</span>
-      </div>
-
-      {/* 플립 상단 (이전값 → 내려가며 사라짐) */}
-      {animating && (
-        <div
-          className="absolute inset-x-0 top-0 h-1/2 bg-[#242424] flex items-end justify-center overflow-hidden rounded-t-md border-b border-black/60 flip-top z-10"
-        >
-          <span className="text-2xl font-black text-white tabular-nums leading-none pb-0.5">{prevRef.current}</span>
-        </div>
-      )}
-      {/* 플립 하단 (새값 → 위에서 내려옴) */}
-      {animating && (
-        <div
-          className="absolute inset-x-0 bottom-0 h-1/2 bg-[#1C1C1C] flex items-start justify-center overflow-hidden rounded-b-md flip-bottom z-10"
-        >
-          <span className="text-2xl font-black text-white tabular-nums leading-none -mt-[14px]">{digit}</span>
-        </div>
-      )}
-
+      {/* 정적: 상단 (현재값) */}
+      <HalfDigit value={digit} half="top" />
       {/* 중앙 구분선 */}
-      <div className="absolute inset-x-0 top-1/2 h-px bg-black/80 z-20" />
+      <div style={{ height: 1, background: "#000", position: "relative", zIndex: 5 }} />
+      {/* 정적: 하단 (현재값) */}
+      <HalfDigit value={digit} half="bottom" dim />
+
+      {/* 애니메이션: 이전값 상단이 아래로 접힘 */}
+      {animating && (
+        <div
+          className="flip-top"
+          style={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            right: 0,
+            height: HALF_H,
+            overflow: "hidden",
+            zIndex: 10,
+            transformOrigin: "bottom center",
+            borderRadius: "6px 6px 0 0",
+            background: "#2A2A2A",
+          }}
+        >
+          <div
+            style={{
+              height: CARD_H,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <span className="tabular-nums font-black" style={{ fontSize: 26, lineHeight: 1, color: "#fff" }}>
+              {savedPrev}
+            </span>
+          </div>
+        </div>
+      )}
+
+      {/* 애니메이션: 새값 하단이 위에서 펼쳐짐 */}
+      {animating && (
+        <div
+          className="flip-bottom"
+          style={{
+            position: "absolute",
+            bottom: 0,
+            left: 0,
+            right: 0,
+            height: HALF_H,
+            overflow: "hidden",
+            zIndex: 10,
+            transformOrigin: "top center",
+            borderRadius: "0 0 6px 6px",
+            background: "#1E1E1E",
+          }}
+        >
+          <div
+            style={{
+              height: CARD_H,
+              marginTop: -HALF_H,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <span className="tabular-nums font-black" style={{ fontSize: 26, lineHeight: 1, color: "rgba(255,255,255,0.55)" }}>
+              {digit}
+            </span>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
