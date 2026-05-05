@@ -101,42 +101,42 @@ const FEATURES = [
     },
   },
   {
-    icon: "📈",
-    title: "맞출수록 내 영향력이 커진다",
-    desc: "누적 정확도가 가중치가 되어 내 예측이 커뮤니티를 움직여요",
+    icon: "🎯",
+    title: "고수 예측이 실제로 더 잘 맞아요",
+    desc: "단순 다수결보다 고수 가중예측의 실제 적중률이 높아요",
     detail: {
-      summary: "장 마감(15:35) 후 결과가 텔레그램으로 와요. 맞춘 횟수가 누적될수록 내 가중치가 올라가고, 다른 사람들이 보는 고수 예측에 내 의견이 더 많이 반영됩니다.",
+      summary: "다수결은 모든 의견을 동등하게 취급하지만, 고수 가중예측은 잘 맞추는 사람의 의견에 더 무게를 줍니다. 데이터가 쌓일수록 두 예측의 정확도 차이를 직접 확인할 수 있어요.",
       steps: null,
       mockup: (
         <div className="mt-3 space-y-3">
-          <div className="bg-[#1A1A1A] rounded-2xl p-4 border border-[#2A2A2A] space-y-2">
-            <div className="text-white text-xs font-bold mb-2">📨 15:35 결과 알림 예시</div>
-            <div className="bg-[#0d1117] rounded-xl p-3 text-xs space-y-1.5">
+          <div className="bg-[#1A1A1A] rounded-2xl p-4 border border-[#2A2A2A]">
+            <p className="text-xs text-gray-400 font-bold mb-3">📊 누적 방향 예측 적중률 비교</p>
+            {[
+              { label: "단순 다수결", pct: 54, color: "bg-gray-500" },
+              { label: "⭐ 고수 가중예측", pct: 67, color: "bg-yellow-400" },
+            ].map((item) => (
+              <div key={item.label} className="mb-3">
+                <div className="flex justify-between text-xs mb-1">
+                  <span className="text-gray-400">{item.label}</span>
+                  <span className="text-white font-bold">{item.pct}%</span>
+                </div>
+                <div className="bg-[#111] rounded-full h-4 overflow-hidden">
+                  <div className={`h-full ${item.color} rounded-full`} style={{ width: `${item.pct}%` }} />
+                </div>
+              </div>
+            ))}
+            <p className="text-xs text-gray-600">* 예시 수치 — 실제 적중률은 서비스 내 데이터로 누적됩니다</p>
+          </div>
+          <div className="bg-[#1A1A1A] rounded-2xl p-3 border border-[#2A2A2A]">
+            <p className="text-xs text-gray-400 font-bold mb-2">📨 15:35 결과 알림 예시</p>
+            <div className="bg-[#0d1117] rounded-xl p-3 text-xs space-y-1">
               <p className="text-green-400">KOSPI ▲ +0.8% → 내 예측 ✅ 정답</p>
               <p className="text-red-400">KOSDAQ ▼ -0.3% → 내 예측 ❌ 오답</p>
               <div className="border-t border-gray-700 pt-2 mt-1 space-y-1">
                 <p className="text-gray-300">🎯 누적 정확도 <b className="text-white">68%</b></p>
                 <p className="text-gray-300">🏅 상위 <b className="text-yellow-400">23%</b></p>
-                <p className="text-gray-300">⭐ 가중 기여도 <b className="text-green-400">136%</b> <span className="text-gray-600">(평균 대비)</span></p>
               </div>
             </div>
-          </div>
-          <div className="bg-[#1A1A1A] rounded-2xl p-3 border border-[#2A2A2A]">
-            <p className="text-xs text-gray-400 mb-2 font-bold">참여 기간별 영향력 변화</p>
-            {[
-              { label: "신규 (0일)", pct: 50, color: "bg-gray-500" },
-              { label: "1개월 (정확도 55%)", pct: 60, color: "bg-blue-500" },
-              { label: "3개월 (정확도 68%)", pct: 75, color: "bg-yellow-500" },
-              { label: "6개월 고수 (정확도 78%)", pct: 90, color: "bg-green-400" },
-            ].map((item) => (
-              <div key={item.label} className="flex items-center gap-2 mb-2">
-                <span className="text-gray-500 text-xs w-32 flex-shrink-0">{item.label}</span>
-                <div className="flex-1 bg-[#111] rounded-full h-3 overflow-hidden">
-                  <div className={`h-full ${item.color} rounded-full`} style={{ width: `${item.pct}%` }} />
-                </div>
-              </div>
-            ))}
-            <p className="text-xs text-gray-600 mt-1">가중치가 높을수록 내 예측이 고수 예측에 더 많이 반영됩니다</p>
           </div>
         </div>
       ),
