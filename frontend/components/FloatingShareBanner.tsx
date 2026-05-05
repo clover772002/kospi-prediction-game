@@ -25,16 +25,16 @@ export default function FloatingShareBanner() {
       >
         <div className="flex-1 min-w-0 space-y-1">
           <p className="text-xs font-bold text-white leading-snug">
-            친구 초대하고 정확도 겨루기
+            정확도를 높여요. 누가 더 고수인지 확인해봐요
           </p>
           <p className="text-[10px] text-gray-400 leading-snug">
-            매일 맞히면 정확도가 쌓여요. 친구도 참여하면 대시보드 고수 랭킹에서 누가 더 잘 맞히는지 겨룰 수 있어요
+            사람이 많을수록 정확도가 올라가요 · 친구를 불러 함께 겨루세요
           </p>
         </div>
 
         <ShareSheet
           title="투자자 층간소음 — 코스피 예측"
-          text="같이 코스피 맞히고 랭킹에서 정확도 붙자. 매일 08:48 한 판 · 대시보드에서 고수 순위로 대결"
+          text="같이 코스피 맞히고 고수 자리 붙자 — 매일 08:48, 랭킹으로 정확도 겨루기"
           renderTrigger={(onClick) => (
             <button
               type="button"
