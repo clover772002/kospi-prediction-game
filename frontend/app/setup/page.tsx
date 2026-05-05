@@ -222,6 +222,19 @@ export default function SetupPage() {
               <li>⚠️ iPhone은 Safari에서 홈 화면에 추가 후 사용 가능</li>
             </ul>
           </div>
+
+          {/* 인앱 브라우저 경고 */}
+          {typeof navigator !== "undefined" && /KAKAOTALK|Instagram|FBAN|FBAV|Line\//i.test(navigator.userAgent) && (
+            <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-4 space-y-2">
+              <p className="text-yellow-400 text-sm font-bold">⚠️ 카카오톡 내에서는 사용 불가</p>
+              <p className="text-xs text-gray-400">브라우저 알림은 카카오톡 앱 내에서 작동하지 않아요.<br />아래 방법 중 하나를 선택해주세요.</p>
+              <ul className="text-xs text-gray-400 space-y-1 mt-1">
+                <li>① <span className="text-white">텔레그램 봇</span> 탭으로 연동 (권장)</li>
+                <li>② 주소창 링크를 복사해서 <span className="text-white">Chrome/Safari</span>로 직접 열기</li>
+              </ul>
+            </div>
+          )}
+
           <button
             onClick={async () => {
               if (!token) return;
