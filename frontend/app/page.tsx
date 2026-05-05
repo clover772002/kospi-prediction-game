@@ -106,10 +106,11 @@ const FEATURES = [
     title: "고수 예측이 실제로 더 잘 맞아요",
     desc: "단순 다수결보다 고수 가중예측의 실제 적중률이 높아요",
     detail: {
-      summary: "다수결은 모든 의견을 동등하게 취급하지만, 고수 가중예측은 잘 맞추는 사람의 의견에 더 무게를 줍니다. 데이터가 쌓일수록 두 예측의 정확도 차이를 직접 확인할 수 있어요.",
+      summary: "잘 맞추는 사람은 가중치 UP, 항상 틀리는 사람은 반대 방향 신호로 활용합니다. 틀리는 것도 데이터가 되는 구조 덕분에 단순 다수결보다 훨씬 정교한 예측이 만들어집니다.",
       steps: null,
       mockup: (
         <div className="mt-3 space-y-3">
+          {/* 적중률 비교 */}
           <div className="bg-[#1A1A1A] rounded-2xl p-4 border border-[#2A2A2A]">
             <p className="text-xs text-gray-400 font-bold mb-3">📊 누적 방향 예측 적중률 비교</p>
             {[
@@ -128,16 +129,26 @@ const FEATURES = [
             ))}
             <p className="text-xs text-gray-600">* 예시 수치 — 실제 적중률은 서비스 내 데이터로 누적됩니다</p>
           </div>
-          <div className="bg-[#1A1A1A] rounded-2xl p-3 border border-[#2A2A2A]">
-            <p className="text-xs text-gray-400 font-bold mb-2">📨 15:35 결과 알림 예시</p>
-            <div className="bg-[#0d1117] rounded-xl p-3 text-xs space-y-1">
-              <p className="text-green-400">KOSPI ▲ +0.8% → 내 예측 ✅ 정답</p>
-              <p className="text-red-400">KOSDAQ ▼ -0.3% → 내 예측 ❌ 오답</p>
-              <div className="border-t border-gray-700 pt-2 mt-1 space-y-1">
-                <p className="text-gray-300">🎯 누적 정확도 <b className="text-white">68%</b></p>
-                <p className="text-gray-300">🏅 상위 <b className="text-yellow-400">23%</b></p>
-              </div>
+
+          {/* 역방향 신호 알고리즘 설명 */}
+          <div className="bg-[#1A1A1A] rounded-2xl p-4 border border-purple-500/20">
+            <p className="text-purple-400 text-xs font-bold mb-3">🔬 틀려도 신호가 되는 알고리즘</p>
+            <div className="space-y-2">
+              {[
+                { emoji: "🟢", label: "고수 (정확도 70%+)", effect: "예측 그대로 반영", weight: "+강하게" },
+                { emoji: "🟡", label: "평균 (정확도 ~50%)", effect: "노이즈로 제외", weight: "0" },
+                { emoji: "🔴", label: "역신호 (정확도 30%↓)", effect: "예측 반대로 반영", weight: "−역방향" },
+              ].map((row) => (
+                <div key={row.label} className="flex items-center gap-2 text-xs">
+                  <span>{row.emoji}</span>
+                  <span className="text-gray-400 flex-1">{row.label}</span>
+                  <span className="text-gray-500">{row.effect}</span>
+                </div>
+              ))}
             </div>
+            <p className="text-xs text-gray-600 mt-3">
+              항상 틀리는 사람이 "오른다"고 하면 → 시스템은 <span className="text-red-400">내린다</span> 신호로 해석합니다
+            </p>
           </div>
         </div>
       ),
