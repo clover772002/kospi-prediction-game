@@ -256,16 +256,23 @@ async def send_daily_survey_to_all(supabase, date_str: str) -> None:
 
 
 def _calc_weighted_pct_tg(responses_data: list, accuracy_map: dict) -> tuple[int, int]:
-    """텔레그램용 가중예측치 계산"""
-    kospi_w = kospi_wy = kosdaq_w = kosdaq_wy = 0.0
+    """
+    텔레그램용 가중예측치 계산.
+    정확도 < 50% 유저는 음의 가중치(역방향)로 반영.
+    weight = (accuracy - 0.5) * 2  →  범위: -1.0 ~ +1.0
+    """
+    kospi_score = kospi_w = kosdaq_score = kosdaq_w = 0.0
     for r in responses_data:
-        w = max(0.1, accuracy_map.get(r["user_id"], 0.5))
-        kospi_w += w
-        kosdaq_w += w
-        if r["kospi_answer"]:  kospi_wy += w
-        if r["kosdaq_answer"]: kosdaq_wy += w
-    k = round(kospi_wy / kospi_w * 100) if kospi_w > 0 else 50
-    q = round(kosdaq_wy / kosdaq_w * 100) if kosdaq_w > 0 else 50
+        acc = accuracy_map.get(r["user_id"], 0.5)
+        weight = (acc - 0.5) * 2
+        if abs(weight) < 0.05:
+            continue
+        kospi_vote  = 1 if r["kospi_answer"]  else -1
+        kosdaq_vote = 1 if r["kosdaq_answer"] else -1
+        kospi_score  += weight * kospi_vote;  kospi_w  += abs(weight)
+        kosdaq_score += weight * kosdaq_vote; kosdaq_w += abs(weight)
+    k = round((kospi_score  / kospi_w  + 1) / 2 * 100) if kospi_w  > 0 else 50
+    q = round((kosdaq_score / kosdaq_w + 1) / 2 * 100) if kosdaq_w > 0 else 50
     return k, q
 
 

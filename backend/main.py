@@ -237,27 +237,37 @@ async def get_me(
 
 
 def _calc_weighted_pct(responses_with_users: list, accuracy_map: dict) -> tuple[int | None, int | None]:
-    """응답자별 누적 정확도를 가중치로 적용한 가중예측치 계산"""
+    """
+    누적 정확도 기반 가중예측치 계산.
+    - 정확도 > 50%: 양의 가중치 (예측 그대로 반영)
+    - 정확도 = 50%: 가중치 0 (무시)
+    - 정확도 < 50%: 음의 가중치 (예측 반전 반영 — 항상 틀리는 사람도 신호가 됨)
+    weight = (accuracy - 0.5) * 2  →  범위: -1.0 ~ +1.0
+    """
     if not responses_with_users:
         return None, None
 
-    kospi_w_sum = kospi_w_yes = 0.0
-    kosdaq_w_sum = kosdaq_w_yes = 0.0
+    kospi_score = kospi_w = 0.0
+    kosdaq_score = kosdaq_w = 0.0
 
     for r in responses_with_users:
         uid = r["user_id"]
-        acc = accuracy_map.get(uid, 0.5)  # 이력 없으면 중립 가중치 0.5
-        weight = max(0.1, acc)            # 최소 0.1 보장
+        acc = accuracy_map.get(uid, 0.5)
+        weight = (acc - 0.5) * 2  # -1 ~ +1
 
-        kospi_w_sum  += weight
-        kosdaq_w_sum += weight
-        if r["kospi_answer"]:
-            kospi_w_yes += weight
-        if r["kosdaq_answer"]:
-            kosdaq_w_yes += weight
+        if abs(weight) < 0.05:  # 거의 50%에 가까운 유저는 노이즈로 제외
+            continue
 
-    kospi_wpct  = round(kospi_w_yes  / kospi_w_sum  * 100) if kospi_w_sum  > 0 else None
-    kosdaq_wpct = round(kosdaq_w_yes / kosdaq_w_sum * 100) if kosdaq_w_sum > 0 else None
+        kospi_vote  = 1 if r["kospi_answer"]  else -1
+        kosdaq_vote = 1 if r["kosdaq_answer"] else -1
+
+        kospi_score  += weight * kospi_vote
+        kospi_w      += abs(weight)
+        kosdaq_score += weight * kosdaq_vote
+        kosdaq_w     += abs(weight)
+
+    kospi_wpct  = round((kospi_score  / kospi_w  + 1) / 2 * 100) if kospi_w  > 0 else None
+    kosdaq_wpct = round((kosdaq_score / kosdaq_w + 1) / 2 * 100) if kosdaq_w > 0 else None
     return kospi_wpct, kosdaq_wpct
 
 
