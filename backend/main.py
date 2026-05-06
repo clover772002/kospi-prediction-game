@@ -713,6 +713,33 @@ async def trigger_close():
     return {"success": True, "message": "설문 마감 완료"}
 
 
+@app.post("/api/admin/set-result")
+async def set_result_manually(
+    kospi_change_pct: float,
+    survey_date: str = None,
+    supabase: Client = Depends(get_supabase),
+):
+    """KOSPI 결과를 수동으로 설정 (자동 조회 실패 시 사용)"""
+    d = survey_date or today_kst()
+    kospi_up = kospi_change_pct > 0
+    supabase.table("daily_surveys").update({
+        "kospi_result": kospi_up,
+        "kospi_change_pct": round(kospi_change_pct, 2),
+        "is_closed": True,
+    }).eq("survey_date", d).execute()
+
+    # 정확도 재계산
+    responses = supabase.table("survey_responses").select("user_id, kospi_answer").eq("survey_date", d).execute()
+    for resp in responses.data:
+        supabase.table("accuracy_records").upsert(
+            {"user_id": resp["user_id"], "survey_date": d, "kospi_correct": resp["kospi_answer"] == kospi_up},
+            on_conflict="user_id,survey_date",
+        ).execute()
+
+    logger.info(f"수동 결과 설정: {d} 코스피 {'▲' if kospi_up else '▼'}{kospi_change_pct}%")
+    return {"success": True, "survey_date": d, "kospi_change_pct": kospi_change_pct, "kospi_up": kospi_up}
+
+
 @app.post("/api/admin/trigger-results")
 async def trigger_results(force: bool = False):
     if force:
