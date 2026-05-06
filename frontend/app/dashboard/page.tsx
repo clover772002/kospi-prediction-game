@@ -268,7 +268,7 @@ export default function DashboardPage() {
                 if (!isWeekend && beforeSurvey) return `📊 ${dateStr} 설문 대기중`;
                 return `📊 ${dateStr} 휴장일`;
               }
-              return `📊 ${dateStr} 예측결과`;
+              return `📊 ${dateStr}`;
             })()}
           </h1>
           {user && (
