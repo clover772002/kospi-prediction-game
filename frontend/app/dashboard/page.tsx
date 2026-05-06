@@ -456,33 +456,33 @@ export default function DashboardPage() {
             </div>
           ) : dash ? (
             <div className="space-y-4">
+              {/* 코스피 적중률 — 맨 위 */}
+              <div className="bg-[#111] rounded-xl p-3 text-center">
+                <p className="text-xs text-gray-500 mb-1">코스피 적중률</p>
+                <p className="text-2xl font-black text-green-400">
+                  {dash.accuracy.kospi !== null ? `${dash.accuracy.kospi}%` : "-"}
+                </p>
+                <p className="text-xs text-gray-500 mt-1">{dash.total_predictions}일 참여</p>
+              </div>
+
               {/* 전체 정확도 + 순위 + 기여도 */}
               <div className="grid grid-cols-3 gap-2">
-                <div
-                  className="rounded-xl p-3 text-center"
-                  style={{ backgroundColor: "#1F2937" }}
-                >
-                  <p className="text-xs text-gray-400 mb-1">전체 정확도</p>
+                <div className="rounded-xl p-3 text-center" style={{ backgroundColor: "#1F2937" }}>
+                  <p className="text-xs text-gray-400 mb-1 whitespace-nowrap">정확도</p>
                   <p className="text-2xl font-black text-blue-400">
                     {dash.accuracy.overall !== null ? `${dash.accuracy.overall}%` : "-"}
                   </p>
-                  <p className="text-xs text-gray-500 mt-1">{dash.total_predictions}일</p>
+                  <p className="text-xs text-gray-500 mt-1">전체</p>
                 </div>
-                <div
-                  className="rounded-xl p-3 text-center"
-                  style={{ backgroundColor: "#1F2937" }}
-                >
-                  <p className="text-xs text-gray-400 mb-1">내 순위</p>
-                  <p className="text-2xl font-black text-yellow-400">
-                    {dash.percentile !== null ? `상위 ${dash.percentile}%` : "-"}
+                <div className="rounded-xl p-3 text-center" style={{ backgroundColor: "#1F2937" }}>
+                  <p className="text-xs text-gray-400 mb-1 whitespace-nowrap">내 순위</p>
+                  <p className="text-xl font-black text-yellow-400">
+                    {dash.percentile !== null ? `상위${dash.percentile}%` : "-"}
                   </p>
                   <p className="text-xs text-gray-500 mt-1">전체 대비</p>
                 </div>
-                <div
-                  className="rounded-xl p-3 text-center"
-                  style={{ backgroundColor: "#1F2937" }}
-                >
-                  <p className="text-xs text-gray-400 mb-1">가중 기여도</p>
+                <div className="rounded-xl p-3 text-center" style={{ backgroundColor: "#1F2937" }}>
+                  <p className="text-xs text-gray-400 mb-1 whitespace-nowrap">기여도</p>
                   <p className={`text-2xl font-black ${
                     dash.contribution !== null
                       ? dash.contribution >= 100 ? "text-green-400" : "text-orange-400"
@@ -492,14 +492,6 @@ export default function DashboardPage() {
                   </p>
                   <p className="text-xs text-gray-500 mt-1">평균 대비</p>
                 </div>
-              </div>
-
-              {/* 코스피 정확도 */}
-              <div className="bg-[#111] rounded-xl p-3 text-center">
-                <p className="text-xs text-gray-500 mb-1">코스피 적중률</p>
-                <p className="text-xl font-black text-green-400">
-                  {dash.accuracy.kospi !== null ? `${dash.accuracy.kospi}%` : "-"}
-                </p>
               </div>
             </div>
           ) : null}
