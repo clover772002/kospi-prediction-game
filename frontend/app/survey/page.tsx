@@ -16,6 +16,9 @@ export default function SurveyPage() {
   const [error, setError] = useState<string | null>(null);
 
   const [kospiAnswer, setKospiAnswer] = useState<boolean | null>(null);
+  const [alreadyAnswered, setAlreadyAnswered] = useState(false);
+  const [previousAnswer, setPreviousAnswer] = useState<boolean | null>(null);
+  const [retrying, setRetrying] = useState(false);
 
   const loadToday = useCallback(async () => {
     try {
@@ -29,6 +32,24 @@ export default function SurveyPage() {
     }
   }, []);
 
+  const checkMyResponse = useCallback(async (tok: string) => {
+    try {
+      const res = await fetch("/api/survey/my-response", {
+        headers: { Authorization: `Bearer ${tok}` },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.answered) {
+          setAlreadyAnswered(true);
+          setPreviousAnswer(data.kospi_answer);
+          setKospiAnswer(data.kospi_answer);
+        }
+      }
+    } catch {
+      // 조회 실패는 무시 — 일반 설문 화면 표시
+    }
+  }, []);
+
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === "SIGNED_OUT" || (event === "INITIAL_SESSION" && !session)) {
@@ -38,10 +59,11 @@ export default function SurveyPage() {
       if (session) {
         setToken(session.access_token);
         loadToday();
+        checkMyResponse(session.access_token);
       }
     });
     return () => subscription.unsubscribe();
-  }, [router, loadToday]);
+  }, [router, loadToday, checkMyResponse]);
 
   const handleSubmit = async () => {
     if (!token || kospiAnswer === null) return;
@@ -67,6 +89,9 @@ export default function SurveyPage() {
         throw new Error(detail);
       }
       setSubmitted(true);
+      setAlreadyAnswered(true);
+      setPreviousAnswer(kospiAnswer);
+      setRetrying(false);
     } catch (e: unknown) {
       const raw = e instanceof Error ? e.message : String(e);
       if (/failed\s*to\s*fetch|load\s*failed|network\s*error/i.test(raw) || !raw) {
@@ -151,12 +176,45 @@ export default function SurveyPage() {
         );
       })()}
 
-      {/* 설문 진행 중 */}
-      {status === "open" && !submitted && (
+      {/* 설문 진행 중 — 이미 완료됨 (재투표 전) */}
+      {status === "open" && alreadyAnswered && !retrying && (
+        <div className="flex flex-col items-center gap-5 mt-12 text-center">
+          <div className="text-6xl">✅</div>
+          <p className="text-xl font-bold text-white">설문이 이미 완료되었습니다</p>
+          <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-2xl p-5 w-full space-y-2">
+            <p className="text-sm text-gray-400">현재 내 예측</p>
+            <p className="text-white font-bold text-lg">
+              코스피 {previousAnswer ? "📈 오른다" : "📉 내린다"}
+            </p>
+          </div>
+          <p className="text-xs text-gray-500">마음이 바뀌셨나요?</p>
+          <button
+            onClick={() => { setRetrying(true); setSubmitted(false); }}
+            className="w-full py-4 bg-[#1A1A1A] border border-[#333] hover:border-white/30 text-gray-300 font-bold rounded-2xl transition-all"
+          >
+            다시 투표하기
+          </button>
+          <button
+            onClick={() => router.push("/dashboard")}
+            className="w-full py-4 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-2xl transition-all"
+          >
+            대시보드로 이동
+          </button>
+        </div>
+      )}
+
+      {/* 설문 진행 중 — 투표 폼 */}
+      {status === "open" && (!alreadyAnswered || retrying) && !submitted && (
         <div className="space-y-6 mt-4">
           <div className="bg-amber-500/10 border border-amber-500/30 rounded-2xl p-4 text-center">
             <p className="text-amber-400 font-bold text-sm">⏰ 설문 진행 중 · 09:00 마감</p>
           </div>
+
+          {retrying && (
+            <div className="bg-blue-500/10 border border-blue-500/30 rounded-xl p-3 text-blue-400 text-sm text-center">
+              예측을 변경할 수 있어요. 선택 후 제출하세요.
+            </div>
+          )}
 
           {/* 코스피 단일 질문 */}
           <div className="bg-[#1A1A1A] rounded-2xl p-5 space-y-4 border border-[#2A2A2A]">
@@ -201,7 +259,7 @@ export default function SurveyPage() {
                 <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                 제출 중...
               </span>
-            ) : "예측 제출하기"}
+            ) : retrying ? "예측 변경하기" : "예측 제출하기"}
           </button>
 
           {kospiAnswer === null && (

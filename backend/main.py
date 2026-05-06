@@ -511,6 +511,24 @@ async def web_survey_respond(
     return {"success": True}
 
 
+@app.get("/api/survey/my-response")
+async def get_my_response(
+    current_user=Depends(get_current_user),
+    supabase: Client = Depends(get_supabase),
+):
+    """오늘 내 응답 조회 (없으면 null 반환)"""
+    user_id = str(current_user.id)
+    today_str = today_kst()
+    res = supabase.table("survey_responses") \
+        .select("kospi_answer") \
+        .eq("user_id", user_id) \
+        .eq("survey_date", today_str) \
+        .execute()
+    if res.data:
+        return {"answered": True, "kospi_answer": res.data[0]["kospi_answer"]}
+    return {"answered": False, "kospi_answer": None}
+
+
 @app.get("/api/dashboard")
 async def get_dashboard(
     current_user=Depends(get_current_user),
