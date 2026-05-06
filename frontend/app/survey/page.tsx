@@ -3,10 +3,8 @@
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
-import { getToday, TodaySurvey } from "@/lib/api";
+import { getToday, resolveApiBase, TodaySurvey } from "@/lib/api";
 import FlipClock from "@/components/FlipClock";
-
-const API_BASE = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
 
 export default function SurveyPage() {
   const router = useRouter();
@@ -50,7 +48,7 @@ export default function SurveyPage() {
     setSubmitting(true);
     setError(null);
     try {
-      const res = await fetch(`${API_BASE}/api/survey/respond`, {
+      const res = await fetch(`${resolveApiBase()}/api/survey/respond`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -59,8 +57,14 @@ export default function SurveyPage() {
         body: JSON.stringify({ kospi_answer: kospiAnswer }),
       });
       if (!res.ok) {
-        const err = await res.json().catch(() => ({ detail: "오류가 발생했습니다." }));
-        throw new Error(err.detail);
+        const raw = await res.json().catch(() => ({}));
+        const detail =
+          typeof raw.detail === "string"
+            ? raw.detail
+            : Array.isArray(raw.detail) && raw.detail[0]?.msg
+              ? String(raw.detail[0].msg)
+              : "오류가 발생했습니다.";
+        throw new Error(detail);
       }
       setSubmitted(true);
     } catch (e: unknown) {

@@ -1,7 +1,22 @@
-const API_BASE = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
+/**
+ * 브라우저가 HTTPS인데 NEXT_PUBLIC_BACKEND_URL이 http://이면 혼합 콘텐츠 차단으로 fetch가 실패함(Safari 등).
+ * Railway 등 공개 호스트는 https로 요청을 보냄.
+ */
+export function resolveApiBase(): string {
+  const raw = (process.env.NEXT_PUBLIC_BACKEND_URL || "").trim().replace(/\/$/, "");
+  let base = raw || "http://localhost:8000";
+  if (typeof window !== "undefined" && window.location.protocol === "https:") {
+    const isLocalHttp =
+      /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?(\/|$)/i.test(base);
+    if (base.startsWith("http://") && !isLocalHttp) {
+      base = "https://" + base.slice("http://".length);
+    }
+  }
+  return base;
+}
 
 async function authFetch<T>(path: string, token: string, options: RequestInit = {}): Promise<T> {
-  const res = await fetch(`${API_BASE}${path}`, {
+  const res = await fetch(`${resolveApiBase()}${path}`, {
     ...options,
     headers: {
       "Content-Type": "application/json",
@@ -10,8 +25,14 @@ async function authFetch<T>(path: string, token: string, options: RequestInit = 
     },
   });
   if (!res.ok) {
-    const err = await res.json().catch(() => ({ detail: "오류가 발생했습니다." }));
-    throw new Error(err.detail || "오류가 발생했습니다.");
+    const raw = await res.json().catch(() => ({}));
+    const detail =
+      typeof raw.detail === "string"
+        ? raw.detail
+        : Array.isArray(raw.detail) && raw.detail[0]?.msg
+          ? String(raw.detail[0].msg)
+          : "오류가 발생했습니다.";
+    throw new Error(detail);
   }
   return res.json();
 }
@@ -70,7 +91,7 @@ export async function getMe(token: string): Promise<UserProfile> {
 }
 
 export async function getToday(): Promise<TodaySurvey> {
-  const res = await fetch(`${API_BASE}/api/today`);
+  const res = await fetch(`${resolveApiBase()}/api/today`);
   if (!res.ok) throw new Error("오늘 데이터 조회 실패");
   return res.json();
 }
@@ -84,7 +105,7 @@ export async function unlinkTelegram(token: string): Promise<void> {
 }
 
 export async function getVapidPublicKey(): Promise<string> {
-  const res = await fetch(`${API_BASE}/api/vapid-public-key`);
+  const res = await fetch(`${resolveApiBase()}/api/vapid-public-key`);
   if (!res.ok) throw new Error("VAPID 키 조회 실패");
   const data = await res.json();
   return data.public_key;
