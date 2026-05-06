@@ -1,16 +1,21 @@
 /**
- * 브라우저가 HTTPS인데 NEXT_PUBLIC_BACKEND_URL이 http://이면 혼합 콘텐츠 차단으로 fetch가 실패함(Safari 등).
- * Railway 등 공개 호스트는 https로 요청을 보냄.
+ * 브라우저: Next 리라이트(`/api-proxy` → 백엔드)로 동일 출처 요청 → CORS·안드로이드/모바일 차단 완화.
+ * 서버 빌드/SSR: 환경변수의 백엔드 직접 URL(http→https 보정).
  */
 export function resolveApiBase(): string {
-  const raw = (process.env.NEXT_PUBLIC_BACKEND_URL || "").trim().replace(/\/$/, "");
+  if (typeof window !== "undefined") {
+    return "/api-proxy";
+  }
+  const raw = (
+    process.env.NEXT_PUBLIC_BACKEND_URL ||
+    process.env.NEXT_PUBLIC_API_URL ||
+    ""
+  )
+    .trim()
+    .replace(/\/$/, "");
   let base = raw || "http://localhost:8000";
-  if (typeof window !== "undefined" && window.location.protocol === "https:") {
-    const isLocalHttp =
-      /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?(\/|$)/i.test(base);
-    if (base.startsWith("http://") && !isLocalHttp) {
-      base = "https://" + base.slice("http://".length);
-    }
+  if (base.startsWith("http://") && !/^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?(\/|$)/i.test(base)) {
+    base = "https://" + base.slice("http://".length);
   }
   return base;
 }
