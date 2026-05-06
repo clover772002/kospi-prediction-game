@@ -495,12 +495,15 @@ async def web_survey_respond(
         raise HTTPException(status_code=422, detail="kospi_answer가 필요합니다.")
 
     try:
-        supabase.table("survey_responses").upsert({
-            "user_id": user_id,
-            "survey_date": today_str,
-            "kospi_answer": bool(kospi_answer),
-            "kosdaq_answer": False,
-        }).execute()
+        supabase.table("survey_responses").upsert(
+            {
+                "user_id": user_id,
+                "survey_date": today_str,
+                "kospi_answer": bool(kospi_answer),
+                "kosdaq_answer": False,
+            },
+            on_conflict="user_id,survey_date",
+        ).execute()
     except Exception as e:
         logger.exception("survey_responses upsert 오류")
         raise HTTPException(status_code=500, detail=f"응답 저장 중 오류: {e}")

@@ -161,12 +161,15 @@ async def handle_callback_query(callback_query: dict, supabase) -> None:
     user_id = user_res.data[0]["id"]
 
     try:
-        supabase.table("survey_responses").upsert({
-            "user_id": user_id,
-            "survey_date": date_str,
-            "kospi_answer": is_yes,
-            "kosdaq_answer": False,
-        }).execute()
+        supabase.table("survey_responses").upsert(
+            {
+                "user_id": user_id,
+                "survey_date": date_str,
+                "kospi_answer": is_yes,
+                "kosdaq_answer": False,
+            },
+            on_conflict="user_id,survey_date",
+        ).execute()
 
         await edit_message_text(chat_id, message_id, f"✅ <b>코스피</b> → {label}")
         await answer_callback_query(query_id, f"코스피: {label}")
