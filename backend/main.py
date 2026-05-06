@@ -465,6 +465,20 @@ async def web_survey_respond(
     user_id = str(current_user.id)
     today_str = today_kst()
 
+    # users 테이블에 유저가 없으면 자동 생성 (FK 오류 방지)
+    try:
+        existing_user = supabase.table("users").select("id").eq("id", user_id).execute()
+        if not existing_user.data:
+            meta = current_user.user_metadata or {}
+            supabase.table("users").insert({
+                "id": user_id,
+                "email": current_user.email,
+                "name": meta.get("full_name", meta.get("name", "")),
+            }).execute()
+            logger.info(f"survey/respond: 신규 유저 자동 생성 {user_id}")
+    except Exception as e:
+        logger.warning(f"survey/respond: 유저 생성 시도 중 오류 (무시): {e}")
+
     # 설문 존재 여부 확인
     survey_res = supabase.table("daily_surveys").select("*").eq("survey_date", today_str).execute()
     if not survey_res.data:
@@ -480,12 +494,16 @@ async def web_survey_respond(
     if kospi_answer is None:
         raise HTTPException(status_code=422, detail="kospi_answer가 필요합니다.")
 
-    supabase.table("survey_responses").upsert({
-        "user_id": user_id,
-        "survey_date": today_str,
-        "kospi_answer": bool(kospi_answer),
-        "kosdaq_answer": False,
-    }).execute()
+    try:
+        supabase.table("survey_responses").upsert({
+            "user_id": user_id,
+            "survey_date": today_str,
+            "kospi_answer": bool(kospi_answer),
+            "kosdaq_answer": False,
+        }).execute()
+    except Exception as e:
+        logger.exception("survey_responses upsert 오류")
+        raise HTTPException(status_code=500, detail=f"응답 저장 중 오류: {e}")
 
     return {"success": True}
 
