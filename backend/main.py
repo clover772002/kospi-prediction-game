@@ -140,7 +140,7 @@ async def job_15_35():
 
     # yfinance 종가 조회 (오늘 Open 대비 Close)
     try:
-        tomorrow = (date.today() + timedelta(days=1)).isoformat()
+        tomorrow = (datetime.now(KST).date() + timedelta(days=1)).isoformat()
         k_hist = yf.Ticker("^KS11").history(start=today_str, end=tomorrow)
 
         if k_hist.empty:
@@ -158,10 +158,11 @@ async def job_15_35():
         logger.error(f"yfinance 조회 오류: {e}")
         return
 
-    # DB에 실제 결과 저장
+    # DB에 실제 결과 저장 + 설문 마감 처리
     sb.table("daily_surveys").update({
         "kospi_result": kospi_up,
         "kospi_change_pct": kospi_pct,
+        "is_closed": True,
     }).eq("survey_date", today_str).execute()
 
     # 응답자별 정확도 계산
@@ -392,7 +393,12 @@ async def get_today(supabase: Client = Depends(get_supabase)):
     )
     total = len(responses.data)
 
-    status = "open" if not survey["is_closed"] else ("result" if survey.get("kospi_result") is not None else "closed")
+    if survey.get("kospi_result") is not None:
+        status = "result"
+    elif survey["is_closed"]:
+        status = "closed"
+    else:
+        status = "open"
 
     base = {
         "status": status,
