@@ -48,7 +48,7 @@ export default function SurveyPage() {
     setSubmitting(true);
     setError(null);
     try {
-      const res = await fetch(`${resolveApiBase()}/api/survey/respond`, {
+      const res = await fetch(`/api/survey/respond`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -69,7 +69,11 @@ export default function SurveyPage() {
       setSubmitted(true);
     } catch (e: unknown) {
       const raw = e instanceof Error ? e.message : String(e);
-      setError(`[디버그] ${raw}`);
+      if (/failed\s*to\s*fetch|load\s*failed|network\s*error/i.test(raw) || !raw) {
+        setError("서버와 연결할 수 없습니다. 잠시 후 다시 시도해 주세요.");
+      } else {
+        setError(raw);
+      }
     } finally {
       setSubmitting(false);
     }
