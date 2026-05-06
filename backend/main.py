@@ -138,25 +138,52 @@ async def job_15_35():
         logger.info("오늘 결과가 이미 저장됨")
         return
 
-    # yfinance 종가 조회 (오늘 Open 대비 Close)
+    # KOSPI 종가 조회: pykrx → FinanceDataReader → yfinance 순으로 시도
+    kospi_open = kospi_close = kospi_up = kospi_pct = None
+    date_str_nodash = today_str.replace("-", "")  # pykrx 날짜 형식: YYYYMMDD
+
+    # 1순위: pykrx (한국거래소 공식 데이터)
     try:
-        tomorrow = (datetime.now(KST).date() + timedelta(days=1)).isoformat()
-        k_hist = yf.Ticker("^KS11").history(start=today_str, end=tomorrow)
-
-        if k_hist.empty:
-            logger.warning("yfinance 데이터 없음 - 장이 없는 날(휴장)일 수 있음")
-            return
-
-        kospi_open  = float(k_hist["Open"].iloc[-1])
-        kospi_close = float(k_hist["Close"].iloc[-1])
-        kospi_up    = kospi_close > kospi_open
-        kospi_pct   = round((kospi_close / kospi_open - 1) * 100, 2)
-
-        logger.info(f"코스피 {'▲' if kospi_up else '▼'}{kospi_pct}%")
-
+        from pykrx import stock as krx_stock
+        df = krx_stock.get_index_ohlcv_by_date(date_str_nodash, date_str_nodash, "1001")
+        if df is not None and not df.empty:
+            kospi_open  = float(df["시가"].iloc[-1])
+            kospi_close = float(df["종가"].iloc[-1])
+            logger.info(f"pykrx 조회 성공: 시가={kospi_open}, 종가={kospi_close}")
     except Exception as e:
-        logger.error(f"yfinance 조회 오류: {e}")
+        logger.warning(f"pykrx 조회 실패: {e}")
+
+    # 2순위: FinanceDataReader (네이버 금융 등)
+    if kospi_open is None:
+        try:
+            import FinanceDataReader as fdr
+            df = fdr.DataReader("KS11", today_str, today_str)
+            if df is not None and not df.empty:
+                kospi_open  = float(df["Open"].iloc[-1])
+                kospi_close = float(df["Close"].iloc[-1])
+                logger.info(f"FinanceDataReader 조회 성공: 시가={kospi_open}, 종가={kospi_close}")
+        except Exception as e:
+            logger.warning(f"FinanceDataReader 조회 실패: {e}")
+
+    # 3순위: yfinance (최후 수단)
+    if kospi_open is None:
+        try:
+            tomorrow = (datetime.now(KST).date() + timedelta(days=1)).isoformat()
+            k_hist = yf.Ticker("^KS11").history(start=today_str, end=tomorrow)
+            if not k_hist.empty:
+                kospi_open  = float(k_hist["Open"].iloc[-1])
+                kospi_close = float(k_hist["Close"].iloc[-1])
+                logger.info(f"yfinance 조회 성공: 시가={kospi_open}, 종가={kospi_close}")
+        except Exception as e:
+            logger.warning(f"yfinance 조회 실패: {e}")
+
+    if kospi_open is None or kospi_close is None:
+        logger.warning("모든 데이터 소스 조회 실패 — 휴장일이거나 데이터 지연")
         return
+
+    kospi_up  = kospi_close > kospi_open
+    kospi_pct = round((kospi_close / kospi_open - 1) * 100, 2)
+    logger.info(f"코스피 {'▲' if kospi_up else '▼'}{kospi_pct}%")
 
     # DB에 실제 결과 저장 + 설문 마감 처리
     sb.table("daily_surveys").update({
