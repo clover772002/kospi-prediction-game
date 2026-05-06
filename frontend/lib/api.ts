@@ -1,11 +1,9 @@
 /**
- * 브라우저: Next 리라이트(`/api-proxy` → 백엔드)로 동일 출처 요청 → CORS·안드로이드/모바일 차단 완화.
- * 서버 빌드/SSR: 환경변수의 백엔드 직접 URL(http→https 보정).
+ * 백엔드 URL 결정 (브라우저/서버 공통).
+ * NEXT_PUBLIC_BACKEND_URL 또는 NEXT_PUBLIC_API_URL 환경변수에서 가져오며,
+ * http:// 로 시작하는 공개 도메인은 https:// 로 자동 보정.
  */
 export function resolveApiBase(): string {
-  if (typeof window !== "undefined") {
-    return "/api-proxy";
-  }
   const raw = (
     process.env.NEXT_PUBLIC_BACKEND_URL ||
     process.env.NEXT_PUBLIC_API_URL ||
