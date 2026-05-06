@@ -138,52 +138,68 @@ async def job_15_35():
         logger.info("오늘 결과가 이미 저장됨")
         return
 
-    # KOSPI 종가 조회: pykrx → FinanceDataReader → yfinance 순으로 시도
-    kospi_open = kospi_close = kospi_up = kospi_pct = None
+    # KOSPI 등락률 조회: 전일 종가 대비 당일 종가 기준 (시장 표준)
+    # pykrx → FinanceDataReader → yfinance 순으로 시도
+    kospi_prev_close = kospi_close = kospi_up = kospi_pct = None
     date_str_nodash = today_str.replace("-", "")  # pykrx 날짜 형식: YYYYMMDD
+    # 직전 거래일 포함을 위해 10일 전부터 조회
+    from_date = (datetime.now(KST).date() - timedelta(days=10)).strftime("%Y%m%d")
 
     # 1순위: pykrx (한국거래소 공식 데이터)
     try:
         from pykrx import stock as krx_stock
-        df = krx_stock.get_index_ohlcv_by_date(date_str_nodash, date_str_nodash, "1001")
-        if df is not None and not df.empty:
-            kospi_open  = float(df["시가"].iloc[-1])
-            kospi_close = float(df["종가"].iloc[-1])
-            logger.info(f"pykrx 조회 성공: 시가={kospi_open}, 종가={kospi_close}")
+        df = krx_stock.get_index_ohlcv_by_date(from_date, date_str_nodash, "1001")
+        if df is not None and len(df) >= 2:
+            kospi_prev_close = float(df["종가"].iloc[-2])  # 직전 거래일 종가
+            kospi_close      = float(df["종가"].iloc[-1])  # 오늘 종가
+            logger.info(f"pykrx 조회 성공: 전일종가={kospi_prev_close}, 당일종가={kospi_close}")
+        elif df is not None and len(df) == 1:
+            # 직전 거래일 데이터 없으면 시가 대비로 폴백
+            kospi_prev_close = float(df["시가"].iloc[-1])
+            kospi_close      = float(df["종가"].iloc[-1])
+            logger.warning("pykrx: 직전 거래일 없음, 시가 대비로 계산")
     except Exception as e:
         logger.warning(f"pykrx 조회 실패: {e}")
 
     # 2순위: FinanceDataReader (네이버 금융 등)
-    if kospi_open is None:
+    if kospi_prev_close is None:
         try:
             import FinanceDataReader as fdr
-            df = fdr.DataReader("KS11", today_str, today_str)
-            if df is not None and not df.empty:
-                kospi_open  = float(df["Open"].iloc[-1])
-                kospi_close = float(df["Close"].iloc[-1])
-                logger.info(f"FinanceDataReader 조회 성공: 시가={kospi_open}, 종가={kospi_close}")
+            from_date_dash = (datetime.now(KST).date() - timedelta(days=10)).isoformat()
+            df = fdr.DataReader("KS11", from_date_dash, today_str)
+            if df is not None and len(df) >= 2:
+                kospi_prev_close = float(df["Close"].iloc[-2])
+                kospi_close      = float(df["Close"].iloc[-1])
+                logger.info(f"FinanceDataReader 조회 성공: 전일종가={kospi_prev_close}, 당일종가={kospi_close}")
+            elif df is not None and len(df) == 1:
+                kospi_prev_close = float(df["Open"].iloc[-1])
+                kospi_close      = float(df["Close"].iloc[-1])
         except Exception as e:
             logger.warning(f"FinanceDataReader 조회 실패: {e}")
 
     # 3순위: yfinance (최후 수단)
-    if kospi_open is None:
+    if kospi_prev_close is None:
         try:
+            from_date_dash = (datetime.now(KST).date() - timedelta(days=10)).isoformat()
             tomorrow = (datetime.now(KST).date() + timedelta(days=1)).isoformat()
-            k_hist = yf.Ticker("^KS11").history(start=today_str, end=tomorrow)
-            if not k_hist.empty:
-                kospi_open  = float(k_hist["Open"].iloc[-1])
-                kospi_close = float(k_hist["Close"].iloc[-1])
-                logger.info(f"yfinance 조회 성공: 시가={kospi_open}, 종가={kospi_close}")
+            k_hist = yf.Ticker("^KS11").history(start=from_date_dash, end=tomorrow)
+            if k_hist is not None and len(k_hist) >= 2:
+                kospi_prev_close = float(k_hist["Close"].iloc[-2])
+                kospi_close      = float(k_hist["Close"].iloc[-1])
+                logger.info(f"yfinance 조회 성공: 전일종가={kospi_prev_close}, 당일종가={kospi_close}")
+            elif k_hist is not None and len(k_hist) == 1:
+                kospi_prev_close = float(k_hist["Open"].iloc[-1])
+                kospi_close      = float(k_hist["Close"].iloc[-1])
         except Exception as e:
             logger.warning(f"yfinance 조회 실패: {e}")
 
-    if kospi_open is None or kospi_close is None:
+    if kospi_prev_close is None or kospi_close is None:
         logger.warning("모든 데이터 소스 조회 실패 — 휴장일이거나 데이터 지연")
         return
 
-    kospi_up  = kospi_close > kospi_open
-    kospi_pct = round((kospi_close / kospi_open - 1) * 100, 2)
-    logger.info(f"코스피 {'▲' if kospi_up else '▼'}{kospi_pct}%")
+    kospi_up  = kospi_close > kospi_prev_close
+    kospi_pct = round((kospi_close / kospi_prev_close - 1) * 100, 2)
+    logger.info(f"코스피 {'▲' if kospi_up else '▼'}{kospi_pct}% (전일종가 대비)")
 
     # DB에 실제 결과 저장 + 설문 마감 처리
     sb.table("daily_surveys").update({
@@ -698,7 +714,14 @@ async def trigger_close():
 
 
 @app.post("/api/admin/trigger-results")
-async def trigger_results():
+async def trigger_results(force: bool = False):
+    if force:
+        # 이미 저장된 결과를 초기화하고 재계산
+        sb = _supabase_direct()
+        sb.table("daily_surveys").update({
+            "kospi_result": None,
+            "kospi_change_pct": None,
+        }).eq("survey_date", today_kst()).execute()
     await job_15_35()
     return {"success": True, "message": "정확도 계산 완료"}
 
