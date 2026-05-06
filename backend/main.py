@@ -596,6 +596,27 @@ async def trigger_survey():
     return {"success": True, "message": "설문 발송 완료"}
 
 
+@app.post("/api/admin/reopen-survey")
+async def admin_reopen_survey():
+    """테스트용: 오늘 설문 마감 해제 (09:00 이후에도 다시 응답 가능)"""
+    sb = _supabase_direct()
+    d = today_kst()
+    sb.table("daily_surveys").update({"is_closed": False}).eq("survey_date", d).execute()
+    return {"success": True, "survey_date": d}
+
+
+@app.post("/api/admin/resend-telegram-survey")
+async def admin_resend_telegram_survey():
+    """테스트용: 오늘 날짜로 텔레그램 설문 메시지 재발송 (행은 이미 있어야 함)"""
+    sb = _supabase_direct()
+    d = today_kst()
+    row = sb.table("daily_surveys").select("id").eq("survey_date", d).execute()
+    if not row.data:
+        raise HTTPException(status_code=400, detail="오늘 daily_surveys 행이 없습니다.")
+    await send_daily_survey_to_all(sb, d)
+    return {"success": True, "survey_date": d, "message": "텔레그램 설문 재발송 완료"}
+
+
 @app.post("/api/admin/trigger-close")
 async def trigger_close():
     await job_09_00()
