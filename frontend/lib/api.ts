@@ -11,7 +11,7 @@ export function resolveApiBase(): string {
   )
     .trim()
     .replace(/\/$/, "");
-  let base = raw || "http://localhost:8000";
+  let base = raw || "https://kospi-prediction-game-production.up.railway.app";
   if (base.startsWith("http://") && !/^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?(\/|$)/i.test(base)) {
     base = "https://" + base.slice("http://".length);
   }
