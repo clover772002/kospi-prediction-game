@@ -204,6 +204,8 @@ _allowed_origins = [o.strip() for o in _raw_origins.split(",") if o.strip()]
 app.add_middleware(
     CORSMiddleware,
     allow_origins=_allowed_origins,
+    # Vercel 배포(URL이 프로젝트마다 다름)·프리뷰 도메인 패턴 허용 (HTTPS만)
+    allow_origin_regex=r"https://[^\s]+\.vercel\.app",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

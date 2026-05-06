@@ -23,6 +23,7 @@ export default function SurveyPage() {
     try {
       const data = await getToday();
       setToday(data);
+      setError(null);
     } catch {
       setError("설문 정보를 불러오지 못했습니다.");
     } finally {
@@ -63,7 +64,12 @@ export default function SurveyPage() {
       }
       setSubmitted(true);
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "오류가 발생했습니다.");
+      const raw = e instanceof Error ? e.message : "";
+      if (/failed\s*to\s*fetch|load\s*failed|network\s*error/i.test(raw) || !raw) {
+        setError("서버와 연결할 수 없습니다. Wi-Fi·차단 기능을 확인하거나 잠시 후 다시 시도해 주세요.");
+      } else {
+        setError(raw);
+      }
     } finally {
       setSubmitting(false);
     }
