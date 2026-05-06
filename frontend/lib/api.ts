@@ -1,21 +1,19 @@
+const RAILWAY_URL = "https://kospi-prediction-game-production.up.railway.app";
+
 /**
- * 백엔드 URL 결정 (브라우저/서버 공통).
- * NEXT_PUBLIC_BACKEND_URL 또는 NEXT_PUBLIC_API_URL 환경변수에서 가져오며,
- * http:// 로 시작하는 공개 도메인은 https:// 로 자동 보정.
+ * 백엔드 URL 반환.
+ * 환경변수가 설정되어 있으면 우선 사용, 없으면 Railway URL 직접 사용.
  */
 export function resolveApiBase(): string {
-  const raw = (
+  const envUrl = (
     process.env.NEXT_PUBLIC_BACKEND_URL ||
     process.env.NEXT_PUBLIC_API_URL ||
     ""
-  )
-    .trim()
-    .replace(/\/$/, "");
-  let base = raw || "https://kospi-prediction-game-production.up.railway.app";
-  if (base.startsWith("http://") && !/^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?(\/|$)/i.test(base)) {
-    base = "https://" + base.slice("http://".length);
+  ).trim().replace(/\/$/, "");
+  if (envUrl && !envUrl.includes("localhost")) {
+    return envUrl.startsWith("https://") ? envUrl : "https://" + envUrl.replace(/^https?:\/\//, "");
   }
-  return base;
+  return RAILWAY_URL;
 }
 
 async function authFetch<T>(path: string, token: string, options: RequestInit = {}): Promise<T> {
