@@ -115,7 +115,7 @@ async def handle_start(chat_id: int, user_id_param: str, supabase) -> None:
             await send_message(chat_id,
                 f"✅ <b>연동 완료!</b>\n\n"
                 f"안녕하세요, {name}님!\n\n"
-                f"📊 매일 <b>08:48</b>에 코스피·코스닥 예측 설문이 발송됩니다.\n"
+                f"📊 매일 <b>08:48</b>에 코스피 예측 설문이 발송됩니다.\n"
                 f"⏰ <b>09:00</b>까지만 응답 가능합니다.\n"
                 f"📈 장 마감 후 정확도와 순위를 알려드릴게요!"
             )
@@ -165,6 +165,7 @@ async def handle_callback_query(callback_query: dict, supabase) -> None:
             "user_id": user_id,
             "survey_date": date_str,
             "kospi_answer": is_yes,
+            "kosdaq_answer": False,
         }).execute()
 
         await edit_message_text(chat_id, message_id, f"✅ <b>코스피</b> → {label}")
@@ -175,7 +176,7 @@ async def handle_callback_query(callback_query: dict, supabase) -> None:
             f"📊 09:00에 집계 결과를 알려드립니다!"
         )
     except Exception as e:
-        logger.error(f"응답 저장 오류: {e}")
+        logger.exception("응답 저장 오류")
         await send_message(chat_id, "❌ 응답 저장 중 오류가 발생했습니다. 다시 시도해주세요.")
 
 
@@ -214,8 +215,9 @@ async def send_daily_survey_to_all(supabase, date_str: str) -> None:
         try:
             await send_message(
                 chat_id,
-                f"📊 <b>오늘의 장 예측</b> ({date_str})\n"
-                f"⏰ 설문 마감: 09:00\n\n"
+                f"📊 <b>주식장 직전 8:48, 코스피 예측</b> ({date_str})\n"
+                f"설문 빅데이터 집단지성으로 성투하자\n"
+                f"⏰ <b>09:00</b>까지 응답\n\n"
                 f"<b>코스피</b>가 오늘 오를까요?",
                 _survey_keyboard("kospi", date_str)
             )

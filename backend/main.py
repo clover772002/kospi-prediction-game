@@ -482,6 +482,7 @@ async def web_survey_respond(
         "user_id": user_id,
         "survey_date": today_str,
         "kospi_answer": bool(kospi_answer),
+        "kosdaq_answer": False,
     }).execute()
 
     return {"success": True}
