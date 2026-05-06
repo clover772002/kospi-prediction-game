@@ -68,12 +68,8 @@ export default function SurveyPage() {
       }
       setSubmitted(true);
     } catch (e: unknown) {
-      const raw = e instanceof Error ? e.message : "";
-      if (/failed\s*to\s*fetch|load\s*failed|network\s*error/i.test(raw) || !raw) {
-        setError("서버와 연결할 수 없습니다. Wi-Fi·차단 기능을 확인하거나 잠시 후 다시 시도해 주세요.");
-      } else {
-        setError(raw);
-      }
+      const raw = e instanceof Error ? e.message : String(e);
+      setError(`[디버그] ${raw}`);
     } finally {
       setSubmitting(false);
     }
