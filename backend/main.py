@@ -177,11 +177,14 @@ async def job_15_35():
     # 응답자별 정확도 계산
     responses = sb.table("survey_responses").select("user_id, kospi_answer").eq("survey_date", today_str).execute()
     for resp in responses.data:
-        sb.table("accuracy_records").upsert({
-            "user_id": resp["user_id"],
-            "survey_date": today_str,
-            "kospi_correct": resp["kospi_answer"] == kospi_up,
-        }).execute()
+        sb.table("accuracy_records").upsert(
+            {
+                "user_id": resp["user_id"],
+                "survey_date": today_str,
+                "kospi_correct": resp["kospi_answer"] == kospi_up,
+            },
+            on_conflict="user_id,survey_date",
+        ).execute()
 
     # 개인별 텔레그램 알림
     await send_accuracy_notifications(sb, today_str, kospi_up, kospi_pct)
