@@ -390,47 +390,42 @@ export default function DashboardPage() {
           <div className="bg-[#1A1A1A] rounded-2xl p-5 border border-[#2A2A2A]">
             <p className="font-bold text-sm mb-4">오늘의 예측</p>
             <div className="grid grid-cols-2 gap-3">
-              {/* 고수 */}
+              {/* 맞춤 고수 */}
               {today.top_predictor && (
-                <div className="bg-[#111] border border-yellow-500/20 rounded-2xl p-4 space-y-3">
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-base">👑</span>
-                    <span className="text-xs text-yellow-400 font-bold">맞춤 고수</span>
-                    <span className="text-xs text-gray-600 ml-auto">{today.top_predictor.accuracy}% · {today.top_predictor.total_predictions}일</span>
+                <div className="bg-[#111] border border-yellow-500/20 rounded-2xl p-4 flex flex-col gap-2">
+                  <div className="flex items-center gap-1">
+                    <span>👑</span>
+                    <span className="text-xs text-yellow-400 font-bold truncate">맞춤 고수</span>
                   </div>
-                  <p className="text-white font-bold text-sm">{today.top_predictor.masked_name}</p>
-                  <div className="space-y-1.5">
-                    <div className="flex justify-between items-center">
-                      <span className="text-xs text-gray-500">코스피</span>
-                      <span className={`text-xs font-bold ${today.top_predictor.kospi_answer ? "text-green-400" : "text-red-400"}`}>
-                        {today.top_predictor.kospi_answer ? "📈 오른다" : "📉 내린다"}
-                      </span>
-                    </div>
+                  <p className="text-white font-bold text-sm truncate">{today.top_predictor.masked_name}</p>
+                  <p className="text-xs text-gray-500">{today.top_predictor.accuracy}% · {today.top_predictor.total_predictions}일</p>
+                  <div className="border-t border-[#2A2A2A] pt-2">
+                    <p className="text-xs text-gray-500 mb-1">코스피</p>
+                    <p className={`text-xs font-bold ${today.top_predictor.kospi_answer ? "text-green-400" : "text-red-400"}`}>
+                      {today.top_predictor.kospi_answer ? "📈 오른다" : "📉 내린다"}
+                    </p>
                   </div>
                 </div>
               )}
-              {/* 하수 */}
+              {/* 빗나간 예측 */}
               {today.worst_predictor && (
-                <div className="bg-[#111] border border-blue-500/20 rounded-2xl p-4 space-y-3">
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-base">🤡</span>
-                    <span className="text-xs text-blue-400 font-bold">못맞춤 고수</span>
-                    <span className="text-xs text-gray-600 ml-auto">{today.worst_predictor.accuracy}% · {today.worst_predictor.total_predictions}일</span>
+                <div className="bg-[#111] border border-blue-500/20 rounded-2xl p-4 flex flex-col gap-2">
+                  <div className="flex items-center gap-1">
+                    <span>🤡</span>
+                    <span className="text-xs text-blue-400 font-bold truncate">빗나간 예측</span>
                   </div>
-                  <p className="text-white font-bold text-sm">{today.worst_predictor.masked_name}</p>
-                  <div className="space-y-1.5">
-                    <div className="flex justify-between items-center">
-                      <span className="text-xs text-gray-500">코스피</span>
-                      <span className={`text-xs font-bold ${today.worst_predictor.kospi_answer ? "text-green-400" : "text-red-400"}`}>
-                        {today.worst_predictor.kospi_answer ? "📈 오른다" : "📉 내린다"}
-                      </span>
-                    </div>
+                  <p className="text-white font-bold text-sm truncate">{today.worst_predictor.masked_name}</p>
+                  <p className="text-xs text-gray-500">{today.worst_predictor.accuracy}% · {today.worst_predictor.total_predictions}일</p>
+                  <div className="border-t border-[#2A2A2A] pt-2">
+                    <p className="text-xs text-gray-500 mb-1">코스피</p>
+                    <p className={`text-xs font-bold ${today.worst_predictor.kospi_answer ? "text-green-400" : "text-red-400"}`}>
+                      {today.worst_predictor.kospi_answer ? "📈 오른다" : "📉 내린다"}
+                    </p>
                   </div>
                 </div>
               )}
             </div>
-            <p className="text-xs text-gray-600 text-center mt-3">못맞춤 고수 예측은 반대 신호로 활용하세요 😏</p>
-            <p className="text-xs text-gray-700 text-center mt-1">동률일 땐 예측 횟수가 많은 사람이 우선돼요</p>
+            <p className="text-xs text-gray-600 text-center mt-3">빗나간 예측은 반대 신호로 활용하세요 😏</p>
           </div>
         )}
 
