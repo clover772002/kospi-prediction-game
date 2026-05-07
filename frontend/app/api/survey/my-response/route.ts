@@ -11,7 +11,10 @@ export async function GET(req: NextRequest) {
     const data = await upstream.text();
     return new NextResponse(data, {
       status: upstream.status,
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store, no-cache, must-revalidate",
+      },
     });
   } catch (e) {
     return NextResponse.json(

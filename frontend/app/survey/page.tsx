@@ -35,6 +35,7 @@ export default function SurveyPage() {
   const checkMyResponse = useCallback(async (tok: string) => {
     try {
       const res = await fetch("/api/survey/my-response", {
+        cache: "no-store",
         headers: { Authorization: `Bearer ${tok}` },
       });
       if (res.ok) {
