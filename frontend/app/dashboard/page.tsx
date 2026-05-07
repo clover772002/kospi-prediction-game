@@ -278,7 +278,7 @@ export default function DashboardPage() {
               <>
                 <div className="flex items-center justify-between mb-4">
                   <p className="font-bold text-sm">
-                    {isPreSurvey ? "설문 대기중" : isHoliday ? "오늘 휴장" : "실적 / 전망"}
+                    {isPreSurvey ? "설문 대기중" : isHoliday ? "오늘 휴장" : "오늘 코스피"}
                   </p>
                   {!isHoliday && !isPreSurvey && (
                     <span
