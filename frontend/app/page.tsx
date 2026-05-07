@@ -398,40 +398,29 @@ export default function LoginPage() {
       {/* 하루 흐름 — 순환 사이클 */}
       <div className="w-full mb-8">
         <p className="text-xs text-gray-500 font-bold mb-3 tracking-widest uppercase">하루 흐름</p>
-        <div className="grid grid-cols-2 gap-2">
-          {/* 상단: 장시작 전 → 장시작 */}
-          <div className="bg-[#1A1A1A] rounded-2xl p-3 flex flex-col items-center text-center border border-[#2A2A2A]">
-            <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center mb-2 text-sm">📝</div>
-            <p className="text-[11px] font-black text-white">장시작 전</p>
-            <p className="text-[11px] text-blue-400 font-bold">설문</p>
-            <p className="text-[10px] text-gray-600 mt-0.5">08:48</p>
-          </div>
-          <div className="bg-[#1A1A1A] rounded-2xl p-3 flex flex-col items-center text-center border border-[#2A2A2A]">
-            <div className="w-8 h-8 rounded-full bg-yellow-400 flex items-center justify-center mb-2 text-sm">🔓</div>
-            <p className="text-[11px] font-black text-white">장시작</p>
-            <p className="text-[11px] text-yellow-400 font-bold">결과 공개</p>
-            <p className="text-[10px] text-gray-600 mt-0.5">09:00</p>
-          </div>
-          {/* 순환 화살표 */}
-          <div className="col-span-2 flex items-center justify-between px-6 -my-1">
-            <span className="text-gray-600 text-lg">↑</span>
-            <span className="text-xs text-gray-600 tracking-widest">↻ 매일 반복</span>
-            <span className="text-gray-600 text-lg">↓</span>
-          </div>
-          {/* 하단: 강화 ← 장마감 */}
-          <div className="bg-[#1A1A1A] rounded-2xl p-3 flex flex-col items-center text-center border border-purple-500/20">
-            <div className="w-8 h-8 rounded-full bg-purple-500 flex items-center justify-center mb-2 text-sm">⭐</div>
-            <p className="text-[11px] font-black text-white">강화</p>
-            <p className="text-[11px] text-purple-400 font-bold">정확도 향상</p>
-            <p className="text-[10px] text-gray-600 mt-0.5">누적 반영</p>
-          </div>
-          <div className="bg-[#1A1A1A] rounded-2xl p-3 flex flex-col items-center text-center border border-[#2A2A2A]">
-            <div className="w-8 h-8 rounded-full bg-green-500 flex items-center justify-center mb-2 text-sm">✅</div>
-            <p className="text-[11px] font-black text-white">장마감</p>
-            <p className="text-[11px] text-green-400 font-bold">적중 확인</p>
-            <p className="text-[10px] text-gray-600 mt-0.5">15:35</p>
-          </div>
+        <div className="relative flex items-stretch gap-1">
+          {/* 가로 연결 화살표 배경 */}
+          <div className="absolute top-[28px] left-[10%] right-[10%] h-px bg-[#2A2A2A]" />
+          {[
+            { dot: "bg-blue-500", icon: "📝", time: "장시작 전", label: "집단 설문" },
+            { dot: "bg-yellow-400", icon: "⭐", time: "장시작", label: "고수 강화예측\n무료 공개" },
+            { dot: "bg-green-500", icon: "📊", time: "장마감", label: "데이터 강화" },
+          ].map((step, i, arr) => (
+            <div key={i} className="flex-1 flex flex-col items-center text-center relative z-10">
+              <div className={`w-10 h-10 rounded-full ${step.dot} flex items-center justify-center mb-2 text-base shadow-lg`}>
+                {step.icon}
+              </div>
+              <p className="text-[11px] font-black text-white leading-tight">{step.time}</p>
+              {step.label.split("\n").map((line, j) => (
+                <p key={j} className="text-[10px] text-gray-400 leading-tight">{line}</p>
+              ))}
+              {i < arr.length - 1 && (
+                <span className="absolute top-[13px] -right-2 text-gray-600 text-xs z-20">→</span>
+              )}
+            </div>
+          ))}
         </div>
+        <p className="text-center text-[10px] text-gray-600 mt-3">↻ 매일 반복 · 참여할수록 예측 정확도 향상</p>
       </div>
 
       {/* 아코디언 설명 카드 */}
