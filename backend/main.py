@@ -384,39 +384,61 @@ def _build_user_accuracy_map(supabase: Client) -> dict:
 @app.get("/api/public/history")
 async def get_public_history(supabase: Client = Depends(get_supabase)):
     """로그인 화면용 공개 실적 히스토리 (최근 20일, 인증 불필요)"""
-    # 결과가 있는 날만 가져옴 (kospi_result IS NOT NULL)
-    rows = (
-        supabase.table("daily_surveys")
-        .select("survey_date, kospi_result, kospi_change_pct")
-        .not_.is_("kospi_result", "null")
-        .order("survey_date", desc=True)
-        .limit(20)
-        .execute()
-    )
+    try:
+        # 결과가 있는 날만 가져옴 (kospi_result IS NOT NULL)
+        rows = (
+            supabase.table("daily_surveys")
+            .select("survey_date, kospi_result, kospi_change_pct")
+            .filter("kospi_result", "not.is", "null")
+            .order("survey_date", desc=True)
+            .limit(20)
+            .execute()
+        )
+    except Exception as e:
+        logger.error(f"public/history 쿼리 오류: {e}")
+        return {"history": [], "stats": {"total_days": 0, "majority_accuracy": 0, "weighted_accuracy": 0}}
+
     if not rows.data:
-        return {"history": []}
+        return {"history": [], "stats": {"total_days": 0, "majority_accuracy": 0, "weighted_accuracy": 0}}
+
+    # acc_map은 루프 밖에서 한 번만 조회
+    try:
+        acc_map = _build_user_accuracy_map(supabase)
+    except Exception:
+        acc_map = {}
+
+    # 해당 날짜 전체 응답을 한 번에 조회
+    survey_dates = [row["survey_date"] for row in rows.data]
+    try:
+        all_resp = (
+            supabase.table("survey_responses")
+            .select("survey_date, kospi_answer, user_id")
+            .in_("survey_date", survey_dates)
+            .execute()
+        )
+    except Exception as e:
+        logger.error(f"public/history 응답 쿼리 오류: {e}")
+        return {"history": [], "stats": {"total_days": 0, "majority_accuracy": 0, "weighted_accuracy": 0}}
+
+    # 날짜별로 응답 분류
+    resp_by_date: dict = {}
+    for r in all_resp.data:
+        resp_by_date.setdefault(r["survey_date"], []).append(r)
 
     results = []
     for row in rows.data:
         d = row["survey_date"]
-        # 해당 날짜 응답 집계
-        resp = (
-            supabase.table("survey_responses")
-            .select("kospi_answer")
-            .eq("survey_date", d)
-            .execute()
-        )
-        total = len(resp.data)
+        resp_list = resp_by_date.get(d, [])
+        total = len(resp_list)
         if total == 0:
             continue
-        yes_cnt = sum(1 for r in resp.data if r["kospi_answer"])
-        majority_up = yes_cnt >= total / 2  # 단순 다수결 예측
+
+        yes_cnt = sum(1 for r in resp_list if r["kospi_answer"])
+        majority_up = yes_cnt >= total / 2
         actual_up = row["kospi_result"]
         majority_correct = majority_up == actual_up
 
-        # 가중예측
-        acc_map = _build_user_accuracy_map(supabase)
-        weighted_pct = _calc_weighted_pct(resp.data, acc_map)
+        weighted_pct = _calc_weighted_pct(resp_list, acc_map)
         weighted_up = weighted_pct >= 50 if weighted_pct is not None else majority_up
         weighted_correct = weighted_up == actual_up
 
@@ -433,7 +455,6 @@ async def get_public_history(supabase: Client = Depends(get_supabase)):
             "weighted_correct": weighted_correct,
         })
 
-    # 집계 통계
     total_days = len(results)
     majority_hits = sum(1 for r in results if r["majority_correct"])
     weighted_hits = sum(1 for r in results if r["weighted_correct"])
