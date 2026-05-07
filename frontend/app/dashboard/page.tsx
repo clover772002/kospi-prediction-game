@@ -282,9 +282,15 @@ export default function DashboardPage() {
                   </p>
                   {!isHoliday && !isPreSurvey && (
                     <span
-                      className="text-xs px-2.5 py-1 rounded-full font-bold"
+                      className="flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full font-bold"
                       style={{ backgroundColor: `${marketStatus.color}20`, color: marketStatus.color }}
                     >
+                      {status === "open" && (
+                        <span className="relative flex h-2 w-2">
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75" style={{ backgroundColor: marketStatus.color }} />
+                          <span className="relative inline-flex rounded-full h-2 w-2" style={{ backgroundColor: marketStatus.color }} />
+                        </span>
+                      )}
                       {marketStatus.label}
                     </span>
                   )}
@@ -317,6 +323,7 @@ export default function DashboardPage() {
           {(status === "open" || status === "closed" || status === "result") && today && (() => {
             const myEntry = dash?.history?.find((h) => h.date === today.survey_date);
             return (
+              <>
               <div className="grid grid-cols-4 gap-1.5">
                 {/* 고수예측 */}
                 <div className="bg-yellow-500/5 border border-yellow-500/20 rounded-xl py-3 px-1 flex flex-col items-center gap-1 text-center">
@@ -384,6 +391,24 @@ export default function DashboardPage() {
                   )}
                 </div>
               </div>
+
+              {/* 📊 감성 줄다리기 바 */}
+              {today.kospi_yes_pct !== null && (
+                <div className="mt-3 space-y-1.5">
+                  <div className="flex justify-between text-[10px] font-bold">
+                    <span className="text-green-400">📈 {today.kospi_yes_pct}%</span>
+                    <span className="text-gray-500 text-[9px]">집단 예측</span>
+                    <span className="text-red-400">{100 - today.kospi_yes_pct}% 📉</span>
+                  </div>
+                  <div className="h-2.5 rounded-full overflow-hidden flex bg-red-500/30">
+                    <div
+                      className="h-full bg-gradient-to-r from-green-500 to-green-400 rounded-l-full transition-all duration-1000 ease-out"
+                      style={{ width: `${today.kospi_yes_pct}%` }}
+                    />
+                  </div>
+                </div>
+              )}
+              </>
             );
           })()}
         </div>
