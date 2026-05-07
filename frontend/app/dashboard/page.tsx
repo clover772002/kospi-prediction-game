@@ -237,6 +237,10 @@ export default function DashboardPage() {
                 <p className="text-sm text-gray-400 leading-relaxed">
                   오늘의 코스피 예측에 먼저 참여해야<br />집계 결과와 고수 예측을 확인할 수 있어요.
                 </p>
+                <p className="text-xs text-gray-600 leading-relaxed">
+                  설문에 참여하지 않으셨나요?<br />
+                  <span className="text-gray-500">장 마감(15:35) 후에는 누구나 열람 가능합니다.</span>
+                </p>
                 <button
                   onClick={() => router.push("/survey")}
                   className="w-full py-4 bg-amber-500 hover:bg-amber-400 text-white font-black text-base rounded-2xl transition-all active:scale-95"
