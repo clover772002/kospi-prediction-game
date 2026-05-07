@@ -56,6 +56,13 @@ export interface TopPredictor {
   total_predictions: number;
 }
 
+export interface Participant {
+  masked_name: string;
+  kospi_answer: boolean;
+  accuracy: number | null;
+  total_predictions: number;
+}
+
 export interface TodaySurvey {
   status: "no_survey" | "open" | "closed" | "result";
   survey_date: string;
@@ -66,6 +73,7 @@ export interface TodaySurvey {
   kospi_change_pct: number | null;
   top_predictor?: TopPredictor;
   worst_predictor?: TopPredictor;
+  participants?: Participant[];
 }
 
 export interface HistoryItem {

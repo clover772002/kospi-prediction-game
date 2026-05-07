@@ -586,8 +586,37 @@ async def get_today(supabase: Client = Depends(get_supabase)):
             base["top_predictor"] = _predictor_info(top_uid)
             if len(candidates) >= 2 and worst_uid != top_uid:
                 base["worst_predictor"] = _predictor_info(worst_uid)
+
+            # 전체 참여자 목록 (정확도 순 정렬)
+            participants = []
+            for uid in candidates:
+                info = _predictor_info(uid)
+                participants.append(info)
+            participants.sort(key=lambda x: -x["accuracy"])
+            base["participants"] = participants
+
         except Exception as e:
             logger.warning(f"고수/하수 조회 실패: {e}")
+
+        # acc_map에 없는 참여자 (신규, 정확도 기록 없음)도 추가
+        if "participants" not in base:
+            base["participants"] = []
+        known_uids = {p.get("uid") for p in base["participants"]} if base["participants"] else set()
+        for r in responses.data:
+            uid = r["user_id"]
+            if uid not in known_uids and uid not in acc_map:
+                try:
+                    user_row = supabase.table("users").select("name").eq("id", uid).execute()
+                    name = user_row.data[0]["name"] if user_row.data else "익명"
+                    masked = (name[0] + "**") if name else "익명"
+                    base["participants"].append({
+                        "masked_name": masked,
+                        "kospi_answer": r["kospi_answer"],
+                        "accuracy": None,
+                        "total_predictions": 0,
+                    })
+                except Exception:
+                    pass
 
     return base
 
