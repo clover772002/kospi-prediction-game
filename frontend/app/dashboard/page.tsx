@@ -314,25 +314,22 @@ export default function DashboardPage() {
             );
           })()}
 
-          {(status === "open" || status === "closed" || status === "result") && today && (
-            <div className="space-y-3">
-
-              {/* 고수예측 / 단순통계 / 실적 — 3열 카드 */}
-              <div className="grid grid-cols-3 gap-2">
-                {/* 고수 강화예측 */}
+          {(status === "open" || status === "closed" || status === "result") && today && (() => {
+            const myEntry = dash?.history?.find((h) => h.date === today.survey_date);
+            return (
+              <div className="grid grid-cols-2 gap-2">
+                {/* 고수예측 */}
                 <div className="bg-yellow-500/5 border border-yellow-500/20 rounded-xl p-3 flex flex-col items-center gap-1 text-center">
                   <p className="text-xs text-yellow-400/80">⭐ 고수예측</p>
                   {today.kospi_weighted_pct !== null ? (
                     <>
-                      <p className={`text-sm font-black ${today.kospi_weighted_pct >= 50 ? "text-green-400" : "text-red-400"}`}>
+                      <p className={`text-base font-black ${today.kospi_weighted_pct >= 50 ? "text-green-400" : "text-red-400"}`}>
                         {today.kospi_weighted_pct >= 50 ? "📈 상승" : "📉 하락"}
                       </p>
-                      <p className="text-xs text-gray-400">
-                        {today.kospi_weighted_pct}% 상승론
-                      </p>
+                      <p className="text-xs text-gray-400">{today.kospi_weighted_pct}% 상승론</p>
                     </>
                   ) : (
-                    <p className="text-xs font-bold text-gray-500">-</p>
+                    <p className="text-xs text-gray-500">-</p>
                   )}
                 </div>
 
@@ -341,15 +338,32 @@ export default function DashboardPage() {
                   <p className="text-xs text-gray-500">단순통계</p>
                   {today.kospi_yes_pct !== null ? (
                     <>
-                      <p className={`text-sm font-black ${today.kospi_yes_pct >= 50 ? "text-green-400" : "text-red-400"}`}>
+                      <p className={`text-base font-black ${today.kospi_yes_pct >= 50 ? "text-green-400" : "text-red-400"}`}>
                         {today.kospi_yes_pct >= 50 ? "📈 상승" : "📉 하락"}
                       </p>
-                      <p className="text-xs text-gray-400">
-                        {today.kospi_yes_pct}% 상승론
-                      </p>
+                      <p className="text-xs text-gray-400">{today.kospi_yes_pct}% 상승론</p>
                     </>
                   ) : (
-                    <p className="text-xs font-bold text-gray-500">-</p>
+                    <p className="text-xs text-gray-500">-</p>
+                  )}
+                </div>
+
+                {/* 내 선택 */}
+                <div className="bg-[#111] border border-[#2A2A2A] rounded-xl p-3 flex flex-col items-center gap-1 text-center">
+                  <p className="text-xs text-gray-500">내 선택</p>
+                  {myEntry ? (
+                    <>
+                      <p className={`text-base font-black ${myEntry.kospi_answer ? "text-green-400" : "text-red-400"}`}>
+                        {myEntry.kospi_answer ? "📈 상승" : "📉 하락"}
+                      </p>
+                      {today.kospi_result !== null && (
+                        <p className="text-xs">
+                          {myEntry.kospi_answer === today.kospi_result ? "✅ 맞음" : "❌ 틀림"}
+                        </p>
+                      )}
+                    </>
+                  ) : (
+                    <p className="text-xs text-gray-500">미참여</p>
                   )}
                 </div>
 
@@ -358,7 +372,7 @@ export default function DashboardPage() {
                   <p className="text-xs text-gray-500">실적</p>
                   {today.kospi_result !== null && today.kospi_change_pct !== null ? (
                     <>
-                      <p className={`text-sm font-black ${today.kospi_result ? "text-green-400" : "text-red-400"}`}>
+                      <p className={`text-base font-black ${today.kospi_result ? "text-green-400" : "text-red-400"}`}>
                         {today.kospi_result ? "📈 상승" : "📉 하락"}
                       </p>
                       <p className={`text-xs ${today.kospi_change_pct >= 0 ? "text-green-400/70" : "text-red-400/70"}`}>
@@ -366,12 +380,12 @@ export default function DashboardPage() {
                       </p>
                     </>
                   ) : (
-                    <p className="text-xs font-bold text-gray-500">장마감전</p>
+                    <p className="text-xs text-gray-500">장마감전</p>
                   )}
                 </div>
               </div>
-            </div>
-          )}
+            );
+          })()}
         </div>
 
 
@@ -415,44 +429,6 @@ export default function DashboardPage() {
         {/* ── 내 통계 ──────────────────────────────────────── */}
         <div className="bg-[#1A1A1A] rounded-2xl p-5 border border-[#2A2A2A]">
           <p className="font-bold text-sm mb-4">내 통계</p>
-
-          {/* 오늘 내 선택 — 항상 표시 */}
-          {(() => {
-            const todayEntry = dash?.history?.find((h) => h.date === today?.survey_date);
-            const hasResult = today?.kospi_result != null;
-            const isCorrect = todayEntry && hasResult
-              ? todayEntry.kospi_answer === today?.kospi_result
-              : null;
-            return (
-              <div className="mb-4 pb-4 border-b border-[#2A2A2A]">
-                <p className="text-xs text-gray-500 mb-2">오늘 내 선택</p>
-                {todayEntry ? (
-                  <div className={`rounded-xl px-4 py-3 flex items-center justify-between ${
-                    isCorrect === true ? "bg-green-500/10 border border-green-500/30" :
-                    isCorrect === false ? "bg-red-500/10 border border-red-500/20" :
-                    "bg-[#111]"
-                  }`}>
-                    <p className={`font-bold text-sm ${todayEntry.kospi_answer ? "text-green-400" : "text-blue-400"}`}>
-                      {todayEntry.kospi_answer ? "📈 코스피 오른다" : "📉 코스피 내린다"}
-                    </p>
-                    {isCorrect === true && <span className="text-lg">✅</span>}
-                    {isCorrect === false && <span className="text-lg">❌</span>}
-                    {isCorrect === null && <span className="text-xs text-gray-500">결과 대기중</span>}
-                  </div>
-                ) : (
-                  <div className="bg-[#111] rounded-xl px-4 py-3 flex items-center justify-between">
-                    <p className="text-sm text-gray-500">오늘 미참여</p>
-                    <button
-                      onClick={() => router.push("/survey")}
-                      className="text-xs text-amber-400 font-bold"
-                    >
-                      참여하기 →
-                    </button>
-                  </div>
-                )}
-              </div>
-            );
-          })()}
 
           {dash && dash.total_predictions === 0 ? (
             <div className="text-center py-4 space-y-2">
