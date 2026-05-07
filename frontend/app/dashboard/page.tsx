@@ -451,7 +451,7 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {/* ── 내 통계 ──────────────────────────────────────── */}
+        {/* ── 내 통계 + 예측 이력 ──────────────────────────── */}
         <div className="bg-[#1A1A1A] rounded-2xl p-5 border border-[#2A2A2A]">
           <p className="font-bold text-sm mb-4">내 통계</p>
 
@@ -464,32 +464,30 @@ export default function DashboardPage() {
               </p>
             </div>
           ) : dash ? (
-            <div className="bg-[#111] rounded-xl p-4 text-center">
-              <p className="text-xs text-gray-500 mb-1">코스피 적중률</p>
-              <p className="text-3xl font-black text-green-400">
-                {dash.accuracy.kospi != null ? `${dash.accuracy.kospi}%` : "-"}
-              </p>
-              <p className="text-xs text-gray-500 mt-1">{dash.total_predictions}일 참여</p>
+            <div className="space-y-4">
+              {/* 적중률 숫자 */}
+              <div className="flex items-end gap-2">
+                <p className="text-5xl font-black text-green-400 leading-none">
+                  {dash.accuracy.kospi != null ? `${dash.accuracy.kospi}` : "-"}
+                </p>
+                {dash.accuracy.kospi != null && (
+                  <p className="text-xl font-black text-green-400/70 pb-0.5">%</p>
+                )}
+                <p className="text-xs text-gray-500 pb-1 ml-1">적중률 · {dash.total_predictions}일 참여</p>
+              </div>
+
+              {/* 최근 이력 */}
+              {dash.history.length > 0 && (
+                <div className="space-y-1.5">
+                  <p className="text-xs text-gray-500">최근 이력</p>
+                  {dash.history.map((item) => (
+                    <HistoryRow key={item.date} item={item} />
+                  ))}
+                </div>
+              )}
             </div>
           ) : null}
         </div>
-
-        {/* ── 예측 이력 ────────────────────────────────────── */}
-        {dash && dash.history.length > 0 && (
-          <div className="bg-[#1A1A1A] rounded-2xl p-5 border border-[#2A2A2A]">
-            <p className="font-bold text-sm mb-3">
-              최근 예측 이력
-              <span className="text-gray-500 text-xs font-normal ml-2">
-                ✅ 맞음 / ❌ 틀림
-              </span>
-            </p>
-            <div className="space-y-2">
-              {dash.history.map((item) => (
-                <HistoryRow key={item.date} item={item} />
-              ))}
-            </div>
-          </div>
-        )}
       </div>
 
       {/* 하단 내비 */}
