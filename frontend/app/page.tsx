@@ -295,8 +295,8 @@ export default function LoginPage() {
         <h1 className="text-2xl font-black text-white mb-1">오늘 코스피, 함께 맞춰요</h1>
         <p className="text-yellow-400 text-xs font-bold mb-3 tracking-wide">매일 1딸깍으로 설문 참여 · 프리미엄 예측 데이터 수령</p>
         <p className="text-gray-400 text-sm leading-relaxed">
-          코스피가 오를지 내릴지 O/X 하나만.<br />
-          맞출수록 가중치가 쌓여 커뮤니티 예측을 움직입니다.
+          코스피가 오를지 내릴지 클릭 한 번만 하면<br />
+          향상된 집단 예측값을 무료로 열람할 수 있습니다.
         </p>
       </div>
 
