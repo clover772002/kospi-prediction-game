@@ -109,19 +109,7 @@ async def job_22_00():
 
 
 async def job_08_45():
-    """매일 08:45 - 브라우저 알림 마감임박 예령"""
-    sb = _supabase_direct()
-    await send_web_push_to_all(
-        sb,
-        title="⏰ 마감 임박! 09:00까지예요",
-        body="아직 코스피 예측 안 하셨나요? 지금 바로 참여하세요 📊",
-        url="/survey",
-    )
-    logger.info("08:45 마감임박 웹푸시 발송 완료")
-
-
-async def job_08_50():
-    """매일 08:48 - 텔레그램 마감임박 리마인더 (설문은 전날 22:00에 이미 생성)"""
+    """매일 08:45 - 텔레그램 + 웹푸시 마감임박 알림"""
     sb = _supabase_direct()
     today_str = today_kst()
 
@@ -129,19 +117,18 @@ async def job_08_50():
     existing = sb.table("daily_surveys").select("id").eq("survey_date", today_str).execute()
     if not existing.data:
         sb.table("daily_surveys").insert({"survey_date": today_str}).execute()
-        logger.info(f"08:48 폴백 설문 생성: {today_str}")
-        # 폴백 시에는 신규 설문으로 발송
+        logger.info(f"08:45 폴백 설문 생성: {today_str}")
         await send_daily_survey_to_all(sb, today_str, is_reminder=False)
     else:
-        # 이미 있으면 마감임박 리마인더
         await send_daily_survey_to_all(sb, today_str, is_reminder=True)
 
     await send_web_push_to_all(
         sb,
         title="⏰ 마감 임박! 09:00까지예요",
-        body="코스피 예측 설문이 곧 마감돼요. 지금 탭해서 참여하세요 👆",
+        body="아직 코스피 예측 안 하셨나요? 지금 바로 참여하세요 📊",
         url="/survey",
     )
+    logger.info("08:45 마감임박 텔레그램+웹푸시 발송 완료")
 
 
 async def job_09_00():
@@ -234,12 +221,11 @@ scheduler = AsyncIOScheduler(timezone="Asia/Seoul")
 @asynccontextmanager
 async def lifespan(app_instance):
     scheduler.add_job(job_22_00, CronTrigger(hour=22, minute=0,  timezone="Asia/Seoul"), id="survey_evening",   replace_existing=True)
-    scheduler.add_job(job_08_45, CronTrigger(hour=8,  minute=45, timezone="Asia/Seoul"), id="survey_prebell",   replace_existing=True)
-    scheduler.add_job(job_08_50, CronTrigger(hour=8,  minute=48, timezone="Asia/Seoul"), id="survey_reminder",  replace_existing=True)
+    scheduler.add_job(job_08_45, CronTrigger(hour=8,  minute=45, timezone="Asia/Seoul"), id="survey_reminder",  replace_existing=True)
     scheduler.add_job(job_09_00, CronTrigger(hour=9,  minute=0,  timezone="Asia/Seoul"), id="survey_close",     replace_existing=True)
     scheduler.add_job(job_15_35, CronTrigger(hour=15, minute=35, timezone="Asia/Seoul"), id="market_result",    replace_existing=True)
     scheduler.start()
-    logger.info("스케줄러 시작: 22:00(설문 발송) / 08:45(마감임박 예령) / 08:48(마감임박 리마인더) / 09:00(마감+발표) / 15:35(정확도 알림)")
+    logger.info("스케줄러 시작: 22:00(설문 발송) / 08:45(마감임박 텔레그램+웹푸시) / 09:00(마감+발표) / 15:35(정확도 알림)")
     yield
     scheduler.shutdown()
 
