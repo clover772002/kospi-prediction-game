@@ -4,8 +4,6 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { getMe, getToday, getDashboard, UserProfile, TodaySurvey, DashboardData } from "@/lib/api";
-import FlipClock from "@/components/FlipClock";
-
 function SentimentBar({ label, pct, result }: { label: string; pct: number | null; result?: boolean | null }) {
   const displayPct = pct ?? 0;
   return (
@@ -389,8 +387,6 @@ export default function DashboardPage() {
           )}
         </div>
 
-        {/* ── 카운트다운 ────────────────────────────────────── */}
-        <FlipClock />
 
         {/* ── 고수 vs 하수 예측 ────────────────────────────── */}
         {(today?.top_predictor || today?.worst_predictor) && (
