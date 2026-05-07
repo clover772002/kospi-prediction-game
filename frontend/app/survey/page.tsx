@@ -269,7 +269,7 @@ export default function SurveyPage() {
           <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-2xl p-5 w-full space-y-2">
             <p className="text-sm text-gray-400">현재 내 예측</p>
             <p className="text-white font-bold text-lg">
-              코스피 {previousAnswer ? "📈 오른다" : "📉 내린다"}
+              코스피 {previousAnswer ? "📈 상승" : "📉 하락"}
             </p>
           </div>
           <p className="text-xs text-gray-500">마음이 바뀌셨나요?</p>
@@ -367,7 +367,7 @@ export default function SurveyPage() {
           <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-2xl p-5 w-full space-y-2">
             <p className="text-sm text-gray-400">내 예측</p>
             <p className="text-white font-bold text-lg">
-              코스피 {kospiAnswer ? "📈 오른다" : "📉 내린다"}
+              코스피 {kospiAnswer ? "📈 상승" : "📉 하락"}
             </p>
           </div>
           <p className="text-xs text-gray-500">장 시작 전까지 마감 · 15:35에 결과 공개</p>
@@ -417,7 +417,7 @@ export default function SurveyPage() {
                     <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-2xl p-4 w-full">
                       <p className="text-xs text-gray-400 mb-1">내 예측</p>
                       <p className={`font-bold ${(nextSubmitted ? nextKospiAnswer : nextPreviousAnswer) ? "text-green-400" : "text-blue-400"}`}>
-                        {(nextSubmitted ? nextKospiAnswer : nextPreviousAnswer) ? "📈 오른다" : "📉 내린다"}
+                        {(nextSubmitted ? nextKospiAnswer : nextPreviousAnswer) ? "📈 상승" : "📉 하락"}
                       </p>
                     </div>
                     {nextAlreadyAnswered && !nextSubmitted && (

@@ -15,7 +15,7 @@ function HistoryRow({ item }: { item: DashboardData["history"][0] }) {
         <div className="text-center">
           <p className="text-gray-500 mb-0.5">코스피</p>
           <p className={item.kospi_answer ? "text-green-400" : "text-red-400"}>
-            {item.kospi_answer ? "📈 오름" : "📉 내림"}
+            {item.kospi_answer ? "📈 상승" : "📉 하락"}
           </p>
         </div>
       </div>
