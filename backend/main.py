@@ -589,6 +589,7 @@ async def get_dashboard(
         return {
             "accuracy": {"kospi": None, "overall": None},
             "percentile": None,
+            "contribution": None,
             "history": history,
             "total_predictions": len(my_responses.data),
         }
