@@ -225,11 +225,22 @@ export default function SurveyPage() {
         const day = kst.getDay();
         const mins = kst.getHours() * 60 + kst.getMinutes();
         const isWeekend = day === 0 || day === 6;
-        const isPreSurvey = !isWeekend && mins < 22 * 60;
+        // 09:00~22:00 사이만 "설문 시작 전" (그 외 시간은 전날 22:00에 이미 열림)
+        const isPreSurvey = !isWeekend && mins >= 9 * 60 && mins < 22 * 60;
+        // 00:00~09:00 사이인데 no_survey → 설문 레코드가 아직 없는 경우
+        const isEarlyMorning = !isWeekend && mins < 9 * 60;
         return (
           <div className="flex flex-col gap-5 mt-10">
             <div className="flex flex-col items-center gap-3 text-center">
-              {isPreSurvey ? (
+              {isEarlyMorning ? (
+                <>
+                  <div className="text-5xl">⏳</div>
+                  <p className="text-xl font-bold text-white">설문 준비 중이에요</p>
+                  <p className="text-sm text-gray-400">
+                    잠시 후 새로고침 해주세요
+                  </p>
+                </>
+              ) : isPreSurvey ? (
                 <>
                   <div className="text-5xl">⏳</div>
                   <p className="text-xl font-bold text-white">설문 시작 전이에요</p>

@@ -503,7 +503,20 @@ async def get_today(supabase: Client = Depends(get_supabase)):
 
     survey_res = supabase.table("daily_surveys").select("*").eq("survey_date", today_str).execute()
     if not survey_res.data:
-        return {"status": "no_survey", "survey_date": today_str}
+        # 평일 00:00~09:00 사이에 레코드가 없으면 자동 생성 (22:00 job이 누락된 경우 대비)
+        now_kst = datetime.now(KST)
+        if now_kst.weekday() < 5 and now_kst.hour < 9:
+            try:
+                supabase.table("daily_surveys").upsert(
+                    {"survey_date": today_str, "is_closed": False},
+                    on_conflict="survey_date"
+                ).execute()
+                logger.info(f"get_today: {today_str} 설문 레코드 자동 생성 (early morning fallback)")
+                survey_res = supabase.table("daily_surveys").select("*").eq("survey_date", today_str).execute()
+            except Exception as e:
+                logger.error(f"get_today fallback 생성 오류: {e}")
+        if not survey_res.data:
+            return {"status": "no_survey", "survey_date": today_str}
 
     survey = survey_res.data[0]
     responses = (

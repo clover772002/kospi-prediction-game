@@ -271,8 +271,8 @@ export default function DashboardPage() {
                 const day = kst.getDay(); // 0=일, 6=토
                 const mins = kst.getHours() * 60 + kst.getMinutes();
                 const isWeekend = day === 0 || day === 6;
-                const beforeSurvey = mins < 22 * 60;
-                if (!isWeekend && beforeSurvey) return `📊 ${dateStr} 설문 대기중`;
+                const isPreSurvey = mins >= 9 * 60 && mins < 22 * 60;
+                if (!isWeekend && isPreSurvey) return `📊 ${dateStr} 설문 대기중`;
                 return `📊 ${dateStr} 휴장일`;
               }
               return `📊 ${dateStr}`;
@@ -303,9 +303,9 @@ export default function DashboardPage() {
             const day = kst.getDay();
             const mins = kst.getHours() * 60 + kst.getMinutes();
             const isWeekend = day === 0 || day === 6;
-            const beforeSurvey = mins < 22 * 60; // 22:00 이전
-            const isPreSurvey = status === "no_survey" && !isWeekend && beforeSurvey;
-            const isHoliday = status === "no_survey" && !isPreSurvey;
+            // 09:00~22:00 사이만 "설문 대기중", 00:00~09:00은 전날 22:00에 이미 열림
+            const isPreSurvey = status === "no_survey" && !isWeekend && mins >= 9 * 60 && mins < 22 * 60;
+            const isHoliday = status === "no_survey" && !isPreSurvey && (isWeekend || mins >= 22 * 60);
             return (
               <>
                 <div className="flex items-center justify-between mb-4">
