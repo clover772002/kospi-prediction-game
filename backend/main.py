@@ -387,6 +387,73 @@ def _build_user_accuracy_map(supabase: Client) -> dict:
     }
 
 
+@app.get("/api/public/history")
+async def get_public_history(supabase: Client = Depends(get_supabase)):
+    """로그인 화면용 공개 실적 히스토리 (최근 20일, 인증 불필요)"""
+    # 결과가 있는 날만 가져옴 (kospi_result IS NOT NULL)
+    rows = (
+        supabase.table("daily_surveys")
+        .select("survey_date, kospi_result, kospi_change_pct")
+        .not_.is_("kospi_result", "null")
+        .order("survey_date", desc=True)
+        .limit(20)
+        .execute()
+    )
+    if not rows.data:
+        return {"history": []}
+
+    results = []
+    for row in rows.data:
+        d = row["survey_date"]
+        # 해당 날짜 응답 집계
+        resp = (
+            supabase.table("survey_responses")
+            .select("kospi_answer")
+            .eq("survey_date", d)
+            .execute()
+        )
+        total = len(resp.data)
+        if total == 0:
+            continue
+        yes_cnt = sum(1 for r in resp.data if r["kospi_answer"])
+        majority_up = yes_cnt >= total / 2  # 단순 다수결 예측
+        actual_up = row["kospi_result"]
+        majority_correct = majority_up == actual_up
+
+        # 가중예측
+        acc_map = _build_user_accuracy_map(supabase)
+        weighted_pct = _calc_weighted_pct(resp.data, acc_map)
+        weighted_up = weighted_pct >= 50 if weighted_pct is not None else majority_up
+        weighted_correct = weighted_up == actual_up
+
+        results.append({
+            "date": d,
+            "total": total,
+            "kospi_yes_pct": round(yes_cnt / total * 100),
+            "majority_up": majority_up,
+            "weighted_pct": weighted_pct,
+            "weighted_up": weighted_up,
+            "actual_up": actual_up,
+            "change_pct": row.get("kospi_change_pct"),
+            "majority_correct": majority_correct,
+            "weighted_correct": weighted_correct,
+        })
+
+    # 집계 통계
+    total_days = len(results)
+    majority_hits = sum(1 for r in results if r["majority_correct"])
+    weighted_hits = sum(1 for r in results if r["weighted_correct"])
+
+    return {
+        "history": results,
+        "stats": {
+            "total_days": total_days,
+            "majority_accuracy": round(majority_hits / total_days * 100) if total_days else 0,
+            "weighted_accuracy": round(weighted_hits / total_days * 100) if total_days else 0,
+        },
+    }
+
+
 @app.get("/api/today")
 async def get_today(supabase: Client = Depends(get_supabase)):
     """오늘의 설문 집계 결과 조회 (인증 불필요)"""

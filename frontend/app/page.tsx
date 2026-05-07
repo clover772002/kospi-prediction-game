@@ -5,6 +5,28 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 
+type HistoryItem = {
+  date: string;
+  total: number;
+  kospi_yes_pct: number;
+  majority_up: boolean;
+  weighted_pct: number | null;
+  weighted_up: boolean;
+  actual_up: boolean;
+  change_pct: number | null;
+  majority_correct: boolean;
+  weighted_correct: boolean;
+};
+
+type PublicHistory = {
+  history: HistoryItem[];
+  stats: {
+    total_days: number;
+    majority_accuracy: number;
+    weighted_accuracy: number;
+  };
+};
+
 const FEATURES = [
   {
     icon: "📱",
@@ -185,6 +207,7 @@ export default function LoginPage() {
   const [signing, setSigning] = useState<"google" | "kakao" | null>(null);
   const [openIdx, setOpenIdx] = useState<number | null>(null);
   const [browserType, setBrowserType] = useState<"kakao" | "inapp" | "normal">("normal");
+  const [publicHistory, setPublicHistory] = useState<PublicHistory | null>(null);
 
   useEffect(() => {
     const type = detectBrowser();
@@ -200,6 +223,11 @@ export default function LoginPage() {
         setLoading(false);
       }
     });
+    // 공개 실적 데이터 로드
+    fetch("/api/public/history", { cache: "no-store" })
+      .then((r) => r.json())
+      .then((d) => setPublicHistory(d))
+      .catch(() => {});
   }, [router]);
 
   const handleLogin = async (provider: "google" | "kakao") => {
@@ -271,6 +299,101 @@ export default function LoginPage() {
           맞출수록 가중치가 쌓여 커뮤니티 예측을 움직입니다.
         </p>
       </div>
+
+      {/* 집단지성 실적 트래커 */}
+      {publicHistory && publicHistory.history.length > 0 && (
+        <div className="w-full mb-8">
+          <div className="flex items-center justify-between mb-3">
+            <p className="text-xs text-gray-500 font-bold tracking-widest uppercase">집단지성 예측 실적</p>
+            <div className="flex gap-2 text-xs">
+              <span className="text-gray-500">다수결</span>
+              <span className="font-black text-white">{publicHistory.stats.majority_accuracy}%</span>
+              <span className="text-gray-600">·</span>
+              <span className="text-yellow-400">⭐고수</span>
+              <span className="font-black text-yellow-400">{publicHistory.stats.weighted_accuracy}%</span>
+            </div>
+          </div>
+
+          {/* 정확도 비교 바 */}
+          <div className="bg-[#1A1A1A] rounded-2xl p-4 border border-[#2A2A2A] mb-3">
+            <div className="space-y-2">
+              {[
+                { label: "단순 다수결", pct: publicHistory.stats.majority_accuracy, color: "bg-blue-500" },
+                { label: "⭐ 고수 가중예측", pct: publicHistory.stats.weighted_accuracy, color: "bg-yellow-400" },
+              ].map((item) => (
+                <div key={item.label}>
+                  <div className="flex justify-between text-xs mb-1">
+                    <span className="text-gray-400">{item.label}</span>
+                    <span className="text-white font-black">{item.pct}%</span>
+                  </div>
+                  <div className="bg-[#111] rounded-full h-3 overflow-hidden">
+                    <div className={`h-full ${item.color} rounded-full transition-all`} style={{ width: `${item.pct}%` }} />
+                  </div>
+                </div>
+              ))}
+            </div>
+            <p className="text-xs text-gray-600 mt-3">* 최근 {publicHistory.stats.total_days}일 실제 데이터 기준</p>
+          </div>
+
+          {/* 날짜별 예측 결과 카드 */}
+          <div className="space-y-2">
+            {publicHistory.history.slice(0, 7).map((item) => {
+              const mmdd = item.date.slice(5).replace("-", "/");
+              const actualLabel = item.actual_up ? "▲ 상승" : "▼ 하락";
+              const actualColor = item.actual_up ? "text-red-400" : "text-blue-400";
+              const changeTxt = item.change_pct != null
+                ? `${item.change_pct > 0 ? "+" : ""}${item.change_pct}%`
+                : "";
+              return (
+                <div
+                  key={item.date}
+                  className="bg-[#1A1A1A] rounded-2xl border border-[#2A2A2A] px-4 py-3"
+                >
+                  {/* 날짜 + 실제결과 */}
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-white font-black text-sm">{mmdd}</span>
+                    <div className="flex items-center gap-1.5">
+                      <span className={`text-xs font-bold ${actualColor}`}>{actualLabel}</span>
+                      {changeTxt && (
+                        <span className={`text-xs font-bold ${item.actual_up ? "text-red-400" : "text-blue-400"}`}>
+                          {changeTxt}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* 예측 vs 결과 */}
+                  <div className="grid grid-cols-2 gap-2">
+                    {/* 단순 다수결 */}
+                    <div className={`rounded-xl p-2.5 flex items-center justify-between ${item.majority_correct ? "bg-green-500/10 border border-green-500/30" : "bg-red-500/10 border border-red-500/20"}`}>
+                      <div>
+                        <p className="text-xs text-gray-500 mb-0.5">다수결</p>
+                        <p className="text-xs font-bold text-white">
+                          {item.majority_up ? "▲ 상승" : "▼ 하락"} {item.kospi_yes_pct}%
+                        </p>
+                      </div>
+                      <span className="text-lg">{item.majority_correct ? "✅" : "❌"}</span>
+                    </div>
+                    {/* 고수 가중예측 */}
+                    <div className={`rounded-xl p-2.5 flex items-center justify-between ${item.weighted_correct ? "bg-green-500/10 border border-green-500/30" : "bg-red-500/10 border border-red-500/20"}`}>
+                      <div>
+                        <p className="text-xs text-yellow-500 mb-0.5">⭐ 고수</p>
+                        <p className="text-xs font-bold text-white">
+                          {item.weighted_up ? "▲ 상승" : "▼ 하락"} {item.weighted_pct ?? "-"}%
+                        </p>
+                      </div>
+                      <span className="text-lg">{item.weighted_correct ? "✅" : "❌"}</span>
+                    </div>
+                  </div>
+
+                  {/* 참여자 수 */}
+                  <p className="text-xs text-gray-600 mt-2 text-right">{item.total}명 참여</p>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* 하루 흐름 타임라인 */}
       <div className="w-full mb-8">
