@@ -323,17 +323,15 @@ export default function LoginPage() {
                   key={item.date}
                   className="bg-[#1A1A1A] rounded-2xl border border-[#2A2A2A] px-4 py-3"
                 >
-                  {/* 날짜 + 실제결과 */}
-                  <div className="flex items-center justify-between mb-2">
+                  {/* 날짜 + 실제결과 — 좌측 밀착 배치 */}
+                  <div className="flex items-center gap-2 mb-2">
                     <span className="text-white font-black text-sm">{mmdd}</span>
-                    <div className="flex items-center gap-1.5">
-                      <span className={`text-xs font-bold ${actualColor}`}>{actualLabel}</span>
-                      {changeTxt && (
-                        <span className={`text-xs font-bold ${item.actual_up ? "text-red-400" : "text-blue-400"}`}>
-                          {changeTxt}
-                        </span>
-                      )}
-                    </div>
+                    <span className={`text-xs font-bold ${actualColor}`}>{actualLabel}</span>
+                    {changeTxt && (
+                      <span className={`text-xs font-bold ${item.actual_up ? "text-red-400" : "text-blue-400"}`}>
+                        {changeTxt}
+                      </span>
+                    )}
                   </div>
 
                   {/* 예측 vs 결과 */}
