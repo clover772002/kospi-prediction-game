@@ -226,7 +226,7 @@ export default function SurveyPage() {
                   <div className="text-5xl">⏳</div>
                   <p className="text-xl font-bold text-white">설문 시작 전이에요</p>
                   <p className="text-sm text-gray-400">
-                    <span className="text-white font-bold">08:48</span>에 오늘 코스피 예측 설문이 시작돼요
+                    오늘 코스피 예측 설문이 곧 시작돼요
                   </p>
                 </>
               ) : (
@@ -273,7 +273,7 @@ export default function SurveyPage() {
       {status === "open" && (!alreadyAnswered || retrying) && !submitted && (
         <div className="space-y-6 mt-4">
           <div className="bg-amber-500/10 border border-amber-500/30 rounded-2xl p-4 text-center">
-            <p className="text-amber-400 font-bold text-sm">⏰ 설문 진행 중 · 09:00 마감</p>
+            <p className="text-amber-400 font-bold text-sm">⏰ 설문 진행 중 · 장 시작 전 마감</p>
           </div>
 
           {retrying && (

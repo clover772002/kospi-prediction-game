@@ -56,32 +56,6 @@ const FEATURES = [
     },
   },
   {
-    icon: "⏰",
-    title: "10분 타임어택",
-    desc: "09:00까지만 응답 가능. 늦으면 기회 없음!",
-    detail: {
-      summary: "장 시작 10분 전에만 응답할 수 있어요. 시장이 열리기 전 순수한 예측만 반영되기 때문에 진짜 실력을 측정할 수 있습니다.",
-      steps: null,
-      mockup: (
-        <div className="mt-3 space-y-2">
-          {[
-            { time: "08:48", label: "코스피 예측 설문 발송", color: "bg-blue-500", active: true },
-            { time: "08:48~09:00", label: "응답 가능 시간 (12분)", color: "bg-green-500", active: true },
-            { time: "09:00", label: "응답 마감 & 집계 공개", color: "bg-yellow-500", active: true },
-            { time: "09:00~", label: "장 시작 (응답 불가)", color: "bg-gray-600", active: false },
-            { time: "15:35", label: "실적/예측 분석 알림", color: "bg-purple-500", active: true },
-          ].map((item) => (
-            <div key={item.time} className="flex items-center gap-3">
-              <div className={`w-2 h-2 rounded-full flex-shrink-0 ${item.color}`} />
-              <span className="text-gray-400 text-xs w-24 flex-shrink-0">{item.time}</span>
-              <span className={`text-xs ${item.active ? "text-white" : "text-gray-600"}`}>{item.label}</span>
-            </div>
-          ))}
-        </div>
-      ),
-    },
-  },
-  {
     icon: "🔓",
     title: "응답하면 고수 예측이 열려요",
     desc: "09:00 마감 후, 적중률 고수들의 집단 예측을 바로 확인",
