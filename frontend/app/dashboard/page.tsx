@@ -440,18 +440,43 @@ export default function DashboardPage() {
         <div className="bg-[#1A1A1A] rounded-2xl p-5 border border-[#2A2A2A]">
           <p className="font-bold text-sm mb-4">내 통계</p>
 
-          {/* 오늘 내 선택 */}
-          {dash && dash.history.length > 0 && dash.history[0].date === today?.survey_date && (
-            <div className="mb-4 pb-4 border-b border-[#2A2A2A]">
-              <p className="text-xs text-gray-500 mb-2">오늘 내 예측</p>
-              <div className="bg-[#111] rounded-xl p-2.5 text-center w-full">
-                <p className="text-xs text-gray-500 mb-0.5">코스피</p>
-                <p className={`font-bold text-sm ${dash.history[0].kospi_answer ? "text-green-400" : "text-red-400"}`}>
-                  {dash.history[0].kospi_answer ? "📈 오른다" : "📉 내린다"}
-                </p>
+          {/* 오늘 내 선택 — 항상 표시 */}
+          {(() => {
+            const todayEntry = dash?.history?.find((h) => h.date === today?.survey_date);
+            const hasResult = today?.kospi_result != null;
+            const isCorrect = todayEntry && hasResult
+              ? todayEntry.kospi_answer === today?.kospi_result
+              : null;
+            return (
+              <div className="mb-4 pb-4 border-b border-[#2A2A2A]">
+                <p className="text-xs text-gray-500 mb-2">오늘 내 선택</p>
+                {todayEntry ? (
+                  <div className={`rounded-xl px-4 py-3 flex items-center justify-between ${
+                    isCorrect === true ? "bg-green-500/10 border border-green-500/30" :
+                    isCorrect === false ? "bg-red-500/10 border border-red-500/20" :
+                    "bg-[#111]"
+                  }`}>
+                    <p className={`font-bold text-sm ${todayEntry.kospi_answer ? "text-green-400" : "text-blue-400"}`}>
+                      {todayEntry.kospi_answer ? "📈 코스피 오른다" : "📉 코스피 내린다"}
+                    </p>
+                    {isCorrect === true && <span className="text-lg">✅</span>}
+                    {isCorrect === false && <span className="text-lg">❌</span>}
+                    {isCorrect === null && <span className="text-xs text-gray-500">결과 대기중</span>}
+                  </div>
+                ) : (
+                  <div className="bg-[#111] rounded-xl px-4 py-3 flex items-center justify-between">
+                    <p className="text-sm text-gray-500">오늘 미참여</p>
+                    <button
+                      onClick={() => router.push("/survey")}
+                      className="text-xs text-amber-400 font-bold"
+                    >
+                      참여하기 →
+                    </button>
+                  </div>
+                )}
               </div>
-            </div>
-          )}
+            );
+          })()}
 
           {dash && dash.total_predictions === 0 ? (
             <div className="text-center py-4 space-y-2">
