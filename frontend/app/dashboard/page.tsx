@@ -320,22 +320,22 @@ export default function DashboardPage() {
                 총 <span className="text-white font-bold">{today.total_responses}명</span> 참여
               </p>
 
-              {/* 실적 / 단순통계 / 고수강화예측 — 3열 카드 */}
+              {/* 고수예측 / 단순통계 / 실적 — 3열 카드 */}
               <div className="grid grid-cols-3 gap-2">
-                {/* 실적 */}
-                <div className="bg-[#111] border border-[#2A2A2A] rounded-xl p-3 flex flex-col items-center gap-1 text-center">
-                  <p className="text-xs text-gray-500">실적</p>
-                  {today.kospi_result !== null && today.kospi_change_pct !== null ? (
+                {/* 고수 강화예측 */}
+                <div className="bg-yellow-500/5 border border-yellow-500/20 rounded-xl p-3 flex flex-col items-center gap-1 text-center">
+                  <p className="text-xs text-yellow-400/80">⭐ 고수예측</p>
+                  {today.kospi_weighted_pct !== null ? (
                     <>
-                      <p className={`text-sm font-black ${today.kospi_result ? "text-green-400" : "text-red-400"}`}>
-                        {today.kospi_result ? "📈 상승" : "📉 하락"}
+                      <p className={`text-sm font-black ${today.kospi_weighted_pct >= 50 ? "text-green-400" : "text-red-400"}`}>
+                        {today.kospi_weighted_pct >= 50 ? "📈 상승" : "📉 하락"}
                       </p>
-                      <p className={`text-xs ${today.kospi_change_pct >= 0 ? "text-green-400/70" : "text-red-400/70"}`}>
-                        {today.kospi_change_pct >= 0 ? "+" : ""}{today.kospi_change_pct.toFixed(2)}%
+                      <p className="text-xs text-gray-400">
+                        {today.kospi_weighted_pct}% 상승론
                       </p>
                     </>
                   ) : (
-                    <p className="text-xs font-bold text-gray-500">장마감전</p>
+                    <p className="text-xs font-bold text-gray-500">-</p>
                   )}
                 </div>
 
@@ -356,20 +356,20 @@ export default function DashboardPage() {
                   )}
                 </div>
 
-                {/* 고수 강화예측 */}
-                <div className="bg-yellow-500/5 border border-yellow-500/20 rounded-xl p-3 flex flex-col items-center gap-1 text-center">
-                  <p className="text-xs text-yellow-400/80">⭐ 고수예측</p>
-                  {today.kospi_weighted_pct !== null ? (
+                {/* 실적 */}
+                <div className="bg-[#111] border border-[#2A2A2A] rounded-xl p-3 flex flex-col items-center gap-1 text-center">
+                  <p className="text-xs text-gray-500">실적</p>
+                  {today.kospi_result !== null && today.kospi_change_pct !== null ? (
                     <>
-                      <p className={`text-sm font-black ${today.kospi_weighted_pct >= 50 ? "text-green-400" : "text-red-400"}`}>
-                        {today.kospi_weighted_pct >= 50 ? "📈 상승" : "📉 하락"}
+                      <p className={`text-sm font-black ${today.kospi_result ? "text-green-400" : "text-red-400"}`}>
+                        {today.kospi_result ? "📈 상승" : "📉 하락"}
                       </p>
-                      <p className="text-xs text-gray-400">
-                        {today.kospi_weighted_pct}% 상승론
+                      <p className={`text-xs ${today.kospi_change_pct >= 0 ? "text-green-400/70" : "text-red-400/70"}`}>
+                        {today.kospi_change_pct >= 0 ? "+" : ""}{today.kospi_change_pct.toFixed(2)}%
                       </p>
                     </>
                   ) : (
-                    <p className="text-xs font-bold text-gray-500">-</p>
+                    <p className="text-xs font-bold text-gray-500">장마감전</p>
                   )}
                 </div>
               </div>
