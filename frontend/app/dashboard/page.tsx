@@ -316,9 +316,6 @@ export default function DashboardPage() {
 
           {(status === "open" || status === "closed" || status === "result") && today && (
             <div className="space-y-3">
-              <p className="text-xs text-gray-500 text-right">
-                총 <span className="text-white font-bold">{today.total_responses}명</span> 참여
-              </p>
 
               {/* 고수예측 / 단순통계 / 실적 — 3열 카드 */}
               <div className="grid grid-cols-3 gap-2">
@@ -381,9 +378,8 @@ export default function DashboardPage() {
         {/* ── 오늘의 예측 참여자 리스트 ────────────────────── */}
         {today?.participants && today.participants.length > 0 && (
           <div className="bg-[#1A1A1A] rounded-2xl p-5 border border-[#2A2A2A]">
-            <div className="flex items-center justify-between mb-3">
+            <div className="mb-3">
               <p className="font-bold text-sm">오늘의 예측</p>
-              <p className="text-xs text-gray-500">{today.participants.length}명 참여</p>
             </div>
             {/* 헤더 */}
             <div className="grid grid-cols-3 text-xs text-gray-500 px-2 pb-2 border-b border-[#2A2A2A]">
