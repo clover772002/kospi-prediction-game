@@ -9,6 +9,13 @@ KST = ZoneInfo("Asia/Seoul")
 def today_kst() -> str:
     """KST 기준 오늘 날짜 (Railway는 UTC이므로 명시적으로 변환)"""
     return datetime.now(KST).date().isoformat()
+
+def next_trading_day_str() -> str:
+    """KST 기준 다음 거래일 (주말 건너뜀)"""
+    d = datetime.now(KST).date() + timedelta(days=1)
+    while d.weekday() >= 5:  # 5=토, 6=일
+        d += timedelta(days=1)
+    return d.isoformat()
 from contextlib import asynccontextmanager
 
 import yfinance as yf
@@ -182,6 +189,16 @@ async def job_15_35():
 
     # 개인별 텔레그램 알림
     await send_accuracy_notifications(sb, today_str, kospi_up, kospi_pct)
+
+    # 다음 거래일 설문 미리 생성 (장마감 후 바로 예측 참여 가능하도록)
+    next_str = next_trading_day_str()
+    try:
+        existing_next = sb.table("daily_surveys").select("id").eq("survey_date", next_str).execute()
+        if not existing_next.data:
+            sb.table("daily_surveys").insert({"survey_date": next_str}).execute()
+            logger.info(f"다음 거래일 설문 미리 생성: {next_str}")
+    except Exception as e:
+        logger.warning(f"다음 거래일 설문 생성 실패 (무시): {e}")
 
 
 # ─────────────────────────────────────────────────────────────
@@ -579,26 +596,27 @@ async def web_survey_respond(
     except Exception as e:
         logger.warning(f"survey/respond: 유저 생성 시도 중 오류 (무시): {e}")
 
-    # 설문 존재 여부 확인
-    survey_res = supabase.table("daily_surveys").select("*").eq("survey_date", today_str).execute()
-    if not survey_res.data:
-        raise HTTPException(status_code=400, detail="오늘 설문이 없습니다.")
-
-    survey = survey_res.data[0]
-    if survey.get("is_closed"):
-        raise HTTPException(status_code=400, detail="설문이 마감됐습니다.")
-
     body = await request.json()
     kospi_answer = body.get("kospi_answer")
+    # 클라이언트가 survey_date를 명시하면 그걸 사용, 없으면 오늘
+    target_date = body.get("survey_date") or today_str
 
     if kospi_answer is None:
         raise HTTPException(status_code=422, detail="kospi_answer가 필요합니다.")
+
+    # 해당 날짜 설문 존재 여부 + 마감 여부 확인
+    survey_res = supabase.table("daily_surveys").select("*").eq("survey_date", target_date).execute()
+    if not survey_res.data:
+        raise HTTPException(status_code=400, detail="해당 날짜의 설문이 없습니다.")
+    survey = survey_res.data[0]
+    if survey.get("is_closed"):
+        raise HTTPException(status_code=400, detail="설문이 마감됐습니다.")
 
     try:
         supabase.table("survey_responses").upsert(
             {
                 "user_id": user_id,
-                "survey_date": today_str,
+                "survey_date": target_date,
                 "kospi_answer": bool(kospi_answer),
                 "kosdaq_answer": False,
             },
@@ -608,25 +626,36 @@ async def web_survey_respond(
         logger.exception("survey_responses upsert 오류")
         raise HTTPException(status_code=500, detail=f"응답 저장 중 오류: {e}")
 
-    return {"success": True}
+    return {"success": True, "survey_date": target_date}
 
 
 @app.get("/api/survey/my-response")
 async def get_my_response(
+    survey_date: str = None,
     current_user=Depends(get_current_user),
     supabase: Client = Depends(get_supabase),
 ):
-    """오늘 내 응답 조회 (없으면 null 반환)"""
+    """특정 날짜(기본=오늘) 내 응답 조회"""
     user_id = str(current_user.id)
-    today_str = today_kst()
+    target_date = survey_date or today_kst()
     res = supabase.table("survey_responses") \
         .select("kospi_answer") \
         .eq("user_id", user_id) \
-        .eq("survey_date", today_str) \
+        .eq("survey_date", target_date) \
         .execute()
     if res.data:
         return {"answered": True, "kospi_answer": res.data[0]["kospi_answer"]}
     return {"answered": False, "kospi_answer": None}
+
+
+@app.get("/api/next-survey")
+async def get_next_survey(supabase: Client = Depends(get_supabase)):
+    """다음 거래일 설문 상태 반환 (장마감 후 미리 예측 참여용)"""
+    next_str = next_trading_day_str()
+    res = supabase.table("daily_surveys").select("survey_date, is_closed").eq("survey_date", next_str).execute()
+    if res.data and not res.data[0]["is_closed"]:
+        return {"survey_date": next_str, "is_open": True}
+    return {"survey_date": next_str, "is_open": False}
 
 
 @app.get("/api/dashboard")

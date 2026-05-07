@@ -4,14 +4,10 @@ const BACKEND = "https://kospi-prediction-game-production.up.railway.app";
 
 export async function GET(req: NextRequest) {
   const auth = req.headers.get("authorization") ?? "";
-  const surveyDate = req.nextUrl.searchParams.get("survey_date");
-  const url = surveyDate
-    ? `${BACKEND}/api/survey/my-response?survey_date=${surveyDate}`
-    : `${BACKEND}/api/survey/my-response`;
   try {
-    const upstream = await fetch(url, {
+    const upstream = await fetch(`${BACKEND}/api/next-survey`, {
       cache: "no-store",
-      headers: { Authorization: auth },
+      headers: auth ? { Authorization: auth } : {},
     });
     const data = await upstream.text();
     return new NextResponse(data, {

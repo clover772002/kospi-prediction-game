@@ -20,11 +20,26 @@ export default function SurveyPage() {
   const [previousAnswer, setPreviousAnswer] = useState<boolean | null>(null);
   const [retrying, setRetrying] = useState(false);
 
+  // 다음 거래일 설문 (장마감 후 미리 참여)
+  const [nextSurvey, setNextSurvey] = useState<{ survey_date: string; is_open: boolean } | null>(null);
+  const [nextKospiAnswer, setNextKospiAnswer] = useState<boolean | null>(null);
+  const [nextAlreadyAnswered, setNextAlreadyAnswered] = useState(false);
+  const [nextPreviousAnswer, setNextPreviousAnswer] = useState<boolean | null>(null);
+  const [nextSubmitted, setNextSubmitted] = useState(false);
+  const [nextSubmitting, setNextSubmitting] = useState(false);
+
   const loadToday = useCallback(async () => {
     try {
       const data = await getToday();
       setToday(data);
       setError(null);
+      // 오늘 결과가 이미 나온 경우 다음 거래일 설문 확인
+      if (data.status === "result") {
+        fetch("/api/next-survey", { cache: "no-store" })
+          .then((r) => r.json())
+          .then((d) => setNextSurvey(d))
+          .catch(() => {});
+      }
     } catch {
       setError("설문 정보를 불러오지 못했습니다.");
     } finally {
@@ -44,11 +59,33 @@ export default function SurveyPage() {
           setAlreadyAnswered(true);
           setPreviousAnswer(data.kospi_answer);
           setKospiAnswer(data.kospi_answer);
+        } else {
+          setAlreadyAnswered(false);
+          setPreviousAnswer(null);
+          setKospiAnswer(null);
+          setRetrying(false);
         }
       }
     } catch {
       // 조회 실패는 무시 — 일반 설문 화면 표시
     }
+  }, []);
+
+  const checkNextMyResponse = useCallback(async (tok: string, surveyDate: string) => {
+    try {
+      const res = await fetch(`/api/survey/my-response?survey_date=${surveyDate}`, {
+        cache: "no-store",
+        headers: { Authorization: `Bearer ${tok}` },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.answered) {
+          setNextAlreadyAnswered(true);
+          setNextPreviousAnswer(data.kospi_answer);
+          setNextKospiAnswer(data.kospi_answer);
+        }
+      }
+    } catch { /* 무시 */ }
   }, []);
 
   useEffect(() => {
@@ -62,9 +99,13 @@ export default function SurveyPage() {
         loadToday();
         checkMyResponse(session.access_token);
       }
+      // nextSurvey가 이미 로드됐으면 다음 설문 응답도 확인
+      if (session && nextSurvey?.is_open) {
+        checkNextMyResponse(session.access_token, nextSurvey.survey_date);
+      }
     });
     return () => subscription.unsubscribe();
-  }, [router, loadToday, checkMyResponse]);
+  }, [router, loadToday, checkMyResponse, nextSurvey, checkNextMyResponse]);
 
   const handleSubmit = async () => {
     if (!token || kospiAnswer === null) return;
@@ -102,6 +143,30 @@ export default function SurveyPage() {
       }
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleNextSubmit = async () => {
+    if (!token || nextKospiAnswer === null || !nextSurvey) return;
+    setNextSubmitting(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/survey/respond", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ kospi_answer: nextKospiAnswer, survey_date: nextSurvey.survey_date }),
+      });
+      if (!res.ok) {
+        const raw = await res.json().catch(() => ({}));
+        throw new Error(typeof raw.detail === "string" ? raw.detail : "오류가 발생했습니다.");
+      }
+      setNextSubmitted(true);
+      setNextAlreadyAnswered(true);
+      setNextPreviousAnswer(nextKospiAnswer);
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "오류가 발생했습니다.");
+    } finally {
+      setNextSubmitting(false);
     }
   };
 
@@ -310,7 +375,78 @@ export default function SurveyPage() {
               대시보드에서 결과 보기
             </button>
           </div>
-          <FlipClock />
+
+          {/* 내일 미리 예측하기 */}
+          {status === "result" && nextSurvey?.is_open && (
+            <div className="mt-2 space-y-4">
+              <div className="border-t border-[#2A2A2A] pt-5">
+                <p className="text-center text-xs text-gray-500 mb-1">내일 예측 미리하기</p>
+                <p className="text-center font-black text-white text-base mb-4">
+                  📅 {nextSurvey.survey_date.slice(5).replace("-","/")} 코스피 어떨까요?
+                </p>
+
+                {nextSubmitted || nextAlreadyAnswered ? (
+                  <div className="flex flex-col items-center gap-3 text-center">
+                    <div className="text-4xl">✅</div>
+                    <p className="text-white font-bold">내일 예측 완료!</p>
+                    <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-2xl p-4 w-full">
+                      <p className="text-xs text-gray-400 mb-1">내 예측</p>
+                      <p className={`font-bold ${(nextSubmitted ? nextKospiAnswer : nextPreviousAnswer) ? "text-green-400" : "text-blue-400"}`}>
+                        {(nextSubmitted ? nextKospiAnswer : nextPreviousAnswer) ? "📈 오른다" : "📉 내린다"}
+                      </p>
+                    </div>
+                    {nextAlreadyAnswered && !nextSubmitted && (
+                      <button
+                        onClick={() => { setNextAlreadyAnswered(false); setNextSubmitted(false); }}
+                        className="text-xs text-gray-500 underline"
+                      >
+                        다시 선택하기
+                      </button>
+                    )}
+                  </div>
+                ) : (
+                  <>
+                    <div className="grid grid-cols-2 gap-3">
+                      <button
+                        onClick={() => setNextKospiAnswer(true)}
+                        className={`py-5 rounded-2xl font-black text-xl transition-all active:scale-95 border-2 ${
+                          nextKospiAnswer === true
+                            ? "bg-green-500 border-green-400 text-white"
+                            : "bg-[#111] border-[#333] text-gray-400 hover:border-green-600"
+                        }`}
+                      >
+                        📈 오른다
+                      </button>
+                      <button
+                        onClick={() => setNextKospiAnswer(false)}
+                        className={`py-5 rounded-2xl font-black text-xl transition-all active:scale-95 border-2 ${
+                          nextKospiAnswer === false
+                            ? "bg-red-500 border-red-400 text-white"
+                            : "bg-[#111] border-[#333] text-gray-400 hover:border-red-600"
+                        }`}
+                      >
+                        📉 내린다
+                      </button>
+                    </div>
+                    {error && (
+                      <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-3 text-red-400 text-sm text-center mt-2">
+                        {error}
+                      </div>
+                    )}
+                    <button
+                      onClick={handleNextSubmit}
+                      disabled={nextKospiAnswer === null || nextSubmitting}
+                      className="w-full mt-3 py-5 bg-amber-500 hover:bg-amber-400 disabled:bg-[#333] disabled:text-gray-500 text-white font-black text-xl rounded-2xl transition-all active:scale-95"
+                    >
+                      {nextSubmitting ? "제출 중..." : "내일 예측 제출하기"}
+                    </button>
+                  </>
+                )}
+              </div>
+            </div>
+          )}
+
+          {!(status === "result" && nextSurvey?.is_open) && <FlipClock />}
         </div>
       )}
 
