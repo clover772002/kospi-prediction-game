@@ -65,7 +65,7 @@ const FEATURES = [
       mockup: (
         <div className="mt-3 space-y-2">
           {[
-            { time: "08:48", label: "설문 발송 (사고팔자!)", color: "bg-blue-500", active: true },
+            { time: "08:48", label: "코스피 예측 설문 발송", color: "bg-blue-500", active: true },
             { time: "08:48~09:00", label: "응답 가능 시간 (12분)", color: "bg-green-500", active: true },
             { time: "09:00", label: "응답 마감 & 집계 공개", color: "bg-yellow-500", active: true },
             { time: "09:00~", label: "장 시작 (응답 불가)", color: "bg-gray-600", active: false },
@@ -292,7 +292,7 @@ export default function LoginPage() {
       {/* 로고 */}
       <div className="text-center mb-10">
         <div className="text-6xl mb-4">📊</div>
-        <h1 className="text-2xl font-black text-white mb-1">8:48 — 사고 팔자!</h1>
+        <h1 className="text-2xl font-black text-white mb-1">오늘 코스피, 함께 맞춰요</h1>
         <p className="text-yellow-400 text-xs font-bold mb-3 tracking-wide">매일 아침 8시 48분, 오늘 장을 예측하세요</p>
         <p className="text-gray-400 text-sm leading-relaxed">
           코스피가 오를지 내릴지 O/X 하나만.<br />
@@ -406,8 +406,8 @@ export default function LoginPage() {
               {
                 time: "08:48",
                 dot: "bg-blue-500",
-                title: "설문 발송 (사고팔자!)",
-                desc: "\"사고 팔자!\" 08:48, 코스피 O/X 설문이 발송됩니다",
+                title: "코스피 예측 설문 발송",
+                desc: "08:48, 오늘 코스피 방향 O/X 설문이 발송됩니다",
               },
               {
                 time: "09:00",
