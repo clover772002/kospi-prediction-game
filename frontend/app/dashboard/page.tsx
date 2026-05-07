@@ -377,10 +377,10 @@ export default function DashboardPage() {
                 <SentimentBar label="코스피" pct={today.kospi_yes_pct} />
               </div>
 
-              {/* 3. 고수 가중예측 */}
+              {/* 3. 고수 강화예측 */}
               {today.kospi_weighted_pct !== null && (
                 <div className="bg-yellow-500/5 border border-yellow-500/20 rounded-xl p-3 space-y-3">
-                  <p className="text-xs text-yellow-400 font-bold">⭐ 고수 가중예측 (누적 정확도 반영)</p>
+                  <p className="text-xs text-yellow-400 font-bold">⭐ 고수 강화예측 (누적 정확도 반영)</p>
                   <SentimentBar label="코스피" pct={today.kospi_weighted_pct} />
                   <p className="text-xs text-gray-600">정확도 높은 유저의 예측에 더 높은 가중치를 부여합니다</p>
                 </div>

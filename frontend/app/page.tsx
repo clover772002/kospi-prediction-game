@@ -109,7 +109,7 @@ const FEATURES = [
               </div>
             </div>
             <div className="bg-[#1A1A1A] rounded-2xl p-4 border border-yellow-500/30">
-              <div className="text-yellow-400 text-xs font-bold mb-1">⭐ 고수 가중예측 <span className="text-gray-500 font-normal">누적 정확도 반영</span></div>
+              <div className="text-yellow-400 text-xs font-bold mb-1">⭐ 고수 강화예측 <span className="text-gray-500 font-normal">누적 정확도 반영</span></div>
               <p className="text-gray-600 text-xs mb-3">다수결과 다를 때가 진짜 신호</p>
               <div className="space-y-3">
                 <div><p className="text-xs text-gray-400 mb-1">KOSPI</p><Bar yes={61} no={39} /></div>
@@ -134,7 +134,7 @@ const FEATURES = [
             <p className="text-xs text-gray-400 font-bold mb-3">📊 누적 방향 예측 적중률 비교</p>
             {[
               { label: "단순 다수결", pct: 54, color: "bg-gray-500" },
-              { label: "⭐ 고수 가중예측", pct: 67, color: "bg-yellow-400" },
+              { label: "⭐ 고수 강화예측", pct: 67, color: "bg-yellow-400" },
             ].map((item) => (
               <div key={item.label} className="mb-3">
                 <div className="flex justify-between text-xs mb-1">
@@ -309,8 +309,8 @@ export default function LoginPage() {
               <span className="text-gray-500">단순통계</span>
               <span className="font-black text-white">{publicHistory.stats.majority_accuracy}%</span>
               <span className="text-gray-600">·</span>
-              <span className="text-blue-400">🤖 AI</span>
-              <span className="font-black text-blue-400">{publicHistory.stats.weighted_accuracy}%</span>
+              <span className="text-yellow-400">⭐ 고수 강화예측</span>
+              <span className="font-black text-yellow-400">{publicHistory.stats.weighted_accuracy}%</span>
             </div>
           </div>
 
@@ -319,7 +319,7 @@ export default function LoginPage() {
             <div className="space-y-2">
               {[
                 { label: "단순통계", pct: publicHistory.stats.majority_accuracy, color: "bg-gray-500" },
-                { label: "🤖 AI 예측", pct: publicHistory.stats.weighted_accuracy, color: "bg-blue-500" },
+                { label: "⭐ 고수 강화예측", pct: publicHistory.stats.weighted_accuracy, color: "bg-yellow-400" },
               ].map((item) => (
                 <div key={item.label}>
                   <div className="flex justify-between text-xs mb-1">
@@ -374,10 +374,10 @@ export default function LoginPage() {
                       </div>
                       <span className="text-lg">{item.majority_correct ? "✅" : "❌"}</span>
                     </div>
-                    {/* AI 예측 */}
+                    {/* 고수 강화예측 */}
                     <div className={`rounded-xl p-2.5 flex items-center justify-between ${item.weighted_correct ? "bg-green-500/10 border border-green-500/30" : "bg-red-500/10 border border-red-500/20"}`}>
                       <div>
-                        <p className="text-xs text-blue-400 mb-0.5">🤖 AI 예측</p>
+                        <p className="text-xs text-yellow-400 mb-0.5">⭐ 고수 강화예측</p>
                         <p className="text-xs font-bold text-white">
                           {item.weighted_up ? "▲ 상승" : "▼ 하락"} {item.weighted_pct ?? "-"}%
                         </p>
@@ -413,7 +413,7 @@ export default function LoginPage() {
                 time: "09:00",
                 dot: "bg-yellow-400",
                 title: "마감 → 집계 공개",
-                desc: "단순 집계 + 고수 가중예측이 동시에 열려요",
+                desc: "단순 집계 + 고수 강화예측이 동시에 열려요",
               },
               {
                 time: "15:35",
@@ -425,7 +425,7 @@ export default function LoginPage() {
                 time: "다음날",
                 dot: "bg-purple-400",
                 title: "누적 정확도 반영",
-                desc: "쌓인 적중률이 내일 고수 가중예측 계산에 반영",
+                desc: "쌓인 적중률이 내일 고수 강화예측 계산에 반영",
               },
             ].map((step, i) => (
               <div key={i} className="flex gap-4 pb-5 last:pb-0">
@@ -545,7 +545,7 @@ export default function LoginPage() {
           {[
             {
               q: "완전 무료인가요?",
-              a: "네, 지금은 전부 무료입니다. 고수 가중예측 열람, 내 정확도 확인, 순위까지 모두 무료예요. 유료 전환 계획이 생기면 사전에 공지합니다.",
+              a: "네, 지금은 전부 무료입니다. 고수 강화예측 열람, 내 정확도 확인, 순위까지 모두 무료예요. 유료 전환 계획이 생기면 사전에 공지합니다.",
             },
             {
               q: "매일 해야 하나요? 빠지면 불이익이 있나요?",
@@ -553,14 +553,14 @@ export default function LoginPage() {
             },
             {
               q: "정확도가 낮으면 어떻게 되나요?",
-              a: "서비스 이용에는 아무 제한이 없어요. 다만 정확도가 낮으면 고수 가중예측에 반영되는 내 가중치가 낮아지고, 높으면 커뮤니티 예측에 내 의견이 더 많이 반영됩니다. 잘 못 맞춰도 계속 참여하는 것 자체가 의미 있어요.",
+              a: "서비스 이용에는 아무 제한이 없어요. 다만 정확도가 낮으면 고수 강화예측에 반영되는 내 가중치가 낮아지고, 높으면 커뮤니티 예측에 내 의견이 더 많이 반영됩니다. 잘 못 맞춰도 계속 참여하는 것 자체가 의미 있어요.",
             },
             {
               q: "이걸로 실제 투자 결정을 해도 되나요?",
               a: "본 서비스는 투자 조언이 아닙니다. 집단 예측 데이터를 재미로 확인하는 서비스예요. 실제 투자 결정은 반드시 본인의 판단과 책임 하에 하세요.",
             },
             {
-              q: "고수 가중예측은 언제부터 믿을 수 있나요?",
+              q: "고수 강화예측은 언제부터 믿을 수 있나요?",
               a: "참여자가 많고 누적 데이터가 쌓일수록 신뢰도가 올라갑니다. 잘 맞추는 사람의 의견은 더 크게, 항상 틀리는 사람의 의견은 반대 방향으로 반영되기 때문에 단순 다수결보다 정교해요.",
             },
             {
