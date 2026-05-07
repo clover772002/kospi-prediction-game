@@ -304,13 +304,13 @@ export default function LoginPage() {
       {publicHistory && publicHistory.history.length > 0 && (
         <div className="w-full mb-8">
           <div className="flex items-center justify-between mb-3">
-            <p className="text-xs text-gray-500 font-bold tracking-widest uppercase">집단지성 예측 실적</p>
+            <p className="text-xs text-gray-500 font-bold tracking-widest uppercase">누적 적중률</p>
             <div className="flex gap-2 text-xs">
-              <span className="text-gray-500">다수결</span>
+              <span className="text-gray-500">단순통계</span>
               <span className="font-black text-white">{publicHistory.stats.majority_accuracy}%</span>
               <span className="text-gray-600">·</span>
-              <span className="text-yellow-400">⭐고수</span>
-              <span className="font-black text-yellow-400">{publicHistory.stats.weighted_accuracy}%</span>
+              <span className="text-blue-400">🤖 AI</span>
+              <span className="font-black text-blue-400">{publicHistory.stats.weighted_accuracy}%</span>
             </div>
           </div>
 
@@ -318,8 +318,8 @@ export default function LoginPage() {
           <div className="bg-[#1A1A1A] rounded-2xl p-4 border border-[#2A2A2A] mb-3">
             <div className="space-y-2">
               {[
-                { label: "단순 다수결", pct: publicHistory.stats.majority_accuracy, color: "bg-blue-500" },
-                { label: "⭐ 고수 가중예측", pct: publicHistory.stats.weighted_accuracy, color: "bg-yellow-400" },
+                { label: "단순통계", pct: publicHistory.stats.majority_accuracy, color: "bg-gray-500" },
+                { label: "🤖 AI 예측", pct: publicHistory.stats.weighted_accuracy, color: "bg-blue-500" },
               ].map((item) => (
                 <div key={item.label}>
                   <div className="flex justify-between text-xs mb-1">
@@ -364,20 +364,20 @@ export default function LoginPage() {
 
                   {/* 예측 vs 결과 */}
                   <div className="grid grid-cols-2 gap-2">
-                    {/* 단순 다수결 */}
+                    {/* 단순통계 */}
                     <div className={`rounded-xl p-2.5 flex items-center justify-between ${item.majority_correct ? "bg-green-500/10 border border-green-500/30" : "bg-red-500/10 border border-red-500/20"}`}>
                       <div>
-                        <p className="text-xs text-gray-500 mb-0.5">다수결</p>
+                        <p className="text-xs text-gray-500 mb-0.5">단순통계</p>
                         <p className="text-xs font-bold text-white">
                           {item.majority_up ? "▲ 상승" : "▼ 하락"} {item.kospi_yes_pct}%
                         </p>
                       </div>
                       <span className="text-lg">{item.majority_correct ? "✅" : "❌"}</span>
                     </div>
-                    {/* 고수 가중예측 */}
+                    {/* AI 예측 */}
                     <div className={`rounded-xl p-2.5 flex items-center justify-between ${item.weighted_correct ? "bg-green-500/10 border border-green-500/30" : "bg-red-500/10 border border-red-500/20"}`}>
                       <div>
-                        <p className="text-xs text-yellow-500 mb-0.5">⭐ 고수</p>
+                        <p className="text-xs text-blue-400 mb-0.5">🤖 AI 예측</p>
                         <p className="text-xs font-bold text-white">
                           {item.weighted_up ? "▲ 상승" : "▼ 하락"} {item.weighted_pct ?? "-"}%
                         </p>
