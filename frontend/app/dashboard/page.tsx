@@ -10,13 +10,13 @@ function SentimentBar({ label, pct, result }: { label: string; pct: number | nul
   const displayPct = pct ?? 0;
   return (
     <div className="space-y-1.5">
-      <div className="flex justify-between text-xs text-gray-400">
+      <div className="flex justify-between items-end text-xs text-gray-400">
         <span className="font-bold text-white">{label}</span>
         {pct !== null && (
-          <span>
-            오른다 <span className="text-green-400 font-bold">{pct}%</span>
-            {" "}vs 내린다 <span className="text-red-400 font-bold">{100 - pct}%</span>
-          </span>
+          <div className="flex gap-2 text-right">
+            <span>📈 <span className="text-green-400 font-bold">{pct}%</span></span>
+            <span>📉 <span className="text-red-400 font-bold">{100 - pct}%</span></span>
+          </div>
         )}
       </div>
       <div className="h-3 bg-[#222] rounded-full overflow-hidden">
@@ -380,7 +380,7 @@ export default function DashboardPage() {
               {/* 3. 고수 강화예측 */}
               {today.kospi_weighted_pct !== null && (
                 <div className="bg-yellow-500/5 border border-yellow-500/20 rounded-xl p-3 space-y-3">
-                  <p className="text-xs text-yellow-400 font-bold">⭐ 고수 강화예측 (누적 정확도 반영)</p>
+                  <p className="text-xs text-yellow-400 font-bold">⭐ 고수 강화예측</p>
                   <SentimentBar label="코스피" pct={today.kospi_weighted_pct} />
                   <p className="text-xs text-gray-600">정확도 높은 유저의 예측에 더 높은 가중치를 부여합니다</p>
                 </div>
