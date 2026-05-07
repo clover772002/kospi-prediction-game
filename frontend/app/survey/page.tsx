@@ -201,13 +201,21 @@ export default function SurveyPage() {
     <main className="max-w-md mx-auto min-h-screen pb-36 px-5">
       <div className="pt-10 pb-6 flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-black text-white">오늘 장 예측</h1>
-          <p className="text-xs text-gray-500 mt-1">
-            {(() => {
-              const kst = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Seoul" }));
-              return `${kst.getFullYear()}.${String(kst.getMonth()+1).padStart(2,"0")}.${String(kst.getDate()).padStart(2,"0")} (KST)`;
-            })()}
-          </p>
+          {(() => {
+            const kst = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Seoul" }));
+            const todayStr = `${kst.getFullYear()}-${String(kst.getMonth()+1).padStart(2,"0")}-${String(kst.getDate()).padStart(2,"0")}`;
+            const surveyDate = today?.survey_date ?? todayStr;
+            const isTomorrow = surveyDate > todayStr;
+            const displayDate = surveyDate.replace(/-/g, ".");
+            return (
+              <>
+                <h1 className="text-2xl font-black text-white">
+                  {isTomorrow ? "내일 장 예측" : "오늘 장 예측"}
+                </h1>
+                <p className="text-xs text-gray-500 mt-1">{displayDate} (KST)</p>
+              </>
+            );
+          })()}
         </div>
       </div>
 
@@ -284,7 +292,13 @@ export default function SurveyPage() {
 
           {/* 코스피 단일 질문 */}
           <div className="bg-[#1A1A1A] rounded-2xl p-5 space-y-4 border border-[#2A2A2A]">
-            <p className="font-bold text-white text-base">📈 코스피 오늘 어떨까요?</p>
+            <p className="font-bold text-white text-base">
+              {(() => {
+                const kst = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Seoul" }));
+                const todayStr = `${kst.getFullYear()}-${String(kst.getMonth()+1).padStart(2,"0")}-${String(kst.getDate()).padStart(2,"0")}`;
+                return (today?.survey_date ?? todayStr) > todayStr ? "📈 코스피 내일 어떨까요?" : "📈 코스피 오늘 어떨까요?";
+              })()}
+            </p>
             <div className="grid grid-cols-2 gap-3">
               <button
                 onClick={() => setKospiAnswer(true)}
