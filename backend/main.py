@@ -87,36 +87,59 @@ async def get_current_user(request: Request, supabase: Client = Depends(get_supa
 # 스케줄러 작업
 # ─────────────────────────────────────────────────────────────
 
+async def job_22_00():
+    """매일 22:00 - 다음 거래일 코스피 예측 설문 텔레그램+웹푸시 발송"""
+    sb = _supabase_direct()
+    next_str = next_trading_day_str()
+
+    # 다음 거래일 설문이 없으면 생성
+    existing = sb.table("daily_surveys").select("id").eq("survey_date", next_str).execute()
+    if not existing.data:
+        sb.table("daily_surveys").insert({"survey_date": next_str}).execute()
+        logger.info(f"22:00 다음 거래일 설문 생성: {next_str}")
+
+    await send_daily_survey_to_all(sb, next_str, is_reminder=False)
+    await send_web_push_to_all(
+        sb,
+        title="📊 내일 코스피, 함께 맞춰요!",
+        body=f"내일 장 예측 설문이 열렸어요. 지금 바로 참여하세요 👆 (마감 09:00)",
+        url="/survey",
+    )
+    logger.info("22:00 설문 발송 완료")
+
+
 async def job_08_45():
-    """매일 08:45 - 브라우저 알림 예령 (3분 전 준비 알림)"""
+    """매일 08:45 - 브라우저 알림 마감임박 예령"""
     sb = _supabase_direct()
     await send_web_push_to_all(
         sb,
-        title="⏰ 3분 후 설문이 시작돼요!",
-        body="08:48에 오늘 코스피 예측 설문이 발송됩니다. 준비하세요 📊",
+        title="⏰ 마감 임박! 09:00까지예요",
+        body="아직 코스피 예측 안 하셨나요? 지금 바로 참여하세요 📊",
         url="/survey",
     )
-    logger.info("08:45 예령 웹푸시 발송 완료")
+    logger.info("08:45 마감임박 웹푸시 발송 완료")
 
 
 async def job_08_50():
-    """매일 08:48 - 설문 생성 및 텔레그램 발송"""
+    """매일 08:48 - 텔레그램 마감임박 리마인더 (설문은 전날 22:00에 이미 생성)"""
     sb = _supabase_direct()
     today_str = today_kst()
 
+    # 혹시 설문이 없으면 폴백으로 생성
     existing = sb.table("daily_surveys").select("id").eq("survey_date", today_str).execute()
-    if existing.data:
-        logger.info("오늘 설문이 이미 존재함 - 발송 스킵")
-        return
+    if not existing.data:
+        sb.table("daily_surveys").insert({"survey_date": today_str}).execute()
+        logger.info(f"08:48 폴백 설문 생성: {today_str}")
+        # 폴백 시에는 신규 설문으로 발송
+        await send_daily_survey_to_all(sb, today_str, is_reminder=False)
+    else:
+        # 이미 있으면 마감임박 리마인더
+        await send_daily_survey_to_all(sb, today_str, is_reminder=True)
 
-    sb.table("daily_surveys").insert({"survey_date": today_str}).execute()
-    logger.info(f"설문 생성: {today_str}")
-
-    await send_daily_survey_to_all(sb, today_str)
     await send_web_push_to_all(
         sb,
-        title="📊 오늘 장 예측 — 사고 팔자!",
-        body=f"코스피·코스닥 오르나 내리나? 탭해서 지금 예측하세요 👆 (마감 09:00)",
+        title="⏰ 마감 임박! 09:00까지예요",
+        body="코스피 예측 설문이 곧 마감돼요. 지금 탭해서 참여하세요 👆",
         url="/survey",
     )
 
@@ -210,12 +233,13 @@ scheduler = AsyncIOScheduler(timezone="Asia/Seoul")
 
 @asynccontextmanager
 async def lifespan(app_instance):
-    scheduler.add_job(job_08_45, CronTrigger(hour=8,  minute=45, timezone="Asia/Seoul"), id="survey_prebell",  replace_existing=True)
-    scheduler.add_job(job_08_50, CronTrigger(hour=8,  minute=48, timezone="Asia/Seoul"), id="survey_open",      replace_existing=True)
+    scheduler.add_job(job_22_00, CronTrigger(hour=22, minute=0,  timezone="Asia/Seoul"), id="survey_evening",   replace_existing=True)
+    scheduler.add_job(job_08_45, CronTrigger(hour=8,  minute=45, timezone="Asia/Seoul"), id="survey_prebell",   replace_existing=True)
+    scheduler.add_job(job_08_50, CronTrigger(hour=8,  minute=48, timezone="Asia/Seoul"), id="survey_reminder",  replace_existing=True)
     scheduler.add_job(job_09_00, CronTrigger(hour=9,  minute=0,  timezone="Asia/Seoul"), id="survey_close",     replace_existing=True)
     scheduler.add_job(job_15_35, CronTrigger(hour=15, minute=35, timezone="Asia/Seoul"), id="market_result",    replace_existing=True)
     scheduler.start()
-    logger.info("스케줄러 시작: 08:45(예령) / 08:48(설문 발송) / 09:00(마감+발표) / 15:35(정확도 알림)")
+    logger.info("스케줄러 시작: 22:00(설문 발송) / 08:45(마감임박 예령) / 08:48(마감임박 리마인더) / 09:00(마감+발표) / 15:35(정확도 알림)")
     yield
     scheduler.shutdown()
 

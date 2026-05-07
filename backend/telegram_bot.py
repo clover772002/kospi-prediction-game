@@ -203,8 +203,10 @@ async def handle_webhook(update: dict, supabase) -> None:
 # 스케줄러에서 호출하는 함수들
 # ─────────────────────────────────────────────────────────────
 
-async def send_daily_survey_to_all(supabase, date_str: str) -> None:
-    """08:48 - 텔레그램 연동 유저 전원에게 코스피 예측 설문 발송"""
+async def send_daily_survey_to_all(supabase, date_str: str, is_reminder: bool = False) -> None:
+    """텔레그램 연동 유저 전원에게 코스피 예측 설문 발송
+    is_reminder=True: 08:48 마감임박 리마인더 / False: 22:00 신규 설문
+    """
     users = (
         supabase.table("users")
         .select("telegram_chat_id")
@@ -216,19 +218,26 @@ async def send_daily_survey_to_all(supabase, date_str: str) -> None:
     for user in users.data:
         chat_id = user["telegram_chat_id"]
         try:
-            await send_message(
-                chat_id,
-                f"📊 <b>주식장 직전 8:48, 코스피 예측</b> ({date_str})\n"
-                f"설문 빅데이터 집단지성으로 성투하자\n"
-                f"⏰ <b>09:00</b>까지 응답\n\n"
-                f"<b>코스피</b>가 오늘 오를까요?",
-                _survey_keyboard("kospi", date_str)
-            )
+            if is_reminder:
+                msg = (
+                    f"⏰ <b>마감 임박!</b> ({date_str})\n"
+                    f"코스피 예측 설문이 <b>09:00</b>에 마감돼요.\n"
+                    f"아직 참여 안 하셨다면 지금 바로!\n\n"
+                    f"<b>코스피</b>가 오늘 오를까요?"
+                )
+            else:
+                msg = (
+                    f"📊 <b>오늘 코스피, 함께 맞춰요!</b> ({date_str})\n"
+                    f"집단지성으로 내일 장을 미리 예측해보세요.\n"
+                    f"⏰ 마감: 내일 <b>09:00</b>\n\n"
+                    f"<b>코스피</b>가 내일 오를까요?"
+                )
+            await send_message(chat_id, msg, _survey_keyboard("kospi", date_str))
             sent += 1
         except Exception as e:
             logger.error(f"설문 발송 실패 (chat_id={chat_id}): {e}")
 
-    logger.info(f"설문 발송 완료: {sent}명")
+    logger.info(f"설문 {'리마인더' if is_reminder else '신규'} 발송 완료: {sent}명")
 
 
 def _calc_weighted_pct_tg(responses_data: list, accuracy_map: dict) -> int:
