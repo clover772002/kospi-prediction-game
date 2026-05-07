@@ -293,7 +293,7 @@ export default function LoginPage() {
       <div className="text-center mb-10">
         <div className="text-6xl mb-4">📊</div>
         <h1 className="text-2xl font-black text-white mb-1">오늘 코스피, 함께 맞춰요</h1>
-        <p className="text-yellow-400 text-xs font-bold mb-3 tracking-wide">매일 아침 8시 48분, 오늘 장을 예측하세요</p>
+        <p className="text-yellow-400 text-xs font-bold mb-3 tracking-wide">매일 1딸깍으로 설문 참여 · 프리미엄 예측 데이터 수령</p>
         <p className="text-gray-400 text-sm leading-relaxed">
           코스피가 오를지 내릴지 O/X 하나만.<br />
           맞출수록 가중치가 쌓여 커뮤니티 예측을 움직입니다.
