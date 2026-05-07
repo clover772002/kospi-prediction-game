@@ -4,36 +4,6 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { getMe, getToday, getDashboard, UserProfile, TodaySurvey, DashboardData } from "@/lib/api";
-function SentimentBar({ label, pct, result }: { label: string; pct: number | null; result?: boolean | null }) {
-  const displayPct = pct ?? 0;
-  return (
-    <div className="space-y-1.5">
-      <div className="flex justify-between items-end text-xs text-gray-400">
-        <span className="font-bold text-white">{label}</span>
-        {pct !== null && (
-          <div className="flex gap-2 text-right">
-            <span>📈 <span className="text-green-400 font-bold">{pct}%</span></span>
-            <span>📉 <span className="text-red-400 font-bold">{100 - pct}%</span></span>
-          </div>
-        )}
-      </div>
-      <div className="h-3 bg-[#222] rounded-full overflow-hidden">
-        <div
-          className="h-full bg-gradient-to-r from-green-500 to-green-400 rounded-full transition-all duration-500"
-          style={{ width: `${displayPct}%` }}
-        />
-      </div>
-      {result !== undefined && result !== null && (
-        <p className="text-xs text-right">
-          실제:{" "}
-          <span className={result ? "text-green-400 font-bold" : "text-red-400 font-bold"}>
-            {result ? "▲ 상승" : "▼ 하락"}
-          </span>
-        </p>
-      )}
-    </div>
-  );
-}
 
 function HistoryRow({ item }: { item: DashboardData["history"][0] }) {
   const hasResult = item.kospi_correct !== null;
@@ -345,44 +315,64 @@ export default function DashboardPage() {
           })()}
 
           {(status === "open" || status === "closed" || status === "result") && today && (
-            <div className="space-y-4">
+            <div className="space-y-3">
               <p className="text-xs text-gray-500 text-right">
                 총 <span className="text-white font-bold">{today.total_responses}명</span> 참여
               </p>
 
-              {/* 1. 실적 표시 */}
-              <div className="flex gap-3">
-                <div className="flex-1 bg-[#111] rounded-xl p-3 text-center">
-                  <p className="text-xs text-gray-500 mb-1">실적</p>
+              {/* 실적 / 단순통계 / 고수강화예측 — 3열 카드 */}
+              <div className="grid grid-cols-3 gap-2">
+                {/* 실적 */}
+                <div className="bg-[#111] border border-[#2A2A2A] rounded-xl p-3 flex flex-col items-center gap-1 text-center">
+                  <p className="text-xs text-gray-500">실적</p>
                   {today.kospi_result !== null && today.kospi_change_pct !== null ? (
                     <>
-                      <p className={`text-2xl font-black ${today.kospi_result ? "text-green-400" : "text-red-400"}`}>
+                      <p className={`text-sm font-black ${today.kospi_result ? "text-green-400" : "text-red-400"}`}>
                         {today.kospi_result ? "📈 상승" : "📉 하락"}
                       </p>
-                      <p className={`text-xs mt-1 ${today.kospi_change_pct >= 0 ? "text-green-400/60" : "text-red-400/60"}`}>
+                      <p className={`text-xs ${today.kospi_change_pct >= 0 ? "text-green-400/70" : "text-red-400/70"}`}>
                         {today.kospi_change_pct >= 0 ? "+" : ""}{today.kospi_change_pct.toFixed(2)}%
                       </p>
                     </>
                   ) : (
-                    <p className="text-lg font-black text-gray-500">장마감전</p>
+                    <p className="text-xs font-bold text-gray-500">장마감전</p>
+                  )}
+                </div>
+
+                {/* 단순통계 */}
+                <div className="bg-[#111] border border-[#2A2A2A] rounded-xl p-3 flex flex-col items-center gap-1 text-center">
+                  <p className="text-xs text-gray-500">단순통계</p>
+                  {today.kospi_yes_pct !== null ? (
+                    <>
+                      <p className={`text-sm font-black ${today.kospi_yes_pct >= 50 ? "text-green-400" : "text-red-400"}`}>
+                        {today.kospi_yes_pct >= 50 ? "📈 상승" : "📉 하락"}
+                      </p>
+                      <p className="text-xs text-gray-400">
+                        {today.kospi_yes_pct}% 상승론
+                      </p>
+                    </>
+                  ) : (
+                    <p className="text-xs font-bold text-gray-500">-</p>
+                  )}
+                </div>
+
+                {/* 고수 강화예측 */}
+                <div className="bg-yellow-500/5 border border-yellow-500/20 rounded-xl p-3 flex flex-col items-center gap-1 text-center">
+                  <p className="text-xs text-yellow-400/80">⭐ 고수예측</p>
+                  {today.kospi_weighted_pct !== null ? (
+                    <>
+                      <p className={`text-sm font-black ${today.kospi_weighted_pct >= 50 ? "text-green-400" : "text-red-400"}`}>
+                        {today.kospi_weighted_pct >= 50 ? "📈 상승" : "📉 하락"}
+                      </p>
+                      <p className="text-xs text-gray-400">
+                        {today.kospi_weighted_pct}% 상승론
+                      </p>
+                    </>
+                  ) : (
+                    <p className="text-xs font-bold text-gray-500">-</p>
                   )}
                 </div>
               </div>
-
-              {/* 2. 단순 집계 */}
-              <div className="space-y-3">
-                <p className="text-xs text-gray-500">📊 단순 집계</p>
-                <SentimentBar label="코스피" pct={today.kospi_yes_pct} />
-              </div>
-
-              {/* 3. 고수 강화예측 */}
-              {today.kospi_weighted_pct !== null && (
-                <div className="bg-yellow-500/5 border border-yellow-500/20 rounded-xl p-3 space-y-3">
-                  <p className="text-xs text-yellow-400 font-bold">⭐ 고수 강화예측</p>
-                  <SentimentBar label="코스피" pct={today.kospi_weighted_pct} />
-                  <p className="text-xs text-gray-600">정확도 높은 유저의 예측에 더 높은 가중치를 부여합니다</p>
-                </div>
-              )}
             </div>
           )}
         </div>
