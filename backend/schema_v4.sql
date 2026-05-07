@@ -35,7 +35,7 @@ CREATE TABLE daily_surveys (
     created_at       TIMESTAMPTZ DEFAULT NOW()
 );
 
--- ── 유저별 응답 (08:48~09:00 사이만 허용) ─────────────────
+-- ── 유저별 응답 (전날 15:35 ~ 당일 09:00 사이 허용) ─────────────────
 CREATE TABLE survey_responses (
     id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id       UUID REFERENCES users(id) ON DELETE CASCADE,

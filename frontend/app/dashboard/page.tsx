@@ -271,7 +271,7 @@ export default function DashboardPage() {
                 const day = kst.getDay(); // 0=일, 6=토
                 const mins = kst.getHours() * 60 + kst.getMinutes();
                 const isWeekend = day === 0 || day === 6;
-                const beforeSurvey = mins < 8 * 60 + 48;
+                const beforeSurvey = mins < 22 * 60;
                 if (!isWeekend && beforeSurvey) return `📊 ${dateStr} 설문 대기중`;
                 return `📊 ${dateStr} 휴장일`;
               }
@@ -303,7 +303,7 @@ export default function DashboardPage() {
             const day = kst.getDay();
             const mins = kst.getHours() * 60 + kst.getMinutes();
             const isWeekend = day === 0 || day === 6;
-            const beforeSurvey = mins < 8 * 60 + 48;
+            const beforeSurvey = mins < 22 * 60; // 22:00 이전
             const isPreSurvey = status === "no_survey" && !isWeekend && beforeSurvey;
             const isHoliday = status === "no_survey" && !isPreSurvey;
             return (
@@ -322,7 +322,7 @@ export default function DashboardPage() {
                   )}
                   {isPreSurvey && (
                     <span className="text-xs px-2.5 py-1 rounded-full font-bold bg-blue-500/20 text-blue-400">
-                      08:48 시작
+                      설문 준비중
                     </span>
                   )}
                 </div>
@@ -330,8 +330,8 @@ export default function DashboardPage() {
                 {isPreSurvey && (
                   <div className="flex flex-col items-center gap-3 py-4 text-center">
                     <span className="text-4xl">⏳</span>
-                    <p className="text-white font-bold">08:48에 설문이 시작돼요</p>
-                    <p className="text-sm text-gray-400">알림을 받으면 바로 참여하세요</p>
+                    <p className="text-white font-bold">오늘 설문이 곧 열려요</p>
+                    <p className="text-sm text-gray-400">밤 22:00에 알림이 발송됩니다</p>
                   </div>
                 )}
 

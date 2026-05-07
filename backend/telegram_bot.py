@@ -2,8 +2,8 @@
 """
 텔레그램 봇 모듈 v3
 - /start {user_uuid} → 텔레그램 chat_id와 구글 계정 연동
-- 매일 08:48 코스피/코스닥 O/X 설문 발송
-- 09:00 집계 결과 발표
+- 매일 22:00 코스피 O/X 설문 발송 (08:45 마감임박 리마인더)
+- 장 시작 전 집계 결과 공개
 - 15:35 개인별 정확도 알림
 """
 import os
@@ -115,8 +115,8 @@ async def handle_start(chat_id: int, user_id_param: str, supabase) -> None:
             await send_message(chat_id,
                 f"✅ <b>연동 완료!</b>\n\n"
                 f"안녕하세요, {name}님!\n\n"
-                f"📊 매일 <b>08:48</b>에 코스피 예측 설문이 발송됩니다.\n"
-                f"⏰ <b>09:00</b>까지만 응답 가능합니다.\n"
+                f"📊 매일 밤 <b>22:00</b>에 코스피 예측 설문이 발송됩니다.\n"
+                f"⏰ 장 시작 전(<b>~09:00</b>)까지만 응답 가능합니다.\n"
                 f"📈 장 마감 후 정확도와 순위를 알려드릴게요!"
             )
         else:
@@ -292,8 +292,8 @@ async def announce_results(supabase, date_str: str) -> None:
         f"<b>📈 코스피</b>\n"
         f"{bar(kospi_pct)}\n"
         f"오른다 <b>{kospi_pct}%</b> vs 내린다 <b>{100 - kospi_pct}%</b>\n"
-        f"⭐ 고수 가중예측: 오른다 <b>{kospi_wpct}%</b>\n\n"
-        f"💡 <i>가중예측치는 정확도 높은 고수들의 의견을 더 반영한 예측입니다.</i>\n"
+        f"⭐ 고수 강화예측: 오른다 <b>{kospi_wpct}%</b>\n\n"
+        f"💡 <i>강화예측은 정확도 높은 고수들의 의견을 더 반영한 예측입니다.</i>\n"
         f"⏳ 실제 결과는 장 마감 후 알려드립니다."
     )
 

@@ -7,7 +7,7 @@ function getSecondsUntilNextSurvey(): number {
   const kst = new Date(now.toLocaleString("en-US", { timeZone: "Asia/Seoul" }));
 
   const todaySurvey = new Date(kst);
-  todaySurvey.setHours(8, 48, 0, 0);
+  todaySurvey.setHours(22, 0, 0, 0);
 
   let target = new Date(todaySurvey);
   if (kst >= todaySurvey) {
@@ -214,7 +214,7 @@ export default function FlipClock() {
         <FlipUnit value={pad(s)} label="초" />
       </div>
       <p className="text-xs text-gray-600 text-center mt-3">
-        다음 영업일 <span className="text-white font-bold">08:48</span> 설문 발송
+        다음 영업일 밤 <span className="text-white font-bold">22:00</span> 설문 발송
       </p>
     </div>
   );

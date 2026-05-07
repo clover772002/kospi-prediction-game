@@ -114,7 +114,7 @@ export default function SetupPage() {
       <div className="pt-8 pb-6 flex items-center justify-between">
         <div>
           <h1 className="text-xl font-black">🔔 알림 설정</h1>
-          <p className="text-xs text-gray-400 mt-1">08:48 설문을 받을 방법을 연결해주세요</p>
+          <p className="text-xs text-gray-400 mt-1">설문 알림을 받을 방법을 연결해주세요</p>
         </div>
         <button onClick={handleLogout} className="text-xs text-gray-500 hover:text-gray-300 transition-colors">
           로그아웃
@@ -166,7 +166,7 @@ export default function SetupPage() {
             <div className="text-5xl">✅</div>
             <p className="font-black text-lg text-green-400">텔레그램 연동 완료!</p>
             <p className="text-sm text-gray-400">
-              매일 <span className="text-white font-bold">08:48</span>에<br />
+              매일 밤 <span className="text-white font-bold">22:00</span>에<br />
               코스피 예측 설문이 발송됩니다.
             </p>
           </div>
@@ -181,7 +181,8 @@ export default function SetupPage() {
           <div className="bg-[#1A1A1A] rounded-2xl p-4 border border-[#2A2A2A] space-y-2 text-sm text-gray-400">
             <p className="font-bold text-white">설문 일정</p>
             <div className="space-y-1">
-              <p>🕛 <span className="text-white">08:48</span> - 코스피 예측 설문 발송</p>
+              <p>🌙 <span className="text-white">22:00</span> - 코스피 예측 설문 발송</p>
+              <p>⏰ <span className="text-white">08:45</span> - 마감 임박 리마인더</p>
               <p>🕘 <span className="text-white">09:00</span> - 설문 마감 + 집계 결과 공개</p>
               <p>🕒 <span className="text-white">15:35</span> - 실제 결과 + 내 정확도 알림</p>
             </div>
@@ -217,7 +218,7 @@ export default function SetupPage() {
           <div className="bg-purple-500/10 border border-purple-500/30 rounded-2xl p-6 text-center space-y-3">
             <div className="text-5xl">🔔</div>
             <p className="font-black text-lg text-purple-400">브라우저 알림 연결 완료!</p>
-            <p className="text-sm text-gray-400">매일 <span className="text-white font-bold">08:48</span>에 알림이 도착합니다.</p>
+            <p className="text-sm text-gray-400">매일 밤 <span className="text-white font-bold">22:00</span>에 알림이 도착합니다.</p>
           </div>
           <button onClick={() => router.push("/dashboard")} className="w-full py-4 bg-blue-600 hover:bg-blue-500 text-white font-black text-lg rounded-2xl transition-all active:scale-95">
             ← 대시보드로 이동

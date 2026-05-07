@@ -217,7 +217,7 @@ export default function SurveyPage() {
         const day = kst.getDay();
         const mins = kst.getHours() * 60 + kst.getMinutes();
         const isWeekend = day === 0 || day === 6;
-        const isPreSurvey = !isWeekend && mins < 8 * 60 + 48;
+        const isPreSurvey = !isWeekend && mins < 22 * 60;
         return (
           <div className="flex flex-col gap-5 mt-10">
             <div className="flex flex-col items-center gap-3 text-center">
@@ -226,7 +226,7 @@ export default function SurveyPage() {
                   <div className="text-5xl">⏳</div>
                   <p className="text-xl font-bold text-white">설문 시작 전이에요</p>
                   <p className="text-sm text-gray-400">
-                    오늘 코스피 예측 설문이 곧 시작돼요
+                    오늘 밤 22:00에 내일 설문이 열려요
                   </p>
                 </>
               ) : (
@@ -345,7 +345,7 @@ export default function SurveyPage() {
               코스피 {kospiAnswer ? "📈 오른다" : "📉 내린다"}
             </p>
           </div>
-          <p className="text-xs text-gray-500">09:00에 집계 결과가 공개돼요</p>
+          <p className="text-xs text-gray-500">장 시작 전까지 마감 · 15:35에 결과 공개</p>
           <button
             onClick={() => router.push("/dashboard")}
             className="w-full py-4 bg-[#1A1A1A] border border-[#2A2A2A] text-gray-300 font-bold rounded-2xl"
@@ -366,7 +366,7 @@ export default function SurveyPage() {
             <p className="text-sm text-gray-400">
               {status === "result"
                 ? "대시보드에서 결과와 내 정확도를 확인하세요"
-                : "09:00에 집계가 끝났어요. 15:35에 결과가 공개돼요"}
+                : "장 시작 전에 집계가 끝났어요. 15:35에 결과가 공개돼요"}
             </p>
             <button
               onClick={() => router.push("/dashboard")}

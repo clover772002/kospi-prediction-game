@@ -14,10 +14,10 @@ self.addEventListener("push", (event) => {
   try {
     payload = event.data.json();
   } catch {
-    payload = { title: "08:48 알림", body: event.data.text() };
+    payload = { title: "코스피 예측 설문", body: event.data.text() };
   }
 
-  const title = payload.title || "08:48 — 사고 팔자!";
+  const title = payload.title || "코스피 예측 설문";
   const options = {
     body: payload.body || "오늘 장 예측 설문이 열렸어요. 탭해서 참여하세요 👆",
     icon: "/icon-192.png",
