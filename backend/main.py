@@ -138,26 +138,20 @@ async def job_15_35():
         logger.info("오늘 결과가 이미 저장됨")
         return
 
-    # KOSPI 등락률 조회: 전일 종가 대비 당일 종가 기준 (시장 표준)
-    # 직전 거래일 포함을 위해 10일 전부터 조회
+    # KOSPI 등락률 조회: fast_info로 당일 종가 + 전일 종가 직접 취득
     kospi_prev_close = kospi_close = kospi_up = kospi_pct = None
     try:
-        from_date = (datetime.now(KST).date() - timedelta(days=10)).isoformat()
-        tomorrow  = (datetime.now(KST).date() + timedelta(days=1)).isoformat()
-        k_hist = yf.Ticker("^KS11").history(start=from_date, end=tomorrow)
+        ticker = yf.Ticker("^KS11")
+        fi = ticker.fast_info
 
-        if k_hist is None or k_hist.empty:
-            logger.warning("yfinance 데이터 없음 — 휴장일이거나 데이터 지연")
+        kospi_close      = float(fi.last_price)
+        kospi_prev_close = float(fi.previous_close)
+
+        if not kospi_close or not kospi_prev_close:
+            logger.warning("yfinance fast_info 데이터 없음 — 휴장일이거나 데이터 지연")
             return
 
-        if len(k_hist) >= 2:
-            kospi_prev_close = float(k_hist["Close"].iloc[-2])  # 직전 거래일 종가
-            kospi_close      = float(k_hist["Close"].iloc[-1])  # 당일 종가
-        else:
-            # 직전 거래일 데이터 없으면 시가 대비로 폴백
-            kospi_prev_close = float(k_hist["Open"].iloc[-1])
-            kospi_close      = float(k_hist["Close"].iloc[-1])
-            logger.warning("직전 거래일 데이터 없음 — 당일 시가 대비로 계산")
+        logger.info(f"yfinance fast_info — 당일: {kospi_close}, 전일종가: {kospi_prev_close}")
 
     except Exception as e:
         logger.error(f"yfinance 조회 오류: {e}")
