@@ -395,53 +395,27 @@ export default function LoginPage() {
         </div>
       )}
 
-      {/* 하루 흐름 타임라인 */}
+      {/* 하루 흐름 — 가로 타임라인 */}
       <div className="w-full mb-8">
         <p className="text-xs text-gray-500 font-bold mb-3 tracking-widest uppercase">하루 흐름</p>
-        <div className="relative">
-          {/* 세로 연결선 */}
-          <div className="absolute left-[19px] top-4 bottom-4 w-px bg-[#2A2A2A]" />
-          <div className="space-y-0">
-            {[
-              {
-                time: "08:48",
-                dot: "bg-blue-500",
-                title: "코스피 예측 설문 발송",
-                desc: "08:48, 오늘 코스피 방향 O/X 설문이 발송됩니다",
-              },
-              {
-                time: "09:00",
-                dot: "bg-yellow-400",
-                title: "마감 → 집계 공개",
-                desc: "단순 집계 + 고수 강화예측이 동시에 열려요",
-              },
-              {
-                time: "15:35",
-                dot: "bg-green-400",
-                title: "장 마감 결과 집계",
-                desc: "실제 등락과 내 예측을 비교해 정확도 기록",
-              },
-              {
-                time: "다음날",
-                dot: "bg-purple-400",
-                title: "누적 정확도 반영",
-                desc: "쌓인 적중률이 내일 고수 강화예측 계산에 반영",
-              },
-            ].map((step, i) => (
-              <div key={i} className="flex gap-4 pb-5 last:pb-0">
-                <div className="flex flex-col items-center flex-shrink-0 w-10">
-                  <div className={`w-4 h-4 rounded-full border-2 border-[#111] ${step.dot} z-10 mt-1`} />
-                </div>
-                <div className="flex-1 pb-1">
-                  <div className="flex items-baseline gap-2 mb-0.5">
-                    <span className="text-xs font-black text-white">{step.time}</span>
-                    <span className="text-xs font-bold text-gray-300">{step.title}</span>
-                  </div>
-                  <p className="text-xs text-gray-500">{step.desc}</p>
-                </div>
+        <div className="relative flex items-start">
+          {/* 가로 연결선 */}
+          <div className="absolute top-[18px] left-[18px] right-[18px] h-px bg-[#2A2A2A]" />
+          {[
+            { time: "장시작 전", label: "설문", dot: "bg-blue-500", sub: "08:48" },
+            { time: "장시작", label: "결과 공개", dot: "bg-yellow-400", sub: "09:00" },
+            { time: "장마감", label: "적중 확인", dot: "bg-green-400", sub: "15:35" },
+            { time: "다음날", label: "정확도 반영", dot: "bg-purple-400", sub: "" },
+          ].map((step, i) => (
+            <div key={i} className="flex-1 flex flex-col items-center text-center relative">
+              <div className={`w-9 h-9 rounded-full ${step.dot} flex items-center justify-center z-10 mb-2`}>
+                <div className="w-3 h-3 rounded-full bg-white/30" />
               </div>
-            ))}
-          </div>
+              <p className="text-[11px] font-black text-white leading-tight">{step.time}</p>
+              <p className="text-[11px] text-gray-400 leading-tight">{step.label}</p>
+              {step.sub && <p className="text-[10px] text-gray-600 mt-0.5">{step.sub}</p>}
+            </div>
+          ))}
         </div>
       </div>
 
