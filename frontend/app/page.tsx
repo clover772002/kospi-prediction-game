@@ -397,7 +397,7 @@ export default function LoginPage() {
 
       {/* 하루 흐름 — 순환 사이클 */}
       <div className="w-full mb-8">
-        <p className="text-xs text-gray-500 font-bold mb-3 tracking-widest uppercase">하루 흐름</p>
+        <p className="text-xs text-gray-500 font-bold mb-3 tracking-widest uppercase">하루 루틴</p>
         <div className="relative flex items-stretch gap-1">
           {/* 가로 연결 화살표 배경 */}
           <div className="absolute top-[28px] left-[10%] right-[10%] h-px bg-[#2A2A2A]" />
