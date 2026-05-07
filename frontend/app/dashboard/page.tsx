@@ -179,8 +179,11 @@ export default function DashboardPage() {
     today?.survey_date &&
     dash.history[0].date === today.survey_date
   );
-  // 연동 안 됨 → 최우선
+  // 장마감 후(result)는 누구나 볼 수 있음
+  const marketClosed = today?.status === "result";
+  // 연동 안 됨 → 최우선 / 장마감 후는 게이트 없음
   const gateType: "not_connected" | "no_survey" | null =
+    marketClosed ? null :
     !isConnected ? "not_connected" :
     surveyDay && !respondedToday ? "no_survey" :
     null;
