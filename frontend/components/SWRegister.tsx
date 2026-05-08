@@ -2,50 +2,61 @@
 
 import { useEffect } from "react";
 
-/**
- * 모든 페이지에서 Service Worker를 등록하고 매 방문마다 강제 업데이트를 체크합니다.
- * 새 SW가 활성화되면 페이지를 자동 새로고침해 구버전이 알림을 가로채는 것을 방지합니다.
- */
+const EXPECTED_SW_VERSION = "5.0";
+
 export default function SWRegister() {
   useEffect(() => {
     if (!("serviceWorker" in navigator)) return;
 
-    let refreshing = false;
-
-    // 새 SW가 컨트롤을 가져오면 페이지 새로고침 → 구버전 완전 교체
-    navigator.serviceWorker.addEventListener("controllerchange", () => {
-      if (!refreshing) {
-        refreshing = true;
-        window.location.reload();
-      }
-    });
-
-    navigator.serviceWorker
-      .register("/sw.js", { updateViaCache: "none" })
-      .then((reg) => {
-        reg.update();
-
-        const activateWaiting = (worker: ServiceWorker) => {
-          worker.postMessage({ type: "SKIP_WAITING" });
-        };
-
-        // 이미 대기 중인 SW가 있으면 즉시 활성화
-        if (reg.waiting) {
-          activateWaiting(reg.waiting);
+    async function initSW() {
+      // 현재 활성화된 SW 버전 확인
+      const controller = navigator.serviceWorker.controller;
+      if (controller) {
+        const version = await askSWVersion(controller);
+        if (version && version !== EXPECTED_SW_VERSION) {
+          // 구버전 SW 감지 → 전부 언등록 후 새로 등록
+          const regs = await navigator.serviceWorker.getRegistrations();
+          await Promise.all(regs.map((r) => r.unregister()));
+          await navigator.serviceWorker.register("/sw.js", { updateViaCache: "none" });
+          window.location.reload();
+          return;
         }
+      }
 
-        reg.addEventListener("updatefound", () => {
-          const newWorker = reg.installing;
-          if (!newWorker) return;
-          newWorker.addEventListener("statechange", () => {
-            if (newWorker.state === "installed") {
-              activateWaiting(newWorker);
-            }
-          });
+      // SW 등록 / 업데이트
+      let refreshing = false;
+      navigator.serviceWorker.addEventListener("controllerchange", () => {
+        if (!refreshing) { refreshing = true; window.location.reload(); }
+      });
+
+      const reg = await navigator.serviceWorker.register("/sw.js", { updateViaCache: "none" });
+      await reg.update();
+
+      const activate = (w: ServiceWorker) => w.postMessage({ type: "SKIP_WAITING" });
+      if (reg.waiting) activate(reg.waiting);
+      reg.addEventListener("updatefound", () => {
+        const nw = reg.installing;
+        if (!nw) return;
+        nw.addEventListener("statechange", () => {
+          if (nw.state === "installed") activate(nw);
         });
-      })
-      .catch(() => {});
+      });
+    }
+
+    initSW().catch(() => {});
   }, []);
 
   return null;
+}
+
+function askSWVersion(controller: ServiceWorker): Promise<string | null> {
+  return new Promise((resolve) => {
+    const channel = new MessageChannel();
+    const timer = setTimeout(() => resolve(null), 1000); // 1초 응답 없으면 null
+    channel.port1.onmessage = (e) => {
+      clearTimeout(timer);
+      resolve(e.data?.version ?? null);
+    };
+    controller.postMessage({ type: "GET_VERSION" }, [channel.port2]);
+  });
 }

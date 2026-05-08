@@ -1,5 +1,5 @@
-// 웹 푸시 Service Worker v4
-const SW_VERSION = "4.0";
+// 웹 푸시 Service Worker v5
+const SW_VERSION = "5.0";
 
 self.addEventListener("install", () => self.skipWaiting());
 self.addEventListener("activate", (event) => {
@@ -7,8 +7,13 @@ self.addEventListener("activate", (event) => {
 });
 
 self.addEventListener("message", (event) => {
-  if (event.data && event.data.type === "SKIP_WAITING") {
+  if (!event.data) return;
+  if (event.data.type === "SKIP_WAITING") {
     self.skipWaiting();
+  }
+  // 버전 확인 요청에 응답
+  if (event.data.type === "GET_VERSION") {
+    event.source.postMessage({ type: "SW_VERSION", version: SW_VERSION });
   }
 });
 
