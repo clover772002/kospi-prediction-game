@@ -1,11 +1,19 @@
 ﻿"use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { getToday, resolveApiBase, TodaySurvey } from "@/lib/api";
 import FlipClock from "@/components/FlipClock";
 import KospiChart from "@/components/KospiChart";
+
+interface KospiPrice {
+  price: number | null;
+  change: number | null;
+  change_pct: number | null;
+  is_up: boolean | null;
+  code: string;
+}
 
 export default function SurveyPage() {
   const router = useRouter();
@@ -20,6 +28,9 @@ export default function SurveyPage() {
   const [alreadyAnswered, setAlreadyAnswered] = useState(false);
   const [previousAnswer, setPreviousAnswer] = useState<boolean | null>(null);
   const [retrying, setRetrying] = useState(false);
+
+  const [kospiPrice, setKospiPrice] = useState<KospiPrice | null>(null);
+  const priceTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // 다음 거래일 설문 (장마감 후 미리 참여)
   const [nextSurvey, setNextSurvey] = useState<{ survey_date: string; is_open: boolean } | null>(null);
@@ -47,6 +58,25 @@ export default function SurveyPage() {
       setLoading(false);
     }
   }, []);
+
+  const fetchKospiPrice = useCallback(async () => {
+    try {
+      const res = await fetch("/api/public/kospi-price", { cache: "no-store" });
+      if (res.ok) setKospiPrice(await res.json());
+    } catch {}
+  }, []);
+
+  // 장 중(09:00~15:35)이면 30초마다 갱신
+  useEffect(() => {
+    const kst = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Seoul" }));
+    const mins = kst.getHours() * 60 + kst.getMinutes();
+    const isMarketOpen = mins >= 9 * 60 && mins < 15 * 60 + 35;
+    fetchKospiPrice();
+    if (isMarketOpen) {
+      priceTimerRef.current = setInterval(fetchKospiPrice, 30000);
+    }
+    return () => { if (priceTimerRef.current) clearInterval(priceTimerRef.current); };
+  }, [fetchKospiPrice]);
 
   const checkMyResponse = useCallback(async (tok: string) => {
     try {
@@ -267,23 +297,26 @@ export default function SurveyPage() {
       {/* 설문 진행 중 — 이미 완료됨 (재투표 전) */}
       {status === "open" && alreadyAnswered && !retrying && (
         <div className="flex flex-col gap-4 mt-6 fade-up">
-          <div className="bg-[#1A1A1A] border border-green-500/30 rounded-2xl p-4 flex items-center justify-between">
-            <div>
-              <p className="text-xs text-gray-400 mb-1">현재 내 예측</p>
+          <div className="grid grid-cols-2 gap-3">
+            {/* 내 예측 */}
+            <div className="bg-[#1A1A1A] border border-green-500/30 rounded-2xl p-4">
+              <p className="text-xs text-gray-400 mb-1">내 예측</p>
               <p className={`font-black text-lg ${previousAnswer ? "text-green-400" : "text-red-400"}`}>
-                코스피 {previousAnswer ? "📈 상승" : "📉 하락"}
+                {previousAnswer ? "📈 상승" : "📉 하락"}
               </p>
+              <button
+                onClick={() => { setRetrying(true); setSubmitted(false); }}
+                className="mt-2 text-[10px] text-gray-500 border border-[#333] px-2 py-1 rounded-lg hover:border-white/30 transition-all"
+              >
+                변경하기
+              </button>
             </div>
-            <button
-              onClick={() => { setRetrying(true); setSubmitted(false); }}
-              className="text-xs text-gray-400 border border-[#333] px-3 py-1.5 rounded-lg hover:border-white/30 transition-all"
-            >
-              변경하기
-            </button>
+            {/* 오늘 장 */}
+            <KospiNowCard price={kospiPrice} status="open" />
           </div>
 
           <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-2xl overflow-hidden">
-            <p className="text-xs text-gray-500 px-4 pt-3 pb-2">📈 KOSPI 실시간 1시간봉</p>
+            <p className="text-xs text-gray-500 px-4 pt-3 pb-2">📈 KODEX200 (코스피200 추종)</p>
             <KospiChart />
           </div>
         </div>
@@ -363,21 +396,19 @@ export default function SurveyPage() {
       {/* 제출 완료 — 내 예측 + 코스피 차트 */}
       {status === "open" && submitted && (
         <div className="flex flex-col gap-4 mt-6 fade-up">
-          <div className="bg-[#1A1A1A] border border-green-500/30 rounded-2xl p-4 flex items-center justify-between">
-            <div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="bg-[#1A1A1A] border border-green-500/30 rounded-2xl p-4">
               <p className="text-xs text-gray-400 mb-1">내 예측</p>
               <p className={`font-black text-lg ${kospiAnswer ? "text-green-400" : "text-red-400"}`}>
-                코스피 {kospiAnswer ? "📈 상승" : "📉 하락"}
+                {kospiAnswer ? "📈 상승" : "📉 하락"}
               </p>
+              <p className="text-[10px] text-gray-600 mt-1.5">15:35 결과 공개</p>
             </div>
-            <div className="text-right">
-              <p className="text-xs text-gray-500">15:35에 결과 공개</p>
-              <p className="text-xs text-gray-600 mt-0.5">장 시작 전까지 마감</p>
-            </div>
+            <KospiNowCard price={kospiPrice} status="open" />
           </div>
 
           <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-2xl overflow-hidden">
-            <p className="text-xs text-gray-500 px-4 pt-3 pb-2">📈 KOSPI 실시간 1시간봉</p>
+            <p className="text-xs text-gray-500 px-4 pt-3 pb-2">📈 KODEX200 (코스피200 추종)</p>
             <KospiChart />
           </div>
         </div>
@@ -386,36 +417,42 @@ export default function SurveyPage() {
       {/* 설문 마감 후 — 내 예측 + 코스피 차트 */}
       {(status === "closed" || status === "result") && (
         <div className="flex flex-col gap-4 mt-6 fade-up">
-          {/* 내 예측 카드 */}
+          {/* 내 예측 + 오늘 장 나란히 */}
           {(previousAnswer !== null || alreadyAnswered) && (
-            <div className={`border rounded-2xl p-4 flex items-center justify-between ${
-              status === "result" && today?.kospi_result != null
-                ? (previousAnswer ?? kospiAnswer) === today.kospi_result
-                  ? "bg-green-500/10 border-green-500/30"
-                  : "bg-red-500/10 border-red-500/20"
-                : "bg-[#1A1A1A] border-[#2A2A2A]"
-            }`}>
-              <div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className={`border rounded-2xl p-4 ${
+                status === "result" && today?.kospi_result != null
+                  ? (previousAnswer ?? kospiAnswer) === today.kospi_result
+                    ? "bg-green-500/10 border-green-500/30"
+                    : "bg-red-500/10 border-red-500/20"
+                  : "bg-[#1A1A1A] border-[#2A2A2A]"
+              }`}>
                 <p className="text-xs text-gray-400 mb-1">내 예측</p>
                 <p className={`font-black text-lg ${(previousAnswer ?? kospiAnswer) ? "text-green-400" : "text-red-400"}`}>
-                  코스피 {(previousAnswer ?? kospiAnswer) ? "📈 상승" : "📉 하락"}
+                  {(previousAnswer ?? kospiAnswer) ? "📈 상승" : "📉 하락"}
                 </p>
+                <div className="mt-1.5">
+                  {status === "result" && today?.kospi_result != null ? (
+                    <span className="text-xl">
+                      {(previousAnswer ?? kospiAnswer) === today.kospi_result ? "✅ 적중" : "❌ 빗나감"}
+                    </span>
+                  ) : (
+                    <p className="text-[10px] text-gray-500">15:35 결과 공개</p>
+                  )}
+                </div>
               </div>
-              <div className="text-right">
-                {status === "result" && today?.kospi_result != null ? (
-                  <span className="text-2xl">
-                    {(previousAnswer ?? kospiAnswer) === today.kospi_result ? "✅" : "❌"}
-                  </span>
-                ) : (
-                  <p className="text-xs text-gray-500">15:35에 결과 공개</p>
-                )}
-              </div>
+              <KospiNowCard
+                price={kospiPrice}
+                status={status}
+                resultPct={today?.kospi_change_pct ?? null}
+                resultUp={today?.kospi_result ?? null}
+              />
             </div>
           )}
 
           {/* KOSPI 차트 */}
           <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-2xl overflow-hidden">
-            <p className="text-xs text-gray-500 px-4 pt-3 pb-2">📈 KOSPI 실시간 1시간봉</p>
+            <p className="text-xs text-gray-500 px-4 pt-3 pb-2">📈 KODEX200 (코스피200 추종)</p>
             <KospiChart />
           </div>
 
@@ -495,5 +532,80 @@ export default function SurveyPage() {
 
       <BottomNav />
     </main>
+  );
+}
+
+/* ── 오늘 장 현황 카드 ──────────────────────────────────── */
+function KospiNowCard({
+  price,
+  status,
+  resultPct = null,
+  resultUp = null,
+}: {
+  price: KospiPrice | null;
+  status: string;
+  resultPct?: number | null;
+  resultUp?: boolean | null;
+}) {
+  const kst = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Seoul" }));
+  const mins = kst.getHours() * 60 + kst.getMinutes();
+  const isMarketOpen = mins >= 9 * 60 && mins < 15 * 60 + 35;
+
+  // 결과 확정 (result 상태 + kospi_result 있음)
+  if (status === "result" && resultUp !== null && resultPct !== null) {
+    return (
+      <div className={`rounded-2xl p-4 border ${resultUp ? "bg-green-500/10 border-green-500/30" : "bg-red-500/10 border-red-500/20"}`}>
+        <p className="text-xs text-gray-400 mb-1">오늘 장 · 종가</p>
+        <p className={`font-black text-lg ${resultUp ? "text-green-400" : "text-red-400"}`}>
+          {resultUp ? "📈 상승" : "📉 하락"}
+        </p>
+        <p className={`text-sm font-bold mt-0.5 ${resultUp ? "text-green-400" : "text-red-400"}`}>
+          {resultUp ? "+" : ""}{resultPct.toFixed(2)}%
+        </p>
+      </div>
+    );
+  }
+
+  // 장 중 실시간
+  if (isMarketOpen && price?.price) {
+    return (
+      <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-2xl p-4">
+        <div className="flex items-center gap-1 mb-1">
+          <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
+          <p className="text-xs text-gray-400">오늘 장 · 진행중</p>
+        </div>
+        <p className="font-black text-lg text-white tabular-nums">
+          {price.price.toLocaleString()}
+        </p>
+        {price.change_pct !== null && (
+          <p className={`text-sm font-bold mt-0.5 ${price.is_up ? "text-green-400" : "text-red-400"}`}>
+            {price.is_up ? "+" : ""}{price.change_pct?.toFixed(2)}%
+          </p>
+        )}
+      </div>
+    );
+  }
+
+  // 장 마감 후 (결과 미집계)
+  if (price?.price) {
+    return (
+      <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-2xl p-4">
+        <p className="text-xs text-gray-400 mb-1">오늘 장 · 종가</p>
+        <p className="font-black text-lg text-white tabular-nums">
+          {price.price.toLocaleString()}
+        </p>
+        {price.change_pct !== null && (
+          <p className={`text-sm font-bold mt-0.5 ${price.is_up ? "text-green-400" : "text-red-400"}`}>
+            {price.is_up ? "+" : ""}{price.change_pct?.toFixed(2)}%
+          </p>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-2xl p-4 flex items-center justify-center">
+      <p className="text-xs text-gray-600">데이터 로딩 중</p>
+    </div>
   );
 }

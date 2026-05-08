@@ -572,6 +572,32 @@ async def get_kospi_chart():
     return {"data": data}
 
 
+@app.get("/api/public/kospi-price")
+async def get_kospi_price():
+    """현재 KOSPI 지수 — 네이버 파이낸스 (인증 불필요)"""
+    url = "https://m.stock.naver.com/api/index/KOSPI/basic"
+    headers = {"User-Agent": "Mozilla/5.0 (compatible; KospiBot/1.0)"}
+    try:
+        async with httpx.AsyncClient(timeout=6.0) as client:
+            r = await client.get(url, headers=headers)
+            r.raise_for_status()
+            d = r.json()
+        price_str  = d.get("closePrice", "").replace(",", "")
+        change_str = d.get("compareToPreviousClosePrice", "").replace(",", "")
+        ratio_str  = d.get("fluctuationsRatio", "").replace(",", "")
+        code       = d.get("compareToPreviousPrice", {}).get("code", "")
+        return {
+            "price":      float(price_str)  if price_str  else None,
+            "change":     float(change_str) if change_str else None,
+            "change_pct": float(ratio_str)  if ratio_str  else None,
+            "is_up":      code == "2",   # 2=상승, 5=하락, 3=보합
+            "code":       code,
+        }
+    except Exception as e:
+        logger.error(f"KOSPI 가격 조회 오류: {e}")
+        return {"price": None, "change": None, "change_pct": None, "is_up": None, "code": ""}
+
+
 @app.get("/api/public/backtest")
 async def get_backtest(supabase: Client = Depends(get_supabase)):
     """백테스트: 고수 강화예측 따라 KOSPI 추종 매매 수익률 (DB 데이터만 사용, 외부 API 없음)"""
