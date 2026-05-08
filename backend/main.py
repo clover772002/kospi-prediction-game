@@ -23,6 +23,7 @@ from contextlib import asynccontextmanager
 import yfinance as yf
 import pytz
 from fastapi import FastAPI, HTTPException, Depends, Request
+from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 from supabase import create_client, Client
@@ -34,6 +35,7 @@ from telegram_bot import (
     send_daily_survey_to_all,
     announce_results,
     send_accuracy_notifications,
+    notify_challenge_results,
 )
 from webpush_helper import send_web_push_to_all
 
@@ -184,6 +186,12 @@ async def job_15_35():
 
     # 개인별 텔레그램 알림 (정확도는 Vercel 쪽에서 이미 업데이트됨)
     await send_accuracy_notifications(sb, today_str, kospi_up, kospi_pct)
+
+    # 대결 결과 처리 및 알림
+    try:
+        await notify_challenge_results(sb, today_str)
+    except Exception as e:
+        logger.error(f"대결 결과 알림 오류: {e}")
 
     # 다음 거래일 설문 미리 생성 (장마감 후 바로 예측 참여 가능하도록)
     next_str = next_trading_day_str()
@@ -860,6 +868,7 @@ async def get_today(supabase: Client = Depends(get_supabase)):
                 masked = (name[0] + "**") if name else "익명"
                 r = resp_map[uid]
                 return {
+                    "user_id": uid,
                     "masked_name": masked,
                     "kospi_answer": r["kospi_answer"],
                     "accuracy": round(acc_map[uid] * 100),
@@ -884,7 +893,7 @@ async def get_today(supabase: Client = Depends(get_supabase)):
         # acc_map에 없는 참여자 (신규, 정확도 기록 없음)도 추가
         if "participants" not in base:
             base["participants"] = []
-        known_uids = {p.get("uid") for p in base["participants"]} if base["participants"] else set()
+        known_uids = {p.get("user_id") for p in base["participants"]} if base["participants"] else set()
         for r in responses.data:
             uid = r["user_id"]
             if uid not in known_uids and uid not in acc_map:
@@ -893,6 +902,7 @@ async def get_today(supabase: Client = Depends(get_supabase)):
                     name = user_row.data[0]["name"] if user_row.data else "익명"
                     masked = (name[0] + "**") if name else "익명"
                     base["participants"].append({
+                        "user_id": uid,
                         "masked_name": masked,
                         "kospi_answer": r["kospi_answer"],
                         "accuracy": None,
@@ -992,6 +1002,108 @@ async def get_next_survey(supabase: Client = Depends(get_supabase)):
         return {"survey_date": next_str, "is_open": True}
     return {"survey_date": next_str, "is_open": False}
 
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 대결 (Challenges) 엔드포인트
+# ─────────────────────────────────────────────────────────────────────────────
+
+class ChallengeRequest(BaseModel):
+    challenged_user_id: str
+    survey_date: str
+
+@app.post("/api/challenges")
+async def create_challenge(
+    body: ChallengeRequest,
+    current_user=Depends(get_current_user),
+    supabase: Client = Depends(get_supabase),
+):
+    """대결 신청"""
+    from telegram_bot import send_message as tg_send
+    challenger_id = str(current_user.id)
+    challenged_id = body.challenged_user_id
+    date_str = body.survey_date
+
+    if challenger_id == challenged_id:
+        raise HTTPException(400, "자신에게 대결을 신청할 수 없어요")
+
+    existing = (
+        supabase.table("challenges")
+        .select("id")
+        .eq("challenger_id", challenger_id)
+        .eq("challenged_id", challenged_id)
+        .eq("survey_date", date_str)
+        .execute()
+    )
+    if existing.data:
+        raise HTTPException(400, "이미 대결을 신청했어요")
+
+    result = (
+        supabase.table("challenges")
+        .insert({"challenger_id": challenger_id, "challenged_id": challenged_id, "survey_date": date_str, "outcome": "pending"})
+        .execute()
+    )
+
+    challenger_row = supabase.table("users").select("name").eq("id", challenger_id).execute()
+    c_name = challenger_row.data[0]["name"] if challenger_row.data else "익명"
+    c_masked = (c_name[0] + "**") if c_name else "익명"
+
+    challenged_row = supabase.table("users").select("telegram_chat_id").eq("id", challenged_id).execute()
+    if challenged_row.data and challenged_row.data[0].get("telegram_chat_id"):
+        try:
+            await tg_send(
+                challenged_row.data[0]["telegram_chat_id"],
+                f"⚔️ <b>대결 신청!</b>\n\n"
+                f"<b>{c_masked}</b>님이 {date_str} 예측 대결을 신청했어요!\n\n"
+                f"장 마감 후 결과를 함께 확인해봐요 🔥",
+            )
+        except Exception as e:
+            logger.warning(f"대결 신청 알림 실패: {e}")
+
+    return {"ok": True, "challenge_id": result.data[0]["id"] if result.data else None}
+
+
+@app.get("/api/challenges/me")
+async def get_my_challenges(
+    date: str = None,
+    current_user=Depends(get_current_user),
+    supabase: Client = Depends(get_supabase),
+):
+    """내가 보내거나 받은 오늘의 대결 목록"""
+    user_id = str(current_user.id)
+    date_str = date or today_kst()
+
+    sent_res = (
+        supabase.table("challenges").select("*")
+        .eq("challenger_id", user_id).eq("survey_date", date_str).execute()
+    )
+    recv_res = (
+        supabase.table("challenges").select("*")
+        .eq("challenged_id", user_id).eq("survey_date", date_str).execute()
+    )
+
+    def _masked(uid: str) -> str:
+        row = supabase.table("users").select("name").eq("id", uid).execute()
+        name = row.data[0]["name"] if row.data else "익명"
+        return (name[0] + "**") if name else "익명"
+
+    def _enrich(c, is_sent: bool):
+        other = c["challenged_id"] if is_sent else c["challenger_id"]
+        return {
+            "id": c["id"],
+            "opponent_masked_name": _masked(other),
+            "opponent_id": other,
+            "outcome": c["outcome"],
+            "survey_date": c["survey_date"],
+            "is_sent": is_sent,
+        }
+
+    return {
+        "sent":     [_enrich(c, True)  for c in sent_res.data],
+        "received": [_enrich(c, False) for c in recv_res.data],
+    }
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 
 @app.get("/api/dashboard")
 async def get_dashboard(

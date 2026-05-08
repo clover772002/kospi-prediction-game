@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
-import { getMe, getToday, getDashboard, UserProfile, TodaySurvey, DashboardData } from "@/lib/api";
+import { getMe, getToday, getDashboard, createChallenge, getMyChallenges, UserProfile, TodaySurvey, DashboardData, Challenge } from "@/lib/api";
 
 // 연속 적중 스트릭 계산
 function calcStreak(history: DashboardData["history"]): number {
@@ -51,6 +51,9 @@ export default function DashboardPage() {
   const [error, setError]     = useState<string | null>(null);
   const [token, setToken]     = useState<string | null>(null);
   const [showResultCard, setShowResultCard] = useState(false);
+  const [challenges, setChallenges]         = useState<{ sent: Challenge[]; received: Challenge[] } | null>(null);
+  const [challengeLoading, setChallengeLoading] = useState<string | null>(null); // challenged user_id
+  const [challengeToast, setChallengeToast]     = useState<string | null>(null);
 
   useEffect(() => {
     let called = false;
@@ -77,6 +80,14 @@ export default function DashboardPage() {
         setUser(profile);
         setToday(todayData);
         setDash(dashData);
+
+        // 대결 목록 로드 (오늘 날짜)
+        try {
+          const ch = await getMyChallenges(accessToken, todayData.survey_date);
+          setChallenges(ch);
+        } catch {
+          // 대결 데이터 로드 실패는 무시
+        }
 
         // 오늘 결과가 나왔고 참여했다면 → 결과 카드 팝업 (하루 1번)
         if (todayData.status === "result" && todayData.survey_date) {
@@ -118,6 +129,22 @@ export default function DashboardPage() {
   const handleLogout = async () => {
     await supabase.auth.signOut();
     router.replace("/");
+  };
+
+  const handleChallenge = async (challenged_user_id: string, survey_date: string) => {
+    if (!token) return;
+    setChallengeLoading(challenged_user_id);
+    try {
+      await createChallenge(token, challenged_user_id, survey_date);
+      const ch = await getMyChallenges(token, survey_date);
+      setChallenges(ch);
+      setChallengeToast("⚔️ 대결 신청 완료! 상대에게 알림이 전송됐어요.");
+    } catch (e: unknown) {
+      setChallengeToast(e instanceof Error ? e.message : "대결 신청 실패");
+    } finally {
+      setChallengeLoading(null);
+      setTimeout(() => setChallengeToast(null), 3000);
+    }
   };
 
   if (loading) {
@@ -294,6 +321,13 @@ export default function DashboardPage() {
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* ── 대결 신청 토스트 ── */}
+      {challengeToast && (
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[60] w-[90vw] max-w-sm bg-[#1E1E1E] border border-[#333] rounded-2xl px-4 py-3 text-sm text-white shadow-2xl text-center animate-[fadeUp_0.3s_ease-out]">
+          {challengeToast}
         </div>
       )}
 
@@ -643,10 +677,10 @@ export default function DashboardPage() {
                 </div>
               )}
 
-              {/* 전체 순위 리스트 */}
+                {/* 전체 순위 리스트 */}
               <div className="border-t border-[#2A2A2A]">
-                <div className="grid grid-cols-[28px_1fr_60px_52px] text-[10px] text-gray-600 px-4 py-2">
-                  <span>#</span><span>닉네임</span><span className="text-center">예측</span><span className="text-right">적중률</span>
+                <div className="grid grid-cols-[28px_1fr_56px_44px_60px] text-[10px] text-gray-600 px-4 py-2">
+                  <span>#</span><span>닉네임</span><span className="text-center">예측</span><span className="text-right">적중률</span><span></span>
                 </div>
                 <div className="divide-y divide-[#222]">
                   {sorted.map((p, i) => {
@@ -654,10 +688,15 @@ export default function DashboardPage() {
                     const result = today.kospi_result !== null
                       ? (p.kospi_answer === today.kospi_result ? "✅" : "❌")
                       : null;
+                    const alreadyChallenged = challenges
+                      ? [...challenges.sent, ...challenges.received].some(
+                          (c) => c.opponent_id === p.user_id
+                        )
+                      : false;
                     return (
                       <div
                         key={i}
-                        className={`grid grid-cols-[28px_1fr_60px_52px] items-center px-4 py-3 transition-colors ${
+                        className={`grid grid-cols-[28px_1fr_56px_44px_60px] items-center px-4 py-3 transition-colors ${
                           isMe ? "bg-blue-500/10 border-l-2 border-blue-500" : ""
                         }`}
                       >
@@ -685,6 +724,22 @@ export default function DashboardPage() {
                         }`}>
                           {p.accuracy !== null ? `${p.accuracy}%` : "신규"}
                         </span>
+                        {/* 대결 버튼 */}
+                        <div className="flex justify-end">
+                          {!isMe && (
+                            alreadyChallenged ? (
+                              <span className="text-[10px] text-gray-600 font-bold">신청됨</span>
+                            ) : (
+                              <button
+                                onClick={() => p.user_id && handleChallenge(p.user_id, today.survey_date)}
+                                disabled={challengeLoading === p.user_id || !p.user_id}
+                                className="text-[10px] font-black px-2 py-1 rounded-lg bg-orange-500/20 text-orange-400 border border-orange-500/30 hover:bg-orange-500/40 active:scale-95 transition-all disabled:opacity-40 whitespace-nowrap"
+                              >
+                                {challengeLoading === p.user_id ? "..." : "⚔️ 대결"}
+                              </button>
+                            )
+                          )}
+                        </div>
                       </div>
                     );
                   })}
@@ -701,6 +756,55 @@ export default function DashboardPage() {
                   </p>
                 </div>
               )}
+            </div>
+          );
+        })()}
+
+        {/* ── 내 대결 현황 ──────────────────────────────────── */}
+        {challenges && (challenges.sent.length > 0 || challenges.received.length > 0) && (() => {
+          const allChallenges = [
+            ...challenges.sent,
+            ...challenges.received.filter(
+              (r) => !challenges.sent.some((s) => s.opponent_id === r.opponent_id)
+            ),
+          ];
+
+          const outcomeLabel = (c: Challenge) => {
+            if (c.outcome === "pending") return { text: "대기중", color: "text-gray-500" };
+            const iWon = c.is_sent
+              ? c.outcome === "challenger_wins"
+              : c.outcome === "challenged_wins";
+            if (c.outcome === "tie") return { text: "🤝 비김", color: "text-blue-400" };
+            if (c.outcome === "no_result") return { text: "미참여", color: "text-gray-600" };
+            return iWon
+              ? { text: "🏆 승리", color: "text-yellow-400" }
+              : { text: "😢 패배", color: "text-red-400" };
+          };
+
+          return (
+            <div className="bg-[#1A1A1A] rounded-2xl border border-[#2A2A2A] overflow-hidden fade-up-5">
+              <div className="px-5 pt-4 pb-3 flex items-center justify-between">
+                <p className="font-black text-sm text-white">⚔️ 내 대결 현황</p>
+                <span className="text-[10px] text-gray-500 bg-[#252525] px-2 py-0.5 rounded-full">
+                  {allChallenges.length}건
+                </span>
+              </div>
+              <div className="divide-y divide-[#222] border-t border-[#2A2A2A]">
+                {allChallenges.map((c) => {
+                  const { text, color } = outcomeLabel(c);
+                  return (
+                    <div key={c.id} className="flex items-center justify-between px-5 py-3">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-bold text-white">{c.opponent_masked_name}</span>
+                        <span className="text-[10px] text-gray-600">
+                          {c.is_sent ? "내가 신청" : "받은 신청"}
+                        </span>
+                      </div>
+                      <span className={`text-xs font-black ${color}`}>{text}</span>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           );
         })()}

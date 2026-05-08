@@ -57,10 +57,22 @@ export interface TopPredictor {
 }
 
 export interface Participant {
+  user_id: string;
   masked_name: string;
   kospi_answer: boolean;
   accuracy: number | null;
   total_predictions: number;
+}
+
+export type ChallengeOutcome = "pending" | "challenger_wins" | "challenged_wins" | "tie" | "no_result";
+
+export interface Challenge {
+  id: string;
+  opponent_masked_name: string;
+  opponent_id: string;
+  outcome: ChallengeOutcome;
+  survey_date: string;
+  is_sent: boolean;
 }
 
 export interface TodaySurvey {
@@ -129,4 +141,22 @@ export async function savePushSubscription(token: string, subscription: PushSubs
 
 export async function deletePushSubscription(token: string): Promise<void> {
   await authFetch<{ success: boolean }>("/api/me/push-subscription", token, { method: "DELETE" });
+}
+
+export async function createChallenge(
+  token: string,
+  challenged_user_id: string,
+  survey_date: string,
+): Promise<{ ok: boolean; challenge_id?: string }> {
+  return authFetch("/api/challenges", token, {
+    method: "POST",
+    body: JSON.stringify({ challenged_user_id, survey_date }),
+  });
+}
+
+export async function getMyChallenges(
+  token: string,
+  date: string,
+): Promise<{ sent: Challenge[]; received: Challenge[] }> {
+  return authFetch(`/api/challenges/me?date=${date}`, token);
 }

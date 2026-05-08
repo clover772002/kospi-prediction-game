@@ -375,3 +375,97 @@ async def send_accuracy_notifications(
             await send_message(chat_id, text)
         except Exception as e:
             logger.error(f"정확도 알림 실패 (chat_id={chat_id}): {e}")
+
+
+async def notify_challenge_results(supabase, date_str: str) -> None:
+    """15:35 대결 결과 처리 및 양측 알림"""
+    acc_rows = (
+        supabase.table("accuracy_records")
+        .select("user_id, kospi_correct")
+        .eq("survey_date", date_str)
+        .execute()
+    )
+    if not acc_rows.data:
+        return
+
+    acc_map = {r["user_id"]: r["kospi_correct"] for r in acc_rows.data}
+
+    challenges = (
+        supabase.table("challenges")
+        .select("*")
+        .eq("survey_date", date_str)
+        .eq("outcome", "pending")
+        .execute()
+    )
+    if not challenges.data:
+        return
+
+    for ch in challenges.data:
+        c1_id = ch["challenger_id"]
+        c2_id = ch["challenged_id"]
+
+        if c1_id not in acc_map or c2_id not in acc_map:
+            supabase.table("challenges").update({"outcome": "no_result"}).eq("id", ch["id"]).execute()
+            continue
+
+        c1_correct = acc_map[c1_id]
+        c2_correct = acc_map[c2_id]
+
+        if c1_correct == c2_correct:
+            outcome = "tie"
+        elif c1_correct:
+            outcome = "challenger_wins"
+        else:
+            outcome = "challenged_wins"
+
+        supabase.table("challenges").update({"outcome": outcome}).eq("id", ch["id"]).execute()
+
+        def _masked_name(uid):
+            row = supabase.table("users").select("name").eq("id", uid).execute()
+            n = row.data[0]["name"] if row.data else "익명"
+            return (n[0] + "**") if n else "익명"
+
+        c1_masked = _masked_name(c1_id)
+        c2_masked = _masked_name(c2_id)
+
+        def _result_msg(my_correct, opp_masked, i_won, is_tie):
+            if is_tie:
+                emoji = "🤝"
+                result_word = "비겼어요!"
+                detail = f"둘 다 {'맞혔어요' if my_correct else '틀렸어요'} 💪"
+            elif i_won:
+                emoji = "🏆"
+                result_word = "승리!"
+                detail = "오늘 예측 대결에서 이겼어요! 🎉"
+            else:
+                emoji = "😢"
+                result_word = "패배!"
+                detail = "오늘은 상대가 더 정확했어요. 내일 다시 도전! 💪"
+            return (
+                f"⚔️ <b>대결 결과</b>\n\n"
+                f"vs <b>{opp_masked}</b>\n\n"
+                f"{emoji} <b>{result_word}</b>\n{detail}"
+            )
+
+        is_tie = (outcome == "tie")
+        c1_wins = (outcome == "challenger_wins")
+
+        c1_row = supabase.table("users").select("telegram_chat_id").eq("id", c1_id).execute()
+        if c1_row.data and c1_row.data[0].get("telegram_chat_id"):
+            try:
+                await send_message(
+                    c1_row.data[0]["telegram_chat_id"],
+                    _result_msg(c1_correct, c2_masked, c1_wins, is_tie),
+                )
+            except Exception as e:
+                logger.error(f"대결 결과 알림 실패(c1): {e}")
+
+        c2_row = supabase.table("users").select("telegram_chat_id").eq("id", c2_id).execute()
+        if c2_row.data and c2_row.data[0].get("telegram_chat_id"):
+            try:
+                await send_message(
+                    c2_row.data[0]["telegram_chat_id"],
+                    _result_msg(c2_correct, c1_masked, not c1_wins and not is_tie, is_tie),
+                )
+            except Exception as e:
+                logger.error(f"대결 결과 알림 실패(c2): {e}")
