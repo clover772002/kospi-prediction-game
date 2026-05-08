@@ -1,0 +1,327 @@
+"use client";
+
+import { useEffect, useState, useCallback } from "react";
+import { useRouter } from "next/navigation";
+import { supabase } from "@/lib/supabase";
+import {
+  createGroup, joinGroup, getMyGroups, getGroupLeaderboard, leaveGroup,
+  Group, GroupLeaderboard,
+} from "@/lib/api";
+
+export default function GroupsPage() {
+  const router = useRouter();
+  const [token, setToken]                     = useState<string | null>(null);
+  const [loading, setLoading]                 = useState(true);
+  const [groups, setGroups]                   = useState<Group[]>([]);
+  const [selectedId, setSelectedId]           = useState<string | null>(null);
+  const [leaderboard, setLeaderboard]         = useState<GroupLeaderboard | null>(null);
+  const [lbLoading, setLbLoading]             = useState(false);
+  const [groupName, setGroupName]             = useState("");
+  const [joinCode, setJoinCode]               = useState("");
+  const [msg, setMsg]                         = useState<{ text: string; ok: boolean } | null>(null);
+  const [copiedCode, setCopiedCode]           = useState<string | null>(null);
+  const [mode, setMode]                       = useState<"list" | "create" | "join">("list");
+
+  const showMsg = (text: string, ok: boolean) => {
+    setMsg({ text, ok });
+    setTimeout(() => setMsg(null), 3500);
+  };
+
+  const loadGroups = useCallback(async (tk: string) => {
+    try {
+      const list = await getMyGroups(tk);
+      setGroups(list);
+      if (list.length > 0 && !selectedId) setSelectedId(list[0].group_id);
+    } catch { /* ignore */ }
+  }, [selectedId]);
+
+  const loadLeaderboard = useCallback(async (tk: string, gid: string) => {
+    setLbLoading(true);
+    try {
+      const lb = await getGroupLeaderboard(tk, gid);
+      setLeaderboard(lb);
+    } catch { /* ignore */ }
+    finally { setLbLoading(false); }
+  }, []);
+
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === "SIGNED_OUT" || (event === "INITIAL_SESSION" && !session)) {
+        router.replace("/"); return;
+      }
+      if (session) {
+        setToken(session.access_token);
+        await loadGroups(session.access_token);
+        setLoading(false);
+      }
+    });
+    return () => subscription.unsubscribe();
+  }, [router, loadGroups]);
+
+  useEffect(() => {
+    if (token && selectedId) loadLeaderboard(token, selectedId);
+  }, [token, selectedId, loadLeaderboard]);
+
+  const handleCreate = async () => {
+    if (!token || !groupName.trim()) return;
+    try {
+      const res = await createGroup(token, groupName.trim());
+      setGroupName(""); setMode("list");
+      showMsg(`✅ "${groupName}" 그룹 생성! 코드: ${res.invite_code}`, true);
+      await loadGroups(token);
+      setSelectedId(res.group_id);
+    } catch (e: unknown) { showMsg(e instanceof Error ? e.message : "생성 실패", false); }
+  };
+
+  const handleJoin = async () => {
+    if (!token || joinCode.length !== 6) return;
+    try {
+      const res = await joinGroup(token, joinCode);
+      setJoinCode(""); setMode("list");
+      showMsg(`✅ "${res.group_name}" 합류!`, true);
+      await loadGroups(token);
+      setSelectedId(res.group_id);
+    } catch (e: unknown) { showMsg(e instanceof Error ? e.message : "가입 실패", false); }
+  };
+
+  const handleLeave = async (gid: string) => {
+    if (!token) return;
+    await leaveGroup(token, gid);
+    if (selectedId === gid) { setSelectedId(null); setLeaderboard(null); }
+    await loadGroups(token);
+    showMsg("그룹에서 탈퇴했어요", true);
+  };
+
+  const copyLink = (code: string) => {
+    navigator.clipboard.writeText(`${window.location.origin}/join?code=${code}`);
+    setCopiedCode(code);
+    setTimeout(() => setCopiedCode(null), 2000);
+  };
+
+  const medals = ["🥇", "🥈", "🥉"];
+
+  if (loading) return (
+    <main className="max-w-md mx-auto min-h-screen flex items-center justify-center bg-[#111]">
+      <div className="w-8 h-8 border-2 border-green-500/30 border-t-green-500 rounded-full animate-spin" />
+    </main>
+  );
+
+  return (
+    <main className="max-w-md mx-auto min-h-screen pb-28 px-5 bg-[#111] text-white">
+      {/* 헤더 */}
+      <div className="pt-8 pb-5">
+        <h1 className="text-xl font-black">👥 그룹 대결</h1>
+        <p className="text-xs text-gray-400 mt-1">친구를 초대해 그룹 내 순위를 겨뤄보세요</p>
+      </div>
+
+      {/* 토스트 메시지 */}
+      {msg && (
+        <div className={`mb-4 rounded-2xl px-4 py-3 text-sm font-bold text-center ${msg.ok ? "bg-green-500/15 text-green-400 border border-green-500/30" : "bg-red-500/15 text-red-400 border border-red-500/30"}`}>
+          {msg.text}
+        </div>
+      )}
+
+      {/* 그룹 없을 때 온보딩 */}
+      {groups.length === 0 && mode === "list" && (
+        <div className="flex flex-col items-center gap-5 py-10 text-center">
+          <span className="text-6xl">🏆</span>
+          <div>
+            <p className="font-black text-lg">아직 그룹이 없어요</p>
+            <p className="text-sm text-gray-400 mt-1">그룹을 만들거나 초대 링크로 참여하세요</p>
+          </div>
+          <div className="flex gap-3 w-full">
+            <button onClick={() => setMode("create")}
+              className="flex-1 py-4 bg-green-600 hover:bg-green-500 font-black rounded-2xl transition-all active:scale-95">
+              ＋ 그룹 만들기
+            </button>
+            <button onClick={() => setMode("join")}
+              className="flex-1 py-4 bg-[#1A1A1A] border border-[#333] font-black rounded-2xl hover:border-blue-500/50 transition-all active:scale-95">
+              코드로 참여
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* 그룹 만들기 폼 */}
+      {mode === "create" && (
+        <div className="space-y-4">
+          <button onClick={() => setMode("list")} className="text-xs text-gray-500 hover:text-white transition-colors">← 뒤로</button>
+          <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-2xl p-5 space-y-4">
+            <p className="font-black text-sm">새 그룹 만들기</p>
+            <input
+              value={groupName} onChange={(e) => setGroupName(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleCreate()}
+              placeholder="그룹 이름 (예: 주식 동아리, 팀 A)"
+              className="w-full bg-[#252525] border border-[#333] rounded-xl px-4 py-3.5 text-sm placeholder-gray-600 outline-none focus:border-green-500/60"
+              maxLength={20}
+            />
+            <button onClick={handleCreate} disabled={!groupName.trim()}
+              className="w-full py-4 bg-green-600 hover:bg-green-500 disabled:bg-[#252525] disabled:text-gray-600 font-black rounded-2xl transition-all active:scale-95">
+              그룹 만들기
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* 코드로 참여 폼 */}
+      {mode === "join" && (
+        <div className="space-y-4">
+          <button onClick={() => setMode("list")} className="text-xs text-gray-500 hover:text-white transition-colors">← 뒤로</button>
+          <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-2xl p-5 space-y-4">
+            <p className="font-black text-sm">초대 코드로 참여</p>
+            <input
+              value={joinCode} onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
+              onKeyDown={(e) => e.key === "Enter" && handleJoin()}
+              placeholder="초대 코드 6자리"
+              className="w-full bg-[#252525] border border-[#333] rounded-xl px-4 py-3.5 text-sm placeholder-gray-600 outline-none focus:border-blue-500/60 font-mono tracking-[0.3em] text-center text-lg"
+              maxLength={6}
+            />
+            <button onClick={handleJoin} disabled={joinCode.length !== 6}
+              className="w-full py-4 bg-blue-600 hover:bg-blue-500 disabled:bg-[#252525] disabled:text-gray-600 font-black rounded-2xl transition-all active:scale-95">
+              참여하기
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* 그룹 있을 때 */}
+      {groups.length > 0 && mode === "list" && (
+        <div className="space-y-4">
+          {/* 그룹 탭 + 버튼 */}
+          <div className="flex items-center gap-2">
+            <div className="flex gap-1.5 flex-1 flex-wrap">
+              {groups.map((g) => (
+                <button key={g.group_id} onClick={() => setSelectedId(g.group_id)}
+                  className={`text-xs font-bold px-3 py-2 rounded-xl transition-all ${selectedId === g.group_id ? "bg-green-600 text-white" : "bg-[#1A1A1A] text-gray-400 border border-[#2A2A2A]"}`}>
+                  {g.name}
+                </button>
+              ))}
+            </div>
+            <button onClick={() => setMode("create")}
+              className="text-xl text-gray-500 hover:text-green-400 transition-colors px-1">＋</button>
+          </div>
+
+          {/* 선택된 그룹 정보 */}
+          {selectedId && (() => {
+            const g = groups.find((x) => x.group_id === selectedId);
+            if (!g) return null;
+            return (
+              <>
+                {/* 초대 카드 */}
+                <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-2xl p-4 flex items-center gap-3">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs text-gray-500 mb-0.5">{g.member_count}명 참여 · {g.is_owner ? "방장" : "멤버"}</p>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-gray-500">코드</span>
+                      <span className="font-mono font-black text-white tracking-widest">{g.invite_code}</span>
+                    </div>
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <button onClick={() => copyLink(g.invite_code)}
+                      className="text-xs font-bold px-3 py-2 bg-green-600/20 text-green-400 border border-green-600/30 rounded-xl hover:bg-green-600/40 transition-all whitespace-nowrap">
+                      {copiedCode === g.invite_code ? "✅ 복사됨" : "🔗 초대 링크"}
+                    </button>
+                    <button onClick={() => handleLeave(g.group_id)}
+                      className="text-[10px] text-gray-600 hover:text-red-400 text-center transition-colors">
+                      탈퇴
+                    </button>
+                  </div>
+                </div>
+
+                {/* 리더보드 */}
+                <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-2xl overflow-hidden">
+                  <div className="px-5 py-4 border-b border-[#2A2A2A]">
+                    <p className="font-black text-sm">🏆 그룹 순위</p>
+                    <p className="text-[10px] text-gray-500 mt-0.5">누적 적중률 기준</p>
+                  </div>
+
+                  {lbLoading ? (
+                    <div className="flex justify-center py-8">
+                      <div className="w-6 h-6 border-2 border-green-500/30 border-t-green-500 rounded-full animate-spin" />
+                    </div>
+                  ) : leaderboard ? (
+                    <>
+                      {/* 포디움 (3명 이상) */}
+                      {leaderboard.members.length >= 2 && (() => {
+                        const top3 = leaderboard.members.slice(0, Math.min(3, leaderboard.members.length));
+                        const order = top3.length >= 3 ? [1, 0, 2] : [0, 1];
+                        return (
+                          <div className="flex items-end justify-center gap-2 px-5 py-5">
+                            {order.map((ri) => {
+                              const m = top3[ri];
+                              if (!m) return <div key={ri} className="flex-1" />;
+                              const podiumH = ri === 0 ? "h-20" : ri === 1 ? "h-24" : "h-16";
+                              const bc = ri === 0 ? "border-gray-300/30" : ri === 1 ? "border-yellow-400/50" : "border-amber-600/40";
+                              return (
+                                <div key={ri} className="flex-1 flex flex-col items-center gap-1">
+                                  {m.is_me && <span className="text-[9px] text-green-400 font-bold">나</span>}
+                                  <span className="text-xl">{medals[ri === 1 ? 0 : ri === 0 ? 1 : 2]}</span>
+                                  <p className="text-[10px] text-gray-300 font-bold truncate max-w-full px-1">{m.masked_name}</p>
+                                  <div className={`w-full ${podiumH} rounded-t-lg border ${bc} flex items-end justify-center pb-2 ${m.is_me ? "bg-green-500/20" : "bg-[#252525]"}`}>
+                                    <span className="text-xs font-black">{m.accuracy !== null ? `${m.accuracy}%` : "신규"}</span>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        );
+                      })()}
+
+                      {/* 전체 목록 */}
+                      <div className="border-t border-[#222]">
+                        <div className="grid grid-cols-[28px_1fr_52px_52px] text-[10px] text-gray-600 px-4 py-2">
+                          <span>#</span><span>닉네임</span><span className="text-right">적중률</span><span className="text-right">참여</span>
+                        </div>
+                        <div className="divide-y divide-[#222]">
+                          {leaderboard.members.map((m, i) => (
+                            <div key={m.user_id} className={`grid grid-cols-[28px_1fr_52px_52px] items-center px-4 py-3 ${m.is_me ? "bg-green-500/10 border-l-2 border-green-500" : ""}`}>
+                              <span className="text-sm">{i < 3 ? medals[i] : <span className="text-gray-500 text-xs">{i + 1}</span>}</span>
+                              <span className="text-sm font-bold flex items-center gap-1.5 truncate">
+                                {m.masked_name}
+                                {m.is_me && <span className="text-[9px] bg-green-500 text-white px-1.5 py-0.5 rounded-full font-black flex-shrink-0">나</span>}
+                              </span>
+                              <span className={`text-xs font-black text-right ${i === 0 ? "text-yellow-400" : i === 1 ? "text-gray-300" : i === 2 ? "text-amber-600" : "text-gray-400"}`}>
+                                {m.accuracy !== null ? `${m.accuracy}%` : "신규"}
+                              </span>
+                              <span className="text-[10px] text-gray-600 text-right">{m.total_predictions}일</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </>
+                  ) : (
+                    <p className="text-xs text-gray-600 text-center py-8">데이터를 불러오는 중...</p>
+                  )}
+                </div>
+
+                {/* 코드 없이 참여 버튼 */}
+                <button onClick={() => setMode("join")}
+                  className="w-full py-3.5 bg-[#1A1A1A] border border-[#2A2A2A] text-gray-400 hover:text-white font-bold rounded-2xl text-sm transition-all">
+                  + 다른 그룹 코드로 참여
+                </button>
+              </>
+            );
+          })()}
+        </div>
+      )}
+
+      {/* 하단 내비 */}
+      <nav className="fixed bottom-0 left-0 right-0 bg-[#111] border-t border-[#222] z-50">
+        <div className="max-w-md mx-auto flex">
+          <button onClick={() => router.push("/survey")} className="flex-1 flex flex-col items-center py-3 gap-1 text-gray-500 hover:text-gray-300 transition-colors">
+            <span className="text-xl">📝</span><span className="text-xs font-medium">설문</span>
+          </button>
+          <button onClick={() => router.push("/dashboard")} className="flex-1 flex flex-col items-center py-3 gap-1 text-gray-500 hover:text-gray-300 transition-colors">
+            <span className="text-xl">📊</span><span className="text-xs font-medium">대시보드</span>
+          </button>
+          <button className="flex-1 flex flex-col items-center py-3 gap-1 text-green-400">
+            <span className="text-xl">👥</span><span className="text-xs font-bold">그룹</span>
+          </button>
+          <button onClick={() => router.push("/setup")} className="flex-1 flex flex-col items-center py-3 gap-1 text-gray-500 hover:text-gray-300 transition-colors">
+            <span className="text-xl">⚙️</span><span className="text-xs font-medium">설정</span>
+          </button>
+        </div>
+      </nav>
+    </main>
+  );
+}
