@@ -607,6 +607,37 @@ async def admin_run_15_35():
     return {"ok": True}
 
 
+@app.post("/api/admin/set-kospi-result")
+async def admin_set_kospi_result(
+    payload: dict,
+    supabase: Client = Depends(get_supabase),
+):
+    """KOSPI 결과 수동 저장 (Railway IP 우회용)
+    Body: { date, changePct, isUp }
+    """
+    date       = payload.get("date") or today_kst()
+    change_pct = float(payload.get("changePct", 0))
+    is_up      = bool(payload.get("isUp", True))
+
+    supabase.table("daily_surveys").update({
+        "kospi_result":     is_up,
+        "kospi_change_pct": change_pct,
+        "is_closed":        True,
+    }).eq("survey_date", date).execute()
+
+    responses = supabase.table("survey_responses") \
+        .select("user_id, kospi_answer").eq("survey_date", date).execute()
+    for r in responses.data:
+        supabase.table("accuracy_records").upsert(
+            {"user_id": r["user_id"], "survey_date": date,
+             "kospi_correct": r["kospi_answer"] == is_up},
+            on_conflict="user_id,survey_date",
+        ).execute()
+
+    return {"ok": True, "date": date, "changePct": change_pct, "isUp": is_up,
+            "participants": len(responses.data)}
+
+
 @app.get("/api/public/backtest")
 async def get_backtest(supabase: Client = Depends(get_supabase)):
     """백테스트: 고수 강화예측 따라 KOSPI 추종 매매 수익률 (DB 데이터만 사용, 외부 API 없음)"""
