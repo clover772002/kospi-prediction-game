@@ -681,7 +681,7 @@ export default function DashboardPage() {
           ) : null}
         </div>
 
-        {/* ── 오늘의 대결 순위 ──────────────────────────────── */}
+        {/* ── 전국대결 순위 ────────────────────────────────── */}
         {today?.participants && today.participants.length > 0 && (() => {
           const myEntry = dash?.history?.find((h) => h.date === today.survey_date);
           const myAcc   = dash?.accuracy?.kospi;
@@ -706,7 +706,7 @@ export default function DashboardPage() {
               {/* 헤더 */}
               <div className="flex items-center justify-between px-5 pt-5 pb-3">
                 <div>
-                  <p className="font-black text-sm text-white">🏆 오늘의 대결</p>
+                  <p className="font-black text-sm text-white">🏆 전국대결</p>
                   <p className="text-[10px] text-gray-500 mt-0.5">적중률 기준 순위</p>
                 </div>
                 <span className="text-xs text-gray-500 bg-[#252525] px-2.5 py-1 rounded-full">
