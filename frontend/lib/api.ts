@@ -196,7 +196,7 @@ export async function createChallenge(
 
 export async function getMyChallenges(
   token: string,
-  date: string,
+  date?: string,
 ): Promise<{ sent: Challenge[]; received: Challenge[] }> {
   return authFetch(`/api/challenges/me?date=${date}`, token);
 }

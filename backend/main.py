@@ -195,6 +195,53 @@ async def job_15_35():
     except Exception as e:
         logger.error(f"대결 결과 알림 오류: {e}")
 
+    # ── 데이터 수익화용 일별 집계 스냅샷 저장 ──────────────────
+    try:
+        responses = sb.table("survey_responses").select("kospi_answer, created_at").eq("survey_date", today_str).execute()
+        total_votes = len(responses.data)
+        if total_votes > 0:
+            up_votes   = sum(1 for r in responses.data if r.get("kospi_answer") is True)
+            down_votes = total_votes - up_votes
+            up_pct     = round(up_votes   / total_votes * 100, 2)
+            down_pct   = round(down_votes / total_votes * 100, 2)
+
+            # 투표 시각대별 분포 (KST 기준 시간대)
+            hour_dist: dict = {}
+            for r in responses.data:
+                raw_ts = r.get("created_at", "")
+                try:
+                    from datetime import datetime, timezone, timedelta
+                    kst = timezone(timedelta(hours=9))
+                    dt = datetime.fromisoformat(raw_ts.replace("Z", "+00:00")).astimezone(kst)
+                    h = dt.hour
+                    hour_dist[h] = hour_dist.get(h, 0) + 1
+                except Exception:
+                    pass
+
+            # 다수결 방향
+            majority_up = up_votes >= down_votes
+            # 고수 강화예측 방향 (daily_surveys 에서 집계)
+            ds = sb.table("daily_surveys").select("expert_prediction").eq("survey_date", today_str).execute()
+            expert_up = ds.data[0].get("expert_prediction") if ds.data else None
+
+            sb.table("survey_summaries").upsert({
+                "survey_date":    today_str,
+                "total_votes":    total_votes,
+                "up_votes":       up_votes,
+                "down_votes":     down_votes,
+                "up_pct":         up_pct,
+                "down_pct":       down_pct,
+                "majority_up":    majority_up,
+                "expert_up":      expert_up,
+                "kospi_result":   kospi_up,
+                "kospi_change_pct": kospi_pct,
+                "majority_correct": majority_up == kospi_up,
+                "hour_distribution": hour_dist,
+            }, on_conflict="survey_date").execute()
+            logger.info(f"survey_summaries 저장 완료: {today_str} 총{total_votes}명 상승{up_pct}%")
+    except Exception as e:
+        logger.warning(f"survey_summaries 저장 실패 (무시): {e}")
+
     # 다음 거래일 설문 미리 생성 (장마감 후 바로 예측 참여 가능하도록)
     next_str = next_trading_day_str()
     try:
