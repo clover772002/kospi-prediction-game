@@ -80,29 +80,21 @@ export default function DashboardPage() {
             ),
           ]);
 
-        const [profile, todayData, dashData] = await Promise.all([
+        const [profile, todayData, dashData, chResult, grpResult] = await Promise.all([
           withTimeout(getMe(accessToken)),
           withTimeout(getToday()),
           withTimeout(getDashboard(accessToken)),
+          withTimeout(getMyChallenges(accessToken)).catch(() => [] as Challenge[]),
+          withTimeout(getMyGroups(accessToken)).catch(() => [] as Group[]),
         ]);
         setUser(profile);
         setToday(todayData);
         setDash(dashData);
-
-        // 대결 목록 로드 (오늘 날짜)
-        try {
-          const ch = await getMyChallenges(accessToken, todayData.survey_date);
-          setChallenges(ch);
-        } catch { /* ignore */ }
-
-        // 내 그룹 목록 로드
-        try {
-          const grps = await getMyGroups(accessToken);
-          setMyGroups(grps);
-          if (grps.length > 0) {
-            setSelectedGroupId(grps[0].group_id);
-          }
-        } catch { /* ignore */ }
+        setChallenges(chResult);
+        if (grpResult.length > 0) {
+          setMyGroups(grpResult);
+          setSelectedGroupId(grpResult[0].group_id);
+        }
 
         // 오늘 결과가 나왔고 참여했다면 → 결과 카드 팝업 (하루 1번)
         if (todayData.status === "result" && todayData.survey_date) {

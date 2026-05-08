@@ -150,6 +150,11 @@ async def job_09_00():
 
 async def job_15_35():
     """매일 15:35 - 종가 조회 → 정확도 계산 → 개인별 알림"""
+    # 정확도가 새로 계산되므로 캐시 무효화
+    _acc_cache["map"] = {}
+    _acc_cache["count"] = {}
+    _acc_cache["ts"] = 0.0
+
     sb = _supabase_direct()
     today_str = today_kst()
 
@@ -472,8 +477,16 @@ def _calc_weighted_pct(responses_with_users: list, accuracy_map: dict) -> int | 
     return round((kospi_score / kospi_w + 1) / 2 * 100) if kospi_w > 0 else None
 
 
-def _build_user_accuracy_map(supabase: Client) -> dict:
-    """모든 유저의 누적 정확도 딕셔너리 반환 {user_id: accuracy_rate}"""
+_acc_cache: dict = {"map": {}, "count": {}, "ts": 0.0}
+_ACC_CACHE_TTL = 300  # 5분 캐시
+
+
+def _get_accuracy_data(supabase: Client) -> tuple[dict, dict]:
+    """(acc_map, pred_count) 반환 — 5분 TTL 인메모리 캐시 적용"""
+    now = time.time()
+    if now - _acc_cache["ts"] < _ACC_CACHE_TTL and _acc_cache["map"]:
+        return _acc_cache["map"], _acc_cache["count"]
+
     all_acc = supabase.table("accuracy_records").select("user_id, kospi_correct").execute()
     user_scores: dict = {}
     for r in all_acc.data:
@@ -482,10 +495,20 @@ def _build_user_accuracy_map(supabase: Client) -> dict:
             user_scores[uid] = {"correct": 0, "total": 0}
         user_scores[uid]["correct"] += 1 if r.get("kospi_correct") else 0
         user_scores[uid]["total"] += 1
-    return {
-        uid: s["correct"] / s["total"]
-        for uid, s in user_scores.items() if s["total"] > 0
-    }
+
+    acc_map   = {uid: s["correct"] / s["total"] for uid, s in user_scores.items() if s["total"] > 0}
+    pred_count = {uid: s["total"] for uid, s in user_scores.items()}
+
+    _acc_cache["map"]   = acc_map
+    _acc_cache["count"] = pred_count
+    _acc_cache["ts"]    = now
+    return acc_map, pred_count
+
+
+def _build_user_accuracy_map(supabase: Client) -> dict:
+    """하위호환용 래퍼 — acc_map만 반환"""
+    acc_map, _ = _get_accuracy_data(supabase)
+    return acc_map
 
 
 @app.get("/api/public/history")
@@ -532,22 +555,48 @@ async def get_public_history(supabase: Client = Depends(get_supabase)):
     for r in all_resp.data:
         resp_by_date.setdefault(r["survey_date"], []).append(r)
 
+    # survey_summaries fallback 조회 (실응답 없는 날 역사 데이터용)
+    try:
+        summaries_res = (
+            supabase.table("survey_summaries")
+            .select("survey_date, total_votes, up_votes, majority_up, expert_up, majority_correct")
+            .in_("survey_date", survey_dates)
+            .execute()
+        )
+        summary_by_date = {s["survey_date"]: s for s in (summaries_res.data or [])}
+    except Exception:
+        summary_by_date = {}
+
     results = []
     for row in rows.data:
         d = row["survey_date"]
         resp_list = resp_by_date.get(d, [])
-        total = len(resp_list)
-        if total == 0:
-            continue
-
-        yes_cnt = sum(1 for r in resp_list if r["kospi_answer"])
-        majority_up = yes_cnt >= total / 2
         actual_up = row["kospi_result"]
-        majority_correct = majority_up == actual_up
 
-        weighted_pct = _calc_weighted_pct(resp_list, acc_map)
-        weighted_up = weighted_pct >= 50 if weighted_pct is not None else majority_up
-        weighted_correct = weighted_up == actual_up
+        if resp_list:
+            # 실제 응답 데이터 사용
+            total = len(resp_list)
+            yes_cnt = sum(1 for r in resp_list if r["kospi_answer"])
+            majority_up = yes_cnt >= total / 2
+            majority_correct = majority_up == actual_up
+            weighted_pct = _calc_weighted_pct(resp_list, acc_map)
+            weighted_up = weighted_pct >= 50 if weighted_pct is not None else majority_up
+            weighted_correct = weighted_up == actual_up
+        elif d in summary_by_date:
+            # 역사 시드 데이터 (survey_summaries) fallback
+            s = summary_by_date[d]
+            total = s.get("total_votes") or 0
+            if total == 0:
+                continue
+            yes_cnt = s.get("up_votes") or 0
+            majority_up = bool(s.get("majority_up"))
+            majority_correct = bool(s.get("majority_correct"))
+            expert_up = s.get("expert_up")
+            weighted_up = bool(expert_up) if expert_up is not None else majority_up
+            weighted_pct = 68.0 if weighted_up else 32.0  # 집계 대표값
+            weighted_correct = weighted_up == actual_up
+        else:
+            continue
 
         results.append({
             "date": d,
@@ -904,77 +953,50 @@ async def get_today(supabase: Client = Depends(get_supabase)):
         kospi_yes = sum(1 for r in responses.data if r["kospi_answer"])
         base["kospi_yes_pct"] = round(kospi_yes / total * 100)
 
-        # 가중예측치 계산
-        acc_map = _build_user_accuracy_map(supabase)
+        # 가중예측치 계산 (캐시된 정확도 맵 사용)
+        acc_map, pred_count = _get_accuracy_data(supabase)
         base["kospi_weighted_pct"] = _calc_weighted_pct(responses.data, acc_map)
 
-        # 최고 고수 / 최고 하수 예측 (오늘 응답한 유저 중)
+        # 참여자 전체 user_id 수집
+        all_uids = [r["user_id"] for r in responses.data]
+
+        # 유저 이름 한 번에 일괄 조회 (N+1 제거)
         try:
-            resp_map = {r["user_id"]: r for r in responses.data}
+            name_rows = supabase.table("users").select("id, name").in_("id", all_uids).execute()
+            name_map = {row["id"]: row["name"] for row in (name_rows.data or [])}
+        except Exception:
+            name_map = {}
 
-            # 예측 횟수 집계 (동률 시 tiebreaker)
-            all_acc_rows = supabase.table("accuracy_records").select("user_id").execute()
-            pred_count: dict = {}
-            for row in all_acc_rows.data:
-                pred_count[row["user_id"]] = pred_count.get(row["user_id"], 0) + 1
+        def _make_entry(uid: str, r: dict) -> dict:
+            name = name_map.get(uid, "")
+            masked = (name[0] + "**") if name else "익명"
+            acc_val = acc_map.get(uid)
+            return {
+                "user_id": uid,
+                "masked_name": masked,
+                "kospi_answer": r["kospi_answer"],
+                "accuracy": round(acc_val * 100) if acc_val is not None else None,
+                "total_predictions": pred_count.get(uid, 0),
+            }
 
-            candidates = [uid for uid in acc_map if uid in resp_map]
-            if not candidates:
-                raise ValueError("후보 없음")
+        resp_map = {r["user_id"]: r for r in responses.data}
 
-            # 정확도 높은 순, 동률이면 예측 횟수 많은 순
-            top_uid = max(candidates, key=lambda uid: (acc_map[uid], pred_count.get(uid, 0)))
-            # 정확도 낮은 순, 동률이면 예측 횟수 많은 순
-            worst_uid = min(candidates, key=lambda uid: (acc_map[uid], -pred_count.get(uid, 0)))
+        # 전체 참여자 목록 (정확도 순 정렬)
+        participants = [_make_entry(uid, resp_map[uid]) for uid in all_uids]
+        participants.sort(key=lambda x: (-(x["accuracy"] or -1), -x["total_predictions"]))
+        base["participants"] = participants
 
-            def _predictor_info(uid):
-                user_row = supabase.table("users").select("name").eq("id", uid).execute()
-                name = user_row.data[0]["name"] if user_row.data else "익명"
-                masked = (name[0] + "**") if name else "익명"
-                r = resp_map[uid]
-                return {
-                    "user_id": uid,
-                    "masked_name": masked,
-                    "kospi_answer": r["kospi_answer"],
-                    "accuracy": round(acc_map[uid] * 100),
-                    "total_predictions": pred_count.get(uid, 0),
-                }
-
-            base["top_predictor"] = _predictor_info(top_uid)
-            if len(candidates) >= 2 and worst_uid != top_uid:
-                base["worst_predictor"] = _predictor_info(worst_uid)
-
-            # 전체 참여자 목록 (정확도 순 정렬)
-            participants = []
-            for uid in candidates:
-                info = _predictor_info(uid)
-                participants.append(info)
-            participants.sort(key=lambda x: -x["accuracy"])
-            base["participants"] = participants
-
+        # 고수 / 하수 (정확도 기록이 있는 참여자 중)
+        try:
+            candidates = [uid for uid in all_uids if uid in acc_map]
+            if candidates:
+                top_uid   = max(candidates, key=lambda u: (acc_map[u], pred_count.get(u, 0)))
+                worst_uid = min(candidates, key=lambda u: (acc_map[u], -pred_count.get(u, 0)))
+                base["top_predictor"]   = _make_entry(top_uid, resp_map[top_uid])
+                if len(candidates) >= 2 and worst_uid != top_uid:
+                    base["worst_predictor"] = _make_entry(worst_uid, resp_map[worst_uid])
         except Exception as e:
             logger.warning(f"고수/하수 조회 실패: {e}")
-
-        # acc_map에 없는 참여자 (신규, 정확도 기록 없음)도 추가
-        if "participants" not in base:
-            base["participants"] = []
-        known_uids = {p.get("user_id") for p in base["participants"]} if base["participants"] else set()
-        for r in responses.data:
-            uid = r["user_id"]
-            if uid not in known_uids and uid not in acc_map:
-                try:
-                    user_row = supabase.table("users").select("name").eq("id", uid).execute()
-                    name = user_row.data[0]["name"] if user_row.data else "익명"
-                    masked = (name[0] + "**") if name else "익명"
-                    base["participants"].append({
-                        "user_id": uid,
-                        "masked_name": masked,
-                        "kospi_answer": r["kospi_answer"],
-                        "accuracy": None,
-                        "total_predictions": 0,
-                    })
-                except Exception:
-                    pass
 
     return base
 
