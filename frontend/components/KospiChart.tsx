@@ -1,42 +1,182 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useState } from "react";
+
+interface Candle {
+  time: string;
+  close: number;
+  open: number;
+  high: number;
+  low: number;
+}
 
 export default function KospiChart() {
-  const containerRef = useRef<HTMLDivElement>(null);
+  const [data, setData] = useState<Candle[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!containerRef.current) return;
-    containerRef.current.innerHTML = "";
-
-    const widget = document.createElement("div");
-    widget.className = "tradingview-widget-container__widget";
-    containerRef.current.appendChild(widget);
-
-    const script = document.createElement("script");
-    script.src = "https://s3.tradingview.com/external-embedding/embed-widget-mini-symbol-overview.js";
-    script.type = "text/javascript";
-    script.async = true;
-    script.innerHTML = JSON.stringify({
-      symbol: "KRX:KOSPI",
-      width: "100%",
-      height: 220,
-      locale: "kr",
-      dateRange: "1D",
-      colorTheme: "dark",
-      isTransparent: true,
-      autosize: true,
-      largeChartUrl: "",
-    });
-
-    containerRef.current.appendChild(script);
+    fetch("/api/public/kospi-chart", { cache: "no-store" })
+      .then((r) => r.json())
+      .then((d) => {
+        setData(d.data || []);
+        setLoading(false);
+      })
+      .catch(() => setLoading(false));
   }, []);
 
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-36 text-gray-500 text-sm">
+        <span className="animate-pulse">차트 불러오는 중...</span>
+      </div>
+    );
+  }
+
+  if (data.length < 2) {
+    return (
+      <div className="flex items-center justify-center h-36 text-gray-500 text-sm">
+        장 시작 전이거나 데이터를 불러올 수 없어요
+      </div>
+    );
+  }
+
+  /* ── SVG 파라미터 ── */
+  const W = 360;
+  const H = 140;
+  const PAD = { top: 12, right: 12, bottom: 22, left: 52 };
+  const cW = W - PAD.left - PAD.right;
+  const cH = H - PAD.top - PAD.bottom;
+
+  const closes = data.map((d) => d.close);
+  const highs  = data.map((d) => d.high);
+  const lows   = data.map((d) => d.low);
+  const minV = Math.min(...lows)   * 0.9995;
+  const maxV = Math.max(...highs)  * 1.0005;
+  const range = maxV - minV || 1;
+
+  const xScale = (i: number) => (i / (data.length - 1)) * cW;
+  const yScale = (v: number) => cH - ((v - minV) / range) * cH;
+
+  const linePoints = data.map((d, i) => `${xScale(i)},${yScale(d.close)}`).join(" ");
+  const firstClose = closes[0];
+  const lastClose  = closes[closes.length - 1];
+  const isUp = lastClose >= firstClose;
+  const lineColor = isUp ? "#4ade80" : "#f87171";
+  const changePct = (((lastClose - firstClose) / firstClose) * 100).toFixed(2);
+
+  /* y축 눈금 4개 */
+  const yTicks = [0, 1/3, 2/3, 1].map((t) => minV + t * range);
+
+  /* x축 눈금: 최대 5개 */
+  const xStep = Math.max(1, Math.floor(data.length / 4));
+  const xTicks = data.filter((_, i) => i % xStep === 0 || i === data.length - 1);
+
   return (
-    <div
-      className="tradingview-widget-container"
-      ref={containerRef}
-      style={{ height: "220px", width: "100%" }}
-    />
+    <div className="px-1 pb-2">
+      {/* 헤더 */}
+      <div className="flex items-baseline justify-between mb-2 px-2">
+        <span className="text-xs font-medium text-gray-400">KOSPI 오늘</span>
+        <span className={`text-sm font-bold ${isUp ? "text-green-400" : "text-red-400"}`}>
+          {lastClose.toLocaleString()}{" "}
+          <span className="text-xs font-normal">
+            ({isUp ? "+" : ""}{changePct}%)
+          </span>
+        </span>
+      </div>
+
+      {/* SVG 차트 */}
+      <svg
+        viewBox={`0 0 ${W} ${H}`}
+        className="w-full"
+        style={{ height: 140, display: "block" }}
+      >
+        <defs>
+          <linearGradient id="kg-fill" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%"   stopColor={lineColor} stopOpacity={0.35} />
+            <stop offset="100%" stopColor={lineColor} stopOpacity={0.02} />
+          </linearGradient>
+        </defs>
+
+        <g transform={`translate(${PAD.left},${PAD.top})`}>
+          {/* 가로 그리드 */}
+          {yTicks.map((v, i) => (
+            <line
+              key={i}
+              x1={0} x2={cW}
+              y1={yScale(v)} y2={yScale(v)}
+              stroke="#ffffff0a" strokeWidth={1}
+            />
+          ))}
+
+          {/* 채우기 */}
+          <polygon
+            points={`0,${cH} ${linePoints} ${xScale(data.length - 1)},${cH}`}
+            fill="url(#kg-fill)"
+          />
+
+          {/* 선 */}
+          <polyline
+            points={linePoints}
+            fill="none"
+            stroke={lineColor}
+            strokeWidth={2}
+            strokeLinejoin="round"
+            strokeLinecap="round"
+          />
+
+          {/* 최신가 점 */}
+          <circle
+            cx={xScale(data.length - 1)}
+            cy={yScale(lastClose)}
+            r={3.5}
+            fill={lineColor}
+          />
+          {/* 점 펄스 */}
+          <circle
+            cx={xScale(data.length - 1)}
+            cy={yScale(lastClose)}
+            r={6}
+            fill={lineColor}
+            opacity={0.25}
+            style={{ animation: "ping 1.4s ease-out infinite" }}
+          />
+
+          {/* y축 레이블 */}
+          {yTicks.map((v, i) => (
+            <text
+              key={i}
+              x={-5}
+              y={yScale(v) + 4}
+              textAnchor="end"
+              fontSize={8.5}
+              fill="#666"
+            >
+              {Math.round(v).toLocaleString()}
+            </text>
+          ))}
+
+          {/* x축 레이블 */}
+          {xTicks.map((d) => {
+            const idx = data.indexOf(d);
+            return (
+              <text
+                key={d.time}
+                x={xScale(idx)}
+                y={cH + 14}
+                textAnchor="middle"
+                fontSize={8.5}
+                fill="#555"
+              >
+                {d.time}
+              </text>
+            );
+          })}
+        </g>
+      </svg>
+
+      <p className="text-center text-[10px] text-gray-600 mt-1">
+        KOSPI 1시간봉 · 실시간
+      </p>
+    </div>
   );
 }

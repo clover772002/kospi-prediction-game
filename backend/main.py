@@ -496,6 +496,38 @@ async def get_public_history(supabase: Client = Depends(get_supabase)):
     }
 
 
+@app.get("/api/public/kospi-chart")
+async def get_kospi_chart():
+    """오늘 KOSPI 1시간봉 데이터 (인증 불필요)"""
+    try:
+        ticker = yf.Ticker("^KS11")
+        hist = ticker.history(period="2d", interval="1h")
+        if hist.empty:
+            return {"data": []}
+
+        # KST 오늘 날짜
+        today_str = today_kst()
+        data = []
+        for idx, row in hist.iterrows():
+            # timezone-aware → KST 변환
+            kst_time = idx.tz_convert("Asia/Seoul") if idx.tzinfo else idx
+            date_str = kst_time.strftime("%Y-%m-%d")
+            if date_str != today_str:
+                continue
+            data.append({
+                "time": kst_time.strftime("%H:%M"),
+                "close": round(float(row["Close"]), 2),
+                "open": round(float(row["Open"]), 2),
+                "high": round(float(row["High"]), 2),
+                "low": round(float(row["Low"]), 2),
+            })
+
+        return {"data": data}
+    except Exception as e:
+        logger.error(f"KOSPI 차트 데이터 오류: {e}")
+        return {"data": []}
+
+
 @app.get("/api/public/backtest")
 async def get_backtest(supabase: Client = Depends(get_supabase)):
     """백테스트: 고수 강화예측 따라 KOSPI 추종 매매 수익률 (DB 데이터만 사용, 외부 API 없음)"""
