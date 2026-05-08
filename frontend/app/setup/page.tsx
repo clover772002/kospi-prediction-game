@@ -383,44 +383,145 @@ export default function SetupPage() {
 
               {/* iPhone — 아직 홈 화면에 추가 안 된 경우 */}
               {isIOS && !isStandalone && !isInApp && (
-                <div className="bg-[#1A1A1A] border border-orange-500/30 rounded-2xl p-5 space-y-4">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xl">🍎</span>
-                    <p className="font-bold text-orange-300 text-sm">iPhone 사용자 필독</p>
+                <div className="bg-[#1A1A1A] border border-orange-500/40 rounded-2xl overflow-hidden">
+                  {/* 헤더 */}
+                  <div className="bg-orange-500/20 px-4 py-3 flex items-center gap-2 border-b border-orange-500/20">
+                    <span className="text-lg">🍎</span>
+                    <div>
+                      <p className="font-black text-orange-300 text-sm">iPhone 알림 설정 방법</p>
+                      <p className="text-[11px] text-orange-400/70">홈 화면에 추가 후 알림 허용 (1분이면 끝!)</p>
+                    </div>
                   </div>
-                  <p className="text-xs text-gray-400 leading-relaxed">
-                    iPhone은 Safari에서 <span className="text-white font-bold">홈 화면에 추가</span>한 뒤 앱을 열어야 브라우저 알림을 사용할 수 있어요.
-                  </p>
-                  <ol className="space-y-3 text-xs text-gray-300">
-                    <li className="flex gap-3 items-start">
-                      <span className="bg-orange-500 text-white rounded-full w-5 h-5 flex items-center justify-center font-bold flex-shrink-0 text-xs">1</span>
-                      <span>Safari 하단 가운데 <span className="text-white font-bold">공유 버튼</span> (□↑) 탭</span>
-                    </li>
-                    <li className="flex gap-3 items-start">
-                      <span className="bg-orange-500 text-white rounded-full w-5 h-5 flex items-center justify-center font-bold flex-shrink-0 text-xs">2</span>
-                      <span>스크롤해서 <span className="text-white font-bold">홈 화면에 추가</span> 선택 → 추가</span>
-                    </li>
-                    <li className="flex gap-3 items-start">
-                      <span className="bg-orange-500 text-white rounded-full w-5 h-5 flex items-center justify-center font-bold flex-shrink-0 text-xs">3</span>
-                      <span>홈 화면에 생긴 <span className="text-white font-bold">앱 아이콘</span>으로 접속</span>
-                    </li>
-                    <li className="flex gap-3 items-start">
-                      <span className="bg-orange-500 text-white rounded-full w-5 h-5 flex items-center justify-center font-bold flex-shrink-0 text-xs">4</span>
-                      <span>설정 → 브라우저 알림 탭에서 <span className="text-white font-bold">알림 허용</span></span>
-                    </li>
-                  </ol>
-                  <button
-                    onClick={() => {
-                      if (typeof navigator !== "undefined") {
+
+                  <div className="p-4 space-y-5">
+
+                    {/* STEP 1 */}
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <span className="bg-orange-500 text-white text-[11px] font-black px-2 py-0.5 rounded-full">STEP 1</span>
+                        <p className="text-xs font-bold text-white">화면 하단 가운데 공유 버튼 탭</p>
+                      </div>
+                      {/* 시각적 예시 */}
+                      <div className="bg-[#111] rounded-xl p-3 border border-[#2A2A2A]">
+                        <p className="text-[10px] text-gray-500 mb-2 text-center">Safari 하단 바</p>
+                        <div className="flex items-center justify-around bg-[#1C1C1E] rounded-xl px-4 py-2.5">
+                          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#888" strokeWidth="1.8"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+                          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#888" strokeWidth="1.8"><path d="M5 12h14M12 19l7-7-7-7"/></svg>
+                          {/* 공유 버튼 강조 */}
+                          <div className="relative">
+                            <div className="absolute -inset-2 bg-orange-500/30 rounded-xl animate-pulse" />
+                            <div className="relative bg-orange-500 rounded-lg p-1.5">
+                              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/>
+                                <polyline points="16 6 12 2 8 6"/>
+                                <line x1="12" y1="2" x2="12" y2="15"/>
+                              </svg>
+                            </div>
+                            <p className="text-[9px] text-orange-400 text-center mt-0.5 font-bold">← 이거!</p>
+                          </div>
+                          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#888" strokeWidth="1.8"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>
+                          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#888" strokeWidth="1.8"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* STEP 2 */}
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <span className="bg-orange-500 text-white text-[11px] font-black px-2 py-0.5 rounded-full">STEP 2</span>
+                        <p className="text-xs font-bold text-white">팝업에서 &ldquo;홈 화면에 추가&rdquo; 선택</p>
+                      </div>
+                      <div className="bg-[#111] rounded-xl p-3 border border-[#2A2A2A]">
+                        <p className="text-[10px] text-gray-500 mb-2 text-center">공유 팝업 (스크롤해서 찾기)</p>
+                        <div className="space-y-1.5">
+                          {[
+                            { icon: "✉️", label: "메일" },
+                            { icon: "💬", label: "메시지" },
+                          ].map((item) => (
+                            <div key={item.label} className="flex items-center gap-3 bg-[#2C2C2E] rounded-xl px-3 py-2 opacity-40">
+                              <span className="text-base">{item.icon}</span>
+                              <span className="text-xs text-gray-300">{item.label}</span>
+                            </div>
+                          ))}
+                          {/* 홈 화면에 추가 — 강조 */}
+                          <div className="flex items-center gap-3 bg-orange-500/20 border-2 border-orange-500 rounded-xl px-3 py-2.5 relative">
+                            <div className="w-8 h-8 bg-[#2C2C2E] rounded-lg flex items-center justify-center flex-shrink-0">
+                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.2" strokeLinecap="round"><rect x="3" y="3" width="18" height="18" rx="3"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+                            </div>
+                            <span className="text-xs font-black text-white">홈 화면에 추가</span>
+                            <span className="ml-auto text-orange-400 text-xs font-black">← 탭!</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* STEP 3 */}
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <span className="bg-orange-500 text-white text-[11px] font-black px-2 py-0.5 rounded-full">STEP 3</span>
+                        <p className="text-xs font-bold text-white">우측 상단 &ldquo;추가&rdquo; 탭</p>
+                      </div>
+                      <div className="bg-[#111] rounded-xl p-3 border border-[#2A2A2A]">
+                        <p className="text-[10px] text-gray-500 mb-2 text-center">앱 이름 확인 화면</p>
+                        <div className="bg-[#1C1C1E] rounded-xl overflow-hidden">
+                          <div className="flex items-center justify-between px-4 py-2.5 border-b border-[#2A2A2A]">
+                            <span className="text-xs text-blue-400">취소</span>
+                            <span className="text-xs font-bold text-white">홈 화면에 추가</span>
+                            <div className="bg-orange-500 rounded-lg px-3 py-1">
+                              <span className="text-xs font-black text-white">추가 ←</span>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-3 px-4 py-3">
+                            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-600 to-blue-800 flex items-center justify-center text-xl flex-shrink-0">📊</div>
+                            <div>
+                              <p className="text-sm font-bold text-white">코스피 예측</p>
+                              <p className="text-[10px] text-gray-500">kospi-prediction.vercel.app</p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* STEP 4 */}
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <span className="bg-orange-500 text-white text-[11px] font-black px-2 py-0.5 rounded-full">STEP 4</span>
+                        <p className="text-xs font-bold text-white">홈 화면 아이콘으로 다시 접속!</p>
+                      </div>
+                      <div className="bg-[#111] rounded-xl p-3 border border-[#2A2A2A]">
+                        <p className="text-[10px] text-gray-500 mb-3 text-center">홈 화면에 생긴 아이콘 클릭</p>
+                        <div className="flex justify-center gap-6">
+                          {/* 다른 앱들 (흐릿) */}
+                          {["🎵","📸","🗺️"].map((e) => (
+                            <div key={e} className="flex flex-col items-center gap-1 opacity-30">
+                              <div className="w-14 h-14 bg-[#2C2C2E] rounded-2xl flex items-center justify-center text-2xl">{e}</div>
+                              <span className="text-[9px] text-gray-600">앱</span>
+                            </div>
+                          ))}
+                          {/* 우리 앱 강조 */}
+                          <div className="flex flex-col items-center gap-1 relative">
+                            <div className="absolute -inset-2 bg-orange-500/20 rounded-2xl animate-pulse" />
+                            <div className="relative w-14 h-14 bg-gradient-to-br from-blue-600 to-blue-800 rounded-2xl flex items-center justify-center text-2xl border-2 border-orange-400">📊</div>
+                            <span className="text-[9px] text-white font-bold">코스피</span>
+                            <span className="text-[9px] text-orange-400 font-black">↑ 클릭!</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* 주소 복사 버튼 */}
+                    <button
+                      onClick={() => {
                         navigator.clipboard.writeText(window.location.href).catch(() => {});
-                        alert("주소가 복사됐어요!\nSafari 주소창에 붙여넣기 후 홈 화면에 추가해주세요 📱");
-                      }
-                    }}
-                    className="w-full py-3 bg-orange-500 hover:bg-orange-400 text-white font-bold rounded-xl text-sm active:scale-95 transition-all"
-                  >
-                    📋 이 페이지 주소 복사하기
-                  </button>
-                  <p className="text-xs text-gray-600 text-center">복사 후 Safari 주소창에 붙여넣기 → 홈 화면에 추가</p>
+                        alert("주소가 복사됐어요!\nSafari 주소창에 붙여넣기 → 홈 화면에 추가해주세요 📱");
+                      }}
+                      className="w-full py-3 bg-orange-500 hover:bg-orange-400 text-white font-black rounded-xl text-sm active:scale-95 transition-all flex items-center justify-center gap-2"
+                    >
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                      이 페이지 주소 복사하기
+                    </button>
+                    <p className="text-[10px] text-gray-600 text-center">복사 후 Safari 주소창에 붙여넣기 → 홈 화면에 추가</p>
+                  </div>
                 </div>
               )}
 
