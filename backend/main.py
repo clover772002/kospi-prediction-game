@@ -1316,6 +1316,18 @@ async def nudge_group(
 
     today_str = today_kst()
 
+    # 현재 열려있는 설문 날짜 확인 (마감 전 설문 or 다음 거래일 예약 설문)
+    open_survey = (
+        supabase.table("daily_surveys")
+        .select("survey_date")
+        .eq("is_closed", False)
+        .is_("kospi_result", "null")
+        .order("survey_date")
+        .limit(1)
+        .execute()
+    )
+    target_date = open_survey.data[0]["survey_date"] if open_survey.data else today_str
+
     # 그룹명 + 발신자 이름
     grp = supabase.table("groups").select("name").eq("id", group_id).execute()
     group_name = grp.data[0]["name"] if grp.data else "그룹"
@@ -1323,14 +1335,14 @@ async def nudge_group(
     sender_name = sender_row.data[0]["name"] if sender_row.data else "익명"
     sender_masked = (sender_name[0] + "**") if sender_name else "익명"
 
-    # 전체 멤버 중 오늘 미참여자
+    # 전체 멤버 중 대상 설문 미참여자
     members = supabase.table("group_members").select("user_id").eq("group_id", group_id).execute()
     notified = 0
     for m in members.data:
         uid = m["user_id"]
         if uid == user_id:
             continue  # 자기 자신 제외
-        voted = supabase.table("survey_responses").select("id").eq("user_id", uid).eq("survey_date", today_str).execute()
+        voted = supabase.table("survey_responses").select("id").eq("user_id", uid).eq("survey_date", target_date).execute()
         if voted.data:
             continue  # 이미 참여한 멤버 제외
 
