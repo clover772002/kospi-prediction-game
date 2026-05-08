@@ -280,6 +280,55 @@ export default function SurveyPage() {
       </div>
 
       {/* 설문 없음 — 대기중 vs 휴장일 구분 */}
+      {/* 주말·no_survey 상태에서 다음 거래일 예측 섹션 */}
+      {status === "no_survey" && nextSurvey?.is_open && (
+        <div className="mt-4 space-y-4">
+          <div className="border-t border-[#2A2A2A] pt-5">
+            {(() => {
+              const { shortLabel } = getSurveyDayLabel(nextSurvey.survey_date);
+              return (
+                <>
+                  <p className="text-center text-xs text-gray-500 mb-1">{shortLabel} 예측 미리하기</p>
+                  <p className="text-center font-black text-white text-base mb-4">
+                    📅 {nextSurvey.survey_date.slice(5).replace("-","/")} 코스피 어떨까요?
+                  </p>
+                </>
+              );
+            })()}
+            {nextSubmitted || nextAlreadyAnswered ? (
+              <div className="flex flex-col items-center gap-3 text-center">
+                <div className="text-4xl">✅</div>
+                <p className="text-white font-bold">{getSurveyDayLabel(nextSurvey.survey_date).shortLabel} 예측 완료!</p>
+                <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-2xl p-4 w-full">
+                  <p className="text-xs text-gray-400 mb-1">내 예측</p>
+                  <p className={`font-bold ${(nextSubmitted ? nextKospiAnswer : nextPreviousAnswer) ? "text-green-400" : "text-blue-400"}`}>
+                    {(nextSubmitted ? nextKospiAnswer : nextPreviousAnswer) ? "📈 상승" : "📉 하락"}
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <>
+                <div className="grid grid-cols-2 gap-3">
+                  <button onClick={() => setNextKospiAnswer(true)}
+                    className={`py-5 rounded-2xl font-black text-xl transition-all active:scale-95 border-2 ${nextKospiAnswer === true ? "bg-green-500 border-green-400 text-white" : "bg-[#111] border-[#333] text-gray-400 hover:border-green-600"}`}>
+                    📈 상승
+                  </button>
+                  <button onClick={() => setNextKospiAnswer(false)}
+                    className={`py-5 rounded-2xl font-black text-xl transition-all active:scale-95 border-2 ${nextKospiAnswer === false ? "bg-red-500 border-red-400 text-white" : "bg-[#111] border-[#333] text-gray-400 hover:border-red-600"}`}>
+                    📉 하락
+                  </button>
+                </div>
+                <button onClick={handleNextSubmit}
+                  disabled={nextKospiAnswer === null || nextSubmitting}
+                  className="w-full mt-3 py-5 bg-amber-500 hover:bg-amber-400 disabled:bg-[#333] disabled:text-gray-500 text-white font-black text-xl rounded-2xl transition-all active:scale-95">
+                  {nextSubmitting ? "제출 중..." : `${getSurveyDayLabel(nextSurvey.survey_date).shortLabel} 예측 제출하기`}
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
       {status === "no_survey" && (() => {
         const kst = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Seoul" }));
         const day = kst.getDay();
@@ -489,8 +538,8 @@ export default function SurveyPage() {
             <KospiChart />
           </div>
 
-          {/* 다음 거래일 미리 예측하기 (결과 공개 후 or 주말 no_survey) */}
-          {(status === "result" || status === "no_survey") && nextSurvey?.is_open && (
+          {/* 다음 거래일 미리 예측하기 (결과 공개 후) */}
+          {status === "result" && nextSurvey?.is_open && (
             <div className="mt-2 space-y-4">
               <div className="border-t border-[#2A2A2A] pt-5">
                 {(() => {
