@@ -212,8 +212,11 @@ export default function GroupsPage() {
             <div className="flex gap-1.5 flex-wrap">
               {groups.map((g) => (
                 <button key={g.group_id} onClick={() => setSelectedId(g.group_id)}
-                  className={`text-sm font-bold px-4 py-2 rounded-xl transition-all ${selectedId === g.group_id ? "bg-green-600 text-white" : "bg-[#1A1A1A] text-gray-400 border border-[#2A2A2A]"}`}>
+                  className={`flex items-center gap-1.5 text-sm font-bold px-4 py-2 rounded-xl transition-all ${selectedId === g.group_id ? "bg-green-600 text-white" : "bg-[#1A1A1A] text-gray-400 border border-[#2A2A2A]"}`}>
                   {g.name}
+                  <span className={`text-[11px] font-black px-1.5 py-0.5 rounded-full ${selectedId === g.group_id ? "bg-white/20 text-white" : "bg-[#2A2A2A] text-gray-500"}`}>
+                    {g.member_count}
+                  </span>
                 </button>
               ))}
             </div>
