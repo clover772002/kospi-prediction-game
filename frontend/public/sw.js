@@ -31,12 +31,9 @@ self.addEventListener("push", (event) => {
     }
   }
 
-  // iOS Safari는 requireInteraction, actions 일부 미지원 → 제거
   const options = {
     body,
-    icon: "/icon-192.png",
-    badge: "/icon-192.png",
-    tag,          // 같은 tag면 덮어써서 중복 방지
+    tag,
     data: { url },
   };
 
