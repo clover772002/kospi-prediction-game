@@ -531,45 +531,8 @@ export default function DashboardPage() {
         </div>
 
 
-        {/* ── 오늘의 예측 참여자 리스트 ────────────────────── */}
-        {today?.participants && today.participants.length > 0 && (
-          <div className="bg-[#1A1A1A] rounded-2xl p-5 border border-[#2A2A2A] fade-up-3 card-hover">
-            <div className="mb-3">
-              <p className="font-bold text-sm">오늘의 예측</p>
-            </div>
-            {/* 헤더 */}
-            <div className="grid grid-cols-3 text-xs text-gray-500 px-2 pb-2 border-b border-[#2A2A2A]">
-              <span>닉네임</span>
-              <span className="text-center">예측</span>
-              <span className="text-right">적중률</span>
-            </div>
-            {/* 참여자 행 */}
-            <div className="divide-y divide-[#2A2A2A]">
-              {today.participants.map((p, i) => {
-                const isTop = today.top_predictor?.masked_name === p.masked_name;
-                const isWorst = today.worst_predictor?.masked_name === p.masked_name;
-                return (
-                  <div key={i} className="grid grid-cols-3 items-center py-2.5 px-2">
-                    <span className="text-sm font-bold text-white flex items-center gap-1 truncate">
-                      {isTop && <span className="text-yellow-400">👑</span>}
-                      {isWorst && <span>🤡</span>}
-                      {p.masked_name}
-                    </span>
-                    <span className={`text-xs font-bold text-center ${p.kospi_answer ? "text-green-400" : "text-red-400"}`}>
-                      {p.kospi_answer ? "📈 상승" : "📉 하락"}
-                    </span>
-                    <span className="text-xs text-gray-400 text-right">
-                      {p.accuracy !== null ? `${p.accuracy}%` : "-"}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
-
         {/* ── 내 통계 + 예측 이력 ──────────────────────────── */}
-        <div className="bg-[#1A1A1A] rounded-2xl p-5 border border-[#2A2A2A] fade-up-4">
+        <div className="bg-[#1A1A1A] rounded-2xl p-5 border border-[#2A2A2A] fade-up-3">
           <div className="flex items-center justify-between mb-4">
             <p className="font-bold text-sm">내 통계</p>
             {streak >= 2 && (
@@ -617,6 +580,130 @@ export default function DashboardPage() {
             </div>
           ) : null}
         </div>
+
+        {/* ── 오늘의 대결 순위 ──────────────────────────────── */}
+        {today?.participants && today.participants.length > 0 && (() => {
+          const myEntry = dash?.history?.find((h) => h.date === today.survey_date);
+          const myAcc   = dash?.accuracy?.kospi;
+
+          // 적중률 내림차순 정렬 (null은 맨 뒤)
+          const sorted = [...today.participants].sort((a, b) => {
+            if (a.accuracy === null && b.accuracy === null) return 0;
+            if (a.accuracy === null) return 1;
+            if (b.accuracy === null) return -1;
+            return b.accuracy - a.accuracy;
+          });
+
+          // 내 행 찾기: 예측 + 적중률 일치
+          const myIdx = sorted.findIndex(
+            (p) => p.accuracy === myAcc && p.kospi_answer === myEntry?.kospi_answer
+          );
+
+          const medals = ["🥇", "🥈", "🥉"];
+
+          return (
+            <div className="bg-[#1A1A1A] rounded-2xl border border-[#2A2A2A] fade-up-5 overflow-hidden">
+              {/* 헤더 */}
+              <div className="flex items-center justify-between px-5 pt-5 pb-3">
+                <div>
+                  <p className="font-black text-sm text-white">🏆 오늘의 대결</p>
+                  <p className="text-[10px] text-gray-500 mt-0.5">적중률 기준 순위</p>
+                </div>
+                <span className="text-xs text-gray-500 bg-[#252525] px-2.5 py-1 rounded-full">
+                  {sorted.length}명 참여
+                </span>
+              </div>
+
+              {/* 1·2·3위 포디움 */}
+              {sorted.length >= 2 && (
+                <div className="flex items-end justify-center gap-2 px-5 pb-4">
+                  {[1, 0, 2].map((rankIdx) => {
+                    const p = sorted[rankIdx];
+                    if (!p) return <div key={rankIdx} className="flex-1" />;
+                    const isMe = rankIdx === myIdx;
+                    const heights = ["h-20", "h-24", "h-16"];
+                    const podiumH = heights[rankIdx === 0 ? 1 : rankIdx === 1 ? 0 : 2];
+                    const borderColors = ["border-yellow-400/50", "border-gray-300/30", "border-amber-600/40"];
+                    const bc = borderColors[rankIdx === 0 ? 1 : rankIdx === 1 ? 0 : 2];
+                    return (
+                      <div key={rankIdx} className="flex-1 flex flex-col items-center gap-1">
+                        {isMe && <span className="text-[9px] text-blue-400 font-bold">나</span>}
+                        <span className="text-lg">{medals[rankIdx === 0 ? 1 : rankIdx === 1 ? 0 : 2]}</span>
+                        <p className="text-[10px] text-gray-300 font-bold truncate max-w-full px-1">{p.masked_name}</p>
+                        <div className={`w-full ${podiumH} rounded-t-lg border ${bc} flex items-end justify-center pb-2 ${
+                          isMe ? "bg-blue-500/20" : "bg-[#252525]"
+                        }`}>
+                          <span className="text-xs font-black text-white">
+                            {p.accuracy !== null ? `${p.accuracy}%` : "신규"}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* 전체 순위 리스트 */}
+              <div className="border-t border-[#2A2A2A]">
+                <div className="grid grid-cols-[28px_1fr_60px_52px] text-[10px] text-gray-600 px-4 py-2">
+                  <span>#</span><span>닉네임</span><span className="text-center">예측</span><span className="text-right">적중률</span>
+                </div>
+                <div className="divide-y divide-[#222]">
+                  {sorted.map((p, i) => {
+                    const isMe = i === myIdx;
+                    const result = today.kospi_result !== null
+                      ? (p.kospi_answer === today.kospi_result ? "✅" : "❌")
+                      : null;
+                    return (
+                      <div
+                        key={i}
+                        className={`grid grid-cols-[28px_1fr_60px_52px] items-center px-4 py-3 transition-colors ${
+                          isMe ? "bg-blue-500/10 border-l-2 border-blue-500" : ""
+                        }`}
+                      >
+                        {/* 순위 */}
+                        <span className="text-sm">
+                          {i < 3 ? medals[i] : <span className="text-gray-500 text-xs">{i + 1}</span>}
+                        </span>
+                        {/* 이름 */}
+                        <span className="text-sm font-bold text-white flex items-center gap-1.5 truncate">
+                          {p.masked_name}
+                          {isMe && (
+                            <span className="text-[9px] bg-blue-500 text-white px-1.5 py-0.5 rounded-full font-black flex-shrink-0">나</span>
+                          )}
+                        </span>
+                        {/* 예측 + 결과 */}
+                        <span className={`text-[11px] font-bold text-center flex items-center justify-center gap-0.5 ${
+                          p.kospi_answer ? "text-green-400" : "text-red-400"
+                        }`}>
+                          {p.kospi_answer ? "📈" : "📉"}
+                          {result && <span className="text-xs">{result}</span>}
+                        </span>
+                        {/* 적중률 */}
+                        <span className={`text-xs text-right font-bold ${
+                          i === 0 ? "text-yellow-400" : i === 1 ? "text-gray-300" : i === 2 ? "text-amber-600" : "text-gray-400"
+                        }`}>
+                          {p.accuracy !== null ? `${p.accuracy}%` : "신규"}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* 내 위치 */}
+              {myIdx >= 0 && (
+                <div className="px-5 py-3 border-t border-[#2A2A2A] flex items-center justify-between">
+                  <p className="text-xs text-gray-500">내 순위</p>
+                  <p className="text-sm font-black text-white">
+                    {myIdx < 3 ? medals[myIdx] : `${myIdx + 1}위`}
+                    <span className="text-xs text-gray-500 font-normal ml-1">/ {sorted.length}명 중</span>
+                  </p>
+                </div>
+              )}
+            </div>
+          );
+        })()}
       </div>
 
       {/* 하단 내비 */}
