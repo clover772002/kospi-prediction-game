@@ -30,7 +30,7 @@ export default function SetupPage() {
   const [botOpened, setBotOpened] = useState(false);
   const [checkFailed, setCheckFailed] = useState(false);
   const [unlinking, setUnlinking] = useState(false);
-  const [tab, setTab] = useState<"telegram" | "webpush" | "groups">("telegram");
+  const [tab, setTab] = useState<"telegram" | "webpush" | "groups">("webpush");
   const [pushLinked, setPushLinked]   = useState(false);
   const [pushLoading, setPushLoading] = useState(false);
   const [pushError, setPushError]     = useState<string | null>(null);
@@ -61,7 +61,6 @@ export default function SetupPage() {
           }
           if (profile.has_push) {
             setPushLinked(true);
-            setTab("webpush");
           }
         } catch (e) {
           console.error(e);
@@ -200,21 +199,35 @@ export default function SetupPage() {
         </div>
       )}
 
-      {/* 탭 (텔레그램 / 브라우저 알림) */}
-      <div className="flex gap-1.5 mb-3">
-        <button
-          onClick={() => setTab("telegram")}
-          className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all ${tab === "telegram" ? "bg-blue-600 text-white" : "bg-[#1A1A1A] text-gray-400 border border-[#2A2A2A]"}`}
-        >
-          ✈️ 텔레그램
-        </button>
+      {/* 탭 (브라우저 알림 / 텔레그램) */}
+      <div className="flex gap-1.5 mb-1">
         <button
           onClick={() => setTab("webpush")}
           className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all ${tab === "webpush" ? "bg-purple-600 text-white" : "bg-[#1A1A1A] text-gray-400 border border-[#2A2A2A]"}`}
         >
-          🔔 브라우저
+          🔔 브라우저 알림
+        </button>
+        <button
+          onClick={() => setTab("telegram")}
+          className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all ${tab === "telegram" ? "bg-[#0088CC] text-white" : "bg-[#1A1A1A] text-gray-400 border border-[#2A2A2A]"}`}
+        >
+          ✈️ 텔레그램
         </button>
       </div>
+      {/* 텔레그램 탭 유도 문구 */}
+      {tab === "webpush" && !pushLinked && (
+        <p className="text-[10px] text-gray-600 text-right mb-3">
+          매번 접속이 귀찮다면?{" "}
+          <button onClick={() => setTab("telegram")} className="text-gray-400 underline underline-offset-2 hover:text-gray-300 transition-colors">
+            텔레그램 봇 연결하기 →
+          </button>
+        </p>
+      )}
+      {tab === "telegram" && !linked && (
+        <p className="text-[10px] text-blue-400/70 text-center mb-3">
+          ✈️ 버튼 한 번으로 설문 알림을 받아요 — 매일 앱을 열 필요 없어요
+        </p>
+      )}
 
       {/* 알림 방식 탭 내부 중복 버튼 (숨김) */}
       {!linked && !pushLinked && (
@@ -293,11 +306,24 @@ export default function SetupPage() {
           <div className="bg-purple-500/10 border border-purple-500/30 rounded-2xl p-6 text-center space-y-3">
             <div className="text-5xl">🔔</div>
             <p className="font-black text-lg text-purple-400">브라우저 알림 연결 완료!</p>
-            <p className="text-sm text-gray-400">매일 밤 <span className="text-white font-bold">22:00</span>에 알림이 도착합니다.</p>
+            <p className="text-sm text-gray-400">
+              매일 밤 <span className="text-white font-bold">22:00</span>에 알림이 도착합니다.<br />
+              알림을 탭하면 바로 설문 페이지로 이동해요.
+            </p>
           </div>
           <button onClick={() => router.push("/dashboard")} className="w-full py-4 bg-blue-600 hover:bg-blue-500 text-white font-black text-lg rounded-2xl transition-all active:scale-95">
             ← 대시보드로 이동
           </button>
+          {/* 텔레그램 서브 유도 */}
+          {!linked && (
+            <button
+              onClick={() => setTab("telegram")}
+              className="w-full py-3 bg-[#1A1A1A] border border-[#0088CC]/30 text-[#0088CC]/70 hover:text-[#0088CC] hover:border-[#0088CC]/60 rounded-xl text-sm transition-all flex items-center justify-center gap-2"
+            >
+              <span>✈️</span>
+              <span>매번 접속이 귀찮다면? 텔레그램 봇으로 더 편하게</span>
+            </button>
+          )}
           <button
             onClick={async () => {
               if (!token) return;

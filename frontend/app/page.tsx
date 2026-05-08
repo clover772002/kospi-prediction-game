@@ -43,25 +43,35 @@ const FEATURES = [
   {
     icon: "📱",
     title: "설문",
-    desc: "매일 밤 22:00 O/X 설문이 텔레그램으로 발송돼요",
+    desc: "매일 밤 22:00 알림이 오면 웹앱에서 클릭 한 번",
     detail: {
-      summary: "텔레그램은 전 세계 9억 명이 사용하는 메신저로, 별도 앱 설치만 하면 끝입니다. 복잡한 가입 없이 봇 하나로 설문을 받고 결과를 받아볼 수 있어요.",
+      summary: "브라우저 알림을 허용하면 매일 밤 알림이 와요. 알림을 탭하면 바로 설문 페이지로 이동하고, O/X 클릭 한 번으로 참여 완료입니다.",
       steps: [
-        "① 앱스토어에서 'Telegram' 검색 후 설치",
-        "② 로그인 후 봇 연동 버튼 클릭",
-        "③ 매일 아침 설문 메시지 수신",
-        "💡 텔레그램 봇이 부담된다면? 브라우저 알림으로도 받을 수 있으니 안심하세요",
+        "① 로그인 후 설정 → 브라우저 알림 허용",
+        "② 매일 밤 22:00 알림 수신",
+        "③ 알림 탭 → 설문 페이지에서 클릭 한 번",
+        "💡 매번 접속이 귀찮다면? 텔레그램 봇 연결 시 메시지로 바로 참여 가능",
       ],
       mockup: (
-        <div className="bg-[#212d3b] rounded-2xl p-4 mt-3 text-sm">
-          <div className="text-gray-400 text-xs mb-3">📨 오늘 장 예측 봇</div>
-          <div className="bg-[#2b5278] rounded-xl p-3 mb-2 text-white">
-            📊 <b>오늘 장 예측 설문</b><br />
-            <span className="text-gray-300 text-xs">코스피(KOSPI)는 오늘 어떻게 될까요?</span>
+        <div className="mt-3 space-y-2 text-sm">
+          {/* 브라우저 알림 mockup */}
+          <div className="bg-[#1A1A1A] border border-[#333] rounded-2xl p-4">
+            <div className="flex items-start gap-3">
+              <div className="w-9 h-9 rounded-xl bg-purple-600 flex items-center justify-center text-base flex-shrink-0">📊</div>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-bold text-white">오늘 코스피 예측 설문</p>
+                <p className="text-[11px] text-gray-400">오늘 코스피 어떻게 될까요? 지금 참여하세요</p>
+                <p className="text-[10px] text-gray-600 mt-0.5">오늘 코스피, 함께 맞춰요 · 지금</p>
+              </div>
+            </div>
           </div>
-          <div className="flex gap-2">
-            <div className="flex-1 bg-[#2b5278] rounded-lg py-2 text-center text-green-400 text-xs font-bold">📈 오른다</div>
-            <div className="flex-1 bg-[#2b5278] rounded-lg py-2 text-center text-red-400 text-xs font-bold">📉 내린다</div>
+          {/* 설문 UI mockup */}
+          <div className="bg-[#111] border border-[#2A2A2A] rounded-2xl p-4">
+            <p className="text-[11px] text-gray-400 mb-2">알림 탭 → 바로 설문 참여</p>
+            <div className="flex gap-2">
+              <div className="flex-1 bg-green-500/20 border border-green-500/40 rounded-xl py-3 text-center text-green-400 text-xs font-bold">📈 상승</div>
+              <div className="flex-1 bg-red-500/20 border border-red-500/40 rounded-xl py-3 text-center text-red-400 text-xs font-bold">📉 하락</div>
+            </div>
           </div>
         </div>
       ),
@@ -610,16 +620,16 @@ export default function LoginPage() {
               a: "소셜 로그인 시 이름·이메일이 저장됩니다. 채팅 내용·연락처·위치는 수집하지 않아요. 자세한 내용은 하단 개인정보처리방침을 확인해 주세요.",
             },
             {
-              q: "텔레그램이 꼭 있어야 하나요? 찝찝한데요",
-              a: "연결되는 건 '봇'이라는 자동 프로그램이에요. 사람과 채팅하는 게 아니고, 내 연락처·채팅 내용은 전혀 공유되지 않아요. 매일 아침 설문 하나 보내고 결과 알려주는 게 전부입니다. 언제든 봇 차단 한 번으로 알림을 끌 수 있어요.",
+              q: "알림은 어떻게 받나요?",
+              a: "로그인 후 설정 페이지에서 '브라우저 알림 허용'을 탭하면 바로 연결돼요. 매일 밤 22:00에 알림이 오고, 탭하면 설문 페이지로 이동해요. 앱 설치 없이 바로 사용 가능합니다.",
             },
             {
-              q: "텔레그램 봇 연동은 어떻게 하나요?",
-              a: "로그인 후 대시보드에서 '텔레그램 연동' 버튼을 누르면 봇 링크가 나와요. 링크를 클릭하면 텔레그램이 열리고, 시작 버튼만 누르면 완료입니다. 1분이면 끝나요.",
+              q: "텔레그램이 꼭 필요한가요?",
+              a: "아니에요! 브라우저 알림만으로 충분해요. 텔레그램은 선택 사항이에요. 매번 앱을 열기 귀찮다면 텔레그램 봇을 연결하면 메시지에서 바로 참여할 수 있어서 더 편리하긴 해요.",
             },
             {
-              q: "설문이 안 왔어요 / 봇이 메시지를 안 보내요",
-              a: "① 대시보드에서 텔레그램 연동이 완료됐는지 확인해주세요. ② 텔레그램에서 봇을 차단했는지 확인해주세요. ③ 설문은 평일 밤 22:00에 발송됩니다 (주말·공휴일 제외). 그래도 해결이 안 되면 forsmartonly@gmail.com으로 문의해 주세요.",
+              q: "알림이 안 와요",
+              a: "① 설정 → 브라우저 알림이 '연동됨'인지 확인해주세요. ② 기기 설정에서 브라우저 알림이 허용돼 있는지 확인해주세요. ③ iPhone은 Safari에서 홈 화면에 추가 후 알림이 작동해요. 해결이 안 되면 forsmartonly@gmail.com으로 문의해 주세요.",
             },
           ].map((item, i) => (
             <FaqItem key={i} q={item.q} a={item.a} />
