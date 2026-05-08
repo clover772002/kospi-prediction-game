@@ -790,6 +790,7 @@ export default function DashboardPage() {
           );
 
           const medals = ["🥇", "🥈", "🥉"];
+          const tooFew = sorted.length < 5;
 
           return (
             <div className="bg-[#1A1A1A] rounded-2xl border border-[#2A2A2A] fade-up-5 overflow-hidden">
@@ -799,13 +800,58 @@ export default function DashboardPage() {
                   <p className="font-black text-sm text-white">🏆 전국대결</p>
                   <p className="text-[10px] text-gray-500 mt-0.5">적중률 기준 순위</p>
                 </div>
-                <span className="text-xs text-gray-500 bg-[#252525] px-2.5 py-1 rounded-full">
+                {!tooFew && <span className="text-xs text-gray-500 bg-[#252525] px-2.5 py-1 rounded-full">
                   {sorted.length}명 참여
-                </span>
+                </span>}
               </div>
 
+              {/* 참여자 부족 시 초대 유도 */}
+              {tooFew && (
+                <div className="px-5 pb-5">
+                  <div className="bg-[#111] border border-dashed border-[#333] rounded-xl p-4 text-center space-y-2">
+                    <p className="text-2xl">👥</p>
+                    <p className="text-sm font-bold text-white">아직 대결 상대가 부족해요</p>
+                    <p className="text-[11px] text-gray-500 leading-relaxed">
+                      투자 잘하는 친구, 못하는 친구 모두 초대해보세요.<br/>
+                      참여자가 많을수록 예측 정확도가 올라가요!
+                    </p>
+                    <button
+                      onClick={() => {
+                        if (navigator.share) {
+                          navigator.share({
+                            title: "주식장 직전 8:48, 코스피 예측",
+                            text: "투자 잘하거나 못하는 친구가 있나요? 같이 코스피 예측해봐요!",
+                            url: window.location.origin,
+                          });
+                        } else {
+                          navigator.clipboard.writeText(window.location.origin);
+                          alert("링크가 복사됐어요!");
+                        }
+                      }}
+                      className="mt-1 bg-yellow-500 hover:bg-yellow-400 text-black text-xs font-black px-4 py-2 rounded-full transition-colors"
+                    >
+                      친구 초대하기 🔗
+                    </button>
+                    {/* 현재 참여자 목록 (소규모라도 표시) */}
+                    {sorted.length > 0 && (
+                      <div className="mt-2 pt-2 border-t border-[#2A2A2A] space-y-1">
+                        {sorted.map((p, i) => (
+                          <div key={i} className="flex items-center justify-between text-[11px] text-gray-400">
+                            <span>{medals[i] ?? "•"} {p.masked_name}</span>
+                            <span className={p.kospi_answer ? "text-green-400" : "text-red-400"}>
+                              {p.kospi_answer ? "📈 상승" : "📉 하락"}
+                              {p.accuracy != null && <span className="text-gray-500 ml-1">({p.accuracy}%)</span>}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
               {/* 1·2·3위 포디움 */}
-              {sorted.length >= 2 && (
+              {!tooFew && sorted.length >= 2 && (
                 <div className="flex items-end justify-center gap-2 px-5 pb-4">
                   {/* 시각적 순서: 2위(left) → 1위(center) → 3위(right) */}
                   {[1, 0, 2].map((rankIdx) => {
@@ -836,7 +882,7 @@ export default function DashboardPage() {
               )}
 
                 {/* 전체 순위 리스트 */}
-              <div className="border-t border-[#2A2A2A]">
+              {!tooFew && <div className="border-t border-[#2A2A2A]">
                 <div className="grid grid-cols-[28px_1fr_56px_44px_60px] text-[10px] text-gray-600 px-4 py-2">
                   <span>#</span><span>닉네임</span><span className="text-center">예측</span><span className="text-right">적중률</span><span></span>
                 </div>
@@ -902,10 +948,10 @@ export default function DashboardPage() {
                     );
                   })}
                 </div>
-              </div>
+              </div>}
 
               {/* 내 위치 */}
-              {myIdx >= 0 && (
+              {!tooFew && myIdx >= 0 && (
                 <div className="px-5 py-3 border-t border-[#2A2A2A] flex items-center justify-between">
                   <p className="text-xs text-gray-500">내 순위</p>
                   <p className="text-sm font-black text-white">

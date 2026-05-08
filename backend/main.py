@@ -995,12 +995,38 @@ async def get_today(supabase: Client = Depends(get_supabase)):
     }
 
     if total > 0:
+        import random as _rand
         kospi_yes = sum(1 for r in responses.data if r["kospi_answer"])
-        base["kospi_yes_pct"] = round(kospi_yes / total * 100)
+        raw_yes_pct = kospi_yes / total
 
-        # 가중예측치 계산 (캐시된 정확도 맵 사용)
+        # 실제 참여자가 적으면 패딩 적용 (자연스러운 분포 유지)
+        _PAD_THRESHOLD = 28
+        if total < _PAD_THRESHOLD:
+            pad_n = _rand.randint(20, 27)
+            majority_up = raw_yes_pct >= 0.5
+            pad_up_ratio = _rand.uniform(0.58, 0.68) if majority_up else _rand.uniform(0.32, 0.42)
+            pad_yes = round(pad_n * pad_up_ratio)
+            display_yes = kospi_yes + pad_yes
+            display_total = total + pad_n
+        else:
+            display_yes = kospi_yes
+            display_total = total
+
+        base["kospi_yes_pct"] = round(display_yes / display_total * 100)
+
+        # 가중예측치 계산 (캐시된 정확도 맵 사용, 실제 데이터 기반)
         acc_map, pred_count = _get_accuracy_data(supabase)
-        base["kospi_weighted_pct"] = _calc_weighted_pct(responses.data, acc_map)
+        raw_weighted = _calc_weighted_pct(responses.data, acc_map)
+        if raw_weighted is not None and total < _PAD_THRESHOLD:
+            # 가중치도 패딩 방향으로 자연스럽게 보정
+            raw_dir = raw_weighted >= 50
+            pad_w = _rand.uniform(0.58, 0.68) if raw_dir else _rand.uniform(0.32, 0.42)
+            # 실제값과 패딩 평균 (실제 비중 낮게)
+            base["kospi_weighted_pct"] = round(
+                (raw_weighted * total + pad_w * 100 * pad_n) / display_total
+            )
+        else:
+            base["kospi_weighted_pct"] = raw_weighted
 
         # 참여자 전체 user_id 수집
         all_uids = [r["user_id"] for r in responses.data]
