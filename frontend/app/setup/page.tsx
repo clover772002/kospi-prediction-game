@@ -547,7 +547,8 @@ export default function SetupPage() {
                           setPushError("알림 권한이 거부됐어요. 브라우저 설정에서 허용해주세요.");
                           return;
                         }
-                        const reg = await navigator.serviceWorker.register("/sw.js");
+                        const reg = await navigator.serviceWorker.register("/sw.js", { updateViaCache: "none" });
+                        await reg.update();
                         await navigator.serviceWorker.ready;
                         const vapidKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
                           || await getVapidPublicKey();
