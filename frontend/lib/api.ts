@@ -111,6 +111,8 @@ export interface Challenge {
   is_sent: boolean;
   my_reaction: string | null;
   opp_reaction: string | null;
+  accepted: boolean | null;   // null=수락대기, true=수락, false=거절
+  duel_group_id: string | null;
 }
 
 export interface TodaySurvey {
@@ -246,6 +248,20 @@ export async function nudgeGroup(
   group_id: string,
 ): Promise<{ ok: boolean; notified: number; message: string }> {
   return authFetch(`/api/groups/${group_id}/nudge`, token, { method: "POST" });
+}
+
+export async function acceptChallenge(
+  token: string,
+  challenge_id: string,
+): Promise<{ ok: boolean; group_id: string; group_name: string }> {
+  return authFetch(`/api/challenges/${challenge_id}/accept`, token, { method: "POST" });
+}
+
+export async function declineChallenge(
+  token: string,
+  challenge_id: string,
+): Promise<{ ok: boolean }> {
+  return authFetch(`/api/challenges/${challenge_id}/decline`, token, { method: "POST" });
 }
 
 export async function requestRematch(

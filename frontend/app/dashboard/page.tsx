@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
-import { getMe, getToday, getDashboard, createChallenge, getMyChallenges, reactToChallenge, requestRematch, getMyGroups, getGroupLeaderboard, UserProfile, TodaySurvey, DashboardData, Challenge, Group, GroupLeaderboard } from "@/lib/api";
+import { getMe, getToday, getDashboard, createChallenge, getMyChallenges, reactToChallenge, requestRematch, acceptChallenge, declineChallenge, getMyGroups, getGroupLeaderboard, UserProfile, TodaySurvey, DashboardData, Challenge, Group, GroupLeaderboard } from "@/lib/api";
 import ShareSheet from "@/components/ShareSheet";
 
 // 연속 적중 스트릭 계산
@@ -57,6 +57,7 @@ export default function DashboardPage() {
   const [challengeToast, setChallengeToast]       = useState<string | null>(null);
   const [reactingId, setReactingId]               = useState<string | null>(null); // challenge id 이모티콘 피커 열림
   const [rematchLoading, setRematchLoading]        = useState<string | null>(null);
+  const [acceptLoading, setAcceptLoading]          = useState<string | null>(null); // challenge_id
   const [myGroups, setMyGroups]                    = useState<Group[]>([]);
   const [selectedGroupId, setSelectedGroupId]      = useState<string | null>(null);
   const [groupLeaderboard, setGroupLeaderboard]    = useState<GroupLeaderboard | null>(null);
@@ -156,6 +157,40 @@ export default function DashboardPage() {
   const showToast = (msg: string) => {
     setChallengeToast(msg);
     setTimeout(() => setChallengeToast(null), 3000);
+  };
+
+  const handleAccept = async (challenge_id: string) => {
+    if (!token) return;
+    setAcceptLoading(challenge_id);
+    try {
+      const res = await acceptChallenge(token, challenge_id);
+      setChallengeToast(`대결 수락! "${res.group_name}" 그룹이 생성됐어요 🔥`);
+      // 그룹 목록 갱신
+      const groups = await getMyGroups(token);
+      setMyGroups(groups);
+      // 대결 목록 갱신
+      const updated = await getMyChallenges(token);
+      setChallenges(updated);
+    } catch (e: unknown) {
+      setChallengeToast(e instanceof Error ? e.message : "수락 실패");
+    } finally {
+      setAcceptLoading(null);
+      setTimeout(() => setChallengeToast(null), 3000);
+    }
+  };
+
+  const handleDecline = async (challenge_id: string) => {
+    if (!token) return;
+    try {
+      await declineChallenge(token, challenge_id);
+      setChallengeToast("대결을 거절했어요");
+      const updated = await getMyChallenges(token);
+      setChallenges(updated);
+    } catch (e: unknown) {
+      setChallengeToast(e instanceof Error ? e.message : "거절 실패");
+    } finally {
+      setTimeout(() => setChallengeToast(null), 2500);
+    }
   };
 
   const handleChallenge = async (challenged_user_id: string, survey_date: string) => {
@@ -903,7 +938,10 @@ export default function DashboardPage() {
           const REACTIONS = ["😄", "😢", "😝"] as const;
 
           const outcomeInfo = (c: Challenge) => {
-            if (c.outcome === "pending")   return { text: "대기중",  color: "text-gray-500",   icon: "⏳" };
+            if (c.accepted === false) return { text: "거절됨",  color: "text-gray-600",   icon: "✖" };
+            if (c.accepted === null && !c.is_sent) return { text: "수락 대기",  color: "text-orange-400", icon: "⏳" };
+            if (c.accepted === null &&  c.is_sent) return { text: "수락 대기",  color: "text-gray-500",   icon: "⏳" };
+            if (c.outcome === "pending")   return { text: "결과 대기",  color: "text-gray-500",   icon: "⏳" };
             if (c.outcome === "no_result") return { text: "미참여",  color: "text-gray-600",   icon: "➖" };
             if (c.outcome === "tie")       return { text: "비김",    color: "text-blue-400",   icon: "🤝" };
             const iWon = c.is_sent ? c.outcome === "challenger_wins" : c.outcome === "challenged_wins";
@@ -941,6 +979,40 @@ export default function DashboardPage() {
                           <span>{icon}</span><span>{text}</span>
                         </span>
                       </div>
+
+                      {/* 수락/거절 버튼 — 받은 신청이고 아직 미처리 */}
+                      {!c.is_sent && c.accepted === null && (
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => handleAccept(c.id)}
+                            disabled={acceptLoading === c.id}
+                            className="flex-1 py-2.5 bg-green-500 hover:bg-green-400 active:scale-95 text-white text-xs font-black rounded-xl transition-all disabled:opacity-40 flex items-center justify-center gap-1.5"
+                          >
+                            {acceptLoading === c.id
+                              ? <span className="w-3.5 h-3.5 border border-white/40 border-t-white rounded-full animate-spin" />
+                              : "✅"}
+                            수락
+                          </button>
+                          <button
+                            onClick={() => handleDecline(c.id)}
+                            disabled={acceptLoading === c.id}
+                            className="flex-1 py-2.5 bg-[#252525] hover:bg-[#2A2A2A] border border-[#333] active:scale-95 text-gray-400 hover:text-white text-xs font-black rounded-xl transition-all"
+                          >
+                            거절
+                          </button>
+                        </div>
+                      )}
+
+                      {/* 수락 후 전용 그룹 배지 */}
+                      {c.accepted === true && c.duel_group_id && (
+                        <button
+                          onClick={() => router.push("/groups")}
+                          className="flex items-center gap-1.5 text-[11px] text-blue-400/80 hover:text-blue-400 transition-colors"
+                        >
+                          <span>👥</span>
+                          <span>전용 대결 그룹 보기 →</span>
+                        </button>
+                      )}
 
                       {/* 반응 영역 */}
                       {isDone && (

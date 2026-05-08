@@ -1266,7 +1266,13 @@ async def create_challenge(
 
     result = (
         supabase.table("challenges")
-        .insert({"challenger_id": challenger_id, "challenged_id": challenged_id, "survey_date": date_str, "outcome": "pending"})
+        .insert({
+            "challenger_id": challenger_id,
+            "challenged_id": challenged_id,
+            "survey_date": date_str,
+            "outcome": "pending",
+            "accepted": None,  # None = 수락 대기 중
+        })
         .execute()
     )
 
@@ -1336,12 +1342,112 @@ async def get_my_challenges(
             "is_sent": is_sent,
             "my_reaction": my_reaction,
             "opp_reaction": opp_reaction,
+            "accepted": c.get("accepted"),          # None=대기, True=수락, False=거절
+            "duel_group_id": c.get("duel_group_id"),# 수락 시 생성된 전용 그룹 ID
         }
 
     return {
         "sent":     [_enrich(c, True)  for c in sent_res.data],
         "received": [_enrich(c, False) for c in recv_res.data],
     }
+
+
+@app.post("/api/challenges/{challenge_id}/accept")
+async def accept_challenge(
+    challenge_id: str,
+    current_user=Depends(get_current_user),
+    supabase: Client = Depends(get_supabase),
+):
+    """대결 수락 → 두 사람 전용 그룹 자동 생성"""
+    from telegram_bot import send_message as tg_send
+    from webpush_helper import send_web_push_to_user
+
+    user_id = str(current_user.id)
+    ch_res = supabase.table("challenges").select("*").eq("id", challenge_id).execute()
+    if not ch_res.data:
+        raise HTTPException(404, "대결을 찾을 수 없어요")
+
+    ch = ch_res.data[0]
+    if ch["challenged_id"] != user_id:
+        raise HTTPException(403, "받은 대결만 수락할 수 있어요")
+    if ch.get("accepted") is not None:
+        raise HTTPException(400, "이미 처리된 대결이에요")
+
+    challenger_id = ch["challenger_id"]
+
+    # 두 사람 이름 조회
+    c_row = supabase.table("users").select("name").eq("id", challenger_id).execute()
+    d_row = supabase.table("users").select("name").eq("id", user_id).execute()
+    c_name = (c_row.data[0]["name"] or "익명") if c_row.data else "익명"
+    d_name = (d_row.data[0]["name"] or "익명") if d_row.data else "익명"
+    c_masked = (c_name[0] + "**") if c_name else "익명"
+    d_masked = (d_name[0] + "**") if d_name else "익명"
+
+    # 전용 대결 그룹 생성
+    invite_code = _gen_invite_code()
+    grp = supabase.table("groups").insert({
+        "name": f"{c_masked} vs {d_masked} 대결",
+        "invite_code": invite_code,
+        "owner_id": challenger_id,
+    }).execute()
+    group_id = grp.data[0]["id"]
+
+    # 두 명 모두 그룹에 가입
+    supabase.table("group_members").insert([
+        {"group_id": group_id, "user_id": challenger_id},
+        {"group_id": group_id, "user_id": user_id},
+    ]).execute()
+
+    # 대결 레코드 업데이트
+    supabase.table("challenges").update({
+        "accepted": True,
+        "duel_group_id": group_id,
+    }).eq("id", challenge_id).execute()
+
+    # 신청자에게 수락 알림
+    c_tg_row = supabase.table("users").select("telegram_chat_id").eq("id", challenger_id).execute()
+    if c_tg_row.data and c_tg_row.data[0].get("telegram_chat_id"):
+        try:
+            await tg_send(
+                c_tg_row.data[0]["telegram_chat_id"],
+                f"⚔️ <b>대결 수락!</b>\n\n"
+                f"<b>{d_masked}</b>님이 대결을 수락했어요!\n"
+                f"장 마감 후 결과를 함께 확인해봐요 🔥",
+            )
+        except Exception as e:
+            logger.warning(f"대결 수락 텔레그램 알림 실패: {e}")
+
+    send_web_push_to_user(
+        supabase, challenger_id,
+        title="⚔️ 대결 수락됐어요!",
+        body=f"{d_masked}님이 대결을 수락했어요! 장 마감 후 결과를 확인해보세요 🔥",
+        url="/dashboard",
+        notif_type="challenge",
+    )
+
+    return {"ok": True, "group_id": group_id, "group_name": f"{c_masked} vs {d_masked} 대결"}
+
+
+@app.post("/api/challenges/{challenge_id}/decline")
+async def decline_challenge(
+    challenge_id: str,
+    current_user=Depends(get_current_user),
+    supabase: Client = Depends(get_supabase),
+):
+    """대결 거절"""
+    user_id = str(current_user.id)
+    ch_res = supabase.table("challenges").select("*").eq("id", challenge_id).execute()
+    if not ch_res.data:
+        raise HTTPException(404, "대결을 찾을 수 없어요")
+
+    ch = ch_res.data[0]
+    if ch["challenged_id"] != user_id:
+        raise HTTPException(403, "받은 대결만 거절할 수 있어요")
+    if ch.get("accepted") is not None:
+        raise HTTPException(400, "이미 처리된 대결이에요")
+
+    supabase.table("challenges").update({"accepted": False, "outcome": "no_result"}).eq("id", challenge_id).execute()
+    return {"ok": True}
 
 
 class ReactRequest(BaseModel):

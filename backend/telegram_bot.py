@@ -399,6 +399,7 @@ async def notify_challenge_results(supabase, date_str: str) -> None:
         .select("*")
         .eq("survey_date", date_str)
         .eq("outcome", "pending")
+        .eq("accepted", True)   # 수락된 대결만 결과 처리
         .execute()
     )
     if not challenges.data:
