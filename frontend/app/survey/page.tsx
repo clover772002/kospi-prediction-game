@@ -50,6 +50,8 @@ export default function SurveyPage() {
   const [alreadyAnswered, setAlreadyAnswered] = useState(false);
   const [previousAnswer, setPreviousAnswer] = useState<boolean | null>(null);
   const [retrying, setRetrying] = useState(false);
+  // ref로 retrying 상태 추적 — checkMyResponse의 useCallback 클로저에서 접근용
+  const retryingRef = useRef(false);
 
   const [kospiPrice, setKospiPrice] = useState<KospiPrice | null>(null);
   const priceTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -111,12 +113,17 @@ export default function SurveyPage() {
         if (data.answered) {
           setAlreadyAnswered(true);
           setPreviousAnswer(data.kospi_answer);
-          setKospiAnswer(data.kospi_answer);
+          // 수정 중(retrying)이면 유저가 고른 선택을 덮어쓰지 않음
+          if (!retryingRef.current) {
+            setKospiAnswer(data.kospi_answer);
+          }
         } else {
-          setAlreadyAnswered(false);
-          setPreviousAnswer(null);
-          setKospiAnswer(null);
-          setRetrying(false);
+          // 수정 중이 아닐 때만 상태 초기화
+          if (!retryingRef.current) {
+            setAlreadyAnswered(false);
+            setPreviousAnswer(null);
+            setKospiAnswer(null);
+          }
         }
       }
     } catch {
@@ -186,6 +193,7 @@ export default function SurveyPage() {
       setSubmitted(true);
       setAlreadyAnswered(true);
       setPreviousAnswer(kospiAnswer);
+      retryingRef.current = false;
       setRetrying(false);
     } catch (e: unknown) {
       const raw = e instanceof Error ? e.message : String(e);
@@ -385,7 +393,7 @@ export default function SurveyPage() {
                 {previousAnswer ? "📈 상승" : "📉 하락"}
               </p>
               <button
-                onClick={() => { setRetrying(true); setSubmitted(false); }}
+                onClick={() => { retryingRef.current = true; setRetrying(true); setSubmitted(false); }}
                 className="mt-2 text-[10px] text-gray-500 border border-[#333] px-2 py-1 rounded-lg hover:border-white/30 transition-all"
               >
                 변경하기
