@@ -268,8 +268,8 @@ export default function SurveyPage() {
             const displayDate = surveyDate.replace(/-/g, ".");
             return (
               <>
-                <h1 className="text-2xl font-black text-white">{label}</h1>
-                <p className="text-xs text-gray-500 mt-1">{displayDate} (KST)</p>
+                <h1 className="text-lg font-black text-white leading-tight">{label}</h1>
+                <p className="text-xs text-gray-500 mt-0.5">{displayDate} (KST)</p>
               </>
             );
           })()}
@@ -310,17 +310,17 @@ export default function SurveyPage() {
               <>
                 <div className="grid grid-cols-2 gap-3">
                   <button onClick={() => setNextKospiAnswer(true)}
-                    className={`py-5 rounded-2xl font-black text-xl transition-all active:scale-95 border-2 ${nextKospiAnswer === true ? "bg-green-500 border-green-400 text-white" : "bg-[#111] border-[#333] text-gray-400 hover:border-green-600"}`}>
+                    className={`py-4 rounded-2xl font-black text-lg transition-all active:scale-95 border-2 ${nextKospiAnswer === true ? "bg-green-500 border-green-400 text-white" : "bg-[#111] border-[#333] text-gray-400 hover:border-green-600"}`}>
                     📈 상승
                   </button>
                   <button onClick={() => setNextKospiAnswer(false)}
-                    className={`py-5 rounded-2xl font-black text-xl transition-all active:scale-95 border-2 ${nextKospiAnswer === false ? "bg-red-500 border-red-400 text-white" : "bg-[#111] border-[#333] text-gray-400 hover:border-red-600"}`}>
+                    className={`py-4 rounded-2xl font-black text-lg transition-all active:scale-95 border-2 ${nextKospiAnswer === false ? "bg-red-500 border-red-400 text-white" : "bg-[#111] border-[#333] text-gray-400 hover:border-red-600"}`}>
                     📉 하락
                   </button>
                 </div>
                 <button onClick={handleNextSubmit}
                   disabled={nextKospiAnswer === null || nextSubmitting}
-                  className="w-full mt-3 py-5 bg-amber-500 hover:bg-amber-400 disabled:bg-[#333] disabled:text-gray-500 text-white font-black text-xl rounded-2xl transition-all active:scale-95">
+                  className="w-full mt-3 py-4 bg-amber-500 hover:bg-amber-400 disabled:bg-[#333] disabled:text-gray-500 text-white font-black text-base rounded-2xl transition-all active:scale-95">
                   {nextSubmitting ? "제출 중..." : `${getSurveyDayLabel(nextSurvey.survey_date).shortLabel} 예측 제출하기`}
                 </button>
               </>
@@ -429,7 +429,7 @@ export default function SurveyPage() {
             <div className="grid grid-cols-2 gap-3">
               <button
                 onClick={() => setKospiAnswer(true)}
-                className={`py-5 rounded-2xl font-black text-xl transition-all duration-150 active:scale-90 border-2 ${
+                className={`py-4 rounded-2xl font-black text-lg transition-all duration-150 active:scale-90 border-2 ${
                   kospiAnswer === true
                     ? "bg-green-500 border-green-400 text-white scale-105 shadow-lg shadow-green-500/30"
                     : "bg-[#111] border-[#333] text-gray-400 hover:border-green-600 hover:text-green-400"
@@ -439,7 +439,7 @@ export default function SurveyPage() {
               </button>
               <button
                 onClick={() => setKospiAnswer(false)}
-                className={`py-5 rounded-2xl font-black text-xl transition-all duration-150 active:scale-90 border-2 ${
+                className={`py-4 rounded-2xl font-black text-lg transition-all duration-150 active:scale-90 border-2 ${
                   kospiAnswer === false
                     ? "bg-red-500 border-red-400 text-white scale-105 shadow-lg shadow-red-500/30"
                     : "bg-[#111] border-[#333] text-gray-400 hover:border-red-600 hover:text-red-400"
@@ -459,7 +459,7 @@ export default function SurveyPage() {
           <button
             onClick={handleSubmit}
             disabled={kospiAnswer === null || submitting}
-            className="w-full py-5 bg-blue-600 hover:bg-blue-500 disabled:bg-[#333] disabled:text-gray-500 text-white font-black text-xl rounded-2xl transition-all active:scale-95"
+            className="w-full py-4 bg-blue-600 hover:bg-blue-500 disabled:bg-[#333] disabled:text-gray-500 text-white font-black text-base rounded-2xl transition-all active:scale-95"
           >
             {submitting ? (
               <span className="flex items-center justify-center gap-2">
@@ -578,7 +578,7 @@ export default function SurveyPage() {
                     <div className="grid grid-cols-2 gap-3">
                       <button
                         onClick={() => setNextKospiAnswer(true)}
-                        className={`py-5 rounded-2xl font-black text-xl transition-all active:scale-95 border-2 ${
+                        className={`py-4 rounded-2xl font-black text-lg transition-all active:scale-95 border-2 ${
                           nextKospiAnswer === true
                             ? "bg-green-500 border-green-400 text-white"
                             : "bg-[#111] border-[#333] text-gray-400 hover:border-green-600"
@@ -588,7 +588,7 @@ export default function SurveyPage() {
                       </button>
                       <button
                         onClick={() => setNextKospiAnswer(false)}
-                        className={`py-5 rounded-2xl font-black text-xl transition-all active:scale-95 border-2 ${
+                        className={`py-4 rounded-2xl font-black text-lg transition-all active:scale-95 border-2 ${
                           nextKospiAnswer === false
                             ? "bg-red-500 border-red-400 text-white"
                             : "bg-[#111] border-[#333] text-gray-400 hover:border-red-600"
@@ -605,7 +605,7 @@ export default function SurveyPage() {
                     <button
                       onClick={handleNextSubmit}
                       disabled={nextKospiAnswer === null || nextSubmitting}
-                      className="w-full mt-3 py-5 bg-amber-500 hover:bg-amber-400 disabled:bg-[#333] disabled:text-gray-500 text-white font-black text-xl rounded-2xl transition-all active:scale-95"
+                      className="w-full mt-3 py-4 bg-amber-500 hover:bg-amber-400 disabled:bg-[#333] disabled:text-gray-500 text-white font-black text-base rounded-2xl transition-all active:scale-95"
                     >
                       {nextSubmitting ? "제출 중..." : `${getSurveyDayLabel(nextSurvey.survey_date).shortLabel} 예측 제출하기`}
                     </button>
