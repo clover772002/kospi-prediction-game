@@ -4,8 +4,14 @@ import InAppBrowserGate from "@/components/InAppBrowserGate";
 import SWRegister from "@/components/SWRegister";
 
 export const metadata: Metadata = {
-  title: "오늘 장 예측 | 코스피 집단지성",
+  title: "코스피 예측",
   description: "매일 밤 22:00 코스피 예측 설문에 참여하고, 내 정확도와 순위를 확인하세요.",
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    title: "코스피 예측",
+    statusBarStyle: "black-translucent",
+  },
 };
 
 export default function RootLayout({

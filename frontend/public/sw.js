@@ -1,43 +1,43 @@
-// 웹 푸시 Service Worker v3
-const SW_VERSION = "3.0";
+// 웹 푸시 Service Worker v4
+const SW_VERSION = "4.0";
 
 self.addEventListener("install", () => self.skipWaiting());
 self.addEventListener("activate", (event) => {
   event.waitUntil(self.clients.claim());
 });
 
-self.addEventListener("push", (event) => {
-  if (!event.data) return;
+self.addEventListener("message", (event) => {
+  if (event.data && event.data.type === "SKIP_WAITING") {
+    self.skipWaiting();
+  }
+});
 
-  let payload = {};
-  try {
-    payload = event.data.json();
-  } catch {
-    payload = { title: "코스피 예측 설문", body: event.data.text() };
+self.addEventListener("push", (event) => {
+  let title = "코스피 예측";
+  let body  = "오늘 장 예측 설문이 열렸어요. 탭해서 참여하세요 👆";
+  let url   = "/survey";
+  let tag   = "survey";
+
+  if (event.data) {
+    try {
+      const payload = event.data.json();
+      if (payload.title) title = payload.title;
+      if (payload.body)  body  = payload.body;
+      if (payload.url)   url   = payload.url;
+      if (payload.type)  tag   = payload.type;
+    } catch {
+      // JSON 파싱 실패 시 텍스트 그대로 본문에 사용
+      body = event.data.text() || body;
+    }
   }
 
-  const title = payload.title || "코스피 예측 설문";
-  const body  = payload.body  || "오늘 장 예측 설문이 열렸어요. 탭해서 참여하세요 👆";
-  const url   = payload.url   || "/survey";
-  const type  = payload.type  || "";
-
-  // 알림 타입별 액션 버튼 텍스트
-  let actionLabel = "📊 지금 예측하기";
-  if (type === "group_nudge")    actionLabel = "📝 설문 참여하기";
-  else if (type === "challenge") actionLabel = "⚔️ 대결 확인하기";
-  else if (type === "result")    actionLabel = "📈 결과 확인하기";
-
+  // iOS Safari는 requireInteraction, actions 일부 미지원 → 제거
   const options = {
     body,
     icon: "/icon-192.png",
     badge: "/icon-192.png",
+    tag,          // 같은 tag면 덮어써서 중복 방지
     data: { url },
-    requireInteraction: true,
-    tag: type || "survey",          // 같은 태그면 덮어씌워서 중복 방지
-    renotify: true,
-    actions: [
-      { action: "open", title: actionLabel },
-    ],
   };
 
   event.waitUntil(self.registration.showNotification(title, options));
@@ -49,8 +49,8 @@ self.addEventListener("notificationclick", (event) => {
   const fullUrl = path.startsWith("http") ? path : self.location.origin + path;
 
   event.waitUntil(
-    clients.matchAll({ type: "window", includeUncontrolled: true }).then((windowClients) => {
-      for (const client of windowClients) {
+    clients.matchAll({ type: "window", includeUncontrolled: true }).then((list) => {
+      for (const client of list) {
         if ("focus" in client) {
           client.navigate(fullUrl);
           return client.focus();
