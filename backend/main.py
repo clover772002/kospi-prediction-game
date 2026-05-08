@@ -157,23 +157,31 @@ async def job_15_35():
         logger.info("오늘 결과가 이미 저장됨")
         return
 
-    # KOSPI 등락률 조회: fast_info로 당일 종가 + 전일 종가 직접 취득
+    # KOSPI 등락률 조회: Yahoo Finance JSON API (httpx, 빠름)
     kospi_prev_close = kospi_close = kospi_up = kospi_pct = None
     try:
-        ticker = yf.Ticker("^KS11")
-        fi = ticker.fast_info
+        url = "https://query1.finance.yahoo.com/v8/finance/chart/%5EKS11?interval=1d&range=2d"
+        headers = {
+            "User-Agent": "Mozilla/5.0 (compatible; KospiBot/1.0)",
+            "Accept": "application/json",
+        }
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            resp = await client.get(url, headers=headers)
+            resp.raise_for_status()
+            chart = resp.json()
 
-        kospi_close      = float(fi.last_price)
-        kospi_prev_close = float(fi.previous_close)
+        meta = chart["chart"]["result"][0]["meta"]
+        kospi_close      = float(meta.get("regularMarketPrice") or meta.get("previousClose"))
+        kospi_prev_close = float(meta.get("chartPreviousClose") or meta.get("previousClose"))
 
         if not kospi_close or not kospi_prev_close:
-            logger.warning("yfinance fast_info 데이터 없음 — 휴장일이거나 데이터 지연")
+            logger.warning("Yahoo Finance 데이터 없음 — 휴장일이거나 데이터 지연")
             return
 
-        logger.info(f"yfinance fast_info — 당일: {kospi_close}, 전일종가: {kospi_prev_close}")
+        logger.info(f"Yahoo Finance — 당일: {kospi_close}, 전일종가: {kospi_prev_close}")
 
     except Exception as e:
-        logger.error(f"yfinance 조회 오류: {e}")
+        logger.error(f"KOSPI 조회 오류 (Yahoo Finance httpx): {e}")
         return
 
     kospi_up  = kospi_close > kospi_prev_close
@@ -573,29 +581,55 @@ async def get_kospi_chart():
 
 
 @app.get("/api/public/kospi-price")
-async def get_kospi_price():
-    """현재 KOSPI 지수 — 네이버 파이낸스 (인증 불필요)"""
-    url = "https://m.stock.naver.com/api/index/KOSPI/basic"
-    headers = {"User-Agent": "Mozilla/5.0 (compatible; KospiBot/1.0)"}
+async def get_kospi_price(supabase: Client = Depends(get_supabase)):
+    """오늘 KOSPI 종가/등락률 — DB 우선, 없으면 Yahoo Finance"""
+    today_str = today_kst()
+
+    # 1) DB에 오늘 결과가 있으면 즉시 반환
     try:
-        async with httpx.AsyncClient(timeout=6.0) as client:
-            r = await client.get(url, headers=headers)
-            r.raise_for_status()
-            d = r.json()
-        price_str  = d.get("closePrice", "").replace(",", "")
-        change_str = d.get("compareToPreviousClosePrice", "").replace(",", "")
-        ratio_str  = d.get("fluctuationsRatio", "").replace(",", "")
-        code       = d.get("compareToPreviousPrice", {}).get("code", "")
+        row = supabase.table("daily_surveys") \
+            .select("kospi_result,kospi_change_pct") \
+            .eq("survey_date", today_str) \
+            .maybe_single().execute()
+        if row.data and row.data.get("kospi_change_pct") is not None:
+            is_up = bool(row.data["kospi_result"])
+            pct   = float(row.data["kospi_change_pct"])
+            return {"price": None, "change": None, "change_pct": pct,
+                    "is_up": is_up, "code": "2" if is_up else "5", "source": "db"}
+    except Exception:
+        pass
+
+    # 2) DB에 없으면 Yahoo Finance JSON API로 직접 조회
+    try:
+        url = "https://query1.finance.yahoo.com/v8/finance/chart/%5EKS11?interval=1d&range=2d"
+        headers = {"User-Agent": "Mozilla/5.0 (compatible; KospiBot/1.0)", "Accept": "application/json"}
+        async with httpx.AsyncClient(timeout=8.0) as client:
+            resp = await client.get(url, headers=headers)
+            resp.raise_for_status()
+            meta = resp.json()["chart"]["result"][0]["meta"]
+
+        price      = float(meta.get("regularMarketPrice") or 0)
+        prev_close = float(meta.get("chartPreviousClose") or meta.get("previousClose") or 0)
+        change_pct = round((price / prev_close - 1) * 100, 2) if prev_close else None
+        is_up      = price > prev_close if prev_close else None
         return {
-            "price":      float(price_str)  if price_str  else None,
-            "change":     float(change_str) if change_str else None,
-            "change_pct": float(ratio_str)  if ratio_str  else None,
-            "is_up":      code == "2",   # 2=상승, 5=하락, 3=보합
-            "code":       code,
+            "price":      price or None,
+            "change":     round(price - prev_close, 2) if prev_close else None,
+            "change_pct": change_pct,
+            "is_up":      is_up,
+            "code":       "2" if is_up else ("5" if is_up is False else ""),
+            "source":     "yahoo",
         }
     except Exception as e:
         logger.error(f"KOSPI 가격 조회 오류: {e}")
         return {"price": None, "change": None, "change_pct": None, "is_up": None, "code": ""}
+
+
+@app.post("/api/admin/run-15-35")
+async def admin_run_15_35():
+    """15:35 결과 집계 수동 트리거 (배포 후 테스트용)"""
+    await job_15_35()
+    return {"ok": True}
 
 
 @app.get("/api/public/backtest")
