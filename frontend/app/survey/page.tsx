@@ -15,6 +15,28 @@ interface KospiPrice {
   code: string;
 }
 
+/** survey_date가 진짜 내일인지, 주말 넘긴 다음 거래일인지 판별 */
+function getSurveyDayLabel(surveyDate: string): { isNextDay: boolean; label: string; shortLabel: string } {
+  const kst = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Seoul" }));
+  const todayStr = `${kst.getFullYear()}-${String(kst.getMonth()+1).padStart(2,"0")}-${String(kst.getDate()).padStart(2,"0")}`;
+
+  if (surveyDate <= todayStr) return { isNextDay: false, label: "오늘 장 예측", shortLabel: "오늘" };
+
+  // 진짜 내일인지 확인
+  const tom = new Date(kst); tom.setDate(tom.getDate() + 1);
+  const tomorrowStr = `${tom.getFullYear()}-${String(tom.getMonth()+1).padStart(2,"0")}-${String(tom.getDate()).padStart(2,"0")}`;
+
+  if (surveyDate === tomorrowStr) {
+    return { isNextDay: true, label: "내일 장 예측", shortLabel: "내일" };
+  }
+  // 주말/연휴 넘어 다음 거래일
+  const [, mm, dd] = surveyDate.split("-");
+  const days = ["일","월","화","수","목","금","토"];
+  const d = new Date(surveyDate + "T00:00:00+09:00");
+  const dayKor = days[d.getDay()];
+  return { isNextDay: true, label: `다음 거래일 장 예측 (${mm}/${dd} ${dayKor})`, shortLabel: `${mm}/${dd}(${dayKor})` };
+}
+
 export default function SurveyPage() {
   const router = useRouter();
   const [token, setToken] = useState<string | null>(null);
@@ -242,13 +264,11 @@ export default function SurveyPage() {
             const kst = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Seoul" }));
             const todayStr = `${kst.getFullYear()}-${String(kst.getMonth()+1).padStart(2,"0")}-${String(kst.getDate()).padStart(2,"0")}`;
             const surveyDate = today?.survey_date ?? todayStr;
-            const isTomorrow = surveyDate > todayStr;
+            const { label } = getSurveyDayLabel(surveyDate);
             const displayDate = surveyDate.replace(/-/g, ".");
             return (
               <>
-                <h1 className="text-2xl font-black text-white">
-                  {isTomorrow ? "내일 장 예측" : "오늘 장 예측"}
-                </h1>
+                <h1 className="text-2xl font-black text-white">{label}</h1>
                 <p className="text-xs text-gray-500 mt-1">{displayDate} (KST)</p>
               </>
             );
@@ -285,7 +305,7 @@ export default function SurveyPage() {
                   <div className="text-5xl">⏳</div>
                   <p className="text-xl font-bold text-white">설문 시작 전이에요</p>
                   <p className="text-sm text-gray-400">
-                    오늘 밤 22:00에 내일 설문이 열려요
+                    오늘 밤 22:00에 다음 거래일 설문이 열려요
                   </p>
                 </>
               ) : (
@@ -347,7 +367,9 @@ export default function SurveyPage() {
               {(() => {
                 const kst = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Seoul" }));
                 const todayStr = `${kst.getFullYear()}-${String(kst.getMonth()+1).padStart(2,"0")}-${String(kst.getDate()).padStart(2,"0")}`;
-                return (today?.survey_date ?? todayStr) > todayStr ? "📈 코스피 내일 어떨까요?" : "📈 코스피 오늘 어떨까요?";
+                const sd = today?.survey_date ?? todayStr;
+                const { shortLabel } = getSurveyDayLabel(sd);
+                return `📈 코스피 ${shortLabel} 어떨까요?`;
               })()}
             </p>
             <div className="grid grid-cols-2 gap-3">
@@ -462,19 +484,26 @@ export default function SurveyPage() {
             <KospiChart />
           </div>
 
-          {/* 내일 미리 예측하기 */}
+          {/* 다음 거래일 미리 예측하기 */}
           {status === "result" && nextSurvey?.is_open && (
             <div className="mt-2 space-y-4">
               <div className="border-t border-[#2A2A2A] pt-5">
-                <p className="text-center text-xs text-gray-500 mb-1">내일 예측 미리하기</p>
-                <p className="text-center font-black text-white text-base mb-4">
-                  📅 {nextSurvey.survey_date.slice(5).replace("-","/")} 코스피 어떨까요?
-                </p>
+                {(() => {
+                  const { shortLabel } = getSurveyDayLabel(nextSurvey.survey_date);
+                  return (
+                    <>
+                      <p className="text-center text-xs text-gray-500 mb-1">{shortLabel} 예측 미리하기</p>
+                      <p className="text-center font-black text-white text-base mb-4">
+                        📅 {nextSurvey.survey_date.slice(5).replace("-","/")} 코스피 어떨까요?
+                      </p>
+                    </>
+                  );
+                })()}
 
                 {nextSubmitted || nextAlreadyAnswered ? (
                   <div className="flex flex-col items-center gap-3 text-center">
                     <div className="text-4xl">✅</div>
-                    <p className="text-white font-bold">내일 예측 완료!</p>
+                    <p className="text-white font-bold">{getSurveyDayLabel(nextSurvey.survey_date).shortLabel} 예측 완료!</p>
                     <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-2xl p-4 w-full">
                       <p className="text-xs text-gray-400 mb-1">내 예측</p>
                       <p className={`font-bold ${(nextSubmitted ? nextKospiAnswer : nextPreviousAnswer) ? "text-green-400" : "text-blue-400"}`}>
@@ -524,7 +553,7 @@ export default function SurveyPage() {
                       disabled={nextKospiAnswer === null || nextSubmitting}
                       className="w-full mt-3 py-5 bg-amber-500 hover:bg-amber-400 disabled:bg-[#333] disabled:text-gray-500 text-white font-black text-xl rounded-2xl transition-all active:scale-95"
                     >
-                      {nextSubmitting ? "제출 중..." : "내일 예측 제출하기"}
+                      {nextSubmitting ? "제출 중..." : `${getSurveyDayLabel(nextSurvey.survey_date).shortLabel} 예측 제출하기`}
                     </button>
                   </>
                 )}

@@ -31,7 +31,7 @@ function getCountdown(): CountdownInfo {
     };
   }
 
-  // 22:00 ~ 09:00 → 장시작까지
+  // 22:00 ~ 09:00 → 다음 거래일 장시작까지
   if (mins >= 22 * 60) {
     target.setDate(target.getDate() + 1);
   }
@@ -39,10 +39,14 @@ function getCountdown(): CountdownInfo {
   while (target.getDay() === 0 || target.getDay() === 6) {
     target.setDate(target.getDate() + 1);
   }
+  const days = ["일","월","화","수","목","금","토"];
+  const mm = String(target.getMonth() + 1).padStart(2, "0");
+  const dd = String(target.getDate()).padStart(2, "0");
+  const dayKor = days[target.getDay()];
   return {
     seconds: Math.max(0, Math.floor((target.getTime() - kst.getTime()) / 1000)),
     label: "장 시작까지",
-    sublabel: "09:00 장 개시",
+    sublabel: `${mm}/${dd}(${dayKor}) 09:00 개장`,
   };
 }
 
