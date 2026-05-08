@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { joinGroup } from "@/lib/api";
 
-export default function JoinPage() {
+function JoinInner() {
   const router       = useRouter();
   const searchParams = useSearchParams();
   const code         = (searchParams.get("code") || "").toUpperCase();
@@ -86,5 +86,17 @@ export default function JoinPage() {
         대시보드로 →
       </button>
     </Wrap>
+  );
+}
+
+export default function JoinPage() {
+  return (
+    <Suspense fallback={
+      <main className="max-w-md mx-auto min-h-screen flex items-center justify-center bg-[#111]">
+        <div className="w-10 h-10 border-2 border-blue-500/30 border-t-blue-500 rounded-full animate-spin" />
+      </main>
+    }>
+      <JoinInner />
+    </Suspense>
   );
 }
