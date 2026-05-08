@@ -27,6 +27,18 @@ type PublicHistory = {
   };
 };
 
+type BacktestResult = {
+  strategy_return: number;
+  hold_return: number;
+  days: number;
+  recent: { date: string; pred_up: boolean; daily_return: number; strategy_cum: number }[];
+};
+
+type Backtest = {
+  results: { [stock: string]: BacktestResult };
+  total_days: number;
+};
+
 const FEATURES = [
   {
     icon: "📱",
@@ -182,6 +194,7 @@ export default function LoginPage() {
   const [openIdx, setOpenIdx] = useState<number | null>(null);
   const [browserType, setBrowserType] = useState<"kakao" | "inapp" | "normal">("normal");
   const [publicHistory, setPublicHistory] = useState<PublicHistory | null>(null);
+  const [backtest, setBacktest] = useState<Backtest | null>(null);
 
   useEffect(() => {
     const type = detectBrowser();
@@ -201,6 +214,11 @@ export default function LoginPage() {
     fetch("/api/public/history", { cache: "no-store" })
       .then((r) => r.json())
       .then((d) => setPublicHistory(d))
+      .catch(() => {});
+    // 백테스트 데이터 로드
+    fetch("/api/public/backtest", { cache: "no-store" })
+      .then((r) => r.json())
+      .then((d) => setBacktest(d))
       .catch(() => {});
   }, [router]);
 
@@ -273,6 +291,76 @@ export default function LoginPage() {
           향상된 집단 예측값을 무료로 열람할 수 있습니다.
         </p>
       </div>
+
+      {/* 🔥 백테스트 섹션 */}
+      {backtest && backtest.total_days >= 2 && Object.keys(backtest.results).length > 0 && (
+        <div className="w-full mb-8">
+          <p className="text-xs text-gray-500 font-bold tracking-widest uppercase mb-3">예측대로 매매했다면?</p>
+          <p className="text-xs text-gray-500 mb-4">
+            고수 강화예측을 따라 매매했을 때 수익률 시뮬레이션 (최근 {backtest.total_days}일)
+          </p>
+          <div className="space-y-3">
+            {Object.entries(backtest.results).map(([name, data]) => {
+              const isStrategyBetter = data.strategy_return > data.hold_return;
+              const diff = data.strategy_return - data.hold_return;
+              return (
+                <div key={name} className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-2xl p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <p className="font-bold text-white text-sm">{name}</p>
+                    {isStrategyBetter ? (
+                      <span className="text-xs bg-green-500/20 text-green-400 px-2 py-0.5 rounded-full font-bold">
+                        단순보유 대비 +{diff.toFixed(1)}%p ↑
+                      </span>
+                    ) : (
+                      <span className="text-xs bg-gray-500/20 text-gray-400 px-2 py-0.5 rounded-full">
+                        단순보유 대비 {diff.toFixed(1)}%p
+                      </span>
+                    )}
+                  </div>
+                  <div className="grid grid-cols-2 gap-3 mb-3">
+                    <div className="bg-[#111] rounded-xl p-3 text-center">
+                      <p className="text-[10px] text-yellow-400/80 mb-1">⭐ 예측 따라 매매</p>
+                      <p className={`text-xl font-black ${data.strategy_return >= 0 ? "text-green-400" : "text-red-400"}`}>
+                        {data.strategy_return >= 0 ? "+" : ""}{data.strategy_return.toFixed(1)}%
+                      </p>
+                    </div>
+                    <div className="bg-[#111] rounded-xl p-3 text-center">
+                      <p className="text-[10px] text-gray-500 mb-1">단순 보유</p>
+                      <p className={`text-xl font-black ${data.hold_return >= 0 ? "text-green-400/60" : "text-red-400/60"}`}>
+                        {data.hold_return >= 0 ? "+" : ""}{data.hold_return.toFixed(1)}%
+                      </p>
+                    </div>
+                  </div>
+                  {/* 최근 일별 바 */}
+                  <div className="flex items-end gap-1 h-8">
+                    {data.recent.map((d, i) => {
+                      const isIn = d.pred_up;
+                      const ret = d.daily_return;
+                      const positive = ret >= 0;
+                      return (
+                        <div key={i} className="flex-1 flex flex-col items-center gap-0.5">
+                          <div
+                            className={`w-full rounded-sm transition-all ${
+                              isIn
+                                ? positive ? "bg-green-400" : "bg-red-400"
+                                : "bg-gray-700"
+                            }`}
+                            style={{ height: `${Math.min(Math.abs(ret) * 10 + 4, 28)}px` }}
+                            title={`${d.date}: ${ret >= 0 ? "+" : ""}${ret}%${isIn ? " (매수)" : " (현금)"}`}
+                          />
+                          <span className="text-[8px] text-gray-600">{d.date.slice(5).replace("-", "/")}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <p className="text-[10px] text-gray-600 mt-1">■ 매수일 · □ 현금 보유일</p>
+                </div>
+              );
+            })}
+          </div>
+          <p className="text-[10px] text-gray-600 mt-2 text-center">* 상승 예측일 매수·하락 예측일 현금 보유 기준 / 세금·수수료 미포함</p>
+        </div>
+      )}
 
       {/* 집단지성 실적 트래커 */}
       {publicHistory && publicHistory.history.length > 0 && (

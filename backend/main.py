@@ -496,6 +496,109 @@ async def get_public_history(supabase: Client = Depends(get_supabase)):
     }
 
 
+@app.get("/api/public/backtest")
+async def get_backtest(supabase: Client = Depends(get_supabase)):
+    """백테스트: 고수 강화예측 따라 삼성전자/SK하이닉스 매매 수익률 (인증 불필요)"""
+    try:
+        # 결과 있는 최근 30일 조회
+        rows = (
+            supabase.table("daily_surveys")
+            .select("survey_date, kospi_result, kospi_change_pct")
+            .filter("kospi_result", "not.is", "null")
+            .order("survey_date", desc=False)
+            .limit(30)
+            .execute()
+        )
+        if not rows.data or len(rows.data) < 2:
+            return {"results": {}, "total_days": 0}
+
+        survey_dates = [r["survey_date"] for r in rows.data]
+
+        # 날짜별 응답 조회
+        all_resp = (
+            supabase.table("survey_responses")
+            .select("survey_date, kospi_answer, user_id")
+            .in_("survey_date", survey_dates)
+            .execute()
+        )
+        resp_by_date: dict = {}
+        for r in all_resp.data:
+            resp_by_date.setdefault(r["survey_date"], []).append(r)
+
+        acc_map = _build_user_accuracy_map(supabase)
+
+        # 날짜별 고수 강화예측 방향 계산
+        predictions: dict = {}
+        for row in rows.data:
+            d = row["survey_date"]
+            resp_list = resp_by_date.get(d, [])
+            if not resp_list:
+                continue
+            wpct = _calc_weighted_pct(resp_list, acc_map)
+            if wpct is not None:
+                predictions[d] = wpct >= 50
+            else:
+                yes_cnt = sum(1 for r in resp_list if r["kospi_answer"])
+                predictions[d] = yes_cnt >= len(resp_list) / 2
+
+        if len(predictions) < 2:
+            return {"results": {}, "total_days": 0}
+
+        # 주가 데이터 조회 범위
+        dates_sorted = sorted(predictions.keys())
+        start_dt = (datetime.strptime(dates_sorted[0], "%Y-%m-%d") - timedelta(days=5)).strftime("%Y-%m-%d")
+        end_dt = (datetime.strptime(dates_sorted[-1], "%Y-%m-%d") + timedelta(days=2)).strftime("%Y-%m-%d")
+
+        stocks = {"삼성전자": "005930.KS", "SK하이닉스": "000660.KS"}
+        results = {}
+
+        for stock_name, ticker in stocks.items():
+            try:
+                df = yf.Ticker(ticker).history(start=start_dt, end=end_dt)
+                if df.empty:
+                    continue
+                df.index = df.index.strftime("%Y-%m-%d")
+
+                strategy_cum = 1.0
+                hold_cum = 1.0
+                prev_close = None
+                daily_results = []
+
+                for d in dates_sorted:
+                    if d not in df.index:
+                        continue
+                    close = float(df.loc[d, "Close"])
+                    if prev_close is not None:
+                        daily_return = (close / prev_close) - 1
+                        hold_cum *= (1 + daily_return)
+                        pred_up = predictions.get(d, True)
+                        if pred_up:
+                            strategy_cum *= (1 + daily_return)
+                        daily_results.append({
+                            "date": d,
+                            "pred_up": pred_up,
+                            "daily_return": round(daily_return * 100, 2),
+                            "strategy_cum": round((strategy_cum - 1) * 100, 2),
+                        })
+                    prev_close = close
+
+                if daily_results:
+                    results[stock_name] = {
+                        "strategy_return": round((strategy_cum - 1) * 100, 2),
+                        "hold_return": round((hold_cum - 1) * 100, 2),
+                        "days": len(daily_results),
+                        "recent": daily_results[-7:],
+                    }
+            except Exception as e:
+                logger.error(f"백테스트 {stock_name} 오류: {e}")
+
+        return {"results": results, "total_days": len(predictions)}
+
+    except Exception as e:
+        logger.error(f"백테스트 전체 오류: {e}")
+        return {"results": {}, "total_days": 0}
+
+
 @app.get("/api/today")
 async def get_today(supabase: Client = Depends(get_supabase)):
     """오늘의 설문 집계 결과 조회 (인증 불필요)"""
