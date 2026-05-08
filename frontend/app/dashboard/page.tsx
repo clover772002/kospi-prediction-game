@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
-import { getMe, getToday, getDashboard, createChallenge, getMyChallenges, reactToChallenge, requestRematch, UserProfile, TodaySurvey, DashboardData, Challenge } from "@/lib/api";
+import { getMe, getToday, getDashboard, createChallenge, getMyChallenges, reactToChallenge, requestRematch, getMyGroups, getGroupLeaderboard, UserProfile, TodaySurvey, DashboardData, Challenge, Group, GroupLeaderboard } from "@/lib/api";
 
 // 연속 적중 스트릭 계산
 function calcStreak(history: DashboardData["history"]): number {
@@ -56,6 +56,10 @@ export default function DashboardPage() {
   const [challengeToast, setChallengeToast]       = useState<string | null>(null);
   const [reactingId, setReactingId]               = useState<string | null>(null); // challenge id 이모티콘 피커 열림
   const [rematchLoading, setRematchLoading]        = useState<string | null>(null);
+  const [myGroups, setMyGroups]                    = useState<Group[]>([]);
+  const [selectedGroupId, setSelectedGroupId]      = useState<string | null>(null);
+  const [groupLeaderboard, setGroupLeaderboard]    = useState<GroupLeaderboard | null>(null);
+  const [groupLbLoading, setGroupLbLoading]        = useState(false);
 
   useEffect(() => {
     let called = false;
@@ -87,9 +91,16 @@ export default function DashboardPage() {
         try {
           const ch = await getMyChallenges(accessToken, todayData.survey_date);
           setChallenges(ch);
-        } catch {
-          // 대결 데이터 로드 실패는 무시
-        }
+        } catch { /* ignore */ }
+
+        // 내 그룹 목록 로드
+        try {
+          const grps = await getMyGroups(accessToken);
+          setMyGroups(grps);
+          if (grps.length > 0) {
+            setSelectedGroupId(grps[0].group_id);
+          }
+        } catch { /* ignore */ }
 
         // 오늘 결과가 나왔고 참여했다면 → 결과 카드 팝업 (하루 1번)
         if (todayData.status === "result" && todayData.survey_date) {
@@ -171,6 +182,22 @@ export default function DashboardPage() {
       showToast(e instanceof Error ? e.message : "반응 전송 실패");
     }
   };
+
+  const loadGroupLeaderboard = async (group_id: string) => {
+    if (!token) return;
+    setGroupLbLoading(true);
+    try {
+      const lb = await getGroupLeaderboard(token, group_id);
+      setGroupLeaderboard(lb);
+    } catch { /* ignore */ }
+    finally { setGroupLbLoading(false); }
+  };
+
+  // selectedGroupId 변경 시 자동 로드
+  useEffect(() => {
+    if (selectedGroupId && token) loadGroupLeaderboard(selectedGroupId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedGroupId, token]);
 
   const handleRematch = async (challenge_id: string, survey_date: string) => {
     if (!token) return;
@@ -909,6 +936,92 @@ export default function DashboardPage() {
           );
         })()}
       </div>
+
+        {/* ── 그룹 리더보드 ──────────────────────────────────── */}
+        {myGroups.length > 0 && (
+          <div className="bg-[#1A1A1A] rounded-2xl border border-[#2A2A2A] overflow-hidden fade-up-5">
+            {/* 헤더 + 그룹 선택 */}
+            <div className="px-5 pt-4 pb-3 border-b border-[#2A2A2A]">
+              <p className="font-black text-sm text-white mb-2">👥 그룹 리더보드</p>
+              {myGroups.length > 1 ? (
+                <div className="flex gap-1.5 flex-wrap">
+                  {myGroups.map((g) => (
+                    <button
+                      key={g.group_id}
+                      onClick={() => setSelectedGroupId(g.group_id)}
+                      className={`text-xs font-bold px-3 py-1.5 rounded-full transition-all ${
+                        selectedGroupId === g.group_id
+                          ? "bg-green-600 text-white"
+                          : "bg-[#252525] text-gray-400 border border-[#333]"
+                      }`}
+                    >
+                      {g.name}
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-xs text-gray-500">{myGroups[0].name} · {myGroups[0].member_count}명</p>
+              )}
+            </div>
+
+            {groupLbLoading ? (
+              <div className="flex justify-center py-8">
+                <div className="w-6 h-6 border-2 border-green-500/30 border-t-green-500 rounded-full animate-spin" />
+              </div>
+            ) : groupLeaderboard ? (
+              <>
+                {/* 컬럼 헤더 */}
+                <div className="grid grid-cols-[28px_1fr_52px_52px] text-[10px] text-gray-600 px-4 py-2 border-b border-[#222]">
+                  <span>#</span><span>닉네임</span><span className="text-right">적중률</span><span className="text-right">참여일</span>
+                </div>
+
+                <div className="divide-y divide-[#222]">
+                  {groupLeaderboard.members.map((m, i) => {
+                    const medals = ["🥇", "🥈", "🥉"];
+                    return (
+                      <div
+                        key={m.user_id}
+                        className={`grid grid-cols-[28px_1fr_52px_52px] items-center px-4 py-3 ${
+                          m.is_me ? "bg-green-500/10 border-l-2 border-green-500" : ""
+                        }`}
+                      >
+                        <span className="text-sm">
+                          {i < 3 ? medals[i] : <span className="text-gray-500 text-xs">{i + 1}</span>}
+                        </span>
+                        <span className="text-sm font-bold text-white flex items-center gap-1.5 truncate">
+                          {m.masked_name}
+                          {m.is_me && (
+                            <span className="text-[9px] bg-green-500 text-white px-1.5 py-0.5 rounded-full font-black flex-shrink-0">나</span>
+                          )}
+                        </span>
+                        <span className={`text-xs font-black text-right ${
+                          i === 0 ? "text-yellow-400" : i === 1 ? "text-gray-300" : i === 2 ? "text-amber-600" : "text-gray-400"
+                        }`}>
+                          {m.accuracy !== null ? `${m.accuracy}%` : "신규"}
+                        </span>
+                        <span className="text-[10px] text-gray-600 text-right">{m.total_predictions}일</span>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* 초대 링크 복사 */}
+                <div className="px-4 py-3 border-t border-[#222]">
+                  <button
+                    onClick={() => {
+                      const url = `${window.location.origin}/join?code=${groupLeaderboard.invite_code}`;
+                      navigator.clipboard.writeText(url);
+                      showToast("📋 초대 링크가 복사됐어요!");
+                    }}
+                    className="w-full text-xs font-bold text-green-400 bg-green-500/10 border border-green-500/20 rounded-xl py-2.5 hover:bg-green-500/20 transition-all active:scale-95"
+                  >
+                    🔗 친구 초대 링크 복사
+                  </button>
+                </div>
+              </>
+            ) : null}
+          </div>
+        )}
 
       {/* 하단 내비 */}
       <nav className="fixed bottom-0 left-0 right-0 bg-[#111] border-t border-[#222] z-50">

@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
-import { getMe, unlinkTelegram, getVapidPublicKey, savePushSubscription, deletePushSubscription, UserProfile } from "@/lib/api";
+import { getMe, unlinkTelegram, getVapidPublicKey, savePushSubscription, deletePushSubscription, createGroup, joinGroup, getMyGroups, leaveGroup, UserProfile, Group } from "@/lib/api";
 
 const BOT_USERNAME = process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME || "Profitchat123bot";
 
@@ -30,10 +30,16 @@ export default function SetupPage() {
   const [botOpened, setBotOpened] = useState(false);
   const [checkFailed, setCheckFailed] = useState(false);
   const [unlinking, setUnlinking] = useState(false);
-  const [tab, setTab] = useState<"telegram" | "webpush">("telegram");
-  const [pushLinked, setPushLinked] = useState(false);
+  const [tab, setTab] = useState<"telegram" | "webpush" | "groups">("telegram");
+  const [pushLinked, setPushLinked]   = useState(false);
   const [pushLoading, setPushLoading] = useState(false);
-  const [pushError, setPushError] = useState<string | null>(null);
+  const [pushError, setPushError]     = useState<string | null>(null);
+  const [groups, setGroups]           = useState<Group[]>([]);
+  const [groupsLoading, setGroupsLoading] = useState(false);
+  const [groupName, setGroupName]     = useState("");
+  const [joinCode, setJoinCode]       = useState("");
+  const [groupMsg, setGroupMsg]       = useState<{ text: string; ok: boolean } | null>(null);
+  const [copiedCode, setCopiedCode]   = useState<string | null>(null);
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
@@ -73,6 +79,59 @@ export default function SetupPage() {
     navigator.clipboard.writeText(botLink);
     setCopyDone(true);
     setTimeout(() => setCopyDone(false), 2000);
+  };
+
+  const loadGroups = async () => {
+    if (!token) return;
+    setGroupsLoading(true);
+    try {
+      const list = await getMyGroups(token);
+      setGroups(list);
+    } catch { /* ignore */ }
+    finally { setGroupsLoading(false); }
+  };
+
+  const handleCreateGroup = async () => {
+    if (!token || !groupName.trim()) return;
+    try {
+      const res = await createGroup(token, groupName.trim());
+      setGroupName("");
+      setGroupMsg({ text: `✅ "${groupName}" 그룹 생성 완료! 초대 코드: ${res.invite_code}`, ok: true });
+      await loadGroups();
+    } catch (e: unknown) {
+      setGroupMsg({ text: e instanceof Error ? e.message : "생성 실패", ok: false });
+    }
+    setTimeout(() => setGroupMsg(null), 4000);
+  };
+
+  const handleJoinGroup = async () => {
+    if (!token || !joinCode.trim()) return;
+    try {
+      const res = await joinGroup(token, joinCode.trim().toUpperCase());
+      setJoinCode("");
+      setGroupMsg({ text: `✅ "${res.group_name}" 합류 완료!`, ok: true });
+      await loadGroups();
+    } catch (e: unknown) {
+      setGroupMsg({ text: e instanceof Error ? e.message : "가입 실패", ok: false });
+    }
+    setTimeout(() => setGroupMsg(null), 4000);
+  };
+
+  const handleLeaveGroup = async (group_id: string) => {
+    if (!token) return;
+    try {
+      await leaveGroup(token, group_id);
+      setGroupMsg({ text: "탈퇴했어요", ok: true });
+      await loadGroups();
+    } catch { /* ignore */ }
+    setTimeout(() => setGroupMsg(null), 3000);
+  };
+
+  const copyInviteLink = (code: string) => {
+    const url = `${window.location.origin}/join?code=${code}`;
+    navigator.clipboard.writeText(url);
+    setCopiedCode(code);
+    setTimeout(() => setCopiedCode(null), 2000);
   };
 
   const checkLink = useCallback(async () => {
@@ -141,9 +200,31 @@ export default function SetupPage() {
         </div>
       )}
 
-      {/* 알림 방식 탭 */}
-      {!linked && !pushLinked && (
-        <div className="flex gap-2 mb-2">
+      {/* 탭 */}
+      <div className="flex gap-1.5 mb-3">
+        <button
+          onClick={() => setTab("telegram")}
+          className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all ${tab === "telegram" ? "bg-blue-600 text-white" : "bg-[#1A1A1A] text-gray-400 border border-[#2A2A2A]"}`}
+        >
+          ✈️ 텔레그램
+        </button>
+        <button
+          onClick={() => setTab("webpush")}
+          className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all ${tab === "webpush" ? "bg-purple-600 text-white" : "bg-[#1A1A1A] text-gray-400 border border-[#2A2A2A]"}`}
+        >
+          🔔 브라우저
+        </button>
+        <button
+          onClick={() => { setTab("groups"); loadGroups(); }}
+          className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all ${tab === "groups" ? "bg-green-600 text-white" : "bg-[#1A1A1A] text-gray-400 border border-[#2A2A2A]"}`}
+        >
+          👥 그룹
+        </button>
+      </div>
+
+      {/* 알림 방식 탭 (telegram/webpush) — 내부 탭 버튼 제거됨 */}
+      {tab !== "groups" && !linked && !pushLinked && (
+        <div className="flex gap-2 mb-2 hidden">
           <button
             onClick={() => setTab("telegram")}
             className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all ${tab === "telegram" ? "bg-blue-600 text-white" : "bg-[#1A1A1A] text-gray-400 border border-[#2A2A2A]"}`}
@@ -463,6 +544,105 @@ export default function SetupPage() {
                 ← 봇 다시 열기
               </button>
             </>
+          )}
+        </div>
+      )}
+
+      {/* ── 그룹 탭 ─────────────────────────────────────────── */}
+      {tab === "groups" && (
+        <div className="space-y-4">
+          {/* 안내 */}
+          <div className="bg-green-500/10 border border-green-500/20 rounded-2xl p-4">
+            <p className="text-sm font-bold text-white mb-1">👥 친구와 그룹 만들기</p>
+            <p className="text-xs text-gray-400">그룹을 만들고 초대 링크를 공유하면 그룹 내 순위를 함께 볼 수 있어요.</p>
+          </div>
+
+          {/* 그룹 생성 */}
+          <div className="bg-[#1A1A1A] rounded-2xl p-4 border border-[#2A2A2A] space-y-3">
+            <p className="text-xs font-bold text-gray-300">새 그룹 만들기</p>
+            <input
+              value={groupName}
+              onChange={(e) => setGroupName(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleCreateGroup()}
+              placeholder="그룹 이름 (예: 주식 동아리)"
+              className="w-full bg-[#252525] border border-[#333] rounded-xl px-4 py-3 text-sm text-white placeholder-gray-600 outline-none focus:border-green-500/50"
+              maxLength={20}
+            />
+            <button
+              onClick={handleCreateGroup}
+              disabled={!groupName.trim()}
+              className="w-full py-3 bg-green-600 hover:bg-green-500 disabled:bg-[#252525] disabled:text-gray-600 text-white font-black rounded-xl transition-all active:scale-95"
+            >
+              ＋ 그룹 만들기
+            </button>
+          </div>
+
+          {/* 그룹 참여 */}
+          <div className="bg-[#1A1A1A] rounded-2xl p-4 border border-[#2A2A2A] space-y-3">
+            <p className="text-xs font-bold text-gray-300">초대 코드로 참여</p>
+            <input
+              value={joinCode}
+              onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
+              onKeyDown={(e) => e.key === "Enter" && handleJoinGroup()}
+              placeholder="초대 코드 6자리 (예: AB1C2D)"
+              className="w-full bg-[#252525] border border-[#333] rounded-xl px-4 py-3 text-sm text-white placeholder-gray-600 outline-none focus:border-green-500/50 font-mono tracking-widest"
+              maxLength={6}
+            />
+            <button
+              onClick={handleJoinGroup}
+              disabled={joinCode.length !== 6}
+              className="w-full py-3 bg-blue-600 hover:bg-blue-500 disabled:bg-[#252525] disabled:text-gray-600 text-white font-black rounded-xl transition-all active:scale-95"
+            >
+              그룹 참여하기
+            </button>
+          </div>
+
+          {/* 메시지 */}
+          {groupMsg && (
+            <div className={`rounded-xl px-4 py-3 text-sm font-bold text-center ${groupMsg.ok ? "bg-green-500/15 text-green-400 border border-green-500/30" : "bg-red-500/15 text-red-400 border border-red-500/30"}`}>
+              {groupMsg.text}
+            </div>
+          )}
+
+          {/* 내 그룹 목록 */}
+          {groupsLoading ? (
+            <div className="flex justify-center py-4">
+              <div className="w-6 h-6 border-2 border-green-500/30 border-t-green-500 rounded-full animate-spin" />
+            </div>
+          ) : groups.length > 0 ? (
+            <div className="space-y-2">
+              <p className="text-xs text-gray-500 font-bold px-1">내 그룹</p>
+              {groups.map((g) => (
+                <div key={g.group_id} className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-2xl p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-black text-sm text-white">{g.name}</p>
+                      <p className="text-[10px] text-gray-500 mt-0.5">{g.member_count}명 · {g.is_owner ? "방장" : "멤버"}</p>
+                    </div>
+                    <button
+                      onClick={() => handleLeaveGroup(g.group_id)}
+                      className="text-[10px] text-gray-600 hover:text-red-400 transition-colors"
+                    >
+                      탈퇴
+                    </button>
+                  </div>
+
+                  {/* 초대 코드 + 링크 복사 */}
+                  <div className="flex items-center gap-2 bg-[#252525] rounded-xl px-3 py-2.5">
+                    <span className="text-xs text-gray-500">초대 코드</span>
+                    <span className="font-mono font-black text-sm text-white tracking-widest flex-1">{g.invite_code}</span>
+                    <button
+                      onClick={() => copyInviteLink(g.invite_code)}
+                      className="text-xs font-bold text-green-400 hover:text-green-300 transition-colors"
+                    >
+                      {copiedCode === g.invite_code ? "✅ 복사됨" : "🔗 링크 복사"}
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-xs text-gray-600 text-center py-2">아직 참여 중인 그룹이 없어요</p>
           )}
         </div>
       )}

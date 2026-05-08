@@ -64,6 +64,32 @@ export interface Participant {
   total_predictions: number;
 }
 
+// ─── 그룹 타입 ───────────────────────────────────────────────
+export interface Group {
+  group_id: string;
+  name: string;
+  invite_code: string;
+  is_owner: boolean;
+  member_count: number;
+}
+
+export interface GroupMember {
+  user_id: string;
+  masked_name: string;
+  is_me: boolean;
+  accuracy: number | null;
+  total_predictions: number;
+  correct: number;
+  rank: number;
+}
+
+export interface GroupLeaderboard {
+  group_id: string;
+  group_name: string;
+  invite_code: string;
+  members: GroupMember[];
+}
+
 export type ChallengeOutcome = "pending" | "challenger_wins" | "challenged_wins" | "tie" | "no_result";
 
 export interface Challenge {
@@ -172,6 +198,26 @@ export async function reactToChallenge(
     method: "POST",
     body: JSON.stringify({ reaction }),
   });
+}
+
+export async function createGroup(token: string, name: string): Promise<{ ok: boolean; group_id: string; invite_code: string }> {
+  return authFetch("/api/groups", token, { method: "POST", body: JSON.stringify({ name }) });
+}
+
+export async function joinGroup(token: string, invite_code: string): Promise<{ ok: boolean; group_id: string; group_name: string }> {
+  return authFetch("/api/groups/join", token, { method: "POST", body: JSON.stringify({ invite_code }) });
+}
+
+export async function getMyGroups(token: string): Promise<Group[]> {
+  return authFetch("/api/groups/me", token);
+}
+
+export async function getGroupLeaderboard(token: string, group_id: string): Promise<GroupLeaderboard> {
+  return authFetch(`/api/groups/${group_id}/leaderboard`, token);
+}
+
+export async function leaveGroup(token: string, group_id: string): Promise<{ ok: boolean }> {
+  return authFetch(`/api/groups/${group_id}/leave`, token, { method: "DELETE" });
 }
 
 export async function requestRematch(

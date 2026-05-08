@@ -1004,6 +1004,150 @@ async def get_next_survey(supabase: Client = Depends(get_supabase)):
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# 그룹 (Groups) 엔드포인트
+# ─────────────────────────────────────────────────────────────────────────────
+import random, string
+
+def _gen_invite_code() -> str:
+    return "".join(random.choices(string.ascii_uppercase + string.digits, k=6))
+
+class GroupCreateRequest(BaseModel):
+    name: str
+
+class GroupJoinRequest(BaseModel):
+    invite_code: str
+
+@app.post("/api/groups")
+async def create_group(
+    body: GroupCreateRequest,
+    current_user=Depends(get_current_user),
+    supabase: Client = Depends(get_supabase),
+):
+    """그룹 생성. 생성자는 자동으로 멤버 추가."""
+    user_id = str(current_user.id)
+    code = _gen_invite_code()
+    # 충돌 방지
+    for _ in range(5):
+        existing = supabase.table("groups").select("id").eq("invite_code", code).execute()
+        if not existing.data:
+            break
+        code = _gen_invite_code()
+
+    group = supabase.table("groups").insert(
+        {"name": body.name, "invite_code": code, "owner_id": user_id}
+    ).execute()
+    group_id = group.data[0]["id"]
+    supabase.table("group_members").insert({"group_id": group_id, "user_id": user_id}).execute()
+    return {"ok": True, "group_id": group_id, "invite_code": code}
+
+
+@app.post("/api/groups/join")
+async def join_group(
+    body: GroupJoinRequest,
+    current_user=Depends(get_current_user),
+    supabase: Client = Depends(get_supabase),
+):
+    """초대 코드로 그룹 가입."""
+    user_id = str(current_user.id)
+    code = body.invite_code.strip().upper()
+    grp = supabase.table("groups").select("id, name").eq("invite_code", code).execute()
+    if not grp.data:
+        raise HTTPException(404, "초대 코드를 찾을 수 없어요")
+    group_id = grp.data[0]["id"]
+    existing = supabase.table("group_members").select("id").eq("group_id", group_id).eq("user_id", user_id).execute()
+    if existing.data:
+        raise HTTPException(400, "이미 참여 중인 그룹이에요")
+    supabase.table("group_members").insert({"group_id": group_id, "user_id": user_id}).execute()
+    return {"ok": True, "group_id": group_id, "group_name": grp.data[0]["name"]}
+
+
+@app.get("/api/groups/me")
+async def get_my_groups(
+    current_user=Depends(get_current_user),
+    supabase: Client = Depends(get_supabase),
+):
+    """내가 속한 그룹 목록"""
+    user_id = str(current_user.id)
+    memberships = supabase.table("group_members").select("group_id").eq("user_id", user_id).execute()
+    result = []
+    for m in memberships.data:
+        gid = m["group_id"]
+        grp = supabase.table("groups").select("id, name, invite_code, owner_id").eq("id", gid).execute()
+        if grp.data:
+            cnt = supabase.table("group_members").select("id", count="exact").eq("group_id", gid).execute()
+            g = grp.data[0]
+            result.append({
+                "group_id": g["id"],
+                "name": g["name"],
+                "invite_code": g["invite_code"],
+                "is_owner": g["owner_id"] == user_id,
+                "member_count": cnt.count or 0,
+            })
+    return result
+
+
+@app.get("/api/groups/{group_id}/leaderboard")
+async def get_group_leaderboard(
+    group_id: str,
+    current_user=Depends(get_current_user),
+    supabase: Client = Depends(get_supabase),
+):
+    """그룹 내 멤버 순위 (누적 적중률 기준)"""
+    user_id = str(current_user.id)
+    # 멤버 확인
+    mem_check = supabase.table("group_members").select("id").eq("group_id", group_id).eq("user_id", user_id).execute()
+    if not mem_check.data:
+        raise HTTPException(403, "그룹 멤버만 볼 수 있어요")
+
+    members = supabase.table("group_members").select("user_id").eq("group_id", group_id).execute()
+    member_ids = [m["user_id"] for m in members.data]
+
+    rows = []
+    for uid in member_ids:
+        user_row = supabase.table("users").select("name").eq("id", uid).execute()
+        name = user_row.data[0]["name"] if user_row.data else "익명"
+        masked = (name[0] + "**") if name else "익명"
+
+        acc_rows = supabase.table("accuracy_records").select("kospi_correct").eq("user_id", uid).execute()
+        total = len(acc_rows.data)
+        correct = sum(1 for r in acc_rows.data if r.get("kospi_correct"))
+        accuracy = round(correct / total * 100) if total > 0 else None
+
+        rows.append({
+            "user_id": uid,
+            "masked_name": masked,
+            "is_me": uid == user_id,
+            "accuracy": accuracy,
+            "total_predictions": total,
+            "correct": correct,
+        })
+
+    rows.sort(key=lambda r: (-(r["accuracy"] or -1), -r["total_predictions"]))
+    for i, r in enumerate(rows):
+        r["rank"] = i + 1
+
+    grp = supabase.table("groups").select("name, invite_code").eq("id", group_id).execute()
+    return {
+        "group_id": group_id,
+        "group_name": grp.data[0]["name"] if grp.data else "",
+        "invite_code": grp.data[0]["invite_code"] if grp.data else "",
+        "members": rows,
+    }
+
+
+@app.delete("/api/groups/{group_id}/leave")
+async def leave_group(
+    group_id: str,
+    current_user=Depends(get_current_user),
+    supabase: Client = Depends(get_supabase),
+):
+    """그룹 탈퇴"""
+    user_id = str(current_user.id)
+    supabase.table("group_members").delete().eq("group_id", group_id).eq("user_id", user_id).execute()
+    return {"ok": True}
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # 대결 (Challenges) 엔드포인트
 # ─────────────────────────────────────────────────────────────────────────────
 
