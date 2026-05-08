@@ -114,19 +114,23 @@ async def job_22_00():
 
 
 async def job_08_45():
-    """매일 08:45 - 텔레그램 + 웹푸시 마감임박 알림"""
+    """매일 08:45 - 텔레그램 + 웹푸시 마감임박 알림 (거래일에만 발송)"""
     sb = _supabase_direct()
     today_str = today_kst()
 
-    # 혹시 설문이 없으면 폴백으로 생성
-    existing = sb.table("daily_surveys").select("id").eq("survey_date", today_str).execute()
-    if not existing.data:
-        sb.table("daily_surveys").insert({"survey_date": today_str}).execute()
-        logger.info(f"08:45 폴백 설문 생성: {today_str}")
-        await send_daily_survey_to_all(sb, today_str, is_reminder=False)
-    else:
-        await send_daily_survey_to_all(sb, today_str, is_reminder=True)
+    # 오늘 열린(마감 안 된) 설문이 있는지 확인 — 없으면 공휴일·주말이므로 전송 생략
+    open_survey = (
+        sb.table("daily_surveys")
+        .select("id")
+        .eq("survey_date", today_str)
+        .eq("is_closed", False)
+        .execute()
+    )
+    if not open_survey.data:
+        logger.info(f"08:45 마감임박: 오늘({today_str}) 열린 설문 없음 → 알림 생략 (공휴일/주말 또는 이미 마감)")
+        return
 
+    await send_daily_survey_to_all(sb, today_str, is_reminder=True)
     await send_web_push_to_all(
         sb,
         title="⏰ 마감 임박! 09:00까지예요",
@@ -134,13 +138,19 @@ async def job_08_45():
         notif_type="survey_deadline",
         url="/survey",
     )
-    logger.info("08:45 마감임박 텔레그램+웹푸시 발송 완료")
+    logger.info(f"08:45 마감임박 텔레그램+웹푸시 발송 완료: {today_str}")
 
 
 async def job_09_00():
-    """매일 09:00 - 설문 마감 및 집계 결과 발표"""
+    """매일 09:00 - 설문 마감 및 집계 결과 발표 (거래일에만)"""
     sb = _supabase_direct()
     today_str = today_kst()
+
+    # 오늘 열린 설문이 없으면 공휴일·주말 → 생략
+    open_sv = sb.table("daily_surveys").select("id").eq("survey_date", today_str).eq("is_closed", False).execute()
+    if not open_sv.data:
+        logger.info(f"09:00 마감: 오늘({today_str}) 열린 설문 없음 → 생략")
+        return
 
     sb.table("daily_surveys").update({"is_closed": True}).eq("survey_date", today_str).execute()
     logger.info(f"설문 마감: {today_str}")
