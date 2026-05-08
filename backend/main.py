@@ -1361,22 +1361,28 @@ async def nudge_group(
     # 전체 멤버 중 대상 설문 미참여자
     members = supabase.table("group_members").select("user_id").eq("group_id", group_id).execute()
     notified = 0
+    no_channel = 0   # 미참여이지만 알림 수단 없는 멤버 수
+    all_voted  = 0   # 이미 참여한 멤버 수
+
     for m in members.data:
         uid = m["user_id"]
         if uid == user_id:
             continue  # 자기 자신 제외
+
         voted = supabase.table("survey_responses").select("id").eq("user_id", uid).eq("survey_date", target_date).execute()
         if voted.data:
+            all_voted += 1
             continue  # 이미 참여한 멤버 제외
 
         tg_text = (
             f"📣 <b>설문 독촉!</b>\n\n"
             f"<b>[{group_name}]</b> 그룹의 <b>{sender_masked}</b>님이 독촉장을 보냈어요!\n\n"
-            f"아직 오늘 코스피 예측을 안 하셨네요 👀\n"
-            f"얼른 참여해서 순위를 지켜내세요! 🏆"
+            f"아직 코스피 예측을 안 하셨네요 👀\n"
+            f"얼른 참여해서 순위를 지켜내세요! 🏆\n\n"
+            f"👉 {target_date} 설문 참여"
         )
         push_title = f"📣 [{group_name}] 설문 독촉!"
-        push_body  = f"{sender_masked}님이 독촉장을 보냈어요! 얼른 오늘 예측 참여해요 👀"
+        push_body  = f"{sender_masked}님이 독촉장을 보냈어요! 얼른 예측 참여해요 👀"
 
         sent_any = False
 
@@ -1384,6 +1390,7 @@ async def nudge_group(
         pushed = send_web_push_to_user(supabase, uid, push_title, push_body, "/survey", notif_type="group_nudge")
         if pushed:
             sent_any = True
+            logger.info(f"독촉 웹 푸시 전송 성공: target={uid}")
 
         # 텔레그램 시도
         target_row = supabase.table("users").select("telegram_chat_id").eq("id", uid).execute()
@@ -1391,19 +1398,21 @@ async def nudge_group(
             try:
                 await tg_send(target_row.data[0]["telegram_chat_id"], tg_text)
                 sent_any = True
+                logger.info(f"독촉 텔레그램 전송 성공: target={uid}")
             except Exception as e:
-                logger.warning(f"독촉 텔레그램 실패: {e}")
+                logger.warning(f"독촉 텔레그램 실패: target={uid}, {e}")
 
         if sent_any:
             notified += 1
         else:
-            logger.info(f"독촉 대상 {uid}: 알림 수단 없음 (push/Telegram 미설정)")
+            no_channel += 1
+            logger.info(f"독촉 대상 {uid}: 알림 수단 없음 (push_subscription/telegram_chat_id 미설정)")
+
+    logger.info(f"독촉 결과: group={group_id}, target_date={target_date}, 전송={notified}, 알림수단없음={no_channel}, 이미참여={all_voted}")
 
     if notified == 0:
-        # 미참여자는 있었지만 알림 수단이 없는 경우
-        skipped = sum(1 for m in members.data if m["user_id"] != user_id)
-        if skipped > 0:
-            return {"ok": True, "notified": 0, "message": "미참여 멤버가 브라우저 알림을 켜지 않아 전송 불가예요 😥"}
+        if no_channel > 0:
+            return {"ok": True, "notified": 0, "message": f"미참여 멤버 {no_channel}명이 브라우저 알림을 켜지 않아 전송할 수 없어요 😥\n설정 → 브라우저 알림을 켜달라고 안내해주세요!"}
         return {"ok": True, "notified": 0, "message": "모두 이미 참여했어요 🎉"}
     return {"ok": True, "notified": notified, "message": f"{notified}명에게 독촉 알림을 보냈어요!"}
 
