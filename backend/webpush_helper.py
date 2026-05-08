@@ -53,6 +53,21 @@ def send_web_push(subscription_info: dict, title: str, body: str, url: str = "/d
         return False
 
 
+def send_web_push_to_user(supabase, user_id: str, title: str, body: str, url: str = "/dashboard") -> bool:
+    """특정 유저 한 명에게 웹 푸시 전송. 구독 없으면 False 반환."""
+    try:
+        row = supabase.table("users").select("push_subscription").eq("id", user_id).execute()
+        if not row.data or not row.data[0].get("push_subscription"):
+            return False
+        sub = row.data[0]["push_subscription"]
+        if isinstance(sub, str):
+            sub = json.loads(sub)
+        return send_web_push(sub, title, body, url)
+    except Exception as e:
+        logger.error(f"웹 푸시 단일 발송 오류 (user={user_id}): {e}")
+        return False
+
+
 async def send_web_push_to_all(supabase, title: str, body: str, url: str = "/dashboard") -> int:
     """push_subscription이 있는 모든 유저에게 웹 푸시 전송. 성공 수 반환."""
     try:

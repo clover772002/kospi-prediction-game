@@ -10,6 +10,7 @@ import os
 import logging
 import httpx
 from dotenv import load_dotenv
+from webpush_helper import send_web_push_to_user
 
 load_dotenv()
 logger = logging.getLogger(__name__)
@@ -428,44 +429,48 @@ async def notify_challenge_results(supabase, date_str: str) -> None:
         c1_masked = _masked_name(c1_id)
         c2_masked = _masked_name(c2_id)
 
-        def _result_msg(my_correct, opp_masked, i_won, is_tie):
+        def _result_texts(my_correct, opp_masked, i_won, is_tie):
             if is_tie:
-                emoji = "🤝"
-                result_word = "비겼어요!"
-                detail = f"둘 다 {'맞혔어요' if my_correct else '틀렸어요'} 💪"
+                title = "🤝 대결 비김!"
+                body = f"vs {opp_masked} · 둘 다 {'맞혔어요' if my_correct else '틀렸어요'}"
+                tg = (
+                    f"⚔️ <b>대결 결과</b>\n\nvs <b>{opp_masked}</b>\n\n"
+                    f"🤝 <b>비겼어요!</b>\n{body.split(' · ')[1]}"
+                )
             elif i_won:
-                emoji = "🏆"
-                result_word = "승리!"
-                detail = "오늘 예측 대결에서 이겼어요! 🎉"
+                title = "🏆 대결 승리!"
+                body = f"vs {opp_masked} · 오늘 예측 대결에서 이겼어요! 🎉"
+                tg = (
+                    f"⚔️ <b>대결 결과</b>\n\nvs <b>{opp_masked}</b>\n\n"
+                    f"🏆 <b>승리!</b>\n오늘 예측 대결에서 이겼어요! 🎉"
+                )
             else:
-                emoji = "😢"
-                result_word = "패배!"
-                detail = "오늘은 상대가 더 정확했어요. 내일 다시 도전! 💪"
-            return (
-                f"⚔️ <b>대결 결과</b>\n\n"
-                f"vs <b>{opp_masked}</b>\n\n"
-                f"{emoji} <b>{result_word}</b>\n{detail}"
-            )
+                title = "😢 대결 패배"
+                body = f"vs {opp_masked} · 오늘은 상대가 더 정확했어요. 내일 도전! 💪"
+                tg = (
+                    f"⚔️ <b>대결 결과</b>\n\nvs <b>{opp_masked}</b>\n\n"
+                    f"😢 <b>패배!</b>\n오늘은 상대가 더 정확했어요. 내일 다시 도전! 💪"
+                )
+            return title, body, tg
 
         is_tie = (outcome == "tie")
         c1_wins = (outcome == "challenger_wins")
 
+        c1_title, c1_body, c1_tg = _result_texts(c1_correct, c2_masked, c1_wins, is_tie)
+        c2_title, c2_body, c2_tg = _result_texts(c2_correct, c1_masked, not c1_wins and not is_tie, is_tie)
+
         c1_row = supabase.table("users").select("telegram_chat_id").eq("id", c1_id).execute()
         if c1_row.data and c1_row.data[0].get("telegram_chat_id"):
             try:
-                await send_message(
-                    c1_row.data[0]["telegram_chat_id"],
-                    _result_msg(c1_correct, c2_masked, c1_wins, is_tie),
-                )
+                await send_message(c1_row.data[0]["telegram_chat_id"], c1_tg)
             except Exception as e:
-                logger.error(f"대결 결과 알림 실패(c1): {e}")
+                logger.error(f"대결 결과 텔레그램 실패(c1): {e}")
+        send_web_push_to_user(supabase, c1_id, c1_title, c1_body, "/dashboard")
 
         c2_row = supabase.table("users").select("telegram_chat_id").eq("id", c2_id).execute()
         if c2_row.data and c2_row.data[0].get("telegram_chat_id"):
             try:
-                await send_message(
-                    c2_row.data[0]["telegram_chat_id"],
-                    _result_msg(c2_correct, c1_masked, not c1_wins and not is_tie, is_tie),
-                )
+                await send_message(c2_row.data[0]["telegram_chat_id"], c2_tg)
             except Exception as e:
-                logger.error(f"대결 결과 알림 실패(c2): {e}")
+                logger.error(f"대결 결과 텔레그램 실패(c2): {e}")
+        send_web_push_to_user(supabase, c2_id, c2_title, c2_body, "/dashboard")

@@ -1057,7 +1057,16 @@ async def create_challenge(
                 f"장 마감 후 결과를 함께 확인해봐요 🔥",
             )
         except Exception as e:
-            logger.warning(f"대결 신청 알림 실패: {e}")
+            logger.warning(f"대결 신청 텔레그램 알림 실패: {e}")
+
+    # 웹 푸시 알림도 함께 발송
+    from webpush_helper import send_web_push_to_user
+    send_web_push_to_user(
+        supabase, challenged_id,
+        title="⚔️ 대결 신청이 왔어요!",
+        body=f"{c_masked}님이 오늘 예측 대결을 신청했어요. 장 마감 후 결과를 확인해보세요!",
+        url="/dashboard",
+    )
 
     return {"ok": True, "challenge_id": result.data[0]["id"] if result.data else None}
 
