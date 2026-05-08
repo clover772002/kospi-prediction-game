@@ -941,7 +941,7 @@ export default function DashboardPage() {
             if (c.accepted === false) return { text: "거절됨",  color: "text-gray-600",   icon: "✖" };
             if (c.accepted === null && !c.is_sent) return { text: "수락 대기",  color: "text-orange-400", icon: "⏳" };
             if (c.accepted === null &&  c.is_sent) return { text: "수락 대기",  color: "text-gray-500",   icon: "⏳" };
-            if (c.outcome === "pending")   return { text: "결과 대기",  color: "text-gray-500",   icon: "⏳" };
+            if (c.outcome === "pending")   return { text: "대결 중",  color: "text-blue-400",   icon: "⚔️" };
             if (c.outcome === "no_result") return { text: "미참여",  color: "text-gray-600",   icon: "➖" };
             if (c.outcome === "tie")       return { text: "비김",    color: "text-blue-400",   icon: "🤝" };
             const iWon = c.is_sent ? c.outcome === "challenger_wins" : c.outcome === "challenged_wins";
