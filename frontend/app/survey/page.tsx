@@ -526,7 +526,6 @@ export default function SurveyPage() {
             </div>
           )}
 
-          {!(status === "result" && nextSurvey?.is_open) && <FlipClock />}
         </div>
       )}
 
