@@ -285,7 +285,7 @@ export default function GroupsPage() {
                         {nudgeLoading ? (
                           <span className="w-3 h-3 border border-orange-400/40 border-t-orange-400 rounded-full animate-spin" />
                         ) : "📣"}
-                        독촉하기
+                        설문 독촉하기
                       </button>
                     )}
                     {leaderboard && leaderboard.members.every((m) => m.is_me || m.voted_today) && (
@@ -329,12 +329,12 @@ export default function GroupsPage() {
 
                       {/* 전체 목록 */}
                       <div className="border-t border-[#222]">
-                        <div className="grid grid-cols-[28px_1fr_44px_44px_32px] text-[10px] text-gray-600 px-4 py-2">
-                          <span>#</span><span>닉네임</span><span className="text-right">적중률</span><span className="text-right">참여</span><span></span>
+                        <div className="grid grid-cols-[28px_1fr_44px_44px_44px] text-[10px] text-gray-600 px-4 py-2">
+                          <span>#</span><span>닉네임</span><span className="text-right">적중률</span><span className="text-right">참여</span><span className="text-center">설문여부</span>
                         </div>
                         <div className="divide-y divide-[#222]">
                           {leaderboard.members.map((m, i) => (
-                            <div key={m.user_id} className={`grid grid-cols-[28px_1fr_44px_44px_32px] items-center px-4 py-3 ${m.is_me ? "bg-green-500/10 border-l-2 border-green-500" : ""}`}>
+                            <div key={m.user_id} className={`grid grid-cols-[28px_1fr_44px_44px_44px] items-center px-4 py-3 ${m.is_me ? "bg-green-500/10 border-l-2 border-green-500" : ""}`}>
                               <span className="text-sm">{i < 3 ? medals[i] : <span className="text-gray-500 text-xs">{i + 1}</span>}</span>
                               <span className="text-sm font-bold flex items-center gap-1.5 truncate">
                                 {m.masked_name}
@@ -350,9 +350,6 @@ export default function GroupsPage() {
                               </span>
                             </div>
                           ))}
-                        </div>
-                        <div className="px-4 py-2 border-t border-[#222] flex justify-end">
-                          <span className="text-[10px] text-gray-600">✅ = 오늘 참여</span>
                         </div>
                       </div>
                     </>
