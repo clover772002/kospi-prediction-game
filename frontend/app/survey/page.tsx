@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { getToday, resolveApiBase, TodaySurvey } from "@/lib/api";
 import FlipClock from "@/components/FlipClock";
+import KospiChart from "@/components/KospiChart";
 
 export default function SurveyPage() {
   const router = useRouter();
@@ -263,28 +264,26 @@ export default function SurveyPage() {
 
       {/* 설문 진행 중 — 이미 완료됨 (재투표 전) */}
       {status === "open" && alreadyAnswered && !retrying && (
-        <div className="flex flex-col items-center gap-5 mt-12 text-center">
-          <div className="text-6xl">✅</div>
-          <p className="text-xl font-bold text-white">설문이 이미 완료되었습니다</p>
-          <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-2xl p-5 w-full space-y-2">
-            <p className="text-sm text-gray-400">현재 내 예측</p>
-            <p className="text-white font-bold text-lg">
-              코스피 {previousAnswer ? "📈 상승" : "📉 하락"}
-            </p>
+        <div className="flex flex-col gap-4 mt-6 fade-up">
+          <div className="bg-[#1A1A1A] border border-green-500/30 rounded-2xl p-4 flex items-center justify-between">
+            <div>
+              <p className="text-xs text-gray-400 mb-1">현재 내 예측</p>
+              <p className={`font-black text-lg ${previousAnswer ? "text-green-400" : "text-red-400"}`}>
+                코스피 {previousAnswer ? "📈 상승" : "📉 하락"}
+              </p>
+            </div>
+            <button
+              onClick={() => { setRetrying(true); setSubmitted(false); }}
+              className="text-xs text-gray-400 border border-[#333] px-3 py-1.5 rounded-lg hover:border-white/30 transition-all"
+            >
+              변경하기
+            </button>
           </div>
-          <p className="text-xs text-gray-500">마음이 바뀌셨나요?</p>
-          <button
-            onClick={() => { setRetrying(true); setSubmitted(false); }}
-            className="w-full py-4 bg-[#1A1A1A] border border-[#333] hover:border-white/30 text-gray-300 font-bold rounded-2xl transition-all"
-          >
-            다시 투표하기
-          </button>
-          <button
-            onClick={() => router.push("/dashboard")}
-            className="w-full py-4 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-2xl transition-all"
-          >
-            대시보드로 이동
-          </button>
+
+          <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-2xl overflow-hidden">
+            <p className="text-xs text-gray-500 px-4 pt-3 pb-2">📈 KOSPI 실시간 1시간봉</p>
+            <KospiChart />
+          </div>
         </div>
       )}
 
@@ -359,46 +358,63 @@ export default function SurveyPage() {
         </div>
       )}
 
-      {/* 제출 완료 */}
+      {/* 제출 완료 — 내 예측 + 코스피 차트 */}
       {status === "open" && submitted && (
-        <div className="flex flex-col items-center justify-center gap-5 mt-20 text-center">
-          <div className="text-6xl">✅</div>
-          <p className="text-xl font-bold text-white">예측 완료!</p>
-          <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-2xl p-5 w-full space-y-2">
-            <p className="text-sm text-gray-400">내 예측</p>
-            <p className="text-white font-bold text-lg">
-              코스피 {kospiAnswer ? "📈 상승" : "📉 하락"}
-            </p>
+        <div className="flex flex-col gap-4 mt-6 fade-up">
+          <div className="bg-[#1A1A1A] border border-green-500/30 rounded-2xl p-4 flex items-center justify-between">
+            <div>
+              <p className="text-xs text-gray-400 mb-1">내 예측</p>
+              <p className={`font-black text-lg ${kospiAnswer ? "text-green-400" : "text-red-400"}`}>
+                코스피 {kospiAnswer ? "📈 상승" : "📉 하락"}
+              </p>
+            </div>
+            <div className="text-right">
+              <p className="text-xs text-gray-500">15:35에 결과 공개</p>
+              <p className="text-xs text-gray-600 mt-0.5">장 시작 전까지 마감</p>
+            </div>
           </div>
-          <p className="text-xs text-gray-500">장 시작 전까지 마감 · 15:35에 결과 공개</p>
-          <button
-            onClick={() => router.push("/dashboard")}
-            className="w-full py-4 bg-[#1A1A1A] border border-[#2A2A2A] text-gray-300 font-bold rounded-2xl"
-          >
-            대시보드로 이동
-          </button>
+
+          <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-2xl overflow-hidden">
+            <p className="text-xs text-gray-500 px-4 pt-3 pb-2">📈 KOSPI 실시간 1시간봉</p>
+            <KospiChart />
+          </div>
         </div>
       )}
 
-      {/* 설문 마감 후 */}
+      {/* 설문 마감 후 — 내 예측 + 코스피 차트 */}
       {(status === "closed" || status === "result") && (
-        <div className="flex flex-col gap-5 mt-8">
-          <div className="flex flex-col items-center gap-3 text-center">
-            <div className="text-5xl">{status === "result" ? "📊" : "🔒"}</div>
-            <p className="text-xl font-bold text-white">
-              {status === "result" ? "오늘 결과 공개됐어요" : "설문이 마감됐어요"}
-            </p>
-            <p className="text-sm text-gray-400">
-              {status === "result"
-                ? "대시보드에서 결과와 내 정확도를 확인하세요"
-                : "장 시작 전에 집계가 끝났어요. 15:35에 결과가 공개돼요"}
-            </p>
-            <button
-              onClick={() => router.push("/dashboard")}
-              className="w-full py-4 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-2xl transition-all"
-            >
-              대시보드에서 결과 보기
-            </button>
+        <div className="flex flex-col gap-4 mt-6 fade-up">
+          {/* 내 예측 카드 */}
+          {(previousAnswer !== null || alreadyAnswered) && (
+            <div className={`border rounded-2xl p-4 flex items-center justify-between ${
+              status === "result" && today?.kospi_result != null
+                ? (previousAnswer ?? kospiAnswer) === today.kospi_result
+                  ? "bg-green-500/10 border-green-500/30"
+                  : "bg-red-500/10 border-red-500/20"
+                : "bg-[#1A1A1A] border-[#2A2A2A]"
+            }`}>
+              <div>
+                <p className="text-xs text-gray-400 mb-1">내 예측</p>
+                <p className={`font-black text-lg ${(previousAnswer ?? kospiAnswer) ? "text-green-400" : "text-red-400"}`}>
+                  코스피 {(previousAnswer ?? kospiAnswer) ? "📈 상승" : "📉 하락"}
+                </p>
+              </div>
+              <div className="text-right">
+                {status === "result" && today?.kospi_result != null ? (
+                  <span className="text-2xl">
+                    {(previousAnswer ?? kospiAnswer) === today.kospi_result ? "✅" : "❌"}
+                  </span>
+                ) : (
+                  <p className="text-xs text-gray-500">15:35에 결과 공개</p>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* KOSPI 차트 */}
+          <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-2xl overflow-hidden">
+            <p className="text-xs text-gray-500 px-4 pt-3 pb-2">📈 KOSPI 실시간 1시간봉</p>
+            <KospiChart />
           </div>
 
           {/* 내일 미리 예측하기 */}
