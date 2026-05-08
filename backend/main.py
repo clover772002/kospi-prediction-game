@@ -1272,6 +1272,18 @@ async def get_group_leaderboard(
     members = supabase.table("group_members").select("user_id").eq("group_id", group_id).execute()
     member_ids = [m["user_id"] for m in members.data]
 
+    # 리더보드도 nudge와 동일하게 "현재 열린 설문" 날짜 기준으로 voted_today 판단
+    open_sv = (
+        supabase.table("daily_surveys")
+        .select("survey_date")
+        .eq("is_closed", False)
+        .is_("kospi_result", "null")
+        .order("survey_date")
+        .limit(1)
+        .execute()
+    )
+    vote_check_date = open_sv.data[0]["survey_date"] if open_sv.data else today_kst()
+
     rows = []
     for uid in member_ids:
         user_row = supabase.table("users").select("name").eq("id", uid).execute()
@@ -1283,9 +1295,8 @@ async def get_group_leaderboard(
         correct = sum(1 for r in acc_rows.data if r.get("kospi_correct"))
         accuracy = round(correct / total * 100) if total > 0 else None
 
-        # 오늘 설문 참여 여부
-        today_str = today_kst()
-        voted = supabase.table("survey_responses").select("id").eq("user_id", uid).eq("survey_date", today_str).execute()
+        # 열린 설문 날짜 기준으로 참여 여부 확인
+        voted = supabase.table("survey_responses").select("id").eq("user_id", uid).eq("survey_date", vote_check_date).execute()
         rows.append({
             "user_id": uid,
             "masked_name": masked,
@@ -1367,17 +1378,32 @@ async def nudge_group(
         push_title = f"📣 [{group_name}] 설문 독촉!"
         push_body  = f"{sender_masked}님이 독촉장을 보냈어요! 얼른 오늘 예측 참여해요 👀"
 
+        sent_any = False
+
+        # 웹 푸시 시도
+        pushed = send_web_push_to_user(supabase, uid, push_title, push_body, "/survey", notif_type="group_nudge")
+        if pushed:
+            sent_any = True
+
+        # 텔레그램 시도
         target_row = supabase.table("users").select("telegram_chat_id").eq("id", uid).execute()
         if target_row.data and target_row.data[0].get("telegram_chat_id"):
             try:
                 await tg_send(target_row.data[0]["telegram_chat_id"], tg_text)
+                sent_any = True
             except Exception as e:
                 logger.warning(f"독촉 텔레그램 실패: {e}")
 
-        send_web_push_to_user(supabase, uid, push_title, push_body, "/survey", notif_type="group_nudge")
-        notified += 1
+        if sent_any:
+            notified += 1
+        else:
+            logger.info(f"독촉 대상 {uid}: 알림 수단 없음 (push/Telegram 미설정)")
 
     if notified == 0:
+        # 미참여자는 있었지만 알림 수단이 없는 경우
+        skipped = sum(1 for m in members.data if m["user_id"] != user_id)
+        if skipped > 0:
+            return {"ok": True, "notified": 0, "message": "미참여 멤버가 브라우저 알림을 켜지 않아 전송 불가예요 😥"}
         return {"ok": True, "notified": 0, "message": "모두 이미 참여했어요 🎉"}
     return {"ok": True, "notified": notified, "message": f"{notified}명에게 독촉 알림을 보냈어요!"}
 
