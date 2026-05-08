@@ -593,6 +593,8 @@ async def get_public_history(supabase: Client = Depends(get_supabase)):
             majority_correct = bool(s.get("majority_correct"))
             expert_up = s.get("expert_up")
             weighted_up = bool(expert_up) if expert_up is not None else majority_up
+            weighted_pct = 68.0 if weighted_up else 32.0
+            weighted_correct = weighted_up == actual_up
         elif resp_list:
             # 실제 응답 데이터 사용
             total = len(resp_list)
