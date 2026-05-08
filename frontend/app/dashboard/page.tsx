@@ -874,13 +874,13 @@ export default function DashboardPage() {
                 </div>
               )}
 
-                {/* 전체 순위 리스트 */}
+                {/* Top 5 순위 리스트 */}
               {!tooFew && <div className="border-t border-[#2A2A2A]">
                 <div className="grid grid-cols-[28px_1fr_56px_44px_60px] text-[10px] text-gray-600 px-4 py-2">
                   <span>#</span><span>닉네임</span><span className="text-center">예측</span><span className="text-right">적중률</span><span></span>
                 </div>
                 <div className="divide-y divide-[#222]">
-                  {sorted.map((p, i) => {
+                  {sorted.slice(0, 5).map((p, i) => {
                     const isMe = i === myIdx;
                     const result = today.kospi_result !== null
                       ? (p.kospi_answer === today.kospi_result ? "✅" : "❌")
@@ -943,16 +943,28 @@ export default function DashboardPage() {
                 </div>
               </div>}
 
-              {/* 내 위치 */}
-              {!tooFew && myIdx >= 0 && (
-                <div className="px-5 py-3 border-t border-[#2A2A2A] flex items-center justify-between">
-                  <p className="text-xs text-gray-500">내 순위</p>
-                  <p className="text-sm font-black text-white">
-                    {myIdx < 3 ? medals[myIdx] : `${myIdx + 1}위`}
-                    <span className="text-xs text-gray-500 font-normal ml-1">/ {sorted.length}명 중</span>
-                  </p>
-                </div>
-              )}
+              {/* 내가 Top5 밖일 때 내 위치 표시 */}
+              {!tooFew && myIdx >= 5 && (() => {
+                const me = sorted[myIdx];
+                return (
+                  <div className="border-t border-[#2A2A2A]">
+                    <div className="grid grid-cols-[28px_1fr_56px_44px_60px] items-center px-4 py-3 bg-blue-500/10 border-l-2 border-blue-500">
+                      <span className="text-gray-500 text-xs">{myIdx + 1}</span>
+                      <span className="text-sm font-bold text-white flex items-center gap-1.5">
+                        {me.masked_name}
+                        <span className="text-[9px] bg-blue-500 text-white px-1.5 py-0.5 rounded-full font-black">나</span>
+                      </span>
+                      <span className={`text-[11px] font-bold text-center ${me.kospi_answer ? "text-green-400" : "text-red-400"}`}>
+                        {me.kospi_answer ? "📈" : "📉"}
+                      </span>
+                      <span className="text-xs text-right font-bold text-gray-400">
+                        {me.accuracy !== null ? `${me.accuracy}%` : "신규"}
+                      </span>
+                      <div />
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
           );
         })()}
