@@ -21,43 +21,65 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    // 1) Yahoo Finance에서 KOSPI 데이터 가져오기
-    const res = await fetch(
-      "https://query1.finance.yahoo.com/v8/finance/chart/%5EKS11?interval=1d&range=5d",
-      {
-        headers: {
-          "User-Agent":
-            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
-          Accept: "application/json",
-        },
-        cache: "no-store",
+    // 1) 네이버 파이낸스 우선 (한국 기준 전일 대비 등락률이 정확)
+    let price: number | null = null;
+    let changePct: number | null = null;
+    let isUp: boolean | null = null;
+
+    try {
+      const naverRes = await fetch(
+        "https://m.stock.naver.com/api/index/KOSPI/basic",
+        {
+          headers: { "User-Agent": "Mozilla/5.0 (compatible; KospiBot/1.0)" },
+          cache: "no-store",
+        }
+      );
+      if (naverRes.ok) {
+        const d = await naverRes.json();
+        const priceStr = (d.closePrice ?? "").replace(/,/g, "");
+        const ratioStr = (d.fluctuationsRatio ?? "").replace(/,/g, "");
+        const code     = d.compareToPreviousPrice?.code ?? "";
+        if (priceStr && ratioStr) {
+          price     = Number(priceStr);
+          changePct = Math.round(Number(ratioStr) * 100) / 100;
+          isUp      = code === "2"; // 2=상승, 5=하락
+        }
       }
-    );
-    if (!res.ok) {
-      return NextResponse.json(
-        { error: `Yahoo Finance HTTP ${res.status}` },
-        { status: 500 }
+    } catch { /* 네이버 실패 시 Yahoo로 fallback */ }
+
+    // 2) 네이버 실패 시 Yahoo Finance fallback
+    if (price === null) {
+      const res = await fetch(
+        "https://query1.finance.yahoo.com/v8/finance/chart/%5EKS11?interval=1d&range=5d",
+        {
+          headers: {
+            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
+            Accept: "application/json",
+          },
+          cache: "no-store",
+        }
       );
+      if (!res.ok) {
+        return NextResponse.json(
+          { error: `Yahoo Finance HTTP ${res.status}` },
+          { status: 500 }
+        );
+      }
+      const data = await res.json();
+      const meta = data?.chart?.result?.[0]?.meta;
+      if (!meta) {
+        return NextResponse.json({ error: "no meta in response" }, { status: 500 });
+      }
+      // Yahoo는 한국 공휴일 고려 없이 previousClose 계산하므로
+      // regularMarketChangePercent 를 직접 사용
+      price     = Number(meta.regularMarketPrice);
+      changePct = Math.round((meta.regularMarketChangePercent ?? 0) * 100) / 100;
+      isUp      = (changePct ?? 0) > 0;
     }
 
-    const data = await res.json();
-    const meta = data?.chart?.result?.[0]?.meta;
-    if (!meta) {
-      return NextResponse.json({ error: "no meta in response" }, { status: 500 });
+    if (!price || changePct === null || isUp === null) {
+      return NextResponse.json({ error: "price data missing" }, { status: 500 });
     }
-
-    const price     = Number(meta.regularMarketPrice);
-    const prevClose = Number(meta.chartPreviousClose ?? meta.previousClose);
-
-    if (!price || !prevClose) {
-      return NextResponse.json(
-        { error: "price data missing", meta },
-        { status: 500 }
-      );
-    }
-
-    const changePct = Math.round(((price / prevClose - 1) * 100) * 100) / 100;
-    const isUp      = price > prevClose;
 
     // 2) Supabase에 직접 저장 (service role key 사용)
     const supabaseUrl     = process.env.NEXT_PUBLIC_SUPABASE_URL!;
