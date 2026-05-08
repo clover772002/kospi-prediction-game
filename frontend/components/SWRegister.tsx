@@ -4,9 +4,27 @@ import { useEffect } from "react";
 
 const EXPECTED_SW_VERSION = "5.0";
 
+// 전역에 설치 프롬프트 저장 — 원하는 시점에 setup 페이지에서 호출
+declare global {
+  interface Window {
+    __pwaInstallPrompt?: BeforeInstallPromptEvent;
+  }
+}
+interface BeforeInstallPromptEvent extends Event {
+  prompt(): Promise<void>;
+  userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
+}
+
 export default function SWRegister() {
   useEffect(() => {
     if (!("serviceWorker" in navigator)) return;
+
+    // PWA 설치 프롬프트 가로채기 — 나중에 원하는 시점에 사용
+    const handleInstallPrompt = (e: Event) => {
+      e.preventDefault();
+      window.__pwaInstallPrompt = e as BeforeInstallPromptEvent;
+    };
+    window.addEventListener("beforeinstallprompt", handleInstallPrompt);
 
     async function initSW() {
       // 현재 활성화된 SW 버전 확인

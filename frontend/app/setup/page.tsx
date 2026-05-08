@@ -566,6 +566,13 @@ export default function SetupPage() {
                         });
                         await savePushSubscription(token, sub.toJSON());
                         setPushLinked(true);
+
+                        // 알림 연결 완료 후 PWA 설치 프롬프트도 함께 띄우기
+                        const installPrompt = (window as Window & { __pwaInstallPrompt?: { prompt(): Promise<void> } }).__pwaInstallPrompt;
+                        if (installPrompt) {
+                          await installPrompt.prompt();
+                          delete (window as Window & { __pwaInstallPrompt?: unknown }).__pwaInstallPrompt;
+                        }
                       } catch (e: unknown) {
                         const msg = e instanceof Error ? e.message : String(e);
                         setPushError("알림 연결에 실패했어요: " + msg);
