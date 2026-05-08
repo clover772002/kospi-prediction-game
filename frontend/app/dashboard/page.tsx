@@ -221,8 +221,8 @@ export default function DashboardPage() {
     const streakText = streak > 1 ? ` 🔥${streak}연속 적중!` : "";
     const resultText = isCorrectToday ? "✅ 오늘 맞췄어요!" : "❌ 오늘 틀렸어요";
     const kospiText = today?.kospi_result
-      ? `코스피 📈 상승 ${today.kospi_change_pct != null ? `+${today.kospi_change_pct.toFixed(2)}%` : ""}`
-      : `코스피 📉 하락 ${today.kospi_change_pct != null ? `${today.kospi_change_pct.toFixed(2)}%` : ""}`;
+      ? `코스피 📈 상승 ${today?.kospi_change_pct != null ? `+${today.kospi_change_pct.toFixed(2)}%` : ""}`
+      : `코스피 📉 하락 ${today?.kospi_change_pct != null ? `${today.kospi_change_pct.toFixed(2)}%` : ""}`;
     const accuracyText = dash?.accuracy?.kospi != null ? ` (내 적중률 ${dash.accuracy.kospi}%)` : "";
     const shareText = `${resultText}${streakText}\n${kospiText}${accuracyText}\n\n코스피 예측에 참여해봐요 👉`;
     const shareUrl = typeof window !== "undefined" ? window.location.origin : "";
