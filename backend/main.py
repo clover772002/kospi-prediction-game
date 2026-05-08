@@ -498,13 +498,14 @@ async def get_public_history(supabase: Client = Depends(get_supabase)):
 
 @app.get("/api/public/backtest")
 async def get_backtest(supabase: Client = Depends(get_supabase)):
-    """백테스트: 고수 강화예측 따라 삼성전자/SK하이닉스 매매 수익률 (인증 불필요)"""
+    """백테스트: 고수 강화예측 따라 KOSPI 추종 매매 수익률 (DB 데이터만 사용, 외부 API 없음)"""
     try:
-        # 결과 있는 최근 30일 조회
+        # 결과 있는 최근 30일 조회 (kospi_change_pct 포함)
         rows = (
             supabase.table("daily_surveys")
             .select("survey_date, kospi_result, kospi_change_pct")
             .filter("kospi_result", "not.is", "null")
+            .filter("kospi_change_pct", "not.is", "null")
             .order("survey_date", desc=False)
             .limit(30)
             .execute()
@@ -527,75 +528,57 @@ async def get_backtest(supabase: Client = Depends(get_supabase)):
 
         acc_map = _build_user_accuracy_map(supabase)
 
-        # 날짜별 고수 강화예측 방향 계산
-        predictions: dict = {}
+        # 날짜별 예측 방향 + 실제 수익률 계산
+        daily_results = []
+        strategy_cum = 1.0
+        hold_cum = 1.0
+
         for row in rows.data:
             d = row["survey_date"]
+            change_pct = row.get("kospi_change_pct")
+            if change_pct is None:
+                continue
+
             resp_list = resp_by_date.get(d, [])
             if not resp_list:
                 continue
-            wpct = _calc_weighted_pct(resp_list, acc_map)
-            if wpct is not None:
-                predictions[d] = wpct >= 50
-            else:
-                yes_cnt = sum(1 for r in resp_list if r["kospi_answer"])
-                predictions[d] = yes_cnt >= len(resp_list) / 2
 
-        if len(predictions) < 2:
+            wpct = _calc_weighted_pct(resp_list, acc_map)
+            pred_up = (wpct >= 50) if wpct is not None else (
+                sum(1 for r in resp_list if r["kospi_answer"]) >= len(resp_list) / 2
+            )
+
+            daily_ret = change_pct / 100
+            hold_cum *= (1 + daily_ret)
+            if pred_up:
+                strategy_cum *= (1 + daily_ret)
+
+            daily_results.append({
+                "date": d,
+                "pred_up": pred_up,
+                "daily_return": round(change_pct, 2),
+                "strategy_cum": round((strategy_cum - 1) * 100, 2),
+            })
+
+        if len(daily_results) < 2:
             return {"results": {}, "total_days": 0}
 
-        # 주가 데이터 조회 범위
-        dates_sorted = sorted(predictions.keys())
-        start_dt = (datetime.strptime(dates_sorted[0], "%Y-%m-%d") - timedelta(days=5)).strftime("%Y-%m-%d")
-        end_dt = (datetime.strptime(dates_sorted[-1], "%Y-%m-%d") + timedelta(days=2)).strftime("%Y-%m-%d")
+        strategy_return = round((strategy_cum - 1) * 100, 2)
+        hold_return = round((hold_cum - 1) * 100, 2)
 
-        stocks = {"삼성전자": "005930.KS", "SK하이닉스": "000660.KS"}
-        results = {}
+        results = {
+            "KOSPI 추종": {
+                "strategy_return": strategy_return,
+                "hold_return": hold_return,
+                "days": len(daily_results),
+                "recent": daily_results[-7:],
+            }
+        }
 
-        for stock_name, ticker in stocks.items():
-            try:
-                df = yf.Ticker(ticker).history(start=start_dt, end=end_dt)
-                if df.empty:
-                    continue
-                df.index = df.index.strftime("%Y-%m-%d")
-
-                strategy_cum = 1.0
-                hold_cum = 1.0
-                prev_close = None
-                daily_results = []
-
-                for d in dates_sorted:
-                    if d not in df.index:
-                        continue
-                    close = float(df.loc[d, "Close"])
-                    if prev_close is not None:
-                        daily_return = (close / prev_close) - 1
-                        hold_cum *= (1 + daily_return)
-                        pred_up = predictions.get(d, True)
-                        if pred_up:
-                            strategy_cum *= (1 + daily_return)
-                        daily_results.append({
-                            "date": d,
-                            "pred_up": pred_up,
-                            "daily_return": round(daily_return * 100, 2),
-                            "strategy_cum": round((strategy_cum - 1) * 100, 2),
-                        })
-                    prev_close = close
-
-                if daily_results:
-                    results[stock_name] = {
-                        "strategy_return": round((strategy_cum - 1) * 100, 2),
-                        "hold_return": round((hold_cum - 1) * 100, 2),
-                        "days": len(daily_results),
-                        "recent": daily_results[-7:],
-                    }
-            except Exception as e:
-                logger.error(f"백테스트 {stock_name} 오류: {e}")
-
-        return {"results": results, "total_days": len(predictions)}
+        return {"results": results, "total_days": len(daily_results)}
 
     except Exception as e:
-        logger.error(f"백테스트 전체 오류: {e}")
+        logger.error(f"백테스트 오류: {e}")
         return {"results": {}, "total_days": 0}
 
 

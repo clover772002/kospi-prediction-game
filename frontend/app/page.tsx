@@ -297,7 +297,7 @@ export default function LoginPage() {
         <div className="w-full mb-8">
           <p className="text-xs text-gray-500 font-bold tracking-widest uppercase mb-3">예측대로 매매했다면?</p>
           <p className="text-xs text-gray-500 mb-4">
-            고수 강화예측을 따라 매매했을 때 수익률 시뮬레이션 (최근 {backtest.total_days}일)
+            고수 강화예측 신호로 KOSPI 추종 ETF를 매매했다면? (최근 {backtest.total_days}일 시뮬레이션)
           </p>
           <div className="space-y-3">
             {Object.entries(backtest.results).map(([name, data]) => {
