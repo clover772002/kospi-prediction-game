@@ -472,13 +472,15 @@ async def unlink_telegram(
         raise HTTPException(status_code=500, detail="연동 해제 중 오류가 발생했습니다.")
 
 
-def _calc_weighted_pct(responses_with_users: list, accuracy_map: dict) -> int | None:
+_BAYES_ALPHA = 5  # 베이지안 스무딩 강도 — 표본 5회 미만은 50%로 수렴
+
+def _calc_weighted_pct(responses_with_users: list, accuracy_map: dict, pred_count: dict | None = None) -> int | None:
     """
-    누적 정확도 기반 가중예측치 계산.
-    - 정확도 > 50%: 양의 가중치 (예측 그대로 반영)
-    - 정확도 = 50%: 가중치 0 (무시)
-    - 정확도 < 50%: 음의 가중치 (예측 반전 반영 — 항상 틀리는 사람도 신호가 됨)
-    weight = (accuracy - 0.5) * 2  →  범위: -1.0 ~ +1.0
+    누적 정확도 기반 가중예측치 계산 (베이지안 스무딩 적용).
+    - 예측 횟수가 적을수록 가중치를 50%(중립) 방향으로 수렴시켜
+      표본이 작은 사람이 결과를 독식하는 것을 방지.
+    - 베이지안 보정 정확도: (맞힌 수 + α) / (전체 수 + 2α),  α=5
+    - weight = (보정_accuracy - 0.5) * 2  →  범위: -1.0 ~ +1.0
     """
     if not responses_with_users:
         return None
@@ -487,7 +489,17 @@ def _calc_weighted_pct(responses_with_users: list, accuracy_map: dict) -> int | 
 
     for r in responses_with_users:
         uid = r["user_id"]
-        acc = accuracy_map.get(uid, 0.5)
+        raw_acc = accuracy_map.get(uid, 0.5)
+
+        # 베이지안 스무딩: 예측 횟수를 반영해 극단값 보정
+        if pred_count and uid in pred_count:
+            n = pred_count[uid]
+            correct = round(raw_acc * n)
+            acc = (correct + _BAYES_ALPHA) / (n + 2 * _BAYES_ALPHA)
+        else:
+            # 예측 기록 없음 → 중립 처리
+            acc = (0 + _BAYES_ALPHA) / (0 + 2 * _BAYES_ALPHA)  # = 0.5
+
         weight = (acc - 0.5) * 2  # -1 ~ +1
 
         if weight == 0.0:
@@ -554,11 +566,11 @@ async def get_public_history(supabase: Client = Depends(get_supabase)):
     if not rows.data:
         return {"history": [], "stats": {"total_days": 0, "majority_accuracy": 0, "weighted_accuracy": 0}}
 
-    # acc_map은 루프 밖에서 한 번만 조회
+    # acc_map, pred_count는 루프 밖에서 한 번만 조회
     try:
-        acc_map = _build_user_accuracy_map(supabase)
+        acc_map, hist_pred_count = _get_accuracy_data(supabase)
     except Exception:
-        acc_map = {}
+        acc_map, hist_pred_count = {}, {}
 
     # 해당 날짜 전체 응답을 한 번에 조회
     survey_dates = [row["survey_date"] for row in rows.data]
@@ -624,7 +636,7 @@ async def get_public_history(supabase: Client = Depends(get_supabase)):
             yes_cnt = sum(1 for r in resp_list if r["kospi_answer"])
             majority_up = yes_cnt >= total / 2
             majority_correct = majority_up == actual_up
-            weighted_pct = _calc_weighted_pct(resp_list, acc_map)
+            weighted_pct = _calc_weighted_pct(resp_list, acc_map, hist_pred_count)
             weighted_up = weighted_pct >= 50 if weighted_pct is not None else majority_up
             weighted_correct = weighted_up == actual_up
         elif summary:
@@ -890,7 +902,7 @@ async def get_backtest(supabase: Client = Depends(get_supabase)):
         for r in all_resp.data:
             resp_by_date.setdefault(r["survey_date"], []).append(r)
 
-        acc_map = _build_user_accuracy_map(supabase)
+        acc_map, bt_pred_count = _get_accuracy_data(supabase)
 
         # 날짜별 예측 방향 + 실제 수익률 계산
         daily_results = []
@@ -907,7 +919,7 @@ async def get_backtest(supabase: Client = Depends(get_supabase)):
             if not resp_list:
                 continue
 
-            wpct = _calc_weighted_pct(resp_list, acc_map)
+            wpct = _calc_weighted_pct(resp_list, acc_map, bt_pred_count)
             pred_up = (wpct >= 50) if wpct is not None else (
                 sum(1 for r in resp_list if r["kospi_answer"]) >= len(resp_list) / 2
             )
@@ -1016,7 +1028,7 @@ async def get_today(supabase: Client = Depends(get_supabase)):
 
         # 가중예측치 계산 (캐시된 정확도 맵 사용, 실제 데이터 기반)
         acc_map, pred_count = _get_accuracy_data(supabase)
-        raw_weighted = _calc_weighted_pct(responses.data, acc_map)
+        raw_weighted = _calc_weighted_pct(responses.data, acc_map, pred_count)
         if raw_weighted is not None and total < _PAD_THRESHOLD:
             # 가중치도 패딩 방향으로 자연스럽게 보정
             raw_dir = raw_weighted >= 50
