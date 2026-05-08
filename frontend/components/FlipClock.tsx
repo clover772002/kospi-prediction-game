@@ -2,69 +2,66 @@
 
 import { useEffect, useState, useRef } from "react";
 
-function getSecondsUntilNextSurvey(): number {
+type CountdownInfo = { seconds: number; label: string; sublabel: string };
+
+function getCountdown(): CountdownInfo {
   const now = new Date();
   const kst = new Date(now.toLocaleString("en-US", { timeZone: "Asia/Seoul" }));
+  const mins = kst.getHours() * 60 + kst.getMinutes();
 
-  const todaySurvey = new Date(kst);
-  todaySurvey.setHours(22, 0, 0, 0);
+  const target = new Date(kst);
 
-  let target = new Date(todaySurvey);
-  if (kst >= todaySurvey) {
+  // 09:00 ~ 15:35 → 장마감까지
+  if (mins >= 9 * 60 && mins < 15 * 60 + 35) {
+    target.setHours(15, 35, 0, 0);
+    return {
+      seconds: Math.max(0, Math.floor((target.getTime() - kst.getTime()) / 1000)),
+      label: "장마감까지",
+      sublabel: "15:35 결과 공개",
+    };
+  }
+
+  // 15:35 ~ 22:00 → 설문시작까지
+  if (mins >= 15 * 60 + 35 && mins < 22 * 60) {
+    target.setHours(22, 0, 0, 0);
+    return {
+      seconds: Math.max(0, Math.floor((target.getTime() - kst.getTime()) / 1000)),
+      label: "설문 시작까지",
+      sublabel: "22:00 설문 발송",
+    };
+  }
+
+  // 22:00 ~ 09:00 → 장시작까지
+  if (mins >= 22 * 60) {
     target.setDate(target.getDate() + 1);
   }
-  // 주말 건너뛰기
+  target.setHours(9, 0, 0, 0);
   while (target.getDay() === 0 || target.getDay() === 6) {
     target.setDate(target.getDate() + 1);
   }
-
-  return Math.max(0, Math.floor((target.getTime() - kst.getTime()) / 1000));
+  return {
+    seconds: Math.max(0, Math.floor((target.getTime() - kst.getTime()) / 1000)),
+    label: "장 시작까지",
+    sublabel: "09:00 장 개시",
+  };
 }
 
 function pad(n: number) {
   return String(n).padStart(2, "0");
 }
 
-const CARD_H = 56;
+const CARD_H = 40;
 const HALF_H = CARD_H / 2;
+const FONT_SIZE = 18;
 
-function HalfDigit({
-  value,
-  half,
-  dim = false,
-}: {
-  value: string;
-  half: "top" | "bottom";
-  dim?: boolean;
-}) {
+function HalfDigit({ value, half, dim = false }: { value: string; half: "top" | "bottom"; dim?: boolean }) {
   return (
     <div
-      style={{
-        height: HALF_H,
-        overflow: "hidden",
-        position: "relative",
-      }}
+      style={{ height: HALF_H, overflow: "hidden", position: "relative" }}
       className={half === "top" ? "rounded-t-md bg-[#1E1E1E]" : "rounded-b-md bg-[#181818]"}
     >
-      {/* 전체 높이 div 안에 숫자를 센터 정렬 — overflow:hidden이 절반만 보이게 함 */}
-      <div
-        style={{
-          height: CARD_H,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          marginTop: half === "bottom" ? -HALF_H : 0,
-        }}
-      >
-        <span
-          className="tabular-nums font-black select-none"
-          style={{
-            fontSize: 26,
-            lineHeight: 1,
-            color: dim ? "rgba(255,255,255,0.55)" : "#fff",
-            fontVariantNumeric: "tabular-nums",
-          }}
-        >
+      <div style={{ height: CARD_H, display: "flex", alignItems: "center", justifyContent: "center", marginTop: half === "bottom" ? -HALF_H : 0 }}>
+        <span className="tabular-nums font-black select-none" style={{ fontSize: FONT_SIZE, lineHeight: 1, color: dim ? "rgba(255,255,255,0.5)" : "#fff", fontVariantNumeric: "tabular-nums" }}>
           {value}
         </span>
       </div>
@@ -87,78 +84,23 @@ function FlipCard({ digit, prevDigit }: { digit: string; prevDigit: string }) {
   }, [digit]);
 
   return (
-    <div
-      className="relative select-none rounded-md"
-      style={{ width: 36, height: CARD_H, perspective: 300 }}
-    >
-      {/* 정적: 상단 (현재값) */}
+    <div className="relative select-none rounded-md" style={{ width: 26, height: CARD_H, perspective: 200 }}>
       <HalfDigit value={digit} half="top" />
-      {/* 중앙 구분선 */}
       <div style={{ height: 1, background: "#000", position: "relative", zIndex: 5 }} />
-      {/* 정적: 하단 (현재값) */}
       <HalfDigit value={digit} half="bottom" dim />
 
-      {/* 애니메이션: 이전값 상단이 아래로 접힘 */}
       {animating && (
-        <div
-          className="flip-top"
-          style={{
-            position: "absolute",
-            top: 0,
-            left: 0,
-            right: 0,
-            height: HALF_H,
-            overflow: "hidden",
-            zIndex: 10,
-            transformOrigin: "bottom center",
-            borderRadius: "6px 6px 0 0",
-            background: "#2A2A2A",
-          }}
-        >
-          <div
-            style={{
-              height: CARD_H,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-            }}
-          >
-            <span className="tabular-nums font-black" style={{ fontSize: 26, lineHeight: 1, color: "#fff" }}>
-              {savedPrev}
-            </span>
+        <div className="flip-top" style={{ position: "absolute", top: 0, left: 0, right: 0, height: HALF_H, overflow: "hidden", zIndex: 10, transformOrigin: "bottom center", borderRadius: "4px 4px 0 0", background: "#2A2A2A" }}>
+          <div style={{ height: CARD_H, display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <span className="tabular-nums font-black" style={{ fontSize: FONT_SIZE, lineHeight: 1, color: "#fff" }}>{savedPrev}</span>
           </div>
         </div>
       )}
 
-      {/* 애니메이션: 새값 하단이 위에서 펼쳐짐 */}
       {animating && (
-        <div
-          className="flip-bottom"
-          style={{
-            position: "absolute",
-            bottom: 0,
-            left: 0,
-            right: 0,
-            height: HALF_H,
-            overflow: "hidden",
-            zIndex: 10,
-            transformOrigin: "top center",
-            borderRadius: "0 0 6px 6px",
-            background: "#1E1E1E",
-          }}
-        >
-          <div
-            style={{
-              height: CARD_H,
-              marginTop: -HALF_H,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-            }}
-          >
-            <span className="tabular-nums font-black" style={{ fontSize: 26, lineHeight: 1, color: "rgba(255,255,255,0.55)" }}>
-              {digit}
-            </span>
+        <div className="flip-bottom" style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: HALF_H, overflow: "hidden", zIndex: 10, transformOrigin: "top center", borderRadius: "0 0 4px 4px", background: "#1E1E1E" }}>
+          <div style={{ height: CARD_H, marginTop: -HALF_H, display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <span className="tabular-nums font-black" style={{ fontSize: FONT_SIZE, lineHeight: 1, color: "rgba(255,255,255,0.5)" }}>{digit}</span>
           </div>
         </div>
       )}
@@ -167,55 +109,51 @@ function FlipCard({ digit, prevDigit }: { digit: string; prevDigit: string }) {
 }
 
 function FlipUnit({ value, label }: { value: string; label: string }) {
-  const d0 = value[0];
-  const d1 = value[1];
-  const prevD0 = useRef(d0);
-  const prevD1 = useRef(d1);
-
-  const p0 = prevD0.current;
-  const p1 = prevD1.current;
+  const d0 = value[0], d1 = value[1];
+  const prevD0 = useRef(d0), prevD1 = useRef(d1);
+  const p0 = prevD0.current, p1 = prevD1.current;
   prevD0.current = d0;
   prevD1.current = d1;
 
   return (
-    <div className="flex flex-col items-center gap-1.5">
+    <div className="flex flex-col items-center gap-1">
       <div className="flex gap-0.5">
         <FlipCard digit={d0} prevDigit={p0} />
         <FlipCard digit={d1} prevDigit={p1} />
       </div>
-      <span className="text-[10px] text-gray-500 font-bold tracking-widest uppercase">{label}</span>
+      <span className="text-[9px] text-gray-600 font-bold tracking-widest uppercase">{label}</span>
     </div>
   );
 }
 
 export default function FlipClock() {
-  const [secs, setSecs] = useState<number | null>(null);
+  const [info, setInfo] = useState<CountdownInfo | null>(null);
 
   useEffect(() => {
-    setSecs(getSecondsUntilNextSurvey());
-    const id = setInterval(() => setSecs(getSecondsUntilNextSurvey()), 1000);
+    setInfo(getCountdown());
+    const id = setInterval(() => setInfo(getCountdown()), 1000);
     return () => clearInterval(id);
   }, []);
 
-  if (secs === null) return null;
+  if (!info) return null;
 
-  const h = Math.floor(secs / 3600);
-  const m = Math.floor((secs % 3600) / 60);
-  const s = secs % 60;
+  const h = Math.floor(info.seconds / 3600);
+  const m = Math.floor((info.seconds % 3600) / 60);
+  const s = info.seconds % 60;
 
   return (
-    <div className="bg-[#0F0F0F] border border-[#2A2A2A] rounded-2xl p-4">
-      <p className="text-xs text-gray-500 text-center mb-3 tracking-widest uppercase">다음 설문까지</p>
-      <div className="flex items-center justify-center gap-2">
+    <div className="bg-[#0F0F0F] border border-[#2A2A2A] rounded-xl px-4 py-3">
+      <div className="flex items-center justify-between mb-2">
+        <p className="text-[10px] text-gray-500 font-bold tracking-widest uppercase">{info.label}</p>
+        <p className="text-[10px] text-gray-600">{info.sublabel}</p>
+      </div>
+      <div className="flex items-center justify-center gap-1.5">
         <FlipUnit value={pad(h)} label="시간" />
-        <span className="text-2xl font-black text-gray-600 mb-4">:</span>
+        <span className="text-base font-black text-gray-600 pb-3">:</span>
         <FlipUnit value={pad(m)} label="분" />
-        <span className="text-2xl font-black text-gray-600 mb-4">:</span>
+        <span className="text-base font-black text-gray-600 pb-3">:</span>
         <FlipUnit value={pad(s)} label="초" />
       </div>
-      <p className="text-xs text-gray-600 text-center mt-3">
-        다음 영업일 밤 <span className="text-white font-bold">22:00</span> 설문 발송
-      </p>
     </div>
   );
 }
