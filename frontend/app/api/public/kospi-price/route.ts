@@ -3,13 +3,21 @@ import { NextResponse } from "next/server";
 const BACKEND = "https://kospi-prediction-game-production.up.railway.app";
 
 // Vercel에서 직접 Naver 호출 (Railway IP 제한 우회)
+// /price?startDateTime=... 엔드포인트: openPrice/highPrice/lowPrice 포함
 async function fetchNaverOhlc() {
-  const res = await fetch("https://m.stock.naver.com/api/index/KOSPI/basic", {
-    headers: { "User-Agent": "Mozilla/5.0 (compatible; KospiBot/1.0)" },
+  const now   = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Seoul" }));
+  const today = `${now.getFullYear()}${String(now.getMonth()+1).padStart(2,"0")}${String(now.getDate()).padStart(2,"0")}`;
+  const url   = `https://m.stock.naver.com/api/index/KOSPI/price?startDateTime=${today}000000&endDateTime=${today}235959&timeFrame=1d`;
+
+  const res = await fetch(url, {
+    headers: { "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X)" },
     cache: "no-store",
   });
   if (!res.ok) return null;
-  const d = await res.json();
+  const rows = await res.json();
+  // 오늘 날짜 데이터만 사용
+  const d = Array.isArray(rows) ? rows.find((r: Record<string, string>) => r.localTradedAt === `${today.slice(0,4)}-${today.slice(4,6)}-${today.slice(6,8)}`) ?? rows[0] : rows;
+  if (!d) return null;
 
   const num = (key: string) => {
     const v = (d[key] ?? "").replace(/,/g, "");
