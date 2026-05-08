@@ -200,7 +200,7 @@ export default function SurveyPage() {
 
   return (
     <main className="max-w-md mx-auto min-h-screen pb-36 px-5">
-      <div className="pt-10 pb-6 flex items-center justify-between">
+      <div className="pt-10 pb-6 flex items-center justify-between gap-3">
         <div>
           {(() => {
             const kst = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Seoul" }));
@@ -217,6 +217,9 @@ export default function SurveyPage() {
               </>
             );
           })()}
+        </div>
+        <div className="shrink-0">
+          <FlipClock compact />
         </div>
       </div>
 
@@ -257,7 +260,6 @@ export default function SurveyPage() {
                 </>
               )}
             </div>
-            <FlipClock />
           </div>
         );
       })()}

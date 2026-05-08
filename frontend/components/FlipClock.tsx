@@ -126,7 +126,7 @@ function FlipUnit({ value, label }: { value: string; label: string }) {
   );
 }
 
-export default function FlipClock() {
+export default function FlipClock({ compact = false }: { compact?: boolean }) {
   const [info, setInfo] = useState<CountdownInfo | null>(null);
 
   useEffect(() => {
@@ -140,6 +140,22 @@ export default function FlipClock() {
   const h = Math.floor(info.seconds / 3600);
   const m = Math.floor((info.seconds % 3600) / 60);
   const s = info.seconds % 60;
+
+  /* ── compact 모드: 헤더 옆 배치용 ── */
+  if (compact) {
+    return (
+      <div className="flex flex-col items-end gap-0.5">
+        <p className="text-[9px] text-gray-500 font-bold tracking-widest">{info.label}</p>
+        <div className="flex items-center gap-1">
+          <FlipUnit value={pad(h)} label="시" />
+          <span className="text-sm font-black text-gray-600 pb-3">:</span>
+          <FlipUnit value={pad(m)} label="분" />
+          <span className="text-sm font-black text-gray-600 pb-3">:</span>
+          <FlipUnit value={pad(s)} label="초" />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-[#0F0F0F] border border-[#2A2A2A] rounded-xl px-4 py-3">
