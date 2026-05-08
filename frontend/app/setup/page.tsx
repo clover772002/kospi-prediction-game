@@ -267,13 +267,13 @@ export default function SetupPage() {
       ) : pushLinked ? (
         /* 웹 푸시 연동 완료 */
         <div className="space-y-5">
-          <div className="bg-purple-500/10 border border-purple-500/30 rounded-2xl p-6 text-center space-y-3">
-            <div className="text-5xl">🔔</div>
-            <p className="font-black text-lg text-purple-400">브라우저 알림 연결 완료!</p>
-            <p className="text-sm text-gray-400">
-              매일 밤 <span className="text-white font-bold">22:00</span>에 알림이 도착합니다.<br />
-              알림을 탭하면 바로 설문 페이지로 이동해요.
-            </p>
+          <div className="bg-purple-500/10 border border-purple-500/30 rounded-2xl px-4 py-3 flex items-center gap-3">
+            <span className="text-2xl flex-shrink-0">🔔</span>
+            <div className="flex-1 min-w-0">
+              <p className="font-black text-sm text-purple-400">브라우저 알림 연결 완료!</p>
+              <p className="text-[11px] text-gray-400 mt-0.5">매일 밤 <span className="text-white font-bold">22:00</span> 알림 · 탭하면 바로 설문으로</p>
+            </div>
+            <span className="text-green-400 text-lg flex-shrink-0">✅</span>
           </div>
 
           {/* 알림 종류 체크박스 */}
