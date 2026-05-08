@@ -9,35 +9,34 @@ export default function KospiChart() {
     if (!containerRef.current) return;
     containerRef.current.innerHTML = "";
 
+    const widget = document.createElement("div");
+    widget.className = "tradingview-widget-container__widget";
+    containerRef.current.appendChild(widget);
+
     const script = document.createElement("script");
-    script.src = "https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js";
+    script.src = "https://s3.tradingview.com/external-embedding/embed-widget-mini-symbol-overview.js";
     script.type = "text/javascript";
     script.async = true;
     script.innerHTML = JSON.stringify({
-      autosize: true,
       symbol: "KRX:KOSPI",
-      interval: "60",
-      timezone: "Asia/Seoul",
-      theme: "dark",
-      style: "1",
+      width: "100%",
+      height: 220,
       locale: "kr",
-      toolbar_bg: "#0D0D0D",
-      backgroundColor: "#0D0D0D",
-      gridColor: "rgba(255,255,255,0.04)",
-      hide_top_toolbar: false,
-      hide_legend: true,
-      save_image: false,
-      calendar: false,
-      hide_volume: true,
-      support_host: "https://www.tradingview.com",
+      dateRange: "1D",
+      colorTheme: "dark",
+      isTransparent: true,
+      autosize: true,
+      largeChartUrl: "",
     });
 
     containerRef.current.appendChild(script);
   }, []);
 
   return (
-    <div className="tradingview-widget-container" ref={containerRef} style={{ height: "300px", width: "100%" }}>
-      <div className="tradingview-widget-container__widget" style={{ height: "100%", width: "100%" }} />
-    </div>
+    <div
+      className="tradingview-widget-container"
+      ref={containerRef}
+      style={{ height: "220px", width: "100%" }}
+    />
   );
 }
