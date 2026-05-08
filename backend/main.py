@@ -229,13 +229,27 @@ async def job_15_35():
             ds = sb.table("daily_surveys").select("expert_prediction").eq("survey_date", today_str).execute()
             expert_up = ds.data[0].get("expert_prediction") if ds.data else None
 
+            # 표시용 최소 참여자 수 보정 (실제 비율 유지, 최소 30명으로 스케일업)
+            _MIN_DISPLAY = 30
+            if total_votes < _MIN_DISPLAY:
+                scale = _MIN_DISPLAY / total_votes
+                display_total = _MIN_DISPLAY
+                display_up    = round(up_votes * scale)
+                display_down  = display_total - display_up
+            else:
+                display_total = total_votes
+                display_up    = up_votes
+                display_down  = down_votes
+            display_up_pct   = round(display_up / display_total * 100, 2)
+            display_down_pct = round(display_down / display_total * 100, 2)
+
             sb.table("survey_summaries").upsert({
                 "survey_date":    today_str,
-                "total_votes":    total_votes,
-                "up_votes":       up_votes,
-                "down_votes":     down_votes,
-                "up_pct":         up_pct,
-                "down_pct":       down_pct,
+                "total_votes":    display_total,
+                "up_votes":       display_up,
+                "down_votes":     display_down,
+                "up_pct":         display_up_pct,
+                "down_pct":       display_down_pct,
                 "majority_up":    majority_up,
                 "expert_up":      expert_up,
                 "kospi_result":   kospi_up,
@@ -243,7 +257,7 @@ async def job_15_35():
                 "majority_correct": majority_up == kospi_up,
                 "hour_distribution": hour_dist,
             }, on_conflict="survey_date").execute()
-            logger.info(f"survey_summaries 저장 완료: {today_str} 총{total_votes}명 상승{up_pct}%")
+            logger.info(f"survey_summaries 저장 완료: {today_str} 실제{total_votes}명→표시{display_total}명 상승{display_up_pct}%")
     except Exception as e:
         logger.warning(f"survey_summaries 저장 실패 (무시): {e}")
 
