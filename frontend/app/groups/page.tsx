@@ -109,9 +109,17 @@ export default function GroupsPage() {
   return (
     <main className="max-w-md mx-auto min-h-screen pb-28 px-5 bg-[#111] text-white">
       {/* 헤더 */}
-      <div className="pt-8 pb-5">
-        <h1 className="text-xl font-black">👥 그룹 대결</h1>
-        <p className="text-xs text-gray-400 mt-1">친구를 초대해 그룹 내 순위를 겨뤄보세요</p>
+      <div className="pt-8 pb-5 flex items-center justify-between">
+        <div>
+          <h1 className="text-xl font-black">👥 그룹 대결</h1>
+          <p className="text-xs text-gray-400 mt-1">친구를 초대해 그룹 내 순위를 겨뤄보세요</p>
+        </div>
+        <button
+          onClick={() => setMode("create")}
+          className="flex items-center gap-1.5 text-xs font-black px-3 py-2 bg-green-600/20 text-green-400 border border-green-600/30 hover:bg-green-600/40 rounded-xl transition-all active:scale-95"
+        >
+          ＋ 그룹 추가
+        </button>
       </div>
 
       {/* 토스트 메시지 */}
@@ -189,17 +197,13 @@ export default function GroupsPage() {
         <div className="space-y-4">
           {/* 그룹 탭 (여러 그룹) */}
           {groups.length > 1 && (
-            <div className="flex items-center gap-2">
-              <div className="flex gap-1.5 flex-1 flex-wrap">
-                {groups.map((g) => (
-                  <button key={g.group_id} onClick={() => setSelectedId(g.group_id)}
-                    className={`text-sm font-bold px-4 py-2 rounded-xl transition-all ${selectedId === g.group_id ? "bg-green-600 text-white" : "bg-[#1A1A1A] text-gray-400 border border-[#2A2A2A]"}`}>
-                    {g.name}
-                  </button>
-                ))}
-              </div>
-              <button onClick={() => setMode("create")}
-                className="text-xl text-gray-500 hover:text-green-400 transition-colors px-1">＋</button>
+            <div className="flex gap-1.5 flex-wrap">
+              {groups.map((g) => (
+                <button key={g.group_id} onClick={() => setSelectedId(g.group_id)}
+                  className={`text-sm font-bold px-4 py-2 rounded-xl transition-all ${selectedId === g.group_id ? "bg-green-600 text-white" : "bg-[#1A1A1A] text-gray-400 border border-[#2A2A2A]"}`}>
+                  {g.name}
+                </button>
+              ))}
             </div>
           )}
 
@@ -220,18 +224,10 @@ export default function GroupsPage() {
                           {g.member_count}명 참여 &middot; {g.is_owner ? "👑 방장" : "멤버"}
                         </p>
                       </div>
-                      <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
-                        {groups.length === 1 && (
-                          <button onClick={() => setMode("create")}
-                            className="text-[10px] font-bold text-green-400 hover:text-green-300 transition-colors">
-                            ＋ 그룹 추가
-                          </button>
-                        )}
-                        <button onClick={() => handleLeave(g.group_id)}
-                          className="text-[10px] text-gray-600 hover:text-red-400 transition-colors">
-                          탈퇴
-                        </button>
-                      </div>
+                      <button onClick={() => handleLeave(g.group_id)}
+                        className="text-[10px] text-gray-600 hover:text-red-400 transition-colors flex-shrink-0">
+                        탈퇴
+                      </button>
                     </div>
                   </div>
 
