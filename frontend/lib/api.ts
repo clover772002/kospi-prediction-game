@@ -73,6 +73,8 @@ export interface Challenge {
   outcome: ChallengeOutcome;
   survey_date: string;
   is_sent: boolean;
+  my_reaction: string | null;
+  opp_reaction: string | null;
 }
 
 export interface TodaySurvey {
@@ -159,4 +161,22 @@ export async function getMyChallenges(
   date: string,
 ): Promise<{ sent: Challenge[]; received: Challenge[] }> {
   return authFetch(`/api/challenges/me?date=${date}`, token);
+}
+
+export async function reactToChallenge(
+  token: string,
+  challenge_id: string,
+  reaction: string,
+): Promise<{ ok: boolean }> {
+  return authFetch(`/api/challenges/${challenge_id}/react`, token, {
+    method: "POST",
+    body: JSON.stringify({ reaction }),
+  });
+}
+
+export async function requestRematch(
+  token: string,
+  challenge_id: string,
+): Promise<{ ok: boolean; challenge_id?: string; survey_date?: string }> {
+  return authFetch(`/api/challenges/${challenge_id}/rematch`, token, { method: "POST" });
 }

@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
-import { getMe, getToday, getDashboard, createChallenge, getMyChallenges, UserProfile, TodaySurvey, DashboardData, Challenge } from "@/lib/api";
+import { getMe, getToday, getDashboard, createChallenge, getMyChallenges, reactToChallenge, requestRematch, UserProfile, TodaySurvey, DashboardData, Challenge } from "@/lib/api";
 
 // 연속 적중 스트릭 계산
 function calcStreak(history: DashboardData["history"]): number {
@@ -52,8 +52,10 @@ export default function DashboardPage() {
   const [token, setToken]     = useState<string | null>(null);
   const [showResultCard, setShowResultCard] = useState(false);
   const [challenges, setChallenges]         = useState<{ sent: Challenge[]; received: Challenge[] } | null>(null);
-  const [challengeLoading, setChallengeLoading] = useState<string | null>(null); // challenged user_id
-  const [challengeToast, setChallengeToast]     = useState<string | null>(null);
+  const [challengeLoading, setChallengeLoading]   = useState<string | null>(null);
+  const [challengeToast, setChallengeToast]       = useState<string | null>(null);
+  const [reactingId, setReactingId]               = useState<string | null>(null); // challenge id 이모티콘 피커 열림
+  const [rematchLoading, setRematchLoading]        = useState<string | null>(null);
 
   useEffect(() => {
     let called = false;
@@ -131,19 +133,56 @@ export default function DashboardPage() {
     router.replace("/");
   };
 
+  const refreshChallenges = async (surveyDate: string) => {
+    if (!token) return;
+    try {
+      const ch = await getMyChallenges(token, surveyDate);
+      setChallenges(ch);
+    } catch { /* ignore */ }
+  };
+
+  const showToast = (msg: string) => {
+    setChallengeToast(msg);
+    setTimeout(() => setChallengeToast(null), 3000);
+  };
+
   const handleChallenge = async (challenged_user_id: string, survey_date: string) => {
     if (!token) return;
     setChallengeLoading(challenged_user_id);
     try {
       await createChallenge(token, challenged_user_id, survey_date);
-      const ch = await getMyChallenges(token, survey_date);
-      setChallenges(ch);
-      setChallengeToast("⚔️ 대결 신청 완료! 상대에게 알림이 전송됐어요.");
+      await refreshChallenges(survey_date);
+      showToast("⚔️ 대결 신청 완료! 상대에게 알림이 전송됐어요.");
     } catch (e: unknown) {
-      setChallengeToast(e instanceof Error ? e.message : "대결 신청 실패");
+      showToast(e instanceof Error ? e.message : "대결 신청 실패");
     } finally {
       setChallengeLoading(null);
-      setTimeout(() => setChallengeToast(null), 3000);
+    }
+  };
+
+  const handleReact = async (challenge_id: string, reaction: string, survey_date: string) => {
+    if (!token) return;
+    setReactingId(null);
+    try {
+      await reactToChallenge(token, challenge_id, reaction);
+      await refreshChallenges(survey_date);
+      showToast(`${reaction} 반응을 보냈어요!`);
+    } catch (e: unknown) {
+      showToast(e instanceof Error ? e.message : "반응 전송 실패");
+    }
+  };
+
+  const handleRematch = async (challenge_id: string, survey_date: string) => {
+    if (!token) return;
+    setRematchLoading(challenge_id);
+    try {
+      const res = await requestRematch(token, challenge_id);
+      await refreshChallenges(survey_date);
+      showToast(`🔥 재대결 신청! ${res.survey_date} 대결이 잡혔어요.`);
+    } catch (e: unknown) {
+      showToast(e instanceof Error ? e.message : "재대결 신청 실패");
+    } finally {
+      setRematchLoading(null);
     }
   };
 
@@ -769,16 +808,16 @@ export default function DashboardPage() {
             ),
           ];
 
-          const outcomeLabel = (c: Challenge) => {
-            if (c.outcome === "pending") return { text: "대기중", color: "text-gray-500" };
-            const iWon = c.is_sent
-              ? c.outcome === "challenger_wins"
-              : c.outcome === "challenged_wins";
-            if (c.outcome === "tie") return { text: "🤝 비김", color: "text-blue-400" };
-            if (c.outcome === "no_result") return { text: "미참여", color: "text-gray-600" };
+          const REACTIONS = ["😄", "😢", "😝"] as const;
+
+          const outcomeInfo = (c: Challenge) => {
+            if (c.outcome === "pending")   return { text: "대기중",  color: "text-gray-500",   icon: "⏳" };
+            if (c.outcome === "no_result") return { text: "미참여",  color: "text-gray-600",   icon: "➖" };
+            if (c.outcome === "tie")       return { text: "비김",    color: "text-blue-400",   icon: "🤝" };
+            const iWon = c.is_sent ? c.outcome === "challenger_wins" : c.outcome === "challenged_wins";
             return iWon
-              ? { text: "🏆 승리", color: "text-yellow-400" }
-              : { text: "😢 패배", color: "text-red-400" };
+              ? { text: "승리!", color: "text-yellow-400", icon: "🏆" }
+              : { text: "패배", color: "text-red-400",    icon: "😢" };
           };
 
           return (
@@ -789,18 +828,79 @@ export default function DashboardPage() {
                   {allChallenges.length}건
                 </span>
               </div>
+
               <div className="divide-y divide-[#222] border-t border-[#2A2A2A]">
                 {allChallenges.map((c) => {
-                  const { text, color } = outcomeLabel(c);
+                  const { text, color, icon } = outcomeInfo(c);
+                  const isDone = c.outcome !== "pending" && c.outcome !== "no_result";
+                  const isPickerOpen = reactingId === c.id;
+
                   return (
-                    <div key={c.id} className="flex items-center justify-between px-5 py-3">
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-bold text-white">{c.opponent_masked_name}</span>
-                        <span className="text-[10px] text-gray-600">
-                          {c.is_sent ? "내가 신청" : "받은 신청"}
+                    <div key={c.id} className="px-5 py-4 space-y-3">
+                      {/* 상단: 상대 이름 + 결과 */}
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-bold text-white">{c.opponent_masked_name}</span>
+                          <span className="text-[10px] text-gray-600">
+                            {c.is_sent ? "내가 신청" : "받은 신청"}
+                          </span>
+                        </div>
+                        <span className={`text-sm font-black flex items-center gap-1 ${color}`}>
+                          <span>{icon}</span><span>{text}</span>
                         </span>
                       </div>
-                      <span className={`text-xs font-black ${color}`}>{text}</span>
+
+                      {/* 반응 영역 */}
+                      {isDone && (
+                        <div className="flex items-center gap-2 flex-wrap">
+                          {/* 상대방 반응 표시 */}
+                          {c.opp_reaction && (
+                            <div className="flex items-center gap-1 bg-[#252525] rounded-full px-2.5 py-1">
+                              <span className="text-sm">{c.opp_reaction}</span>
+                              <span className="text-[10px] text-gray-500">상대</span>
+                            </div>
+                          )}
+
+                          {/* 내 반응 or 피커 */}
+                          {c.my_reaction ? (
+                            <div className="flex items-center gap-1 bg-blue-500/20 border border-blue-500/30 rounded-full px-2.5 py-1">
+                              <span className="text-sm">{c.my_reaction}</span>
+                              <span className="text-[10px] text-blue-400">나</span>
+                            </div>
+                          ) : (
+                            <>
+                              <button
+                                onClick={() => setReactingId(isPickerOpen ? null : c.id)}
+                                className="text-[11px] text-gray-400 bg-[#252525] hover:bg-[#2A2A2A] border border-[#333] rounded-full px-2.5 py-1 transition-colors"
+                              >
+                                {isPickerOpen ? "닫기" : "😄 반응하기"}
+                              </button>
+                              {isPickerOpen && (
+                                <div className="flex gap-1.5 animate-[fadeUp_0.2s_ease-out]">
+                                  {REACTIONS.map((r) => (
+                                    <button
+                                      key={r}
+                                      onClick={() => handleReact(c.id, r, c.survey_date)}
+                                      className="w-9 h-9 text-xl bg-[#252525] hover:bg-orange-500/20 border border-[#333] hover:border-orange-500/40 rounded-xl transition-all active:scale-90 flex items-center justify-center"
+                                    >
+                                      {r}
+                                    </button>
+                                  ))}
+                                </div>
+                              )}
+                            </>
+                          )}
+
+                          {/* 재대결 버튼 */}
+                          <button
+                            onClick={() => handleRematch(c.id, c.survey_date)}
+                            disabled={rematchLoading === c.id}
+                            className="ml-auto text-[11px] font-black px-2.5 py-1 rounded-full bg-red-500/15 text-red-400 border border-red-500/30 hover:bg-red-500/30 active:scale-95 transition-all disabled:opacity-40 whitespace-nowrap"
+                          >
+                            {rematchLoading === c.id ? "..." : "🔥 재대결"}
+                          </button>
+                        </div>
+                      )}
                     </div>
                   );
                 })}

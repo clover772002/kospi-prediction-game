@@ -1097,6 +1097,8 @@ async def get_my_challenges(
 
     def _enrich(c, is_sent: bool):
         other = c["challenged_id"] if is_sent else c["challenger_id"]
+        my_reaction    = c.get("challenger_reaction") if is_sent else c.get("challenged_reaction")
+        opp_reaction   = c.get("challenged_reaction") if is_sent else c.get("challenger_reaction")
         return {
             "id": c["id"],
             "opponent_masked_name": _masked(other),
@@ -1104,12 +1106,137 @@ async def get_my_challenges(
             "outcome": c["outcome"],
             "survey_date": c["survey_date"],
             "is_sent": is_sent,
+            "my_reaction": my_reaction,
+            "opp_reaction": opp_reaction,
         }
 
     return {
         "sent":     [_enrich(c, True)  for c in sent_res.data],
         "received": [_enrich(c, False) for c in recv_res.data],
     }
+
+
+class ReactRequest(BaseModel):
+    reaction: str  # "😄" | "😢" | "😝"
+
+ALLOWED_REACTIONS = {"😄", "😢", "😝"}
+
+@app.post("/api/challenges/{challenge_id}/react")
+async def react_to_challenge(
+    challenge_id: str,
+    body: ReactRequest,
+    current_user=Depends(get_current_user),
+    supabase: Client = Depends(get_supabase),
+):
+    """결과 확정 후 상대방에게 이모티콘 반응 전송"""
+    from telegram_bot import send_message as tg_send
+    from webpush_helper import send_web_push_to_user
+
+    if body.reaction not in ALLOWED_REACTIONS:
+        raise HTTPException(400, "허용되지 않는 반응이에요")
+
+    user_id = str(current_user.id)
+    ch_res = supabase.table("challenges").select("*").eq("id", challenge_id).execute()
+    if not ch_res.data:
+        raise HTTPException(404, "대결을 찾을 수 없어요")
+
+    ch = ch_res.data[0]
+    if ch["outcome"] == "pending":
+        raise HTTPException(400, "결과가 아직 나오지 않았어요")
+
+    is_challenger = ch["challenger_id"] == user_id
+    is_challenged = ch["challenged_id"] == user_id
+    if not is_challenger and not is_challenged:
+        raise HTTPException(403, "내 대결이 아니에요")
+
+    reaction_col = "challenger_reaction" if is_challenger else "challenged_reaction"
+    opponent_id  = ch["challenged_id"] if is_challenger else ch["challenger_id"]
+
+    supabase.table("challenges").update({reaction_col: body.reaction}).eq("id", challenge_id).execute()
+
+    # 내 이름 마스킹
+    my_row = supabase.table("users").select("name").eq("id", user_id).execute()
+    my_name = my_row.data[0]["name"] if my_row.data else "익명"
+    my_masked = (my_name[0] + "**") if my_name else "익명"
+
+    tg_text = f"{body.reaction} <b>{my_masked}</b>님이 반응을 보냈어요!\n앱에서 확인해보세요 👀"
+    push_body = f"{my_masked}님이 {body.reaction} 반응을 보냈어요!"
+
+    opp_row = supabase.table("users").select("telegram_chat_id").eq("id", opponent_id).execute()
+    if opp_row.data and opp_row.data[0].get("telegram_chat_id"):
+        try:
+            await tg_send(opp_row.data[0]["telegram_chat_id"], tg_text)
+        except Exception as e:
+            logger.warning(f"반응 텔레그램 알림 실패: {e}")
+
+    send_web_push_to_user(supabase, opponent_id, "⚔️ 상대방이 반응했어요!", push_body, "/dashboard")
+
+    return {"ok": True}
+
+
+@app.post("/api/challenges/{challenge_id}/rematch")
+async def request_rematch(
+    challenge_id: str,
+    current_user=Depends(get_current_user),
+    supabase: Client = Depends(get_supabase),
+):
+    """결과 확정 후 다음 거래일 재대결 신청"""
+    from telegram_bot import send_message as tg_send
+    from webpush_helper import send_web_push_to_user
+
+    user_id = str(current_user.id)
+    ch_res = supabase.table("challenges").select("*").eq("id", challenge_id).execute()
+    if not ch_res.data:
+        raise HTTPException(404, "대결을 찾을 수 없어요")
+
+    ch = ch_res.data[0]
+    if ch["outcome"] == "pending":
+        raise HTTPException(400, "결과가 아직 나오지 않았어요")
+
+    is_challenger = ch["challenger_id"] == user_id
+    is_challenged = ch["challenged_id"] == user_id
+    if not is_challenger and not is_challenged:
+        raise HTTPException(403, "내 대결이 아니에요")
+
+    opponent_id = ch["challenged_id"] if is_challenger else ch["challenger_id"]
+    next_str = next_trading_day_str()
+
+    # 이미 재대결 신청 여부 확인
+    existing = (
+        supabase.table("challenges").select("id")
+        .eq("challenger_id", user_id).eq("challenged_id", opponent_id).eq("survey_date", next_str).execute()
+    )
+    if existing.data:
+        raise HTTPException(400, "이미 재대결을 신청했어요")
+
+    result = supabase.table("challenges").insert({
+        "challenger_id": user_id,
+        "challenged_id": opponent_id,
+        "survey_date": next_str,
+        "outcome": "pending",
+    }).execute()
+
+    my_row = supabase.table("users").select("name").eq("id", user_id).execute()
+    my_name = my_row.data[0]["name"] if my_row.data else "익명"
+    my_masked = (my_name[0] + "**") if my_name else "익명"
+
+    tg_text = (
+        f"🔥 <b>재대결 신청!</b>\n\n"
+        f"<b>{my_masked}</b>님이 {next_str} 재대결을 신청했어요!\n"
+        f"내일도 예측 대결, 받아주실 건가요? 😤"
+    )
+    push_body = f"{my_masked}님이 내일 재대결을 신청했어요! 😤"
+
+    opp_row = supabase.table("users").select("telegram_chat_id").eq("id", opponent_id).execute()
+    if opp_row.data and opp_row.data[0].get("telegram_chat_id"):
+        try:
+            await tg_send(opp_row.data[0]["telegram_chat_id"], tg_text)
+        except Exception as e:
+            logger.warning(f"재대결 텔레그램 알림 실패: {e}")
+
+    send_web_push_to_user(supabase, opponent_id, "🔥 재대결 신청이 왔어요!", push_body, "/dashboard")
+
+    return {"ok": True, "challenge_id": result.data[0]["id"] if result.data else None, "survey_date": next_str}
 
 
 # ─────────────────────────────────────────────────────────────────────────────
