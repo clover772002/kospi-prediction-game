@@ -1381,8 +1381,8 @@ async def nudge_group(
             f"얼른 참여해서 순위를 지켜내세요! 🏆\n\n"
             f"👉 {target_date} 설문 참여"
         )
-        push_title = f"📣 [{group_name}] 설문 독촉!"
-        push_body  = f"{sender_masked}님이 독촉장을 보냈어요! 얼른 예측 참여해요 👀"
+        push_title = f"📣 {sender_masked}님이 독촉장을 보냈어요!"
+        push_body  = f"[{group_name}] 아직 오늘 코스피 예측 안 하셨네요 👀 얼른 참여해서 순위 지켜내세요! 🏆"
 
         sent_any = False
 

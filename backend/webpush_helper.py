@@ -46,15 +46,18 @@ def _allowed(preferences: dict | None, notif_type: str | None) -> bool:
     return preferences.get(notif_type, True)
 
 
-def send_web_push(subscription_info: dict, title: str, body: str, url: str = "/dashboard") -> bool:
+def send_web_push(subscription_info: dict, title: str, body: str, url: str = "/dashboard", notif_type: str | None = None) -> bool:
     """단일 구독자에게 웹 푸시 전송. 성공 시 True, 실패 시 False 반환."""
     if not VAPID_PRIVATE_KEY:
         logger.warning("VAPID_PRIVATE_KEY 미설정 — 웹 푸시 생략")
         return False
     try:
+        payload = {"title": title, "body": body, "url": url}
+        if notif_type:
+            payload["type"] = notif_type
         webpush(
             subscription_info=subscription_info,
-            data=json.dumps({"title": title, "body": body, "url": url}),
+            data=json.dumps(payload),
             vapid_private_key=VAPID_PRIVATE_KEY,
             vapid_claims={"sub": VAPID_CLAIMS_EMAIL},
         )
@@ -90,7 +93,7 @@ def send_web_push_to_user(
         sub = row.data[0]["push_subscription"]
         if isinstance(sub, str):
             sub = json.loads(sub)
-        return send_web_push(sub, title, body, url)
+        return send_web_push(sub, title, body, url, notif_type)
     except Exception as e:
         logger.error(f"웹 푸시 단일 발송 오류 (user={user_id}): {e}")
         return False
@@ -133,7 +136,7 @@ async def send_web_push_to_all(
                 logger.error(f"유저 {user.get('id')}: push_subscription JSON 파싱 오류 {e}")
                 continue
         logger.info(f"유저 {user.get('id')} 푸시 발송 시도")
-        if send_web_push(sub, title, body, url):
+        if send_web_push(sub, title, body, url, notif_type):
             sent += 1
 
     logger.info(f"웹 푸시 발송 완료: {sent}명")
