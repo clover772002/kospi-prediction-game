@@ -81,6 +81,7 @@ export interface GroupMember {
   total_predictions: number;
   correct: number;
   rank: number;
+  voted_today: boolean;
 }
 
 export interface GroupLeaderboard {
@@ -218,6 +219,13 @@ export async function getGroupLeaderboard(token: string, group_id: string): Prom
 
 export async function leaveGroup(token: string, group_id: string): Promise<{ ok: boolean }> {
   return authFetch(`/api/groups/${group_id}/leave`, token, { method: "DELETE" });
+}
+
+export async function nudgeGroup(
+  token: string,
+  group_id: string,
+): Promise<{ ok: boolean; notified: number; message: string }> {
+  return authFetch(`/api/groups/${group_id}/nudge`, token, { method: "POST" });
 }
 
 export async function requestRematch(

@@ -1113,6 +1113,9 @@ async def get_group_leaderboard(
         correct = sum(1 for r in acc_rows.data if r.get("kospi_correct"))
         accuracy = round(correct / total * 100) if total > 0 else None
 
+        # 오늘 설문 참여 여부
+        today_str = today_kst()
+        voted = supabase.table("survey_responses").select("id").eq("user_id", uid).eq("survey_date", today_str).execute()
         rows.append({
             "user_id": uid,
             "masked_name": masked,
@@ -1120,6 +1123,7 @@ async def get_group_leaderboard(
             "accuracy": accuracy,
             "total_predictions": total,
             "correct": correct,
+            "voted_today": bool(voted.data),
         })
 
     rows.sort(key=lambda r: (-(r["accuracy"] or -1), -r["total_predictions"]))
@@ -1133,6 +1137,67 @@ async def get_group_leaderboard(
         "invite_code": grp.data[0]["invite_code"] if grp.data else "",
         "members": rows,
     }
+
+
+@app.post("/api/groups/{group_id}/nudge")
+async def nudge_group(
+    group_id: str,
+    current_user=Depends(get_current_user),
+    supabase: Client = Depends(get_supabase),
+):
+    """오늘 설문 미참여 그룹 멤버에게 독촉 알림 발송"""
+    from telegram_bot import send_message as tg_send
+    from webpush_helper import send_web_push_to_user
+
+    user_id = str(current_user.id)
+
+    # 멤버 확인
+    mem_check = supabase.table("group_members").select("id").eq("group_id", group_id).eq("user_id", user_id).execute()
+    if not mem_check.data:
+        raise HTTPException(403, "그룹 멤버만 독촉할 수 있어요")
+
+    today_str = today_kst()
+
+    # 그룹명 + 발신자 이름
+    grp = supabase.table("groups").select("name").eq("id", group_id).execute()
+    group_name = grp.data[0]["name"] if grp.data else "그룹"
+    sender_row = supabase.table("users").select("name").eq("id", user_id).execute()
+    sender_name = sender_row.data[0]["name"] if sender_row.data else "익명"
+    sender_masked = (sender_name[0] + "**") if sender_name else "익명"
+
+    # 전체 멤버 중 오늘 미참여자
+    members = supabase.table("group_members").select("user_id").eq("group_id", group_id).execute()
+    notified = 0
+    for m in members.data:
+        uid = m["user_id"]
+        if uid == user_id:
+            continue  # 자기 자신 제외
+        voted = supabase.table("survey_responses").select("id").eq("user_id", uid).eq("survey_date", today_str).execute()
+        if voted.data:
+            continue  # 이미 참여한 멤버 제외
+
+        tg_text = (
+            f"📣 <b>설문 독촉!</b>\n\n"
+            f"<b>[{group_name}]</b> 그룹의 <b>{sender_masked}</b>님이 독촉장을 보냈어요!\n\n"
+            f"아직 오늘 코스피 예측을 안 하셨네요 👀\n"
+            f"얼른 참여해서 순위를 지켜내세요! 🏆"
+        )
+        push_title = f"📣 [{group_name}] 설문 독촉!"
+        push_body  = f"{sender_masked}님이 독촉장을 보냈어요! 얼른 오늘 예측 참여해요 👀"
+
+        target_row = supabase.table("users").select("telegram_chat_id").eq("id", uid).execute()
+        if target_row.data and target_row.data[0].get("telegram_chat_id"):
+            try:
+                await tg_send(target_row.data[0]["telegram_chat_id"], tg_text)
+            except Exception as e:
+                logger.warning(f"독촉 텔레그램 실패: {e}")
+
+        send_web_push_to_user(supabase, uid, push_title, push_body, "/survey")
+        notified += 1
+
+    if notified == 0:
+        return {"ok": True, "notified": 0, "message": "모두 이미 참여했어요 🎉"}
+    return {"ok": True, "notified": notified, "message": f"{notified}명에게 독촉 알림을 보냈어요!"}
 
 
 @app.delete("/api/groups/{group_id}/leave")

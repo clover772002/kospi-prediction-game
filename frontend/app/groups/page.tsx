@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import {
-  createGroup, joinGroup, getMyGroups, getGroupLeaderboard, leaveGroup,
+  createGroup, joinGroup, getMyGroups, getGroupLeaderboard, leaveGroup, nudgeGroup,
   Group, GroupLeaderboard,
 } from "@/lib/api";
 import ShareSheet from "@/components/ShareSheet";
@@ -21,6 +21,7 @@ export default function GroupsPage() {
   const [joinCode, setJoinCode]               = useState("");
   const [msg, setMsg]                         = useState<{ text: string; ok: boolean } | null>(null);
   const [mode, setMode]                       = useState<"list" | "create" | "join">("list");
+  const [nudgeLoading, setNudgeLoading]       = useState(false);
 
   const showMsg = (text: string, ok: boolean) => {
     setMsg({ text, ok });
@@ -82,6 +83,20 @@ export default function GroupsPage() {
       await loadGroups(token);
       setSelectedId(res.group_id);
     } catch (e: unknown) { showMsg(e instanceof Error ? e.message : "가입 실패", false); }
+  };
+
+  const handleNudge = async (gid: string) => {
+    if (!token) return;
+    setNudgeLoading(true);
+    try {
+      const res = await nudgeGroup(token, gid);
+      showMsg(res.message, res.ok);
+      if (res.notified > 0) await loadLeaderboard(token, gid);
+    } catch (e: unknown) {
+      showMsg(e instanceof Error ? e.message : "독촉 실패", false);
+    } finally {
+      setNudgeLoading(false);
+    }
   };
 
   const handleLeave = async (gid: string) => {
@@ -253,13 +268,29 @@ export default function GroupsPage() {
 
                 {/* 리더보드 */}
                 <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-2xl overflow-hidden">
-                  <div className="px-5 py-4 border-b border-[#2A2A2A] flex items-center justify-between">
-                    <div>
+                  <div className="px-5 py-4 border-b border-[#2A2A2A] flex items-center justify-between gap-3">
+                    <div className="flex-1 min-w-0">
                       <p className="font-black text-sm">🏆 그룹 순위</p>
                       <p className="text-[10px] text-gray-500 mt-0.5">
                         누적 적중률 높은 순 &middot; 동률 시 참여일 수 많은 순
                       </p>
                     </div>
+                    {/* 독촉 버튼 */}
+                    {leaderboard && leaderboard.members.some((m) => !m.is_me && !m.voted_today) && (
+                      <button
+                        onClick={() => handleNudge(g.group_id)}
+                        disabled={nudgeLoading}
+                        className="flex items-center gap-1.5 text-xs font-black px-3 py-2 bg-orange-500/20 text-orange-400 border border-orange-500/30 hover:bg-orange-500/40 active:scale-95 rounded-xl transition-all disabled:opacity-40 whitespace-nowrap flex-shrink-0"
+                      >
+                        {nudgeLoading ? (
+                          <span className="w-3 h-3 border border-orange-400/40 border-t-orange-400 rounded-full animate-spin" />
+                        ) : "📣"}
+                        독촉하기
+                      </button>
+                    )}
+                    {leaderboard && leaderboard.members.every((m) => m.is_me || m.voted_today) && (
+                      <span className="text-[10px] text-green-400 font-bold flex-shrink-0">✅ 모두 참여</span>
+                    )}
                   </div>
 
                   {lbLoading ? (
@@ -298,12 +329,12 @@ export default function GroupsPage() {
 
                       {/* 전체 목록 */}
                       <div className="border-t border-[#222]">
-                        <div className="grid grid-cols-[28px_1fr_52px_52px] text-[10px] text-gray-600 px-4 py-2">
-                          <span>#</span><span>닉네임</span><span className="text-right">적중률</span><span className="text-right">참여</span>
+                        <div className="grid grid-cols-[28px_1fr_44px_44px_32px] text-[10px] text-gray-600 px-4 py-2">
+                          <span>#</span><span>닉네임</span><span className="text-right">적중률</span><span className="text-right">참여</span><span></span>
                         </div>
                         <div className="divide-y divide-[#222]">
                           {leaderboard.members.map((m, i) => (
-                            <div key={m.user_id} className={`grid grid-cols-[28px_1fr_52px_52px] items-center px-4 py-3 ${m.is_me ? "bg-green-500/10 border-l-2 border-green-500" : ""}`}>
+                            <div key={m.user_id} className={`grid grid-cols-[28px_1fr_44px_44px_32px] items-center px-4 py-3 ${m.is_me ? "bg-green-500/10 border-l-2 border-green-500" : ""}`}>
                               <span className="text-sm">{i < 3 ? medals[i] : <span className="text-gray-500 text-xs">{i + 1}</span>}</span>
                               <span className="text-sm font-bold flex items-center gap-1.5 truncate">
                                 {m.masked_name}
@@ -313,8 +344,15 @@ export default function GroupsPage() {
                                 {m.accuracy !== null ? `${m.accuracy}%` : "신규"}
                               </span>
                               <span className="text-[10px] text-gray-600 text-right">{m.total_predictions}일</span>
+                              {/* 오늘 참여 여부 */}
+                              <span className="text-center text-xs">
+                                {m.voted_today ? "✅" : <span className="text-gray-600">⬜</span>}
+                              </span>
                             </div>
                           ))}
+                        </div>
+                        <div className="px-4 py-2 border-t border-[#222] flex justify-end">
+                          <span className="text-[10px] text-gray-600">✅ = 오늘 참여</span>
                         </div>
                       </div>
                     </>
