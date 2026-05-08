@@ -7,6 +7,7 @@ import {
   createGroup, joinGroup, getMyGroups, getGroupLeaderboard, leaveGroup,
   Group, GroupLeaderboard,
 } from "@/lib/api";
+import ShareSheet from "@/components/ShareSheet";
 
 export default function GroupsPage() {
   const router = useRouter();
@@ -19,7 +20,6 @@ export default function GroupsPage() {
   const [groupName, setGroupName]             = useState("");
   const [joinCode, setJoinCode]               = useState("");
   const [msg, setMsg]                         = useState<{ text: string; ok: boolean } | null>(null);
-  const [copiedCode, setCopiedCode]           = useState<string | null>(null);
   const [mode, setMode]                       = useState<"list" | "create" | "join">("list");
 
   const showMsg = (text: string, ok: boolean) => {
@@ -92,11 +92,8 @@ export default function GroupsPage() {
     showMsg("그룹에서 탈퇴했어요", true);
   };
 
-  const copyLink = (code: string) => {
-    navigator.clipboard.writeText(`${window.location.origin}/join?code=${code}`);
-    setCopiedCode(code);
-    setTimeout(() => setCopiedCode(null), 2000);
-  };
+  const inviteUrl = (code: string) =>
+    typeof window !== "undefined" ? `${window.location.origin}/join?code=${code}` : "";
 
   const medals = ["🥇", "🥈", "🥉"];
 
@@ -231,21 +228,26 @@ export default function GroupsPage() {
                     </div>
                   </div>
 
-                  {/* 초대 코드 + 링크 — 한 덩어리로 */}
+                  {/* 초대 코드 + 공유 — 한 덩어리로 */}
                   <div className="px-5 py-4 flex items-center gap-3">
                     <div className="flex-1">
                       <p className="text-[10px] text-gray-500 mb-1">초대 코드</p>
                       <p className="font-mono font-black text-xl text-white tracking-[0.25em]">{g.invite_code}</p>
                     </div>
-                    <button
-                      onClick={() => copyLink(g.invite_code)}
-                      className="flex flex-col items-center gap-1 px-4 py-3 bg-green-600 hover:bg-green-500 active:scale-95 rounded-2xl transition-all"
-                    >
-                      <span className="text-lg">{copiedCode === g.invite_code ? "✅" : "🔗"}</span>
-                      <span className="text-[10px] font-black text-white whitespace-nowrap">
-                        {copiedCode === g.invite_code ? "복사됨" : "초대 링크"}
-                      </span>
-                    </button>
+                    <ShareSheet
+                      url={inviteUrl(g.invite_code)}
+                      title="투자를 잘하거나 못하는 친구가 있나요?"
+                      text={`코스피 예측 그룹 "${g.name}"에 초대합니다! 함께 예측 대결해봐요 🏆`}
+                      renderTrigger={(onClick) => (
+                        <button
+                          onClick={onClick}
+                          className="flex flex-col items-center gap-1 px-4 py-3 bg-green-600 hover:bg-green-500 active:scale-95 rounded-2xl transition-all"
+                        >
+                          <span className="text-lg">🔗</span>
+                          <span className="text-[10px] font-black text-white whitespace-nowrap">초대하기</span>
+                        </button>
+                      )}
+                    />
                   </div>
                 </div>
 
