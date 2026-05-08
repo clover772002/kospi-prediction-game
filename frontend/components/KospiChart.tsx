@@ -13,8 +13,10 @@ interface Candle {
 export default function KospiChart() {
   const [data, setData] = useState<Candle[]>([]);
   const [loading, setLoading] = useState(true);
+  const [retry, setRetry] = useState(0);
 
   useEffect(() => {
+    setLoading(true);
     fetch("/api/public/kospi-chart", { cache: "no-store" })
       .then((r) => r.json())
       .then((d) => {
@@ -22,7 +24,7 @@ export default function KospiChart() {
         setLoading(false);
       })
       .catch(() => setLoading(false));
-  }, []);
+  }, [retry]);
 
   if (loading) {
     return (
@@ -34,8 +36,14 @@ export default function KospiChart() {
 
   if (data.length < 2) {
     return (
-      <div className="flex items-center justify-center h-36 text-gray-500 text-sm">
-        장 시작 전이거나 데이터를 불러올 수 없어요
+      <div className="flex flex-col items-center justify-center h-36 gap-2 text-gray-500 text-sm">
+        <span>장 시작 전이거나 데이터를 불러올 수 없어요</span>
+        <button
+          onClick={() => setRetry((r) => r + 1)}
+          className="text-xs px-3 py-1 rounded-full border border-gray-600 hover:border-gray-400 transition-colors"
+        >
+          다시 시도
+        </button>
       </div>
     );
   }

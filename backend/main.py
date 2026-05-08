@@ -1,5 +1,7 @@
 ﻿# -*- coding: utf-8 -*-
 import os
+import asyncio
+import time
 import logging
 from datetime import date, timedelta, datetime, timezone
 from zoneinfo import ZoneInfo
@@ -496,36 +498,58 @@ async def get_public_history(supabase: Client = Depends(get_supabase)):
     }
 
 
+# ── KOSPI 차트 인메모리 캐시 ────────────────────────────────
+_kospi_chart_cache: dict = {"data": [], "ts": 0.0}
+_CHART_CACHE_TTL = 300  # 5분
+
+
+def _fetch_kospi_chart_sync() -> list:
+    """yfinance에서 오늘 KOSPI 1시간봉 데이터를 동기적으로 가져옴"""
+    ticker = yf.Ticker("^KS11")
+    hist = ticker.history(period="2d", interval="1h")
+    if hist.empty:
+        return []
+    today_str = today_kst()
+    data = []
+    for idx, row in hist.iterrows():
+        kst_time = idx.tz_convert("Asia/Seoul") if idx.tzinfo else idx
+        if kst_time.strftime("%Y-%m-%d") != today_str:
+            continue
+        data.append({
+            "time": kst_time.strftime("%H:%M"),
+            "close": round(float(row["Close"]), 2),
+            "open": round(float(row["Open"]), 2),
+            "high": round(float(row["High"]), 2),
+            "low": round(float(row["Low"]), 2),
+        })
+    return data
+
+
 @app.get("/api/public/kospi-chart")
 async def get_kospi_chart():
-    """오늘 KOSPI 1시간봉 데이터 (인증 불필요)"""
+    """오늘 KOSPI 1시간봉 데이터 (인증 불필요, 5분 캐시)"""
+    global _kospi_chart_cache
+    now = time.time()
+
+    # 캐시가 유효하면 즉시 반환
+    if now - _kospi_chart_cache["ts"] < _CHART_CACHE_TTL and _kospi_chart_cache["data"]:
+        return {"data": _kospi_chart_cache["data"], "cached": True}
+
     try:
-        ticker = yf.Ticker("^KS11")
-        hist = ticker.history(period="2d", interval="1h")
-        if hist.empty:
-            return {"data": []}
-
-        # KST 오늘 날짜
-        today_str = today_kst()
-        data = []
-        for idx, row in hist.iterrows():
-            # timezone-aware → KST 변환
-            kst_time = idx.tz_convert("Asia/Seoul") if idx.tzinfo else idx
-            date_str = kst_time.strftime("%Y-%m-%d")
-            if date_str != today_str:
-                continue
-            data.append({
-                "time": kst_time.strftime("%H:%M"),
-                "close": round(float(row["Close"]), 2),
-                "open": round(float(row["Open"]), 2),
-                "high": round(float(row["High"]), 2),
-                "low": round(float(row["Low"]), 2),
-            })
-
-        return {"data": data}
+        loop = asyncio.get_event_loop()
+        data = await asyncio.wait_for(
+            loop.run_in_executor(None, _fetch_kospi_chart_sync),
+            timeout=9.0,
+        )
+        if data:
+            _kospi_chart_cache = {"data": data, "ts": now}
+        return {"data": data or _kospi_chart_cache["data"]}
+    except asyncio.TimeoutError:
+        logger.warning("KOSPI 차트 yfinance 타임아웃 — 캐시 반환")
+        return {"data": _kospi_chart_cache["data"]}
     except Exception as e:
         logger.error(f"KOSPI 차트 데이터 오류: {e}")
-        return {"data": []}
+        return {"data": _kospi_chart_cache["data"]}
 
 
 @app.get("/api/public/backtest")
