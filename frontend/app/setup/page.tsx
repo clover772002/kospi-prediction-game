@@ -46,6 +46,7 @@ export default function SetupPage() {
   const [isIOS, setIsIOS]             = useState(false);
   const [isStandalone, setIsStandalone] = useState(false);
   const [isInApp, setIsInApp]         = useState(false);
+  const [canInstall, setCanInstall]   = useState(false);
   const [joinCode, setJoinCode]       = useState("");
   const [groupMsg, setGroupMsg]       = useState<{ text: string; ok: boolean } | null>(null);
   const [copiedCode, setCopiedCode]   = useState<string | null>(null);
@@ -60,6 +61,15 @@ export default function SetupPage() {
       (navigator as any).standalone === true
     );
     setIsInApp(/KAKAOTALK|Instagram|FBAN|FBAV|Line\//i.test(ua));
+
+    // PWA 설치 가능 여부 감지
+    const onInstallPrompt = () => setCanInstall(true);
+    window.addEventListener("beforeinstallprompt", onInstallPrompt);
+    // 이미 저장된 프롬프트가 있으면 바로 표시
+    if ((window as Window & { __pwaInstallPrompt?: unknown }).__pwaInstallPrompt) {
+      setCanInstall(true);
+    }
+    return () => window.removeEventListener("beforeinstallprompt", onInstallPrompt);
   }, []);
 
   useEffect(() => {
@@ -290,6 +300,23 @@ export default function SetupPage() {
             </div>
             <span className="text-green-400 text-lg flex-shrink-0">✅</span>
           </div>
+
+          {/* PWA 설치 유도 — 브라우저가 설치 가능 상태일 때만 표시 */}
+          {canInstall && !isStandalone && (
+            <button
+              onClick={async () => {
+                const prompt = (window as Window & { __pwaInstallPrompt?: { prompt(): Promise<void> } }).__pwaInstallPrompt;
+                if (prompt) {
+                  await prompt.prompt();
+                  delete (window as Window & { __pwaInstallPrompt?: unknown }).__pwaInstallPrompt;
+                  setCanInstall(false);
+                }
+              }}
+              className="w-full py-3.5 bg-blue-600 hover:bg-blue-500 active:scale-95 text-white font-black rounded-2xl text-sm transition-all flex items-center justify-center gap-2"
+            >
+              📲 홈 화면에 앱 추가하기
+            </button>
+          )}
 
           {/* 알림 종류 체크박스 */}
           <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-2xl p-5 space-y-4">
@@ -566,12 +593,9 @@ export default function SetupPage() {
                         });
                         await savePushSubscription(token, sub.toJSON());
                         setPushLinked(true);
-
-                        // 알림 연결 완료 후 PWA 설치 프롬프트도 함께 띄우기
-                        const installPrompt = (window as Window & { __pwaInstallPrompt?: { prompt(): Promise<void> } }).__pwaInstallPrompt;
-                        if (installPrompt) {
-                          await installPrompt.prompt();
-                          delete (window as Window & { __pwaInstallPrompt?: unknown }).__pwaInstallPrompt;
+                        // 설치 가능 상태면 버튼 표시
+                        if ((window as Window & { __pwaInstallPrompt?: unknown }).__pwaInstallPrompt) {
+                          setCanInstall(true);
                         }
                       } catch (e: unknown) {
                         const msg = e instanceof Error ? e.message : String(e);
