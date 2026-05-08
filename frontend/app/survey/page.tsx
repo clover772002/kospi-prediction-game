@@ -1,7 +1,7 @@
 ﻿"use client";
 
-import { useEffect, useState, useCallback, useRef } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useState, useCallback, useRef, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { getToday, resolveApiBase, TodaySurvey } from "@/lib/api";
 import FlipClock from "@/components/FlipClock";
@@ -37,8 +37,10 @@ function getSurveyDayLabel(surveyDate: string): { isNextDay: boolean; label: str
   return { isNextDay: true, label: `다음 거래일 장 예측 (${mm}/${dd} ${dayKor})`, shortLabel: `${mm}/${dd}(${dayKor})` };
 }
 
-export default function SurveyPage() {
+function SurveyPageInner() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const [nudgeToast, setNudgeToast] = useState<string | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [today, setToday] = useState<TodaySurvey | null>(null);
   const [loading, setLoading] = useState(true);
@@ -89,6 +91,17 @@ export default function SurveyPage() {
       if (res.ok) setKospiPrice(await res.json());
     } catch {}
   }, []);
+
+  // nudge 링크로 접근하면 토스트 표시
+  useEffect(() => {
+    const from  = searchParams.get("nudge_from");
+    const group = searchParams.get("nudge_group");
+    if (!from) return;
+    const msg = group ? `📣 ${from}님이 [${group}] 독촉장을 보냈어요!` : `📣 ${from}님이 독촉장을 보냈어요!`;
+    setNudgeToast(msg);
+    const t = setTimeout(() => setNudgeToast(null), 4000);
+    return () => clearTimeout(t);
+  }, [searchParams]);
 
   // 장 중(09:00~15:35)이면 30초마다 갱신
   useEffect(() => {
@@ -266,6 +279,13 @@ export default function SurveyPage() {
 
   return (
     <main className="max-w-md mx-auto min-h-screen pb-36 px-5">
+      {/* 독촉 토스트 */}
+      {nudgeToast && (
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[100] px-4 py-3 bg-orange-500 text-white text-sm font-bold rounded-2xl shadow-xl animate-bounce-in max-w-xs text-center">
+          {nudgeToast}
+        </div>
+      )}
+
       <div className="pt-10 pb-6 flex items-center justify-between gap-3">
         <div>
           {(() => {
@@ -703,5 +723,13 @@ function KospiNowCard({
     <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-2xl p-4 flex items-center justify-center">
       <p className="text-xs text-gray-600">데이터 로딩 중</p>
     </div>
+  );
+}
+
+export default function SurveyPage() {
+  return (
+    <Suspense>
+      <SurveyPageInner />
+    </Suspense>
   );
 }

@@ -1374,20 +1374,26 @@ async def nudge_group(
             all_voted += 1
             continue  # 이미 참여한 멤버 제외
 
+        app_base = os.getenv("NEXT_PUBLIC_APP_URL", "https://kospi-prediction.vercel.app")
+        tg_link = f"{app_base}/survey?nudge_from={quote(sender_masked)}&nudge_group={quote(group_name)}"
         tg_text = (
             f"📣 <b>설문 독촉!</b>\n\n"
             f"<b>[{group_name}]</b> 그룹의 <b>{sender_masked}</b>님이 독촉장을 보냈어요!\n\n"
             f"아직 코스피 예측을 안 하셨네요 👀\n"
             f"얼른 참여해서 순위를 지켜내세요! 🏆\n\n"
-            f"👉 {target_date} 설문 참여"
+            f"👉 <a href=\"{tg_link}\">지금 바로 예측하기</a>"
         )
         push_title = f"📣 {sender_masked}님이 독촉장을 보냈어요!"
         push_body  = f"[{group_name}] 아직 오늘 코스피 예측 안 하셨네요 👀 얼른 참여해서 순위 지켜내세요! 🏆"
 
+        # 링크에 발신자·그룹 정보 포함 — 설문 페이지에서 토스트로 표시
+        from urllib.parse import quote
+        nudge_url = f"/survey?nudge_from={quote(sender_masked)}&nudge_group={quote(group_name)}"
+
         sent_any = False
 
         # 웹 푸시 시도
-        pushed = send_web_push_to_user(supabase, uid, push_title, push_body, "/survey", notif_type="group_nudge")
+        pushed = send_web_push_to_user(supabase, uid, push_title, push_body, nudge_url, notif_type="group_nudge")
         if pushed:
             sent_any = True
             logger.info(f"독촉 웹 푸시 전송 성공: target={uid}")

@@ -79,6 +79,14 @@ body {
   from { opacity: 0; transform: translateY(20px); }
   to   { opacity: 1; transform: translateY(0); }
 }
+
+/* ── 독촉 토스트 등장 ───────────────────────────────────── */
+@keyframes bounceIn {
+  0%   { opacity: 0; transform: translateX(-50%) translateY(-16px) scale(0.9); }
+  60%  { transform: translateX(-50%) translateY(4px) scale(1.03); }
+  100% { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
+}
+.animate-bounce-in { animation: bounceIn 0.4s ease-out both; }
 .fade-up { animation: fadeUp 0.45s ease-out both; }
 .fade-up-1 { animation: fadeUp 0.45s ease-out 0.05s both; }
 .fade-up-2 { animation: fadeUp 0.45s ease-out 0.15s both; }
