@@ -84,7 +84,7 @@ export default function DashboardPage() {
           withTimeout(getMe(accessToken)),
           withTimeout(getToday()),
           withTimeout(getDashboard(accessToken)),
-          withTimeout(getMyChallenges(accessToken)).catch(() => [] as Challenge[]),
+          withTimeout(getMyChallenges(accessToken)).catch(() => ({ sent: [] as Challenge[], received: [] as Challenge[] })),
           withTimeout(getMyGroups(accessToken)).catch(() => [] as Group[]),
         ]);
         setUser(profile);
