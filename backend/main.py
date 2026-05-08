@@ -229,32 +229,26 @@ async def job_15_35():
             ds = sb.table("daily_surveys").select("expert_prediction").eq("survey_date", today_str).execute()
             expert_up = ds.data[0].get("expert_prediction") if ds.data else None
 
-            # 표시용 최소 참여자 수 보정 (최소 30명, 자연스러운 분포 적용)
-            _MIN_DISPLAY = 30
-            _NATURAL_THRESHOLD = 8  # 이 수 미만이면 자연스러운 분포로 대체
-            if total_votes >= _MIN_DISPLAY:
-                # 충분한 실제 참여자 → 그대로 사용
+            # 표시용 참여자 수 보정
+            # 실제 참여자가 적을 때 기본 참여자(20~27명 랜덤)를 더해 자연스럽게 보이도록
+            import random as _rand
+            _PAD_THRESHOLD = 28  # 이 수 미만이면 패딩 추가
+            if total_votes < _PAD_THRESHOLD:
+                pad_total = _rand.randint(20, 27)  # 날마다 달라 보이도록
+                # 패딩 참여자는 다수결 방향으로 58~68% 분포
+                if majority_up:
+                    pad_up_ratio = _rand.uniform(0.58, 0.68)
+                else:
+                    pad_up_ratio = _rand.uniform(0.32, 0.42)
+                pad_up    = round(pad_total * pad_up_ratio)
+                pad_down  = pad_total - pad_up
+                display_total = total_votes + pad_total
+                display_up    = up_votes + pad_up
+                display_down  = down_votes + pad_down
+            else:
                 display_total = total_votes
                 display_up    = up_votes
                 display_down  = down_votes
-            elif total_votes >= _NATURAL_THRESHOLD:
-                # 어느 정도 있으면 비율 유지하며 스케일업
-                scale = _MIN_DISPLAY / total_votes
-                display_total = _MIN_DISPLAY
-                display_up    = round(up_votes * scale)
-                display_down  = display_total - display_up
-            else:
-                # 너무 적으면 방향만 유지하고 자연스러운 분포 (58~72%) 적용
-                import random as _rand
-                display_total = _MIN_DISPLAY
-                if majority_up:
-                    # 상승 방향: 58~72% 범위에서 랜덤
-                    up_ratio = _rand.uniform(0.58, 0.72)
-                else:
-                    # 하락 방향: 28~42% 범위에서 랜덤
-                    up_ratio = _rand.uniform(0.28, 0.42)
-                display_up   = round(display_total * up_ratio)
-                display_down = display_total - display_up
             display_up_pct   = round(display_up / display_total * 100, 2)
             display_down_pct = round(display_down / display_total * 100, 2)
 
