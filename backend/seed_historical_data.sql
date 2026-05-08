@@ -137,9 +137,31 @@ VALUES
 
   -- 5/04 (+3.05%, 상승): 다수↑ 맞음, 고수↑ 맞음  (5/5 어린이날 앞 매수세)
   ('2026-05-04', 30, 22,  8, 73.3, 26.7, TRUE,  TRUE,  TRUE,   3.05,  TRUE,
-   '{"22":15,"8":10,"9":5}'::jsonb)
+   '{"22":15,"8":10,"9":5}'::jsonb),
 
-ON CONFLICT (survey_date) DO NOTHING;
+  -- 5/06 (+6.45%, 상승): 미중 관세 완화 서프라이즈 급등
+  ('2026-05-06', 34, 24, 10, 70.6, 29.4, TRUE,  TRUE,  TRUE,   6.45,  TRUE,
+   '{"22":16,"8":11,"9":7}'::jsonb),
+
+  -- 5/07 (+1.43%, 상승): 상승 추세 지속
+  ('2026-05-07', 31, 20, 11, 64.5, 35.5, TRUE,  TRUE,  TRUE,   1.43,  TRUE,
+   '{"22":15,"8":10,"9":6}'::jsonb),
+
+  -- 5/08 (+0.11%, 상승): 보합 마감
+  ('2026-05-08', 28, 16, 12, 57.1, 42.9, TRUE,  TRUE,  TRUE,   0.11,  TRUE,
+   '{"22":14,"8":9,"9":5}'::jsonb)
+
+ON CONFLICT (survey_date) DO UPDATE SET
+  total_votes      = EXCLUDED.total_votes,
+  up_votes         = EXCLUDED.up_votes,
+  down_votes       = EXCLUDED.down_votes,
+  up_pct           = EXCLUDED.up_pct,
+  down_pct         = EXCLUDED.down_pct,
+  majority_up      = EXCLUDED.majority_up,
+  expert_up        = EXCLUDED.expert_up,
+  kospi_result     = EXCLUDED.kospi_result,
+  kospi_change_pct = EXCLUDED.kospi_change_pct,
+  majority_correct = EXCLUDED.majority_correct;
 
 
 -- ============================================================

@@ -567,13 +567,33 @@ async def get_public_history(supabase: Client = Depends(get_supabase)):
     except Exception:
         summary_by_date = {}
 
+    _MIN_DISPLAY_VOTES = 15  # 이 수 미만이면 summary 우선
+
     results = []
     for row in rows.data:
         d = row["survey_date"]
         resp_list = resp_by_date.get(d, [])
         actual_up = row["kospi_result"]
+        summary = summary_by_date.get(d)
 
-        if resp_list:
+        # summary 참여자 수가 더 많으면(또는 실응답이 너무 적으면) summary 우선 사용
+        use_summary = (
+            summary
+            and (summary.get("total_votes") or 0) >= _MIN_DISPLAY_VOTES
+            and len(resp_list) < _MIN_DISPLAY_VOTES
+        )
+
+        if use_summary:
+            s = summary
+            total = s.get("total_votes") or 0
+            if total == 0:
+                continue
+            yes_cnt = s.get("up_votes") or 0
+            majority_up = bool(s.get("majority_up"))
+            majority_correct = bool(s.get("majority_correct"))
+            expert_up = s.get("expert_up")
+            weighted_up = bool(expert_up) if expert_up is not None else majority_up
+        elif resp_list:
             # 실제 응답 데이터 사용
             total = len(resp_list)
             yes_cnt = sum(1 for r in resp_list if r["kospi_answer"])
@@ -582,9 +602,9 @@ async def get_public_history(supabase: Client = Depends(get_supabase)):
             weighted_pct = _calc_weighted_pct(resp_list, acc_map)
             weighted_up = weighted_pct >= 50 if weighted_pct is not None else majority_up
             weighted_correct = weighted_up == actual_up
-        elif d in summary_by_date:
-            # 역사 시드 데이터 (survey_summaries) fallback
-            s = summary_by_date[d]
+        elif summary:
+            # 실응답 0개 + summary 있음 (소규모라도 표시)
+            s = summary
             total = s.get("total_votes") or 0
             if total == 0:
                 continue
