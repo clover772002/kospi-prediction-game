@@ -74,6 +74,64 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
+/* ── 카드 등장 (fade-up) ───────────────────────────────── */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.fade-up { animation: fadeUp 0.45s ease-out both; }
+.fade-up-1 { animation: fadeUp 0.45s ease-out 0.05s both; }
+.fade-up-2 { animation: fadeUp 0.45s ease-out 0.15s both; }
+.fade-up-3 { animation: fadeUp 0.45s ease-out 0.25s both; }
+.fade-up-4 { animation: fadeUp 0.45s ease-out 0.35s both; }
+.fade-up-5 { animation: fadeUp 0.45s ease-out 0.45s both; }
+
+/* ── 숫자 카운트업 (pulse 효과) ───────────────────────── */
+@keyframes countPop {
+  0%   { transform: scale(0.6); opacity: 0; }
+  70%  { transform: scale(1.08); }
+  100% { transform: scale(1); opacity: 1; }
+}
+.count-pop { animation: countPop 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) both; }
+
+/* ── 그라데이션 흐르는 배경 ──────────────────────────── */
+@keyframes shimmer {
+  0%   { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+.shimmer-bg {
+  background: linear-gradient(90deg, #1a1a1a 25%, #2a2a2a 50%, #1a1a1a 75%);
+  background-size: 200% auto;
+  animation: shimmer 2s linear infinite;
+}
+
+/* ── 스트릭 불꽃 효과 ────────────────────────────────── */
+@keyframes fireGlow {
+  0%, 100% { box-shadow: 0 0 8px rgba(251, 146, 60, 0.4); }
+  50%       { box-shadow: 0 0 20px rgba(251, 146, 60, 0.8), 0 0 40px rgba(251, 146, 60, 0.3); }
+}
+.fire-glow { animation: fireGlow 1.5s ease-in-out infinite; }
+
+/* ── 결과 카드 팝업 등장 ─────────────────────────────── */
+@keyframes slideUp {
+  from { transform: translateY(100%); opacity: 0; }
+  to   { transform: translateY(0);   opacity: 1; }
+}
+.slide-up { animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) both; }
+
+/* ── 버튼 클릭 ripple ────────────────────────────────── */
+@keyframes ripple {
+  to { transform: scale(4); opacity: 0; }
+}
+
+/* ── 배지 등장 ───────────────────────────────────────── */
+@keyframes badgePop {
+  0%   { transform: scale(0); opacity: 0; }
+  70%  { transform: scale(1.15); }
+  100% { transform: scale(1); opacity: 1; }
+}
+.badge-pop { animation: badgePop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) 0.3s both; }
+
 /* 플립 클락 애니메이션 */
 @keyframes flipTop {
   0%   { transform: rotateX(0deg); }

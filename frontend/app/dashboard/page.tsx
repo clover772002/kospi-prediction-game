@@ -241,7 +241,7 @@ export default function DashboardPage() {
       {showResultCard && (
         <div className="fixed inset-0 z-[60] flex items-end justify-center px-4 pb-8" style={{ backgroundColor: "rgba(0,0,0,0.7)" }} onClick={handleCloseResultCard}>
           <div
-            className="w-full max-w-sm rounded-3xl p-6 space-y-5 shadow-2xl"
+            className="w-full max-w-sm rounded-3xl p-6 space-y-5 shadow-2xl slide-up"
             style={{ background: isCorrectToday ? "linear-gradient(135deg, #052e16, #14532d)" : "linear-gradient(135deg, #1c0a0a, #3b0d0d)" }}
             onClick={(e) => e.stopPropagation()}
           >
@@ -376,9 +376,9 @@ export default function DashboardPage() {
       </div>
 
       <div className="space-y-4">
-        {/* ── 오늘의 집계 ─────────────────────────────────── */}
+        {/* ── 오늘의 집계 ─────────────────────────────────────── */}
         <div
-          className="rounded-2xl p-5 border"
+          className="rounded-2xl p-5 border fade-up-1"
           style={{
             borderColor: `${statusColor[status]}40`,
             backgroundColor: `${statusColor[status]}08`,
@@ -534,7 +534,7 @@ export default function DashboardPage() {
 
         {/* ── 오늘의 예측 참여자 리스트 ────────────────────── */}
         {today?.participants && today.participants.length > 0 && (
-          <div className="bg-[#1A1A1A] rounded-2xl p-5 border border-[#2A2A2A]">
+          <div className="bg-[#1A1A1A] rounded-2xl p-5 border border-[#2A2A2A] fade-up-3 card-hover">
             <div className="mb-3">
               <p className="font-bold text-sm">오늘의 예측</p>
             </div>
@@ -570,16 +570,16 @@ export default function DashboardPage() {
         )}
 
         {/* ── 내 통계 + 예측 이력 ──────────────────────────── */}
-        <div className="bg-[#1A1A1A] rounded-2xl p-5 border border-[#2A2A2A]">
+        <div className="bg-[#1A1A1A] rounded-2xl p-5 border border-[#2A2A2A] fade-up-4">
           <div className="flex items-center justify-between mb-4">
             <p className="font-bold text-sm">내 통계</p>
             {streak >= 2 && (
-              <span className="flex items-center gap-1 text-xs font-black text-orange-400 bg-orange-400/10 border border-orange-400/30 px-2.5 py-1 rounded-full animate-pulse">
+              <span className="flex items-center gap-1 text-xs font-black text-orange-400 bg-orange-400/10 border border-orange-400/30 px-2.5 py-1 rounded-full fire-glow badge-pop">
                 🔥 {streak}연속 적중
               </span>
             )}
             {streak === 1 && (
-              <span className="flex items-center gap-1 text-xs font-bold text-orange-300/70 bg-orange-400/5 px-2 py-0.5 rounded-full">
+              <span className="flex items-center gap-1 text-xs font-bold text-orange-300/70 bg-orange-400/5 px-2 py-0.5 rounded-full badge-pop">
                 🔥 1연속 적중
               </span>
             )}
@@ -597,7 +597,7 @@ export default function DashboardPage() {
             <div className="space-y-4">
               {/* 적중률 숫자 */}
               <div className="flex items-end gap-2">
-                <p className="text-5xl font-black text-green-400 leading-none">
+                <p className="text-5xl font-black text-green-400 leading-none count-pop tabular-nums">
                   {dash.accuracy.kospi != null ? `${dash.accuracy.kospi}` : "-"}
                 </p>
                 {dash.accuracy.kospi != null && (

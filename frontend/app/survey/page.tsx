@@ -290,7 +290,7 @@ export default function SurveyPage() {
 
       {/* 설문 진행 중 — 투표 폼 */}
       {status === "open" && (!alreadyAnswered || retrying) && !submitted && (
-        <div className="space-y-6 mt-4">
+        <div className="space-y-6 mt-4 fade-up">
           <div className="bg-amber-500/10 border border-amber-500/30 rounded-2xl p-4 text-center">
             <p className="text-amber-400 font-bold text-sm">⏰ 설문 진행 중 · 장 시작 전 마감</p>
           </div>
@@ -313,20 +313,20 @@ export default function SurveyPage() {
             <div className="grid grid-cols-2 gap-3">
               <button
                 onClick={() => setKospiAnswer(true)}
-                className={`py-5 rounded-2xl font-black text-xl transition-all active:scale-95 border-2 ${
+                className={`py-5 rounded-2xl font-black text-xl transition-all duration-150 active:scale-90 border-2 ${
                   kospiAnswer === true
-                    ? "bg-green-500 border-green-400 text-white"
-                    : "bg-[#111] border-[#333] text-gray-400 hover:border-green-600"
+                    ? "bg-green-500 border-green-400 text-white scale-105 shadow-lg shadow-green-500/30"
+                    : "bg-[#111] border-[#333] text-gray-400 hover:border-green-600 hover:text-green-400"
                 }`}
               >
                 📈 오른다
               </button>
               <button
                 onClick={() => setKospiAnswer(false)}
-                className={`py-5 rounded-2xl font-black text-xl transition-all active:scale-95 border-2 ${
+                className={`py-5 rounded-2xl font-black text-xl transition-all duration-150 active:scale-90 border-2 ${
                   kospiAnswer === false
-                    ? "bg-red-500 border-red-400 text-white"
-                    : "bg-[#111] border-[#333] text-gray-400 hover:border-red-600"
+                    ? "bg-red-500 border-red-400 text-white scale-105 shadow-lg shadow-red-500/30"
+                    : "bg-[#111] border-[#333] text-gray-400 hover:border-red-600 hover:text-red-400"
                 }`}
               >
                 📉 내린다
