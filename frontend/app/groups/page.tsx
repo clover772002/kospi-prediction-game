@@ -120,6 +120,12 @@ export default function GroupsPage() {
 
   return (
     <main className="max-w-md mx-auto min-h-screen pb-28 px-5 bg-[#111] text-white">
+      {/* 플로팅 토스트 */}
+      {msg && (
+        <div className={`fixed top-5 left-1/2 -translate-x-1/2 z-[70] max-w-sm w-[calc(100%-2rem)] px-5 py-3.5 rounded-2xl text-sm font-bold text-center shadow-lg transition-all animate-[fadeUp_0.25s_ease-out] ${msg.ok ? "bg-green-500 text-white" : "bg-red-500 text-white"}`}>
+          {msg.text}
+        </div>
+      )}
       {/* 헤더 */}
       <div className="pt-8 pb-5 flex items-center justify-between">
         <div>
@@ -134,12 +140,6 @@ export default function GroupsPage() {
         </button>
       </div>
 
-      {/* 토스트 메시지 */}
-      {msg && (
-        <div className={`mb-4 rounded-2xl px-4 py-3 text-sm font-bold text-center ${msg.ok ? "bg-green-500/15 text-green-400 border border-green-500/30" : "bg-red-500/15 text-red-400 border border-red-500/30"}`}>
-          {msg.text}
-        </div>
-      )}
 
       {/* 그룹 없을 때 온보딩 */}
       {groups.length === 0 && mode === "list" && (
