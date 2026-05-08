@@ -218,6 +218,14 @@ async def lifespan(app_instance):
         id="kospi_snapshot",
         replace_existing=True,
     )
+    # Railway 콜드스타트 방지: 5분마다 자기 자신에게 ping
+    scheduler.add_job(
+        _self_ping,
+        "interval",
+        minutes=5,
+        id="self_ping",
+        replace_existing=True,
+    )
     scheduler.start()
     logger.info("스케줄러 시작: 22:00(설문 발송) / 08:45(마감임박) / 09:00(마감) / 15:35(정확도) / 09-15시 30분(KOSPI 스냅샷)")
     yield
@@ -247,6 +255,11 @@ app.add_middleware(
 @app.get("/")
 async def root():
     return {"message": "주식 예측 봇 API 정상 작동 중 📈"}
+
+
+@app.get("/api/health")
+async def health():
+    return {"ok": True}
 
 
 @app.get("/api/me")
@@ -510,6 +523,15 @@ async def _naver_kospi_price() -> float | None:
     except Exception as e:
         logger.warning(f"네이버 KOSPI 가격 조회 실패: {e}")
         return None
+
+
+async def _self_ping():
+    """Railway 콜드스타트 방지용 자기 ping"""
+    try:
+        async with httpx.AsyncClient(timeout=5.0) as client:
+            await client.get("https://kospi-prediction-game-production.up.railway.app/api/health")
+    except Exception:
+        pass  # 실패해도 무시
 
 
 async def job_kospi_snapshot():

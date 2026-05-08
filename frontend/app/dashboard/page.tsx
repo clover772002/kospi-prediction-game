@@ -60,12 +60,12 @@ export default function DashboardPage() {
       called = true;
       setToken(accessToken);
       try {
-        // 각 요청에 8초 타임아웃 적용
-        const withTimeout = <T,>(p: Promise<T>, ms = 8000): Promise<T> =>
+        // 각 요청에 20초 타임아웃 적용 (Railway 콜드스타트 대응)
+        const withTimeout = <T,>(p: Promise<T>, ms = 20000): Promise<T> =>
           Promise.race([
             p,
             new Promise<T>((_, reject) =>
-              setTimeout(() => reject(new Error(`요청 타임아웃 (${ms / 1000}초). 백엔드(localhost:8000)가 실행 중인지 확인해주세요.`)), ms)
+              setTimeout(() => reject(new Error(`서버 응답 지연 (${ms / 1000}초). 잠시 후 다시 시도해주세요.`)), ms)
             ),
           ]);
 
@@ -142,8 +142,7 @@ export default function DashboardPage() {
             <p className="text-red-400 text-sm font-mono break-all">{error}</p>
           </div>
           <p className="text-xs text-gray-500">
-            백엔드(localhost:8000)가 실행 중인지,<br />
-            Supabase SQL 스키마가 적용됐는지 확인해주세요.
+            서버가 잠시 느릴 수 있어요. 다시 시도해주세요.
           </p>
           <button
             onClick={() => { setError(null); setLoading(true); window.location.reload(); }}

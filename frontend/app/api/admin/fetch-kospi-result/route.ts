@@ -128,7 +128,6 @@ export async function POST(req: NextRequest) {
       ok: true,
       date: today,
       price,
-      prevClose,
       changePct,
       isUp,
       participants: responses?.length ?? 0,
