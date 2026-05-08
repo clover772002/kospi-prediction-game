@@ -503,49 +503,85 @@ _kospi_chart_cache: dict = {"data": [], "ts": 0.0}
 _CHART_CACHE_TTL = 300  # 5분
 
 
-def _fetch_kospi_chart_sync() -> list:
-    """yfinance에서 오늘 KOSPI 1시간봉 데이터를 동기적으로 가져옴"""
-    ticker = yf.Ticker("^KS11")
-    hist = ticker.history(period="2d", interval="1h")
-    if hist.empty:
+async def _fetch_naver_kospi_chart() -> list:
+    """네이버 파이낸스 분봉 → 1시간봉 집계"""
+    url = (
+        "https://fchart.stock.naver.com/sise.nhn"
+        "?symbol=KOSPI&timeframe=minute&count=420&requestType=0"
+    )
+    headers = {"User-Agent": "Mozilla/5.0 (compatible; KospiBot/1.0)"}
+
+    async with httpx.AsyncClient(timeout=8.0) as client:
+        resp = await client.get(url, headers=headers)
+        resp.raise_for_status()
+
+    # XML 파싱: <item data="20260508090100|2600.12|2610.23|2598.45|2605.67|0" />
+    import re
+    items = re.findall(r'<item data="([^"]+)"', resp.text)
+    if not items:
         return []
-    today_str = today_kst()
-    data = []
-    for idx, row in hist.iterrows():
-        kst_time = idx.tz_convert("Asia/Seoul") if idx.tzinfo else idx
-        if kst_time.strftime("%Y-%m-%d") != today_str:
+
+    today_str = today_kst().replace("-", "")  # "20260508"
+    buckets: dict = {}
+
+    for item in items:
+        parts = item.split("|")
+        if len(parts) < 5:
             continue
-        data.append({
-            "time": kst_time.strftime("%H:%M"),
-            "close": round(float(row["Close"]), 2),
-            "open": round(float(row["Open"]), 2),
-            "high": round(float(row["High"]), 2),
-            "low": round(float(row["Low"]), 2),
-        })
-    return data
+        dt_str = parts[0]  # "20260508090100" or "20260508090000"
+        if not dt_str.startswith(today_str):
+            continue
+        try:
+            hour = dt_str[8:10]  # "09"
+            close_val = float(parts[4])
+            open_val  = float(parts[1])
+            high_val  = float(parts[2])
+            low_val   = float(parts[3])
+        except ValueError:
+            continue
+
+        if hour not in buckets:
+            buckets[hour] = {
+                "open": open_val, "high": high_val,
+                "low": low_val,   "close": close_val,
+            }
+        else:
+            buckets[hour]["high"]  = max(buckets[hour]["high"], high_val)
+            buckets[hour]["low"]   = min(buckets[hour]["low"], low_val)
+            buckets[hour]["close"] = close_val  # 마지막 분봉이 시간봉 종가
+
+    if not buckets:
+        return []
+
+    return [
+        {
+            "time": f"{h}:00",
+            "open":  round(v["open"],  2),
+            "high":  round(v["high"],  2),
+            "low":   round(v["low"],   2),
+            "close": round(v["close"], 2),
+        }
+        for h, v in sorted(buckets.items())
+    ]
 
 
 @app.get("/api/public/kospi-chart")
 async def get_kospi_chart():
-    """오늘 KOSPI 1시간봉 데이터 (인증 불필요, 5분 캐시)"""
+    """오늘 KOSPI 1시간봉 데이터 — 네이버 파이낸스 (5분 캐시)"""
     global _kospi_chart_cache
     now = time.time()
 
-    # 캐시가 유효하면 즉시 반환
+    # 캐시 유효 시 즉시 반환
     if now - _kospi_chart_cache["ts"] < _CHART_CACHE_TTL and _kospi_chart_cache["data"]:
         return {"data": _kospi_chart_cache["data"], "cached": True}
 
     try:
-        loop = asyncio.get_event_loop()
-        data = await asyncio.wait_for(
-            loop.run_in_executor(None, _fetch_kospi_chart_sync),
-            timeout=9.0,
-        )
+        data = await asyncio.wait_for(_fetch_naver_kospi_chart(), timeout=9.0)
         if data:
             _kospi_chart_cache = {"data": data, "ts": now}
         return {"data": data or _kospi_chart_cache["data"]}
     except asyncio.TimeoutError:
-        logger.warning("KOSPI 차트 yfinance 타임아웃 — 캐시 반환")
+        logger.warning("KOSPI 차트 네이버 타임아웃 — 캐시 반환")
         return {"data": _kospi_chart_cache["data"]}
     except Exception as e:
         logger.error(f"KOSPI 차트 데이터 오류: {e}")
