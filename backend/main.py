@@ -157,57 +157,32 @@ async def job_15_35():
         logger.info("오늘 결과가 이미 저장됨")
         return
 
-    # KOSPI 등락률 조회: Yahoo Finance JSON API (httpx, 빠름)
-    kospi_prev_close = kospi_close = kospi_up = kospi_pct = None
+    # KOSPI 결과 조회 + 저장: Vercel API 라우트에 위임 (Railway IP 우회)
+    vercel_url    = os.getenv("VERCEL_APP_URL", "https://kospi-prediction-game.vercel.app")
+    admin_secret  = os.getenv("ADMIN_SECRET", "kospi-admin-2026")
+    kospi_up = kospi_pct = None
     try:
-        url = "https://query1.finance.yahoo.com/v8/finance/chart/%5EKS11?interval=1d&range=2d"
-        headers = {
-            "User-Agent": "Mozilla/5.0 (compatible; KospiBot/1.0)",
-            "Accept": "application/json",
-        }
-        async with httpx.AsyncClient(timeout=10.0) as client:
-            resp = await client.get(url, headers=headers)
+        async with httpx.AsyncClient(timeout=15.0) as client:
+            resp = await client.post(
+                f"{vercel_url}/api/admin/fetch-kospi-result",
+                headers={"x-admin-secret": admin_secret},
+            )
             resp.raise_for_status()
-            chart = resp.json()
+            result = resp.json()
 
-        meta = chart["chart"]["result"][0]["meta"]
-        kospi_close      = float(meta.get("regularMarketPrice") or meta.get("previousClose"))
-        kospi_prev_close = float(meta.get("chartPreviousClose") or meta.get("previousClose"))
-
-        if not kospi_close or not kospi_prev_close:
-            logger.warning("Yahoo Finance 데이터 없음 — 휴장일이거나 데이터 지연")
+        if not result.get("ok"):
+            logger.error(f"Vercel fetch-kospi-result 실패: {result}")
             return
 
-        logger.info(f"Yahoo Finance — 당일: {kospi_close}, 전일종가: {kospi_prev_close}")
+        kospi_up  = bool(result["isUp"])
+        kospi_pct = float(result["changePct"])
+        logger.info(f"Vercel 통해 KOSPI 결과 저장 완료: {'▲' if kospi_up else '▼'}{kospi_pct}%")
 
     except Exception as e:
-        logger.error(f"KOSPI 조회 오류 (Yahoo Finance httpx): {e}")
+        logger.error(f"KOSPI 결과 fetch 오류: {e}")
         return
 
-    kospi_up  = kospi_close > kospi_prev_close
-    kospi_pct = round((kospi_close / kospi_prev_close - 1) * 100, 2)
-    logger.info(f"코스피 {'▲' if kospi_up else '▼'}{kospi_pct}% (전일종가 대비)")
-
-    # DB에 실제 결과 저장 + 설문 마감 처리
-    sb.table("daily_surveys").update({
-        "kospi_result": kospi_up,
-        "kospi_change_pct": kospi_pct,
-        "is_closed": True,
-    }).eq("survey_date", today_str).execute()
-
-    # 응답자별 정확도 계산
-    responses = sb.table("survey_responses").select("user_id, kospi_answer").eq("survey_date", today_str).execute()
-    for resp in responses.data:
-        sb.table("accuracy_records").upsert(
-            {
-                "user_id": resp["user_id"],
-                "survey_date": today_str,
-                "kospi_correct": resp["kospi_answer"] == kospi_up,
-            },
-            on_conflict="user_id,survey_date",
-        ).execute()
-
-    # 개인별 텔레그램 알림
+    # 개인별 텔레그램 알림 (정확도는 Vercel 쪽에서 이미 업데이트됨)
     await send_accuracy_notifications(sb, today_str, kospi_up, kospi_pct)
 
     # 다음 거래일 설문 미리 생성 (장마감 후 바로 예측 참여 가능하도록)
