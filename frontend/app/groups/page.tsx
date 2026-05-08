@@ -187,19 +187,21 @@ export default function GroupsPage() {
       {/* 그룹 있을 때 */}
       {groups.length > 0 && mode === "list" && (
         <div className="space-y-4">
-          {/* 그룹 탭 + 버튼 */}
-          <div className="flex items-center gap-2">
-            <div className="flex gap-1.5 flex-1 flex-wrap">
-              {groups.map((g) => (
-                <button key={g.group_id} onClick={() => setSelectedId(g.group_id)}
-                  className={`text-xs font-bold px-3 py-2 rounded-xl transition-all ${selectedId === g.group_id ? "bg-green-600 text-white" : "bg-[#1A1A1A] text-gray-400 border border-[#2A2A2A]"}`}>
-                  {g.name}
-                </button>
-              ))}
+          {/* 그룹 탭 (여러 그룹) */}
+          {groups.length > 1 && (
+            <div className="flex items-center gap-2">
+              <div className="flex gap-1.5 flex-1 flex-wrap">
+                {groups.map((g) => (
+                  <button key={g.group_id} onClick={() => setSelectedId(g.group_id)}
+                    className={`text-sm font-bold px-4 py-2 rounded-xl transition-all ${selectedId === g.group_id ? "bg-green-600 text-white" : "bg-[#1A1A1A] text-gray-400 border border-[#2A2A2A]"}`}>
+                    {g.name}
+                  </button>
+                ))}
+              </div>
+              <button onClick={() => setMode("create")}
+                className="text-xl text-gray-500 hover:text-green-400 transition-colors px-1">＋</button>
             </div>
-            <button onClick={() => setMode("create")}
-              className="text-xl text-gray-500 hover:text-green-400 transition-colors px-1">＋</button>
-          </div>
+          )}
 
           {/* 선택된 그룹 정보 */}
           {selectedId && (() => {
@@ -207,32 +209,59 @@ export default function GroupsPage() {
             if (!g) return null;
             return (
               <>
-                {/* 초대 카드 */}
-                <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-2xl p-4 flex items-center gap-3">
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs text-gray-500 mb-0.5">{g.member_count}명 참여 · {g.is_owner ? "방장" : "멤버"}</p>
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs text-gray-500">코드</span>
-                      <span className="font-mono font-black text-white tracking-widest">{g.invite_code}</span>
+                {/* 그룹 헤더 + 초대 — 통합 카드 */}
+                <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-2xl overflow-hidden">
+                  {/* 그룹명 + 메타 */}
+                  <div className="px-5 pt-5 pb-4 border-b border-[#2A2A2A]">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex-1 min-w-0">
+                        <h2 className="text-2xl font-black text-white leading-tight truncate">{g.name}</h2>
+                        <p className="text-xs text-gray-500 mt-1">
+                          {g.member_count}명 참여 &middot; {g.is_owner ? "👑 방장" : "멤버"}
+                        </p>
+                      </div>
+                      <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
+                        {groups.length === 1 && (
+                          <button onClick={() => setMode("create")}
+                            className="text-[10px] font-bold text-green-400 hover:text-green-300 transition-colors">
+                            ＋ 그룹 추가
+                          </button>
+                        )}
+                        <button onClick={() => handleLeave(g.group_id)}
+                          className="text-[10px] text-gray-600 hover:text-red-400 transition-colors">
+                          탈퇴
+                        </button>
+                      </div>
                     </div>
                   </div>
-                  <div className="flex flex-col gap-1.5">
-                    <button onClick={() => copyLink(g.invite_code)}
-                      className="text-xs font-bold px-3 py-2 bg-green-600/20 text-green-400 border border-green-600/30 rounded-xl hover:bg-green-600/40 transition-all whitespace-nowrap">
-                      {copiedCode === g.invite_code ? "✅ 복사됨" : "🔗 초대 링크"}
-                    </button>
-                    <button onClick={() => handleLeave(g.group_id)}
-                      className="text-[10px] text-gray-600 hover:text-red-400 text-center transition-colors">
-                      탈퇴
+
+                  {/* 초대 코드 + 링크 — 한 덩어리로 */}
+                  <div className="px-5 py-4 flex items-center gap-3">
+                    <div className="flex-1">
+                      <p className="text-[10px] text-gray-500 mb-1">초대 코드</p>
+                      <p className="font-mono font-black text-xl text-white tracking-[0.25em]">{g.invite_code}</p>
+                    </div>
+                    <button
+                      onClick={() => copyLink(g.invite_code)}
+                      className="flex flex-col items-center gap-1 px-4 py-3 bg-green-600 hover:bg-green-500 active:scale-95 rounded-2xl transition-all"
+                    >
+                      <span className="text-lg">{copiedCode === g.invite_code ? "✅" : "🔗"}</span>
+                      <span className="text-[10px] font-black text-white whitespace-nowrap">
+                        {copiedCode === g.invite_code ? "복사됨" : "초대 링크"}
+                      </span>
                     </button>
                   </div>
                 </div>
 
                 {/* 리더보드 */}
                 <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-2xl overflow-hidden">
-                  <div className="px-5 py-4 border-b border-[#2A2A2A]">
-                    <p className="font-black text-sm">🏆 그룹 순위</p>
-                    <p className="text-[10px] text-gray-500 mt-0.5">누적 적중률 기준</p>
+                  <div className="px-5 py-4 border-b border-[#2A2A2A] flex items-center justify-between">
+                    <div>
+                      <p className="font-black text-sm">🏆 그룹 순위</p>
+                      <p className="text-[10px] text-gray-500 mt-0.5">
+                        누적 적중률 높은 순 &middot; 동률 시 참여일 수 많은 순
+                      </p>
+                    </div>
                   </div>
 
                   {lbLoading ? (
