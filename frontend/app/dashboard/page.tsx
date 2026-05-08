@@ -1,9 +1,20 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { getMe, getToday, getDashboard, UserProfile, TodaySurvey, DashboardData } from "@/lib/api";
+
+// 연속 적중 스트릭 계산
+function calcStreak(history: DashboardData["history"]): number {
+  const withResult = [...history].filter((h) => h.kospi_correct !== null);
+  let count = 0;
+  for (const item of withResult) {
+    if (item.kospi_correct === true) count++;
+    else break;
+  }
+  return count;
+}
 
 function HistoryRow({ item }: { item: DashboardData["history"][0] }) {
   const hasResult = item.kospi_correct !== null;
@@ -39,6 +50,7 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError]     = useState<string | null>(null);
   const [token, setToken]     = useState<string | null>(null);
+  const [showResultCard, setShowResultCard] = useState(false);
 
   useEffect(() => {
     let called = false;
@@ -65,6 +77,17 @@ export default function DashboardPage() {
         setUser(profile);
         setToday(todayData);
         setDash(dashData);
+
+        // 오늘 결과가 나왔고 참여했다면 → 결과 카드 팝업 (하루 1번)
+        if (todayData.status === "result" && todayData.survey_date) {
+          const key = `result_card_${todayData.survey_date}`;
+          if (!localStorage.getItem(key)) {
+            const participated = dashData.history?.[0]?.date === todayData.survey_date;
+            if (participated) {
+              setTimeout(() => setShowResultCard(true), 800);
+            }
+          }
+        }
       } catch (e: unknown) {
         const msg = e instanceof Error ? e.message : String(e);
         console.error("데이터 로딩 오류:", msg);
@@ -178,8 +201,103 @@ export default function DashboardPage() {
   }
   const marketStatus = getMarketStatus();
 
+  // 스트릭 계산
+  const streak = dash?.history ? calcStreak(dash.history) : 0;
+
+  // 오늘 결과 공유용 데이터
+  const todayEntry = dash?.history?.find((h) => h.date === today?.survey_date);
+  const isCorrectToday = todayEntry && today?.kospi_result != null
+    ? todayEntry.kospi_answer === today.kospi_result
+    : null;
+
+  const handleCloseResultCard = () => {
+    if (today?.survey_date) {
+      localStorage.setItem(`result_card_${today.survey_date}`, "1");
+    }
+    setShowResultCard(false);
+  };
+
+  const handleShareResult = () => {
+    const streakText = streak > 1 ? ` 🔥${streak}연속 적중!` : "";
+    const resultText = isCorrectToday ? "✅ 오늘 맞췄어요!" : "❌ 오늘 틀렸어요";
+    const kospiText = today?.kospi_result
+      ? `코스피 📈 상승 ${today.kospi_change_pct != null ? `+${today.kospi_change_pct.toFixed(2)}%` : ""}`
+      : `코스피 📉 하락 ${today.kospi_change_pct != null ? `${today.kospi_change_pct.toFixed(2)}%` : ""}`;
+    const accuracyText = dash?.accuracy?.kospi != null ? ` (내 적중률 ${dash.accuracy.kospi}%)` : "";
+    const shareText = `${resultText}${streakText}\n${kospiText}${accuracyText}\n\n코스피 예측에 참여해봐요 👉`;
+    const shareUrl = typeof window !== "undefined" ? window.location.origin : "";
+    if (navigator.share) {
+      navigator.share({ title: "코스피 예측 결과", text: shareText, url: shareUrl });
+    } else {
+      navigator.clipboard?.writeText(`${shareText}\n${shareUrl}`);
+      alert("링크가 복사됐어요!");
+    }
+    handleCloseResultCard();
+  };
+
   return (
     <main className="max-w-md mx-auto min-h-screen pb-36 px-5 relative">
+      {/* ── 결과 공유 카드 팝업 ── */}
+      {showResultCard && (
+        <div className="fixed inset-0 z-[60] flex items-end justify-center px-4 pb-8" style={{ backgroundColor: "rgba(0,0,0,0.7)" }} onClick={handleCloseResultCard}>
+          <div
+            className="w-full max-w-sm rounded-3xl p-6 space-y-5 shadow-2xl"
+            style={{ background: isCorrectToday ? "linear-gradient(135deg, #052e16, #14532d)" : "linear-gradient(135deg, #1c0a0a, #3b0d0d)" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* 결과 헤더 */}
+            <div className="text-center space-y-1">
+              <p className="text-4xl">{isCorrectToday ? "🎉" : "😅"}</p>
+              <p className="text-xl font-black text-white">
+                {isCorrectToday ? "오늘 맞췄어요!" : "오늘 틀렸어요"}
+              </p>
+              {streak > 1 && (
+                <p className="text-sm font-bold text-orange-400">🔥 {streak}연속 적중 중!</p>
+              )}
+            </div>
+
+            {/* 결과 상세 */}
+            <div className="bg-black/30 rounded-2xl p-4 space-y-2 text-sm">
+              <div className="flex justify-between">
+                <span className="text-gray-400">오늘 코스피</span>
+                <span className={`font-bold ${today?.kospi_result ? "text-green-400" : "text-red-400"}`}>
+                  {today?.kospi_result ? "📈 상승" : "📉 하락"}
+                  {today?.kospi_change_pct != null && ` ${today.kospi_change_pct >= 0 ? "+" : ""}${today.kospi_change_pct.toFixed(2)}%`}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-400">내 예측</span>
+                <span className={`font-bold ${todayEntry?.kospi_answer ? "text-green-400" : "text-red-400"}`}>
+                  {todayEntry?.kospi_answer ? "📈 상승" : "📉 하락"}
+                </span>
+              </div>
+              {dash?.accuracy?.kospi != null && (
+                <div className="flex justify-between border-t border-white/10 pt-2">
+                  <span className="text-gray-400">누적 적중률</span>
+                  <span className="font-black text-white">{dash.accuracy.kospi}%</span>
+                </div>
+              )}
+            </div>
+
+            {/* 버튼 */}
+            <div className="space-y-2">
+              <button
+                onClick={handleShareResult}
+                className="w-full py-3.5 bg-white text-gray-900 font-black rounded-2xl text-sm"
+              >
+                📤 친구에게 자랑하기
+              </button>
+              <button
+                onClick={handleCloseResultCard}
+                className="w-full py-2.5 text-gray-500 text-sm"
+              >
+                닫기
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ── 블러 게이트 오버레이 ── */}
       {gateType && (
         <div className="fixed inset-0 z-50 flex items-center justify-center px-6" style={{ backdropFilter: "blur(12px)", backgroundColor: "rgba(0,0,0,0.6)" }}>
@@ -453,7 +571,19 @@ export default function DashboardPage() {
 
         {/* ── 내 통계 + 예측 이력 ──────────────────────────── */}
         <div className="bg-[#1A1A1A] rounded-2xl p-5 border border-[#2A2A2A]">
-          <p className="font-bold text-sm mb-4">내 통계</p>
+          <div className="flex items-center justify-between mb-4">
+            <p className="font-bold text-sm">내 통계</p>
+            {streak >= 2 && (
+              <span className="flex items-center gap-1 text-xs font-black text-orange-400 bg-orange-400/10 border border-orange-400/30 px-2.5 py-1 rounded-full animate-pulse">
+                🔥 {streak}연속 적중
+              </span>
+            )}
+            {streak === 1 && (
+              <span className="flex items-center gap-1 text-xs font-bold text-orange-300/70 bg-orange-400/5 px-2 py-0.5 rounded-full">
+                🔥 1연속 적중
+              </span>
+            )}
+          </div>
 
           {dash && dash.total_predictions === 0 ? (
             <div className="text-center py-4 space-y-2">
