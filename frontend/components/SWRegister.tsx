@@ -3,39 +3,48 @@
 import { useEffect } from "react";
 
 /**
- * 모든 페이지에서 Service Worker를 등록하고,
- * 매 방문마다 강제로 업데이트를 체크합니다.
- * Safari iOS는 updateViaCache: 'none' 없이 캐시된 구버전을 계속 사용합니다.
+ * 모든 페이지에서 Service Worker를 등록하고 매 방문마다 강제 업데이트를 체크합니다.
+ * 새 SW가 활성화되면 페이지를 자동 새로고침해 구버전이 알림을 가로채는 것을 방지합니다.
  */
 export default function SWRegister() {
   useEffect(() => {
     if (!("serviceWorker" in navigator)) return;
 
+    let refreshing = false;
+
+    // 새 SW가 컨트롤을 가져오면 페이지 새로고침 → 구버전 완전 교체
+    navigator.serviceWorker.addEventListener("controllerchange", () => {
+      if (!refreshing) {
+        refreshing = true;
+        window.location.reload();
+      }
+    });
+
     navigator.serviceWorker
-      .register("/sw.js", {
-        updateViaCache: "none", // 브라우저 HTTP 캐시 무시 — 항상 서버에서 새 sw.js 확인
-      })
+      .register("/sw.js", { updateViaCache: "none" })
       .then((reg) => {
-        // 이미 등록돼 있어도 매번 업데이트 체크
         reg.update();
 
-        // 새 SW가 대기 중이면 즉시 활성화 요청
+        const activateWaiting = (worker: ServiceWorker) => {
+          worker.postMessage({ type: "SKIP_WAITING" });
+        };
+
+        // 이미 대기 중인 SW가 있으면 즉시 활성화
         if (reg.waiting) {
-          reg.waiting.postMessage({ type: "SKIP_WAITING" });
+          activateWaiting(reg.waiting);
         }
+
         reg.addEventListener("updatefound", () => {
           const newWorker = reg.installing;
           if (!newWorker) return;
           newWorker.addEventListener("statechange", () => {
-            if (newWorker.state === "installed" && navigator.serviceWorker.controller) {
-              newWorker.postMessage({ type: "SKIP_WAITING" });
+            if (newWorker.state === "installed") {
+              activateWaiting(newWorker);
             }
           });
         });
       })
-      .catch(() => {
-        // 등록 실패는 조용히 무시 (알림 기능에만 영향)
-      });
+      .catch(() => {});
   }, []);
 
   return null;
