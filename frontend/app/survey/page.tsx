@@ -67,8 +67,8 @@ export default function SurveyPage() {
       const data = await getToday();
       setToday(data);
       setError(null);
-      // 오늘 결과가 이미 나온 경우 다음 거래일 설문 확인
-      if (data.status === "result") {
+      // 결과 공개 후 or 주말(no_survey)이면 다음 거래일 설문 확인
+      if (data.status === "result" || data.status === "no_survey") {
         fetch("/api/next-survey", { cache: "no-store" })
           .then((r) => r.json())
           .then((d) => setNextSurvey(d))
@@ -311,8 +311,13 @@ export default function SurveyPage() {
               ) : (
                 <>
                   <div className="text-5xl">🏖️</div>
-                  <p className="text-xl font-bold text-white">오늘은 설문이 없어요</p>
+                  <p className="text-xl font-bold text-white">오늘은 장이 없어요</p>
                   <p className="text-sm text-gray-400">주말·공휴일에는 장이 열리지 않아요</p>
+                  {nextSurvey?.is_open && (
+                    <p className="text-xs text-yellow-400 mt-1">
+                      💡 {getSurveyDayLabel(nextSurvey.survey_date).shortLabel} 예측은 미리 참여 가능해요
+                    </p>
+                  )}
                 </>
               )}
             </div>
@@ -484,8 +489,8 @@ export default function SurveyPage() {
             <KospiChart />
           </div>
 
-          {/* 다음 거래일 미리 예측하기 */}
-          {status === "result" && nextSurvey?.is_open && (
+          {/* 다음 거래일 미리 예측하기 (결과 공개 후 or 주말 no_survey) */}
+          {(status === "result" || status === "no_survey") && nextSurvey?.is_open && (
             <div className="mt-2 space-y-4">
               <div className="border-t border-[#2A2A2A] pt-5">
                 {(() => {
