@@ -43,9 +43,24 @@ export default function SetupPage() {
   const [groups, setGroups]           = useState<Group[]>([]);
   const [groupsLoading, setGroupsLoading] = useState(false);
   const [groupName, setGroupName]     = useState("");
+  const [isIOS, setIsIOS]             = useState(false);
+  const [isStandalone, setIsStandalone] = useState(false);
+  const [isInApp, setIsInApp]         = useState(false);
   const [joinCode, setJoinCode]       = useState("");
   const [groupMsg, setGroupMsg]       = useState<{ text: string; ok: boolean } | null>(null);
   const [copiedCode, setCopiedCode]   = useState<string | null>(null);
+
+  // 클라이언트에서만 실행 — iOS/standalone/인앱브라우저 감지
+  useEffect(() => {
+    const ua = navigator.userAgent || "";
+    setIsIOS(/iPhone|iPad|iPod/i.test(ua));
+    setIsStandalone(
+      window.matchMedia("(display-mode: standalone)").matches ||
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (navigator as any).standalone === true
+    );
+    setIsInApp(/KAKAOTALK|Instagram|FBAN|FBAV|Line\//i.test(ua));
+  }, []);
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
@@ -340,10 +355,6 @@ export default function SetupPage() {
       ) : tab === "webpush" ? (
         /* 웹 푸시 연동 안내 */
         (() => {
-          const isIOS = typeof navigator !== "undefined" && /iPhone|iPad|iPod/i.test(navigator.userAgent);
-          const isStandalone = typeof window !== "undefined" && window.matchMedia("(display-mode: standalone)").matches;
-          const isInApp = typeof navigator !== "undefined" && /KAKAOTALK|Instagram|FBAN|FBAV|Line\//i.test(navigator.userAgent);
-
           return (
             <div className="space-y-4">
               {/* 안내: 설문은 앱에서 직접 */}
