@@ -717,18 +717,20 @@ export default function DashboardPage() {
               {/* 1·2·3위 포디움 */}
               {sorted.length >= 2 && (
                 <div className="flex items-end justify-center gap-2 px-5 pb-4">
+                  {/* 시각적 순서: 2위(left) → 1위(center) → 3위(right) */}
                   {[1, 0, 2].map((rankIdx) => {
                     const p = sorted[rankIdx];
                     if (!p) return <div key={rankIdx} className="flex-1" />;
                     const isMe = rankIdx === myIdx;
-                    const heights = ["h-20", "h-24", "h-16"];
-                    const podiumH = heights[rankIdx === 0 ? 1 : rankIdx === 1 ? 0 : 2];
+                    // rankIdx 0=1위, 1=2위, 2=3위 — 직접 매핑
+                    const heights      = ["h-24", "h-20", "h-16"];
                     const borderColors = ["border-yellow-400/50", "border-gray-300/30", "border-amber-600/40"];
-                    const bc = borderColors[rankIdx === 0 ? 1 : rankIdx === 1 ? 0 : 2];
+                    const podiumH = heights[rankIdx];
+                    const bc      = borderColors[rankIdx];
                     return (
                       <div key={rankIdx} className="flex-1 flex flex-col items-center gap-1">
                         {isMe && <span className="text-[9px] text-blue-400 font-bold">나</span>}
-                        <span className="text-lg">{medals[rankIdx === 0 ? 1 : rankIdx === 1 ? 0 : 2]}</span>
+                        <span className="text-lg">{medals[rankIdx]}</span>
                         <p className="text-[10px] text-gray-300 font-bold truncate max-w-full px-1">{p.masked_name}</p>
                         <div className={`w-full ${podiumH} rounded-t-lg border ${bc} flex items-end justify-center pb-2 ${
                           isMe ? "bg-blue-500/20" : "bg-[#252525]"

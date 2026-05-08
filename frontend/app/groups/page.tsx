@@ -273,20 +273,22 @@ export default function GroupsPage() {
                       {/* 포디움 (3명 이상) */}
                       {leaderboard.members.length >= 2 && (() => {
                         const top3 = leaderboard.members.slice(0, Math.min(3, leaderboard.members.length));
+                        // 시각적 순서: 2위(left) → 1위(center) → 3위(right)
                         const order = top3.length >= 3 ? [1, 0, 2] : [0, 1];
+                        // ri = 데이터 인덱스 (0=1위, 1=2위, 2=3위) — 직접 매핑
+                        const heights      = ["h-24", "h-20", "h-16"];
+                        const borderColors = ["border-yellow-400/50", "border-gray-300/30", "border-amber-600/40"];
                         return (
                           <div className="flex items-end justify-center gap-2 px-5 py-5">
                             {order.map((ri) => {
                               const m = top3[ri];
                               if (!m) return <div key={ri} className="flex-1" />;
-                              const podiumH = ri === 0 ? "h-20" : ri === 1 ? "h-24" : "h-16";
-                              const bc = ri === 0 ? "border-gray-300/30" : ri === 1 ? "border-yellow-400/50" : "border-amber-600/40";
                               return (
                                 <div key={ri} className="flex-1 flex flex-col items-center gap-1">
                                   {m.is_me && <span className="text-[9px] text-green-400 font-bold">나</span>}
-                                  <span className="text-xl">{medals[ri === 1 ? 0 : ri === 0 ? 1 : 2]}</span>
+                                  <span className="text-xl">{medals[ri]}</span>
                                   <p className="text-[10px] text-gray-300 font-bold truncate max-w-full px-1">{m.masked_name}</p>
-                                  <div className={`w-full ${podiumH} rounded-t-lg border ${bc} flex items-end justify-center pb-2 ${m.is_me ? "bg-green-500/20" : "bg-[#252525]"}`}>
+                                  <div className={`w-full ${heights[ri]} rounded-t-lg border ${borderColors[ri]} flex items-end justify-center pb-2 ${m.is_me ? "bg-green-500/20" : "bg-[#252525]"}`}>
                                     <span className="text-xs font-black">{m.accuracy !== null ? `${m.accuracy}%` : "신규"}</span>
                                   </div>
                                 </div>
