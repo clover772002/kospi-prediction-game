@@ -805,16 +805,23 @@ export default function DashboardPage() {
                 </span>}
               </div>
 
-              {/* 참여자 부족 시 초대 유도 */}
+              {/* 참여자 부족 시 블러 준비중 오버레이 */}
               {tooFew && (
-                <div className="px-5 pb-5">
-                  <div className="bg-[#111] border border-dashed border-[#333] rounded-xl p-4 text-center space-y-2">
-                    <p className="text-2xl">👥</p>
-                    <p className="text-sm font-bold text-white">아직 대결 상대가 부족해요</p>
-                    <p className="text-[11px] text-gray-500 leading-relaxed">
-                      투자 잘하는 친구, 못하는 친구 모두 초대해보세요.<br/>
-                      참여자가 많을수록 예측 정확도가 올라가요!
-                    </p>
+                <div className="relative px-5 pb-5 overflow-hidden">
+                  {/* 블러 배경 (가짜 순위 실루엣) */}
+                  <div className="blur-sm pointer-events-none select-none space-y-2 py-2">
+                    {["한**", "이**", "박**", "김**"].map((name, i) => (
+                      <div key={i} className="flex items-center justify-between text-[11px] text-gray-400 px-1">
+                        <span>{medals[i] ?? `${i+1}`} {name}</span>
+                        <span className="text-gray-500">상승 · 67%</span>
+                      </div>
+                    ))}
+                  </div>
+                  {/* 오버레이 */}
+                  <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/60 backdrop-blur-sm rounded-b-2xl gap-2">
+                    <p className="text-lg">🔒</p>
+                    <p className="text-sm font-black text-white">전국대결 준비중</p>
+                    <p className="text-[11px] text-gray-400">참여자가 모이면 자동으로 열려요</p>
                     <button
                       onClick={() => {
                         if (navigator.share) {
@@ -828,24 +835,10 @@ export default function DashboardPage() {
                           alert("링크가 복사됐어요!");
                         }
                       }}
-                      className="mt-1 bg-yellow-500 hover:bg-yellow-400 text-black text-xs font-black px-4 py-2 rounded-full transition-colors"
+                      className="mt-1 bg-yellow-500 hover:bg-yellow-400 text-black text-[11px] font-black px-4 py-1.5 rounded-full transition-colors"
                     >
                       친구 초대하기 🔗
                     </button>
-                    {/* 현재 참여자 목록 (소규모라도 표시) */}
-                    {sorted.length > 0 && (
-                      <div className="mt-2 pt-2 border-t border-[#2A2A2A] space-y-1">
-                        {sorted.map((p, i) => (
-                          <div key={i} className="flex items-center justify-between text-[11px] text-gray-400">
-                            <span>{medals[i] ?? "•"} {p.masked_name}</span>
-                            <span className={p.kospi_answer ? "text-green-400" : "text-red-400"}>
-                              {p.kospi_answer ? "📈 상승" : "📉 하락"}
-                              {p.accuracy != null && <span className="text-gray-500 ml-1">({p.accuracy}%)</span>}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
                   </div>
                 </div>
               )}
