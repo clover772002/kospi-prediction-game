@@ -222,12 +222,21 @@ scheduler = AsyncIOScheduler(timezone="Asia/Seoul")
 
 @asynccontextmanager
 async def lifespan(app_instance):
+    global _kospi_snap_lock
+    _kospi_snap_lock = asyncio.Lock()
     scheduler.add_job(job_22_00, CronTrigger(hour=22, minute=0,  timezone="Asia/Seoul"), id="survey_evening",   replace_existing=True)
     scheduler.add_job(job_08_45, CronTrigger(hour=8,  minute=45, timezone="Asia/Seoul"), id="survey_reminder",  replace_existing=True)
     scheduler.add_job(job_09_00, CronTrigger(hour=9,  minute=0,  timezone="Asia/Seoul"), id="survey_close",     replace_existing=True)
     scheduler.add_job(job_15_35, CronTrigger(hour=15, minute=35, timezone="Asia/Seoul"), id="market_result",    replace_existing=True)
+    # 장 중 30분마다 KOSPI 가격 스냅샷 (09:00 ~ 15:30)
+    scheduler.add_job(
+        job_kospi_snapshot,
+        CronTrigger(hour="9-15", minute="0,30", timezone="Asia/Seoul"),
+        id="kospi_snapshot",
+        replace_existing=True,
+    )
     scheduler.start()
-    logger.info("스케줄러 시작: 22:00(설문 발송) / 08:45(마감임박 텔레그램+웹푸시) / 09:00(마감+발표) / 15:35(정확도 알림)")
+    logger.info("스케줄러 시작: 22:00(설문 발송) / 08:45(마감임박) / 09:00(마감) / 15:35(정확도) / 09-15시 30분(KOSPI 스냅샷)")
     yield
     scheduler.shutdown()
 
@@ -498,94 +507,69 @@ async def get_public_history(supabase: Client = Depends(get_supabase)):
     }
 
 
-# ── KOSPI 차트 인메모리 캐시 ────────────────────────────────
-_kospi_chart_cache: dict = {"data": [], "ts": 0.0}
-_CHART_CACHE_TTL = 300  # 5분
+# ── KOSPI 장 중 가격 스냅샷 (30분마다 스케줄러가 채움) ──────
+_kospi_snapshots: list = []   # [{"time":"09:00","open":..,"high":..,"low":..,"close":..}, ...]
+_kospi_snap_date: str  = ""   # "2026-05-08"
+_kospi_snap_lock: asyncio.Lock | None = None  # lifespan에서 초기화
 
 
-async def _fetch_naver_kospi_chart() -> list:
-    """네이버 파이낸스 분봉 → 1시간봉 집계"""
-    url = (
-        "https://fchart.stock.naver.com/sise.nhn"
-        "?symbol=KOSPI&timeframe=minute&count=420&requestType=0"
-    )
+async def _naver_kospi_price() -> float | None:
+    """네이버 파이낸스에서 현재 KOSPI 지수 반환 (빠른 API 사용)"""
+    url = "https://m.stock.naver.com/api/index/KOSPI/basic"
     headers = {"User-Agent": "Mozilla/5.0 (compatible; KospiBot/1.0)"}
+    try:
+        async with httpx.AsyncClient(timeout=6.0) as client:
+            r = await client.get(url, headers=headers)
+            r.raise_for_status()
+            data = r.json()
+            raw = data.get("closePrice", "").replace(",", "")
+            return float(raw) if raw else None
+    except Exception as e:
+        logger.warning(f"네이버 KOSPI 가격 조회 실패: {e}")
+        return None
 
-    async with httpx.AsyncClient(timeout=8.0) as client:
-        resp = await client.get(url, headers=headers)
-        resp.raise_for_status()
 
-    # XML 파싱: <item data="20260508090100|2600.12|2610.23|2598.45|2605.67|0" />
-    import re
-    items = re.findall(r'<item data="([^"]+)"', resp.text)
-    if not items:
-        return []
+async def job_kospi_snapshot():
+    """장 중 30분마다 KOSPI 가격 스냅샷 저장"""
+    global _kospi_snapshots, _kospi_snap_date
+    kst_now = datetime.now(KST)
+    today = kst_now.date().isoformat()
+    hour_label = kst_now.strftime("%H:00")
 
-    today_str = today_kst().replace("-", "")  # "20260508"
-    buckets: dict = {}
+    price = await _naver_kospi_price()
+    if price is None:
+        logger.warning("KOSPI 스냅샷: 가격 조회 실패, 건너뜀")
+        return
 
-    for item in items:
-        parts = item.split("|")
-        if len(parts) < 5:
-            continue
-        dt_str = parts[0]  # "20260508090100" or "20260508090000"
-        if not dt_str.startswith(today_str):
-            continue
-        try:
-            hour = dt_str[8:10]  # "09"
-            close_val = float(parts[4])
-            open_val  = float(parts[1])
-            high_val  = float(parts[2])
-            low_val   = float(parts[3])
-        except ValueError:
-            continue
+    lock = _kospi_snap_lock or asyncio.Lock()
+    async with lock:
+        if today != _kospi_snap_date:
+            _kospi_snapshots.clear()
+            _kospi_snap_date = today
 
-        if hour not in buckets:
-            buckets[hour] = {
-                "open": open_val, "high": high_val,
-                "low": low_val,   "close": close_val,
-            }
+        existing = next((s for s in _kospi_snapshots if s["time"] == hour_label), None)
+        if existing:
+            existing["close"] = price
+            existing["high"]  = max(existing["high"], price)
+            existing["low"]   = min(existing["low"],  price)
         else:
-            buckets[hour]["high"]  = max(buckets[hour]["high"], high_val)
-            buckets[hour]["low"]   = min(buckets[hour]["low"], low_val)
-            buckets[hour]["close"] = close_val  # 마지막 분봉이 시간봉 종가
-
-    if not buckets:
-        return []
-
-    return [
-        {
-            "time": f"{h}:00",
-            "open":  round(v["open"],  2),
-            "high":  round(v["high"],  2),
-            "low":   round(v["low"],   2),
-            "close": round(v["close"], 2),
-        }
-        for h, v in sorted(buckets.items())
-    ]
+            _kospi_snapshots.append({
+                "time":  hour_label,
+                "open":  price,
+                "high":  price,
+                "low":   price,
+                "close": price,
+            })
+    logger.info(f"KOSPI 스냅샷 저장: {hour_label} = {price}")
 
 
 @app.get("/api/public/kospi-chart")
 async def get_kospi_chart():
-    """오늘 KOSPI 1시간봉 데이터 — 네이버 파이낸스 (5분 캐시)"""
-    global _kospi_chart_cache
-    now = time.time()
-
-    # 캐시 유효 시 즉시 반환
-    if now - _kospi_chart_cache["ts"] < _CHART_CACHE_TTL and _kospi_chart_cache["data"]:
-        return {"data": _kospi_chart_cache["data"], "cached": True}
-
-    try:
-        data = await asyncio.wait_for(_fetch_naver_kospi_chart(), timeout=9.0)
-        if data:
-            _kospi_chart_cache = {"data": data, "ts": now}
-        return {"data": data or _kospi_chart_cache["data"]}
-    except asyncio.TimeoutError:
-        logger.warning("KOSPI 차트 네이버 타임아웃 — 캐시 반환")
-        return {"data": _kospi_chart_cache["data"]}
-    except Exception as e:
-        logger.error(f"KOSPI 차트 데이터 오류: {e}")
-        return {"data": _kospi_chart_cache["data"]}
+    """오늘 KOSPI 1시간봉 스냅샷 반환 (장 중 30분마다 업데이트)"""
+    lock = _kospi_snap_lock or asyncio.Lock()
+    async with lock:
+        data = list(_kospi_snapshots)
+    return {"data": data}
 
 
 @app.get("/api/public/backtest")
