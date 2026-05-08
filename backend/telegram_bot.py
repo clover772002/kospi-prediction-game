@@ -345,10 +345,7 @@ async def send_accuracy_notifications(
     for record in accuracy_records.data:
         user_id = record["user_id"]
         user = supabase.table("users").select("telegram_chat_id").eq("id", user_id).execute()
-        if not user.data or not user.data[0]["telegram_chat_id"]:
-            continue
 
-        chat_id = user.data[0]["telegram_chat_id"]
         kospi_correct = record["kospi_correct"]
 
         my_score = user_scores.get(user_id, {"correct": 0, "total": 0})
@@ -364,18 +361,24 @@ async def send_accuracy_notifications(
         k_emoji = "✅" if kospi_correct else "❌"
         k_result = "맞음" if kospi_correct else "틀림"
 
-        text = (
-            f"📈 <b>오늘 장 마감 결과</b>\n\n"
-            f"코스피 {kospi_dir} {kospi_sign}{kospi_pct}%\n\n"
-            f"<b>내 예측:</b> {k_emoji} {k_result}\n\n"
-            f"📊 누적 정확도: <b>{overall_pct}%</b>\n"
-            f"🏆 현재 순위: <b>상위 {top_pct}%</b>"
-        )
+        # 텔레그램 알림
+        if user.data and user.data[0].get("telegram_chat_id"):
+            chat_id = user.data[0]["telegram_chat_id"]
+            text = (
+                f"📈 <b>오늘 장 마감 결과</b>\n\n"
+                f"코스피 {kospi_dir} {kospi_sign}{kospi_pct}%\n\n"
+                f"<b>내 예측:</b> {k_emoji} {k_result}\n\n"
+                f"📊 누적 정확도: <b>{overall_pct}%</b>\n"
+                f"🏆 현재 순위: <b>상위 {top_pct}%</b>"
+            )
+            try:
+                await send_message(chat_id, text)
+            except Exception as e:
+                logger.error(f"정확도 알림 실패 (chat_id={chat_id}): {e}")
 
-        try:
-            await send_message(chat_id, text)
-        except Exception as e:
-            logger.error(f"정확도 알림 실패 (chat_id={chat_id}): {e}")
+        # 웹 푸시 알림
+        push_body = f"내 예측 {k_emoji} {k_result} · 누적 적중률 {overall_pct}% (상위 {top_pct}%)"
+        send_web_push_to_user(supabase, user_id, "📊 오늘 장 마감 결과", push_body, "/dashboard", notif_type="result")
 
 
 async def notify_challenge_results(supabase, date_str: str) -> None:
@@ -465,7 +468,7 @@ async def notify_challenge_results(supabase, date_str: str) -> None:
                 await send_message(c1_row.data[0]["telegram_chat_id"], c1_tg)
             except Exception as e:
                 logger.error(f"대결 결과 텔레그램 실패(c1): {e}")
-        send_web_push_to_user(supabase, c1_id, c1_title, c1_body, "/dashboard")
+        send_web_push_to_user(supabase, c1_id, c1_title, c1_body, "/dashboard", notif_type="challenge")
 
         c2_row = supabase.table("users").select("telegram_chat_id").eq("id", c2_id).execute()
         if c2_row.data and c2_row.data[0].get("telegram_chat_id"):
@@ -473,4 +476,4 @@ async def notify_challenge_results(supabase, date_str: str) -> None:
                 await send_message(c2_row.data[0]["telegram_chat_id"], c2_tg)
             except Exception as e:
                 logger.error(f"대결 결과 텔레그램 실패(c2): {e}")
-        send_web_push_to_user(supabase, c2_id, c2_title, c2_body, "/dashboard")
+        send_web_push_to_user(supabase, c2_id, c2_title, c2_body, "/dashboard", notif_type="challenge")

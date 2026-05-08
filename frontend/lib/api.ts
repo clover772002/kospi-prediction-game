@@ -40,6 +40,14 @@ async function authFetch<T>(path: string, token: string, options: RequestInit = 
 
 // ─── 타입 ────────────────────────────────────────────────────
 
+export interface PushPreferences {
+  survey_open:    boolean;
+  survey_deadline:boolean;
+  result:         boolean;
+  challenge:      boolean;
+  group_nudge:    boolean;
+}
+
 export interface UserProfile {
   id: string;
   email: string;
@@ -47,6 +55,7 @@ export interface UserProfile {
   picture: string;
   telegram_chat_id: number | null;
   has_push: boolean;
+  push_preferences?: PushPreferences;
 }
 
 export interface TopPredictor {
@@ -219,6 +228,17 @@ export async function getGroupLeaderboard(token: string, group_id: string): Prom
 
 export async function leaveGroup(token: string, group_id: string): Promise<{ ok: boolean }> {
   return authFetch(`/api/groups/${group_id}/leave`, token, { method: "DELETE" });
+}
+
+export async function savePushPreferences(
+  token: string,
+  prefs: PushPreferences,
+): Promise<{ success: boolean }> {
+  return authFetch("/api/me/push-preferences", token, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(prefs),
+  });
 }
 
 export async function nudgeGroup(

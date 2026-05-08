@@ -107,6 +107,7 @@ async def job_22_00():
         sb,
         title="📊 내일 코스피, 함께 맞춰요!",
         body=f"내일 장 예측 설문이 열렸어요. 지금 바로 참여하세요 👆 (마감 09:00)",
+        notif_type="survey_open",
         url="/survey",
     )
     logger.info("22:00 설문 발송 완료")
@@ -130,6 +131,7 @@ async def job_08_45():
         sb,
         title="⏰ 마감 임박! 09:00까지예요",
         body="아직 코스피 예측 안 하셨나요? 지금 바로 참여하세요 📊",
+        notif_type="survey_deadline",
         url="/survey",
     )
     logger.info("08:45 마감임박 텔레그램+웹푸시 발송 완료")
@@ -349,6 +351,22 @@ async def save_push_subscription(
     except Exception as e:
         logger.error(f"푸시 구독 저장 오류: {e}")
         raise HTTPException(status_code=500, detail="구독 저장 실패")
+
+
+@app.patch("/api/me/push-preferences")
+async def save_push_preferences(
+    request: Request,
+    current_user=Depends(get_current_user),
+    supabase: Client = Depends(get_supabase),
+):
+    """알림 종류별 수신 설정 저장"""
+    try:
+        body = await request.json()
+        supabase.table("users").update({"push_preferences": body}).eq("id", str(current_user.id)).execute()
+        return {"success": True}
+    except Exception as e:
+        logger.error(f"push_preferences 저장 오류: {e}")
+        raise HTTPException(500, str(e))
 
 
 @app.delete("/api/me/push-subscription")
@@ -1192,7 +1210,7 @@ async def nudge_group(
             except Exception as e:
                 logger.warning(f"독촉 텔레그램 실패: {e}")
 
-        send_web_push_to_user(supabase, uid, push_title, push_body, "/survey")
+        send_web_push_to_user(supabase, uid, push_title, push_body, "/survey", notif_type="group_nudge")
         notified += 1
 
     if notified == 0:
@@ -1275,6 +1293,7 @@ async def create_challenge(
         title="⚔️ 대결 신청이 왔어요!",
         body=f"{c_masked}님이 오늘 예측 대결을 신청했어요. 장 마감 후 결과를 확인해보세요!",
         url="/dashboard",
+        notif_type="challenge",
     )
 
     return {"ok": True, "challenge_id": result.data[0]["id"] if result.data else None}
@@ -1378,7 +1397,7 @@ async def react_to_challenge(
         except Exception as e:
             logger.warning(f"반응 텔레그램 알림 실패: {e}")
 
-    send_web_push_to_user(supabase, opponent_id, "⚔️ 상대방이 반응했어요!", push_body, "/dashboard")
+    send_web_push_to_user(supabase, opponent_id, "⚔️ 상대방이 반응했어요!", push_body, "/dashboard", notif_type="challenge")
 
     return {"ok": True}
 
@@ -1443,7 +1462,7 @@ async def request_rematch(
         except Exception as e:
             logger.warning(f"재대결 텔레그램 알림 실패: {e}")
 
-    send_web_push_to_user(supabase, opponent_id, "🔥 재대결 신청이 왔어요!", push_body, "/dashboard")
+    send_web_push_to_user(supabase, opponent_id, "🔥 재대결 신청이 왔어요!", push_body, "/dashboard", notif_type="challenge")
 
     return {"ok": True, "challenge_id": result.data[0]["id"] if result.data else None, "survey_date": next_str}
 

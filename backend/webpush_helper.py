@@ -9,16 +9,22 @@ logger = logging.getLogger(__name__)
 
 VAPID_CLAIMS_EMAIL = os.getenv("VAPID_CLAIMS_EMAIL", "mailto:forsmartonly@gmail.com")
 
+# 알림 종류 목록 (이 키는 push_preferences JSONB에서 사용)
+NOTIF_TYPES = {
+    "survey_open":    "설문 시작 알림 (22:00)",
+    "survey_deadline":"마감 임박 알림 (08:45)",
+    "result":         "실적·정확도 알림 (15:35)",
+    "challenge":      "대결 신청·결과 알림",
+    "group_nudge":    "그룹 독촉 알림",
+}
+
 def _load_vapid_private_key() -> str:
-    """환경변수에서 VAPID 개인키를 읽어 PEM 문자열로 반환.
-    base64로 인코딩된 PEM이면 자동으로 디코딩한다."""
     key = os.getenv("VAPID_PRIVATE_KEY", "")
     if not key:
         return key
     if key.startswith("-----"):
         return key
     try:
-        # 패딩 부족 시 자동 보정
         padding = (4 - len(key) % 4) % 4
         decoded = base64.b64decode(key + "=" * padding).decode("utf-8")
         if decoded.startswith("-----"):
@@ -29,6 +35,15 @@ def _load_vapid_private_key() -> str:
     return key
 
 VAPID_PRIVATE_KEY = _load_vapid_private_key()
+
+
+def _allowed(preferences: dict | None, notif_type: str | None) -> bool:
+    """유저 preferences에서 해당 알림 종류가 허용돼 있는지 확인. 기본값=True."""
+    if notif_type is None:
+        return True
+    if not preferences:
+        return True
+    return preferences.get(notif_type, True)
 
 
 def send_web_push(subscription_info: dict, title: str, body: str, url: str = "/dashboard") -> bool:
@@ -53,11 +68,24 @@ def send_web_push(subscription_info: dict, title: str, body: str, url: str = "/d
         return False
 
 
-def send_web_push_to_user(supabase, user_id: str, title: str, body: str, url: str = "/dashboard") -> bool:
-    """특정 유저 한 명에게 웹 푸시 전송. 구독 없으면 False 반환."""
+def send_web_push_to_user(
+    supabase,
+    user_id: str,
+    title: str,
+    body: str,
+    url: str = "/dashboard",
+    notif_type: str | None = None,
+) -> bool:
+    """특정 유저 한 명에게 웹 푸시 전송. preferences로 차단된 종류면 생략."""
     try:
-        row = supabase.table("users").select("push_subscription").eq("id", user_id).execute()
+        row = supabase.table("users").select("push_subscription, push_preferences").eq("id", user_id).execute()
         if not row.data or not row.data[0].get("push_subscription"):
+            return False
+        prefs = row.data[0].get("push_preferences") or {}
+        if isinstance(prefs, str):
+            prefs = json.loads(prefs)
+        if not _allowed(prefs, notif_type):
+            logger.info(f"웹 푸시 생략 (user={user_id}, type={notif_type}, 사용자 비활성)")
             return False
         sub = row.data[0]["push_subscription"]
         if isinstance(sub, str):
@@ -68,10 +96,16 @@ def send_web_push_to_user(supabase, user_id: str, title: str, body: str, url: st
         return False
 
 
-async def send_web_push_to_all(supabase, title: str, body: str, url: str = "/dashboard") -> int:
-    """push_subscription이 있는 모든 유저에게 웹 푸시 전송. 성공 수 반환."""
+async def send_web_push_to_all(
+    supabase,
+    title: str,
+    body: str,
+    url: str = "/dashboard",
+    notif_type: str | None = None,
+) -> int:
+    """push_subscription이 있는 모든 유저에게 웹 푸시 전송. preferences 필터 적용."""
     try:
-        users = supabase.table("users").select("id, push_subscription").not_.is_("push_subscription", "null").execute()
+        users = supabase.table("users").select("id, push_subscription, push_preferences").not_.is_("push_subscription", "null").execute()
     except Exception as e:
         logger.error(f"웹 푸시 구독자 조회 오류: {e}")
         return 0
@@ -82,7 +116,15 @@ async def send_web_push_to_all(supabase, title: str, body: str, url: str = "/das
     for user in users.data:
         sub = user.get("push_subscription")
         if not sub:
-            logger.warning(f"유저 {user.get('id')}: push_subscription 비어있음")
+            continue
+        prefs = user.get("push_preferences") or {}
+        if isinstance(prefs, str):
+            try:
+                prefs = json.loads(prefs)
+            except Exception:
+                prefs = {}
+        if not _allowed(prefs, notif_type):
+            logger.info(f"웹 푸시 생략 (user={user.get('id')}, type={notif_type})")
             continue
         if isinstance(sub, str):
             try:
@@ -90,7 +132,7 @@ async def send_web_push_to_all(supabase, title: str, body: str, url: str = "/das
             except Exception as e:
                 logger.error(f"유저 {user.get('id')}: push_subscription JSON 파싱 오류 {e}")
                 continue
-        logger.info(f"유저 {user.get('id')} 푸시 발송 시도, sub keys={list(sub.keys()) if isinstance(sub, dict) else type(sub)}")
+        logger.info(f"유저 {user.get('id')} 푸시 발송 시도")
         if send_web_push(sub, title, body, url):
             sent += 1
 

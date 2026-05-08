@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
-import { getMe, unlinkTelegram, getVapidPublicKey, savePushSubscription, deletePushSubscription, createGroup, joinGroup, getMyGroups, leaveGroup, UserProfile, Group } from "@/lib/api";
+import { getMe, unlinkTelegram, getVapidPublicKey, savePushSubscription, deletePushSubscription, savePushPreferences, createGroup, joinGroup, getMyGroups, leaveGroup, UserProfile, Group, PushPreferences } from "@/lib/api";
 
 const BOT_USERNAME = process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME || "Profitchat123bot";
 
@@ -30,10 +30,16 @@ export default function SetupPage() {
   const [botOpened, setBotOpened] = useState(false);
   const [checkFailed, setCheckFailed] = useState(false);
   const [unlinking, setUnlinking] = useState(false);
-  const [tab, setTab] = useState<"telegram" | "webpush" | "groups">("webpush");
+  const [tab, setTab] = useState<"telegram" | "webpush">("webpush");
   const [pushLinked, setPushLinked]   = useState(false);
   const [pushLoading, setPushLoading] = useState(false);
   const [pushError, setPushError]     = useState<string | null>(null);
+  const DEFAULT_PREFS: PushPreferences = {
+    survey_open: true, survey_deadline: true,
+    result: true, challenge: true, group_nudge: true,
+  };
+  const [prefs, setPrefs]             = useState<PushPreferences>(DEFAULT_PREFS);
+  const [prefsSaving, setPrefsSaving] = useState(false);
   const [groups, setGroups]           = useState<Group[]>([]);
   const [groupsLoading, setGroupsLoading] = useState(false);
   const [groupName, setGroupName]     = useState("");
@@ -61,6 +67,9 @@ export default function SetupPage() {
           }
           if (profile.has_push) {
             setPushLinked(true);
+          }
+          if (profile.push_preferences) {
+            setPrefs({ ...DEFAULT_PREFS, ...profile.push_preferences });
           }
         } catch (e) {
           console.error(e);
@@ -199,53 +208,8 @@ export default function SetupPage() {
         </div>
       )}
 
-      {/* 탭 (브라우저 알림 / 텔레그램) */}
-      <div className="flex gap-1.5 mb-1">
-        <button
-          onClick={() => setTab("webpush")}
-          className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all ${tab === "webpush" ? "bg-purple-600 text-white" : "bg-[#1A1A1A] text-gray-400 border border-[#2A2A2A]"}`}
-        >
-          🔔 브라우저 알림
-        </button>
-        <button
-          onClick={() => setTab("telegram")}
-          className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all ${tab === "telegram" ? "bg-[#0088CC] text-white" : "bg-[#1A1A1A] text-gray-400 border border-[#2A2A2A]"}`}
-        >
-          ✈️ 텔레그램
-        </button>
-      </div>
-      {/* 텔레그램 탭 유도 문구 */}
-      {tab === "webpush" && !pushLinked && (
-        <p className="text-[10px] text-gray-600 text-right mb-3">
-          매번 접속이 귀찮다면?{" "}
-          <button onClick={() => setTab("telegram")} className="text-gray-400 underline underline-offset-2 hover:text-gray-300 transition-colors">
-            텔레그램 봇 연결하기 →
-          </button>
-        </p>
-      )}
-      {tab === "telegram" && !linked && (
-        <p className="text-[10px] text-blue-400/70 text-center mb-3">
-          ✈️ 버튼 한 번으로 설문 알림을 받아요 — 매일 앱을 열 필요 없어요
-        </p>
-      )}
+      {/* 텔레그램 탭은 제거 — 버튼으로만 진입 가능 */}
 
-      {/* 알림 방식 탭 내부 중복 버튼 (숨김) */}
-      {!linked && !pushLinked && (
-        <div className="flex gap-2 mb-2 hidden">
-          <button
-            onClick={() => setTab("telegram")}
-            className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all ${tab === "telegram" ? "bg-blue-600 text-white" : "bg-[#1A1A1A] text-gray-400 border border-[#2A2A2A]"}`}
-          >
-            ✈️ 텔레그램 봇
-          </button>
-          <button
-            onClick={() => setTab("webpush")}
-            className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all ${tab === "webpush" ? "bg-purple-600 text-white" : "bg-[#1A1A1A] text-gray-400 border border-[#2A2A2A]"}`}
-          >
-            🔔 브라우저 알림
-          </button>
-        </div>
-      )}
 
       {linked ? (
         /* 연동 완료 상태 */
@@ -311,6 +275,43 @@ export default function SetupPage() {
               알림을 탭하면 바로 설문 페이지로 이동해요.
             </p>
           </div>
+
+          {/* 알림 종류 체크박스 */}
+          <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-2xl p-5 space-y-4">
+            <p className="font-black text-sm">🔔 알림 종류 설정</p>
+            <p className="text-[11px] text-gray-500">받고 싶은 알림만 켜두세요</p>
+            {([
+              { key: "survey_open",    icon: "🌙", label: "설문 시작 알림",    desc: "매일 밤 22:00" },
+              { key: "survey_deadline",icon: "⏰", label: "마감 임박 알림",    desc: "오전 08:45" },
+              { key: "result",         icon: "📊", label: "실적·정확도 알림",  desc: "오후 15:35" },
+              { key: "challenge",      icon: "⚔️", label: "대결 신청·결과 알림", desc: "수시" },
+              { key: "group_nudge",    icon: "📣", label: "그룹 독촉 알림",    desc: "수시" },
+            ] as { key: keyof PushPreferences; icon: string; label: string; desc: string }[]).map(({ key, icon, label, desc }) => (
+              <label key={key} className="flex items-center gap-3 cursor-pointer group">
+                <div className={`w-11 h-6 rounded-full transition-all flex-shrink-0 relative ${prefs[key] ? "bg-purple-600" : "bg-[#333]"}`}
+                  onClick={async () => {
+                    const next = { ...prefs, [key]: !prefs[key] };
+                    setPrefs(next);
+                    if (!token) return;
+                    setPrefsSaving(true);
+                    try { await savePushPreferences(token, next); }
+                    catch { /* ignore */ }
+                    finally { setPrefsSaving(false); }
+                  }}
+                >
+                  <div className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-all ${prefs[key] ? "left-5" : "left-0.5"}`} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-bold flex items-center gap-1.5">
+                    <span>{icon}</span>{label}
+                    {prefsSaving && <span className="w-2.5 h-2.5 border border-purple-400/40 border-t-purple-400 rounded-full animate-spin" />}
+                  </p>
+                  <p className="text-[10px] text-gray-500">{desc}</p>
+                </div>
+              </label>
+            ))}
+          </div>
+
           <button onClick={() => router.push("/dashboard")} className="w-full py-4 bg-blue-600 hover:bg-blue-500 text-white font-black text-lg rounded-2xl transition-all active:scale-95">
             ← 대시보드로 이동
           </button>
