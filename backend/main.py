@@ -579,24 +579,62 @@ async def get_kospi_chart():
 
 @app.get("/api/public/kospi-price")
 async def get_kospi_price(supabase: Client = Depends(get_supabase)):
-    """오늘 KOSPI 종가/등락률 — DB 우선, 없으면 Yahoo Finance"""
+    """오늘 KOSPI 종가/OHLC — Naver basic API (Vercel에서 호출 가능)"""
     today_str = today_kst()
 
-    # 1) DB에 오늘 결과가 있으면 즉시 반환
+    # 1) DB에 오늘 결과가 있으면 Naver OHLC와 합쳐서 반환
+    db_pct = db_is_up = None
     try:
         row = supabase.table("daily_surveys") \
             .select("kospi_result,kospi_change_pct") \
             .eq("survey_date", today_str) \
             .maybe_single().execute()
         if row.data and row.data.get("kospi_change_pct") is not None:
-            is_up = bool(row.data["kospi_result"])
-            pct   = float(row.data["kospi_change_pct"])
-            return {"price": None, "change": None, "change_pct": pct,
-                    "is_up": is_up, "code": "2" if is_up else "5", "source": "db"}
+            db_is_up = bool(row.data["kospi_result"])
+            db_pct   = float(row.data["kospi_change_pct"])
     except Exception:
         pass
 
-    # 2) DB에 없으면 Yahoo Finance JSON API로 직접 조회
+    # 2) Naver basic API로 OHLC 조회 (Vercel IP에서도 접근 가능한 경우 사용)
+    try:
+        url = "https://m.stock.naver.com/api/index/KOSPI/basic"
+        headers = {"User-Agent": "Mozilla/5.0 (compatible; KospiBot/1.0)"}
+        async with httpx.AsyncClient(timeout=6.0) as client:
+            r = await client.get(url, headers=headers)
+            r.raise_for_status()
+            d = r.json()
+
+        def _num(key: str) -> float | None:
+            v = d.get(key, "").replace(",", "")
+            return float(v) if v else None
+
+        price      = _num("closePrice")
+        open_p     = _num("openPrice")
+        high_p     = _num("highPrice")
+        low_p      = _num("lowPrice")
+        ratio_str  = (d.get("fluctuationsRatio") or "").replace(",", "")
+        code       = d.get("compareToPreviousPrice", {}).get("code", "")
+        naver_pct  = float(ratio_str) if ratio_str else None
+        naver_up   = code == "2"
+
+        return {
+            "price":      price,
+            "open":       open_p,
+            "high":       high_p,
+            "low":        low_p,
+            "change_pct": db_pct if db_pct is not None else naver_pct,
+            "is_up":      db_is_up if db_is_up is not None else naver_up,
+            "code":       code,
+            "source":     "naver",
+        }
+    except Exception as e:
+        logger.warning(f"Naver KOSPI OHLC 실패: {e}")
+
+    # 3) 모두 실패 시 DB 값만 반환
+    if db_pct is not None:
+        return {"price": None, "open": None, "high": None, "low": None,
+                "change_pct": db_pct, "is_up": db_is_up,
+                "code": "2" if db_is_up else "5", "source": "db_only"}
     try:
         url = "https://query1.finance.yahoo.com/v8/finance/chart/%5EKS11?interval=1d&range=2d"
         headers = {"User-Agent": "Mozilla/5.0 (compatible; KospiBot/1.0)", "Accept": "application/json"}
@@ -604,22 +642,17 @@ async def get_kospi_price(supabase: Client = Depends(get_supabase)):
             resp = await client.get(url, headers=headers)
             resp.raise_for_status()
             meta = resp.json()["chart"]["result"][0]["meta"]
-
         price      = float(meta.get("regularMarketPrice") or 0)
         prev_close = float(meta.get("chartPreviousClose") or meta.get("previousClose") or 0)
         change_pct = round((price / prev_close - 1) * 100, 2) if prev_close else None
         is_up      = price > prev_close if prev_close else None
-        return {
-            "price":      price or None,
-            "change":     round(price - prev_close, 2) if prev_close else None,
-            "change_pct": change_pct,
-            "is_up":      is_up,
-            "code":       "2" if is_up else ("5" if is_up is False else ""),
-            "source":     "yahoo",
-        }
+        return {"price": price or None, "open": None, "high": None, "low": None,
+                "change_pct": change_pct, "is_up": is_up,
+                "code": "2" if is_up else ("5" if is_up is False else ""), "source": "yahoo"}
     except Exception as e:
         logger.error(f"KOSPI 가격 조회 오류: {e}")
-        return {"price": None, "change": None, "change_pct": None, "is_up": None, "code": ""}
+        return {"price": None, "open": None, "high": None, "low": None,
+                "change_pct": None, "is_up": None, "code": ""}
 
 
 @app.post("/api/admin/run-15-35")
