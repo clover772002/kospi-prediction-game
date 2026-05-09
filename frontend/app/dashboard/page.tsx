@@ -754,7 +754,7 @@ export default function DashboardPage() {
           })()}
         </div>
 
-        {today && token && status !== "no_survey" && (
+        {today && token && (status === "open" || status === "closed" || status === "result") && !isWeekendKST && (
           <ExpertGapInsightCard
             accessToken={token}
             surveyDate={today.survey_date}
