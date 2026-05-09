@@ -64,12 +64,13 @@ function SurveyPageInner() {
 
   // 다음 거래일 설문 (장마감 후 미리 참여)
   const [nextSurvey, setNextSurvey] = useState<{ survey_date: string; is_open: boolean } | null>(null);
-  const [nextKospiAnswer, setNextKospiAnswer] = useState<boolean | null>(null);
+  const [nextKospiAnswer, setNextKospiAnswer] = useState<boolean | null>(true);
   const [nextGaugePosition, setNextGaugePosition] = useState<number>(10);
   const [nextAlreadyAnswered, setNextAlreadyAnswered] = useState(false);
   const [nextPreviousAnswer, setNextPreviousAnswer] = useState<boolean | null>(null);
   const [nextSubmitted, setNextSubmitted] = useState(false);
   const [nextSubmitting, setNextSubmitting] = useState(false);
+  const [nextMyResponseLoading, setNextMyResponseLoading] = useState(false);
 
   const loadToday = useCallback(async () => {
     try {
@@ -147,22 +148,45 @@ function SurveyPageInner() {
     }
   }, []);
 
-  const checkNextMyResponse = useCallback(async (tok: string, surveyDate: string) => {
-    try {
-      const res = await fetch(`/api/survey/my-response?survey_date=${surveyDate}`, {
-        cache: "no-store",
-        headers: { Authorization: `Bearer ${tok}` },
-      });
-      if (res.ok) {
+  // 다음 거래일 미리설문 내 응답 조회 — nextSurvey를 의존성에 넣지 않고 분리해야
+  // 인증 리스너가 반복 재구독되며 잘못된 순서로 상태가 바뀌지 않도록 함.
+  useEffect(() => {
+    if (!token || !nextSurvey?.is_open || !nextSurvey.survey_date) {
+      setNextMyResponseLoading(false);
+      return;
+    }
+    const surveyDate = nextSurvey.survey_date;
+    let cancelled = false;
+    setNextMyResponseLoading(true);
+    (async () => {
+      try {
+        const res = await fetch(
+          `/api/survey/my-response?survey_date=${encodeURIComponent(surveyDate)}`,
+          { cache: "no-store", headers: { Authorization: `Bearer ${token}` } },
+        );
+        if (!res.ok || cancelled) return;
         const data = await res.json();
+        if (cancelled) return;
         if (data.answered) {
           setNextAlreadyAnswered(true);
           setNextPreviousAnswer(data.kospi_answer);
           setNextKospiAnswer(data.kospi_answer);
+          setNextGaugePosition(data.kospi_answer ? 10 : -10);
+        } else {
+          setNextAlreadyAnswered(false);
+          setNextPreviousAnswer(null);
+          setNextSubmitted(false);
+          setNextGaugePosition(10);
+          setNextKospiAnswer(true);
         }
+      } finally {
+        if (!cancelled) setNextMyResponseLoading(false);
       }
-    } catch { /* 무시 */ }
-  }, []);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [token, nextSurvey?.survey_date, nextSurvey?.is_open]);
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
@@ -182,13 +206,9 @@ function SurveyPageInner() {
           if (typeof d.current_streak === "number") setUserStreak(d.current_streak);
         }).catch(() => {});
       }
-      // nextSurvey가 이미 로드됐으면 다음 설문 응답도 확인
-      if (session && nextSurvey?.is_open) {
-        checkNextMyResponse(session.access_token, nextSurvey.survey_date);
-      }
     });
     return () => subscription.unsubscribe();
-  }, [router, loadToday, checkMyResponse, nextSurvey, checkNextMyResponse]);
+  }, [router, loadToday, checkMyResponse]);
 
   const handleSubmit = async () => {
     if (!token || kospiAnswer === null) return;
@@ -372,7 +392,12 @@ function SurveyPageInner() {
                 </>
               );
             })()}
-            {nextSubmitted || nextAlreadyAnswered ? (
+            {nextMyResponseLoading ? (
+              <div className="flex flex-col items-center py-8 gap-2">
+                <div className="w-8 h-8 border-2 border-white/20 border-t-amber-400 rounded-full animate-spin" />
+                <p className="text-xs text-gray-500">예측 참여 여부 확인 중…</p>
+              </div>
+            ) : nextSubmitted || nextAlreadyAnswered ? (
               <div className="flex flex-col items-center gap-3 text-center">
                 <div className="text-4xl">✅</div>
                 <p className="text-white font-bold">{getSurveyDayLabel(nextSurvey.survey_date).shortLabel} 예측 완료!</p>
@@ -619,7 +644,12 @@ function SurveyPageInner() {
                   );
                 })()}
 
-                {nextSubmitted || nextAlreadyAnswered ? (
+                {nextMyResponseLoading ? (
+                  <div className="flex flex-col items-center py-8 gap-2">
+                    <div className="w-8 h-8 border-2 border-white/20 border-t-amber-400 rounded-full animate-spin" />
+                    <p className="text-xs text-gray-500">예측 참여 여부 확인 중…</p>
+                  </div>
+                ) : nextSubmitted || nextAlreadyAnswered ? (
                   <div className="flex flex-col items-center gap-3 text-center">
                     <div className="text-4xl">✅</div>
                     <p className="text-white font-bold">{getSurveyDayLabel(nextSurvey.survey_date).shortLabel} 예측 완료!</p>
