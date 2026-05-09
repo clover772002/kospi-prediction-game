@@ -286,7 +286,28 @@ function SurveyPageInner() {
         </div>
       )}
 
-      <div className="pt-10 pb-6 flex items-center justify-between gap-3">
+      {/* 휴장일 배지 — no_survey + 주말/공휴일 */}
+      {status === "no_survey" && (() => {
+        const kst = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Seoul" }));
+        const day = kst.getDay();
+        const mins = kst.getHours() * 60 + kst.getMinutes();
+        const isWeekend = day === 0 || day === 6;
+        const isEvening = mins >= 22 * 60; // 22시 이후엔 설문 열림 대기
+        if (!isWeekend && !isEvening) return null;
+        const mm = String(kst.getMonth() + 1).padStart(2, "0");
+        const dd = String(kst.getDate()).padStart(2, "0");
+        const dayNames = ["일","월","화","수","목","금","토"];
+        return (
+          <div className="pt-6 pb-1">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gray-800 border border-gray-700 text-xs text-gray-400">
+              <span>🏖️</span>
+              <span>{mm}/{dd}({dayNames[day]}) 오늘은 휴장일이에요</span>
+            </div>
+          </div>
+        );
+      })()}
+
+      <div className="pt-4 pb-6 flex items-center justify-between gap-3">
         <div>
           {(() => {
             const kst = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Seoul" }));

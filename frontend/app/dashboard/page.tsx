@@ -292,11 +292,13 @@ export default function DashboardPage() {
   );
   // 장마감 후(result)는 누구나 볼 수 있음
   const marketClosed = today?.status === "result";
-  // 연동 안 됨 → 최우선 / 장마감 후는 게이트 없음
+  // 휴장일(no_survey)에도 게이트 없음 — 예측할 장이 없으므로 누구나 열람 가능
+  const isHolidayDay = !surveyDay;
+  // 연동 안 됨 → 최우선 / 장마감·휴장일은 게이트 없음
   const gateType: "not_connected" | "no_survey" | null =
-    marketClosed ? null :
+    marketClosed || isHolidayDay ? null :
     !isConnected ? "not_connected" :
-    surveyDay && !respondedToday ? "no_survey" :
+    !respondedToday ? "no_survey" :
     null;
 
   const statusColor: Record<string, string> = {
