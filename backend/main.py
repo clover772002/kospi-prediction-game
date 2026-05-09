@@ -870,16 +870,88 @@ async def admin_set_kospi_result(
     }).eq("survey_date", date).execute()
 
     responses = supabase.table("survey_responses") \
-        .select("user_id, kospi_answer").eq("survey_date", date).execute()
+        .select("user_id, kospi_answer, gauge_position, tokens_bet, tokens_before") \
+        .eq("survey_date", date).execute()
+
+    # 집단 투표 비율 조회 (동적 배당 계산용)
+    survey_info = supabase.table("daily_surveys").select("kospi_yes_pct").eq("survey_date", date).execute()
+    kospi_yes_pct = survey_info.data[0].get("kospi_yes_pct") if survey_info.data else 50
+    if kospi_yes_pct is None:
+        # 직접 집계
+        total = len(responses.data)
+        yes_cnt = sum(1 for r in responses.data if r.get("kospi_answer"))
+        kospi_yes_pct = round(yes_cnt / total * 100) if total > 0 else 50
+
+    crowd_up = max(5, kospi_yes_pct)
+    crowd_dn = max(5, 100 - kospi_yes_pct)
+
+    # 그룹 소속 여부 조회 (참여 보상 차등)
+    all_group_members = supabase.table("group_members").select("user_id").execute()
+    group_user_ids = {m["user_id"] for m in all_group_members.data}
+
+    game_overs = 0
     for r in responses.data:
+        uid = r["user_id"]
+        gauge = r.get("gauge_position") or 50
+        is_up_bet = gauge > 0
+        correct = (is_up_bet == is_up)
+
+        # 정확도 기록
         supabase.table("accuracy_records").upsert(
-            {"user_id": r["user_id"], "survey_date": date,
-             "kospi_correct": r["kospi_answer"] == is_up},
+            {"user_id": uid, "survey_date": date,
+             "kospi_correct": correct},
             on_conflict="user_id,survey_date",
         ).execute()
 
+        # 유저 토큰 + 스트릭 조회
+        u_row = supabase.table("users").select("tokens, current_streak, game_over_count").eq("id", uid).execute()
+        if not u_row.data:
+            continue
+        u = u_row.data[0]
+        tokens = u.get("tokens") or 100
+        streak = u.get("current_streak") or 0
+        game_over_count = u.get("game_over_count") or 0
+
+        # 배당배율 계산
+        payout_mult = round(crowd_dn / crowd_up, 3) if is_up_bet else round(crowd_up / crowd_dn, 3)
+
+        # 스트릭 배율
+        streak_mult = 2.0 if streak >= 5 else (1.5 if streak >= 3 else 1.0)
+
+        # 배팅액 (저장된 값 우선, 없으면 재계산)
+        tokens_bet = r.get("tokens_bet") or max(1, round(abs(gauge) / 100 * tokens))
+
+        # 참여 보상 (+5 단독, +10 그룹)
+        participation_bonus = 10 if uid in group_user_ids else 5
+
+        if correct:
+            won = int(tokens_bet * payout_mult * streak_mult)
+            new_tokens = tokens + won + participation_bonus
+            new_streak = streak + 1
+        else:
+            won = -tokens_bet
+            new_tokens = tokens - tokens_bet + participation_bonus
+            new_streak = 0
+
+        game_over = new_tokens <= 0
+        if game_over:
+            new_tokens = 100
+            game_over_count += 1
+            game_overs += 1
+
+        supabase.table("users").update({
+            "tokens": new_tokens,
+            "current_streak": new_streak,
+            "game_over_count": game_over_count,
+        }).eq("id", uid).execute()
+
+        supabase.table("survey_responses").update({
+            "payout_multiplier": payout_mult,
+            "tokens_won": won,
+        }).eq("user_id", uid).eq("survey_date", date).execute()
+
     return {"ok": True, "date": date, "changePct": change_pct, "isUp": is_up,
-            "participants": len(responses.data)}
+            "participants": len(responses.data), "game_overs": game_overs}
 
 
 @app.get("/api/public/backtest")
@@ -1122,12 +1194,23 @@ async def web_survey_respond(
         logger.warning(f"survey/respond: 유저 생성 시도 중 오류 (무시): {e}")
 
     body = await request.json()
-    kospi_answer = body.get("kospi_answer")
+    # gauge_position: -100 ~ +100 (음수=하락, 양수=상승). 없으면 50(상승 기본)
+    gauge_position = body.get("gauge_position")
+    if gauge_position is not None:
+        gauge_position = int(gauge_position)
+        if not (-100 <= gauge_position <= 100) or gauge_position == 0:
+            raise HTTPException(status_code=422, detail="gauge_position은 -100~100 범위의 0이 아닌 값이어야 합니다.")
+        # gauge_position으로 방향 결정
+        kospi_answer = gauge_position > 0
+    else:
+        kospi_answer = body.get("kospi_answer")
+        gauge_position = 50 if kospi_answer else -50  # 기존 호환성
+
     # 클라이언트가 survey_date를 명시하면 그걸 사용, 없으면 오늘
     target_date = body.get("survey_date") or today_str
 
     if kospi_answer is None:
-        raise HTTPException(status_code=422, detail="kospi_answer가 필요합니다.")
+        raise HTTPException(status_code=422, detail="kospi_answer 또는 gauge_position이 필요합니다.")
 
     # 해당 날짜 설문 존재 여부 + 마감 여부 확인
     survey_res = supabase.table("daily_surveys").select("*").eq("survey_date", target_date).execute()
@@ -1137,6 +1220,11 @@ async def web_survey_respond(
     if survey.get("is_closed"):
         raise HTTPException(status_code=400, detail="설문이 마감됐습니다.")
 
+    # 현재 토큰 조회 (배팅액 계산용 — 실제 차감은 결과 정산 시)
+    user_row = supabase.table("users").select("tokens").eq("id", user_id).execute()
+    current_tokens = user_row.data[0]["tokens"] if user_row.data else 100
+    tokens_bet = max(1, round(abs(gauge_position) / 100 * current_tokens))
+
     try:
         supabase.table("survey_responses").upsert(
             {
@@ -1144,6 +1232,9 @@ async def web_survey_respond(
                 "survey_date": target_date,
                 "kospi_answer": bool(kospi_answer),
                 "kosdaq_answer": False,
+                "gauge_position": gauge_position,
+                "tokens_bet": tokens_bet,
+                "tokens_before": current_tokens,
             },
             on_conflict="user_id,survey_date",
         ).execute()
@@ -1151,7 +1242,7 @@ async def web_survey_respond(
         logger.exception("survey_responses upsert 오류")
         raise HTTPException(status_code=500, detail=f"응답 저장 중 오류: {e}")
 
-    return {"success": True, "survey_date": target_date}
+    return {"success": True, "survey_date": target_date, "tokens_bet": tokens_bet, "current_tokens": current_tokens}
 
 
 @app.get("/api/survey/my-response")
@@ -1798,9 +1889,14 @@ async def get_dashboard(
     """내 예측 이력 + 정확도 + 상위 퍼센트"""
     user_id = str(current_user.id)
 
+    # 유저 토큰 + 스트릭 조회
+    user_row = supabase.table("users").select("tokens, current_streak").eq("id", user_id).execute()
+    user_tokens = user_row.data[0].get("tokens", 100) if user_row.data else 100
+    user_streak = user_row.data[0].get("current_streak", 0) if user_row.data else 0
+
     my_responses = (
         supabase.table("survey_responses")
-        .select("survey_date, kospi_answer")
+        .select("survey_date, kospi_answer, gauge_position, tokens_bet, tokens_won, payout_multiplier")
         .eq("user_id", user_id)
         .order("survey_date", desc=True)
         .limit(30)
@@ -1824,6 +1920,10 @@ async def get_dashboard(
             "date": d,
             "kospi_answer": resp["kospi_answer"],
             "kospi_correct": acc.get("kospi_correct"),
+            "gauge_position": resp.get("gauge_position"),
+            "tokens_bet": resp.get("tokens_bet"),
+            "tokens_won": resp.get("tokens_won"),
+            "payout_multiplier": resp.get("payout_multiplier"),
         })
 
     total_with_result = sum(1 for h in history if h["kospi_correct"] is not None)
@@ -1835,6 +1935,8 @@ async def get_dashboard(
             "contribution": None,
             "history": history,
             "total_predictions": len(my_responses.data),
+            "tokens": user_tokens,
+            "current_streak": user_streak,
         }
 
     kospi_correct_cnt = sum(1 for h in history if h["kospi_correct"])
@@ -1868,6 +1970,8 @@ async def get_dashboard(
         "contribution": contribution,
         "history": history,
         "total_predictions": len(my_responses.data),
+        "tokens": user_tokens,
+        "current_streak": user_streak,
     }
 
 

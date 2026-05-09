@@ -132,6 +132,10 @@ export interface HistoryItem {
   date: string;
   kospi_answer: boolean;
   kospi_correct: boolean | null;
+  gauge_position?: number | null;
+  tokens_bet?: number | null;
+  tokens_won?: number | null;
+  payout_multiplier?: number | null;
 }
 
 export interface DashboardData {
@@ -143,6 +147,8 @@ export interface DashboardData {
   contribution: number | null;
   history: HistoryItem[];
   total_predictions: number;
+  tokens?: number;
+  current_streak?: number;
 }
 
 // ─── API 함수 ────────────────────────────────────────────────

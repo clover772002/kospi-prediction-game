@@ -19,24 +19,43 @@ function calcStreak(history: DashboardData["history"]): number {
 
 function HistoryRow({ item }: { item: DashboardData["history"][0] }) {
   const hasResult = item.kospi_correct !== null;
-  return (
-    <div className="flex items-center gap-3 bg-[#1A1A1A] rounded-xl px-4 py-3 border border-[#2A2A2A]">
-      <p className="text-xs text-gray-500 w-20 flex-shrink-0">{item.date.slice(5)}</p>
+  const gauge = item.gauge_position;
+  const isUpBet = gauge !== null && gauge !== undefined ? gauge > 0 : item.kospi_answer;
+  const tokensWon = item.tokens_won;
+  const tokensBet = item.tokens_bet;
 
-      <div className="flex gap-4 flex-1 text-xs">
-        <div className="text-center">
-          <p className="text-gray-500 mb-0.5">코스피</p>
-          <p className={item.kospi_answer ? "text-green-400" : "text-red-400"}>
-            {item.kospi_answer ? "📈 상승" : "📉 하락"}
-          </p>
-        </div>
+  return (
+    <div className={`flex items-center gap-2 rounded-xl px-3 py-3 border ${
+      hasResult
+        ? item.kospi_correct
+          ? "bg-green-500/5 border-green-500/20"
+          : "bg-red-500/5 border-red-500/20"
+        : "bg-[#1A1A1A] border-[#2A2A2A]"
+    }`}>
+      <p className="text-xs text-gray-500 w-16 flex-shrink-0">{item.date.slice(5)}</p>
+
+      <div className="flex-1 flex items-center gap-2 text-xs">
+        <span className={isUpBet ? "text-red-400 font-bold" : "text-blue-400 font-bold"}>
+          {isUpBet ? "📈" : "📉"}
+          {gauge !== null && gauge !== undefined ? ` ${gauge > 0 ? "+" : ""}${gauge}%` : ""}
+        </span>
+        {tokensBet != null && (
+          <span className="text-gray-500">{tokensBet}T 배팅</span>
+        )}
       </div>
 
-      <div className="flex gap-2 flex-shrink-0 text-sm">
+      <div className="flex-shrink-0 text-xs text-right">
         {hasResult ? (
-          <span title="코스피">{item.kospi_correct ? "✅" : "❌"}</span>
+          <div className="flex items-center gap-1.5">
+            <span>{item.kospi_correct ? "✅" : "❌"}</span>
+            {tokensWon !== null && tokensWon !== undefined && (
+              <span className={`font-bold tabular-nums ${tokensWon >= 0 ? "text-green-400" : "text-red-400"}`}>
+                {tokensWon >= 0 ? "+" : ""}{tokensWon}T
+              </span>
+            )}
+          </div>
         ) : (
-          <span className="text-xs text-gray-600">결과 대기</span>
+          <span className="text-gray-600">대기중</span>
         )}
       </div>
     </div>
@@ -766,6 +785,35 @@ export default function DashboardPage() {
                 )}
                 <p className="text-xs text-gray-500 pb-1 ml-1">적중률 · {dash.total_predictions}일 참여</p>
               </div>
+
+              {/* 토큰 + 스트릭 */}
+              {dash.tokens != null && (
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-xl px-4 py-3">
+                    <p className="text-[10px] text-gray-500 mb-1">보유 토큰</p>
+                    <p className="text-xl font-black text-yellow-400 tabular-nums">
+                      💰 {dash.tokens.toLocaleString()}
+                    </p>
+                  </div>
+                  <div className={`rounded-xl px-4 py-3 border ${
+                    (dash.current_streak ?? 0) >= 5
+                      ? "bg-yellow-500/10 border-yellow-500/30"
+                      : (dash.current_streak ?? 0) >= 3
+                        ? "bg-orange-500/10 border-orange-500/30"
+                        : "bg-[#1A1A1A] border-[#2A2A2A]"
+                  }`}>
+                    <p className="text-[10px] text-gray-500 mb-1">연속 적중</p>
+                    <p className={`text-xl font-black tabular-nums ${
+                      (dash.current_streak ?? 0) >= 5 ? "text-yellow-400" :
+                      (dash.current_streak ?? 0) >= 3 ? "text-orange-400" : "text-white"
+                    }`}>
+                      {(dash.current_streak ?? 0) >= 5 ? "🏆" : (dash.current_streak ?? 0) >= 3 ? "🔥" : ""}
+                      {" "}{dash.current_streak ?? 0}일
+                      {(dash.current_streak ?? 0) >= 5 ? " ×2.0" : (dash.current_streak ?? 0) >= 3 ? " ×1.5" : ""}
+                    </p>
+                  </div>
+                </div>
+              )}
 
               {/* 최근 이력 */}
               {dash.history.length > 0 && (

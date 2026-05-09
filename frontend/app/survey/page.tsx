@@ -6,6 +6,7 @@ import { supabase } from "@/lib/supabase";
 import { getToday, resolveApiBase, TodaySurvey } from "@/lib/api";
 import FlipClock from "@/components/FlipClock";
 import KospiChart from "@/components/KospiChart";
+import GaugeBar from "@/components/GaugeBar";
 
 interface KospiPrice {
   price: number | null;
@@ -49,6 +50,9 @@ function SurveyPageInner() {
   const [error, setError] = useState<string | null>(null);
 
   const [kospiAnswer, setKospiAnswer] = useState<boolean | null>(null);
+  const [gaugePosition, setGaugePosition] = useState<number>(10); // -100~+100, 양수=상승
+  const [userTokens, setUserTokens] = useState<number>(100);
+  const [userStreak, setUserStreak] = useState<number>(0);
   const [alreadyAnswered, setAlreadyAnswered] = useState(false);
   const [previousAnswer, setPreviousAnswer] = useState<boolean | null>(null);
   const [retrying, setRetrying] = useState(false);
@@ -171,6 +175,13 @@ function SurveyPageInner() {
         setToken(session.access_token);
         loadToday();
         checkMyResponse(session.access_token);
+        // 토큰 잔액 + 스트릭 조회
+        fetch(`${resolveApiBase()}/api/dashboard`, {
+          headers: { Authorization: `Bearer ${session.access_token}` },
+        }).then(r => r.json()).then(d => {
+          if (typeof d.tokens === "number") setUserTokens(d.tokens);
+          if (typeof d.current_streak === "number") setUserStreak(d.current_streak);
+        }).catch(() => {});
       }
       // nextSurvey가 이미 로드됐으면 다음 설문 응답도 확인
       if (session && nextSurvey?.is_open) {
@@ -191,7 +202,7 @@ function SurveyPageInner() {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ kospi_answer: kospiAnswer }),
+        body: JSON.stringify({ kospi_answer: kospiAnswer, gauge_position: gaugePosition }),
       });
       if (!res.ok) {
         const raw = await res.json().catch(() => ({}));
@@ -482,39 +493,35 @@ function SurveyPageInner() {
             </div>
           )}
 
-          {/* 코스피 단일 질문 */}
-          <div className="bg-[#1A1A1A] rounded-2xl p-5 space-y-4 border border-[#2A2A2A]">
-            <p className="font-bold text-white text-base">
+          {/* 스트릭 뱃지 */}
+          {userStreak >= 3 && (
+            <div className={`flex items-center gap-2 px-3 py-2 rounded-xl border text-xs font-bold ${
+              userStreak >= 5
+                ? "bg-yellow-500/10 border-yellow-500/30 text-yellow-400"
+                : "bg-orange-500/10 border-orange-500/30 text-orange-400"
+            }`}>
+              <span>{userStreak >= 5 ? "🏆" : "🔥"}</span>
+              <span>{userStreak}연속 적중! 배당 {userStreak >= 5 ? "×2.0" : "×1.5"} 적용 중</span>
+            </div>
+          )}
+
+          {/* 코스피 단일 질문 + GaugeBar */}
+          <div>
+            <p className="font-bold text-white text-base mb-3">
               {(() => {
                 const kst = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Seoul" }));
                 const todayStr = `${kst.getFullYear()}-${String(kst.getMonth()+1).padStart(2,"0")}-${String(kst.getDate()).padStart(2,"0")}`;
                 const sd = today?.survey_date ?? todayStr;
                 const { shortLabel } = getSurveyDayLabel(sd);
-                return `📈 코스피 ${shortLabel} 어떨까요?`;
+                return `📈 코스피 ${shortLabel} 얼마나 확신하나요?`;
               })()}
             </p>
-            <div className="grid grid-cols-2 gap-3">
-              <button
-                onClick={() => setKospiAnswer(true)}
-                className={`py-4 rounded-2xl font-black text-lg transition-all duration-150 active:scale-90 border-2 ${
-                  kospiAnswer === true
-                    ? "bg-green-500 border-green-400 text-white scale-105 shadow-lg shadow-green-500/30"
-                    : "bg-[#111] border-[#333] text-gray-400 hover:border-green-600 hover:text-green-400"
-                }`}
-              >
-                📈 오른다
-              </button>
-              <button
-                onClick={() => setKospiAnswer(false)}
-                className={`py-4 rounded-2xl font-black text-lg transition-all duration-150 active:scale-90 border-2 ${
-                  kospiAnswer === false
-                    ? "bg-red-500 border-red-400 text-white scale-105 shadow-lg shadow-red-500/30"
-                    : "bg-[#111] border-[#333] text-gray-400 hover:border-red-600 hover:text-red-400"
-                }`}
-              >
-                📉 내린다
-              </button>
-            </div>
+            <GaugeBar
+              value={gaugePosition}
+              onChange={(v) => { setGaugePosition(v); setKospiAnswer(v > 0); }}
+              tokens={userTokens}
+              disabled={submitting}
+            />
           </div>
 
           {error && (
@@ -525,7 +532,7 @@ function SurveyPageInner() {
 
           <button
             onClick={handleSubmit}
-            disabled={kospiAnswer === null || submitting}
+            disabled={submitting}
             className="w-full py-4 bg-blue-600 hover:bg-blue-500 disabled:bg-[#333] disabled:text-gray-500 text-white font-black text-base rounded-2xl transition-all active:scale-95"
           >
             {submitting ? (
@@ -535,10 +542,6 @@ function SurveyPageInner() {
               </span>
             ) : retrying ? "예측 변경하기" : "예측 제출하기"}
           </button>
-
-          {kospiAnswer === null && (
-            <p className="text-center text-xs text-gray-600">오른다 / 내린다 중 하나를 선택해주세요</p>
-          )}
         </div>
       )}
 
