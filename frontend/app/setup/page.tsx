@@ -673,14 +673,9 @@ export default function SetupPage() {
                 </ul>
               </div>
 
-              <a
-                href={botLink}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={() => setBotOpened(true)}
+              <a href={botLink} target="_blank" rel="noopener noreferrer" onClick={() => setBotOpened(true)}
                 className="flex items-center justify-center gap-2 w-full py-5 rounded-2xl font-black text-xl transition-all active:scale-95"
-                style={{ backgroundColor: "#0088CC", color: "#fff" }}
-              >
+                style={{ backgroundColor: "#0088CC", color: "#fff" }}>
                 <span className="text-2xl">✈️</span>
                 알림 봇 연결하기
               </a>
