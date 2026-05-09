@@ -328,6 +328,47 @@ export async function getExpertGapInsight(accessToken: string, surveyDate: strin
   return res.json();
 }
 
+export interface GaugeCrowdInsightResponse {
+  accessible: boolean;
+  locked?: boolean;
+  reason?: string | null;
+  survey_date: string;
+  product_slug?: string;
+  price_tokens?: number;
+  balance?: number;
+  title?: string;
+  description?: string;
+  data: {
+    survey_date: string;
+    my_gauge: number;
+    direction_label: string;
+    cohort_size: number;
+    opposite_side_count: number;
+    total_with_gauge: number;
+    median_abs_in_cohort: number;
+    strength_vs_cohort_pct: number;
+    conviction_band: string;
+    bullets: string[];
+    computed_note?: string;
+  } | null;
+}
+
+export async function getGaugeCrowdInsight(accessToken: string, surveyDate: string): Promise<GaugeCrowdInsightResponse> {
+  const res = await fetch(
+    `${resolveApiBase()}/api/insights/my-gauge-vs-crowd?survey_date=${encodeURIComponent(surveyDate)}`,
+    { headers: { Authorization: `Bearer ${accessToken}` } },
+  );
+  if (!res.ok) {
+    const raw = await res.json().catch(() => ({}));
+    const detail =
+      typeof raw.detail === "string"
+        ? raw.detail
+        : "인사이트를 불러오지 못했습니다.";
+    throw new Error(detail);
+  }
+  return res.json();
+}
+
 export async function unlockInsightProduct(
   accessToken: string,
   body: { product_slug: string; survey_date: string; idempotency_key: string },

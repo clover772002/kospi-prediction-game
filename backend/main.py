@@ -619,6 +619,109 @@ def _build_daily_expert_gap_payload(supabase: Client, survey_date_str: str) -> d
     }
 
 
+_MIN_GAUGE_COHORT = 5  # 같은 방향 무리 최소 인원
+
+
+def _coerce_gauge_from_row(row: dict) -> int | None:
+    g = row.get("gauge_position")
+    if g is not None:
+        try:
+            gi = int(g)
+        except (TypeError, ValueError):
+            gi = None
+        else:
+            if gi != 0 and -100 <= gi <= 100:
+                return gi
+    ka = row.get("kospi_answer")
+    if ka is not None:
+        return 50 if ka else -50
+    return None
+
+
+def _build_my_gauge_vs_crowd_payload(supabase: Client, survey_date_str: str, user_id: str) -> tuple[dict | None, str | None]:
+    """
+    같은 방향 참가자 ‘무리’ 안에서 내 게이지 절댓값(확신 세기)의 상대적 위치.
+    반환: (payload 또는 None, reason 또는 None).
+    reason: not_participated | no_survey_data | cohort_too_small | None
+    """
+    mine = (
+        supabase.table("survey_responses")
+        .select("gauge_position, kospi_answer")
+        .eq("survey_date", survey_date_str)
+        .eq("user_id", user_id)
+        .execute()
+    )
+    if not mine.data:
+        return (None, "not_participated")
+    g_user = _coerce_gauge_from_row(mine.data[0])
+    if g_user is None:
+        return (None, "not_participated")
+
+    res = (
+        supabase.table("survey_responses")
+        .select("user_id, gauge_position, kospi_answer")
+        .eq("survey_date", survey_date_str)
+        .execute()
+    )
+    rows = res.data or []
+    gauges: list[int] = []
+    for r in rows:
+        g = _coerce_gauge_from_row(r)
+        if g is not None:
+            gauges.append(g)
+    if len(gauges) < 3:
+        return (None, "no_survey_data")
+
+    my_side = 1 if g_user > 0 else -1
+    cohort = [g for g in gauges if (1 if g > 0 else -1) == my_side]
+    if len(cohort) < _MIN_GAUGE_COHORT:
+        return (None, "cohort_too_small")
+
+    abs_mine = abs(g_user)
+    n = len(cohort)
+    weaker = sum(1 for g in cohort if abs(g) < abs_mine)
+    equal = sum(1 for g in cohort if abs(g) == abs_mine)
+    strength_pct = int(round(100.0 * (weaker + 0.5 * equal) / n))
+    sorted_abs = sorted(abs(g) for g in cohort)
+    mid = sorted_abs[len(sorted_abs) // 2]
+
+    if strength_pct >= 67:
+        band = "강함"
+    elif strength_pct <= 33:
+        band = "약함"
+    else:
+        band = "중간"
+
+    dir_label = "상승" if my_side == 1 else "하락"
+    opposite_side = len(gauges) - n
+
+    bullets = [
+        f"그날 「{dir_label}」 예측에 동의한 참가자는 무리 안에서 {n}명입니다 (전체 유효 응답 {len(gauges)}명, 반대편 {opposite_side}명).",
+        f"내 확신도 게이지는 {'+' if g_user > 0 else ''}{g_user} (절댓값 {abs_mine}).",
+        f"같은 편 무리 안 확신 세기 비교 시, 나보다 약한 비율이 약 {strength_pct}% 쪽입니다 (같은 강도는 절반만 반영).",
+        f"무리 안 확신도 절댓값의 중앙값은 {mid}입니다.",
+        "참고: 등락률이 아니라 그날 응답 분포 속 상대 비교예요.",
+        "투자·매매 의사결정이 아니며 수익을 보장하지 않습니다.",
+    ]
+
+    return (
+        {
+            "survey_date": survey_date_str,
+            "my_gauge": g_user,
+            "direction_label": dir_label,
+            "cohort_size": n,
+            "opposite_side_count": opposite_side,
+            "total_with_gauge": len(gauges),
+            "median_abs_in_cohort": mid,
+            "strength_vs_cohort_pct": strength_pct,
+            "conviction_band": band,
+            "bullets": bullets,
+            "computed_note": "같은 방향(상승/하락) 참가자만 한 무리로 묶었습니다. 게이지가 없던 옛 응답은 방향만으로 ±50으로 둡니다.",
+        },
+        None,
+    )
+
+
 def _build_user_accuracy_map(supabase: Client) -> dict:
     """하위호환용 래퍼 — acc_map만 반환"""
     acc_map, _ = _get_accuracy_data(supabase)
@@ -2142,6 +2245,105 @@ async def get_daily_expert_gap(
         "price_tokens": price_tokens,
         "balance": balance,
         "title": meta["title"],
+        "data": payload,
+    }
+
+
+@app.get("/api/insights/my-gauge-vs-crowd")
+async def get_my_gauge_vs_crowd(
+    survey_date: str,
+    current_user=Depends(get_current_user),
+    supabase: Client = Depends(get_supabase),
+):
+    """
+    같은 방향(상승/하락) 참가자 무리 속에서 내 확신도(게이지) 상대 위치.
+    미참여·표본 부족 시 차감 대상 정보 없음(해당 이유 문자열 반환).
+    """
+    user_id = str(current_user.id)
+    sd = survey_date.strip()
+    if len(sd) != 10 or sd[4] != "-" or sd[7] != "-":
+        raise HTTPException(status_code=400, detail="survey_date 형식은 YYYY-MM-DD 여야 합니다.")
+
+    slug = "my_gauge_vs_crowd"
+    meta = INSIGHT_PRODUCTS.get(slug)
+    if not meta:
+        raise HTTPException(status_code=500, detail="상품 설정 오류")
+    price_tokens = int(meta["price_tokens"])
+
+    user_row = supabase.table("users").select("tokens").eq("id", user_id).execute()
+    balance = int(user_row.data[0].get("tokens") or 100) if user_row.data else 100
+
+    has_entitlement = entitlement_exists(supabase, user_id, slug, sd)
+    wall = paywall_enabled()
+
+    payload, rreason = _build_my_gauge_vs_crowd_payload(supabase, sd, user_id)
+
+    if rreason == "not_participated":
+        return {
+            "accessible": False,
+            "locked": False,
+            "reason": "not_participated",
+            "survey_date": sd,
+            "product_slug": slug,
+            "price_tokens": price_tokens,
+            "balance": balance,
+            "title": meta["title"],
+            "description": meta.get("description"),
+            "data": None,
+        }
+
+    if rreason == "no_survey_data":
+        return {
+            "accessible": False,
+            "locked": False,
+            "reason": "no_survey_data",
+            "survey_date": sd,
+            "product_slug": slug,
+            "price_tokens": price_tokens,
+            "balance": balance,
+            "title": meta["title"],
+            "data": None,
+        }
+
+    if rreason == "cohort_too_small":
+        return {
+            "accessible": False,
+            "locked": False,
+            "reason": "cohort_too_small",
+            "survey_date": sd,
+            "product_slug": slug,
+            "price_tokens": price_tokens,
+            "balance": balance,
+            "title": meta["title"],
+            "description": meta.get("description"),
+            "data": None,
+        }
+
+    assert payload is not None
+
+    if wall and not has_entitlement:
+        return {
+            "accessible": False,
+            "locked": True,
+            "reason": None,
+            "survey_date": sd,
+            "product_slug": slug,
+            "price_tokens": price_tokens,
+            "balance": balance,
+            "title": meta["title"],
+            "description": meta.get("description"),
+            "data": None,
+        }
+
+    return {
+        "accessible": True,
+        "locked": False,
+        "survey_date": sd,
+        "product_slug": slug,
+        "price_tokens": price_tokens,
+        "balance": balance,
+        "title": meta["title"],
+        "reason": None,
         "data": payload,
     }
 

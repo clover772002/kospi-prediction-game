@@ -8,6 +8,7 @@ import ShareSheet from "@/components/ShareSheet";
 import AppAmbientBackground from "@/components/AppAmbientBackground";
 import AppTabNav from "@/components/AppTabNav";
 import ExpertGapInsightCard from "@/components/ExpertGapInsightCard";
+import GaugeCrowdInsightCard from "@/components/GaugeCrowdInsightCard";
 
 // 연속 적중 스트릭 계산
 function calcStreak(history: DashboardData["history"]): number {
@@ -755,11 +756,18 @@ export default function DashboardPage() {
         </div>
 
         {today && token && (status === "open" || status === "closed" || status === "result") && !isWeekendKST && (
-          <ExpertGapInsightCard
-            accessToken={token}
-            surveyDate={today.survey_date}
-            onBalanceUpdated={() => void refreshDashboard()}
-          />
+          <div className="space-y-3">
+            <ExpertGapInsightCard
+              accessToken={token}
+              surveyDate={today.survey_date}
+              onBalanceUpdated={() => void refreshDashboard()}
+            />
+            <GaugeCrowdInsightCard
+              accessToken={token}
+              surveyDate={today.survey_date}
+              onBalanceUpdated={() => void refreshDashboard()}
+            />
+          </div>
         )}
 
         {/* ── 내 통계 + 예측 이력 ──────────────────────────── */}
