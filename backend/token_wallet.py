@@ -39,10 +39,12 @@ def entitlement_exists(supabase: Client, user_id: str, product_slug: str, scope_
         )
         return bool(r.data)
     except Exception as e:
-        logger.warning(f"insight_entitlements 조회 실패(table 없음 가능): {e}")
-        raise RuntimeError(
-            "insight_entitlements 테이블을 찾을 수 없습니다. schema_shop_insights.sql 을 실행하세요."
-        ) from e
+        # 테이블 미생성 등: GET 인사이트는 잠금 상태로 두고 카드 로드 실패(503)를 피함.
+        logger.warning(
+            "insight_entitlements 조회 실패 — 테이블이 없으면 Supabase SQL에 schema_shop_insights.sql 실행: %s",
+            e,
+        )
+        return False
 
 
 def insert_ledger(

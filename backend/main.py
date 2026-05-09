@@ -2099,11 +2099,7 @@ async def get_daily_expert_gap(
     user_row = supabase.table("users").select("tokens").eq("id", user_id).execute()
     balance = int(user_row.data[0].get("tokens") or 100) if user_row.data else 100
 
-    try:
-        has_entitlement = entitlement_exists(supabase, user_id, slug, sd)
-    except RuntimeError as e:
-        logger.error(e)
-        raise HTTPException(status_code=503, detail=str(e)) from e
+    has_entitlement = entitlement_exists(supabase, user_id, slug, sd)
 
     wall = paywall_enabled()
     unlocked = (not wall) or has_entitlement
