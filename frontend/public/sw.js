@@ -1,5 +1,5 @@
-// 웹 푸시 Service Worker v5
-const SW_VERSION = "5.0";
+// 웹 푸시 Service Worker v6
+const SW_VERSION = "6.0";
 
 self.addEventListener("install", () => self.skipWaiting());
 self.addEventListener("activate", (event) => {

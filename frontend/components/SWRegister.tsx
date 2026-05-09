@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 
-const EXPECTED_SW_VERSION = "5.0";
+const EXPECTED_SW_VERSION = "6.0";
 
 // 전역에 설치 프롬프트 저장 — 원하는 시점에 setup 페이지에서 호출
 declare global {
