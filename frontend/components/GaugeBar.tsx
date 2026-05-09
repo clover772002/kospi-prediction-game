@@ -303,7 +303,7 @@ export default function GaugeBar({
         <div className="h-px bg-[#222]" />
         <div className="flex justify-between text-xs">
           <span className="text-gray-500">적중 시</span>
-          <span className="text-green-400 font-bold">거는 만큼 × 집단배율 × 스트릭 등</span>
+          <span className="text-green-400 font-bold">거는 만큼 × 집단배율 × 토큰 아이템 등</span>
         </div>
         <div className="flex justify-between text-xs">
           <span className="text-gray-500">실패 시</span>

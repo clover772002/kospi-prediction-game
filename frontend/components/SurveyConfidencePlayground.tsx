@@ -14,6 +14,9 @@ export default function SurveyConfidencePlayground() {
   const [bob, setBob] = useState(0);
   const [btnGlow, setBtnGlow] = useState(0);
   const [crowdUpPct, setCrowdUpPct] = useState(42);
+  /** 데모: 토큰으로 산 배율 부스트 배수 (루프 애니메이션, 고정값 아님) */
+  const [itemBoostMult, setItemBoostMult] = useState(1.12);
+  const [itemDemoPrice, setItemDemoPrice] = useState(120);
 
   useEffect(() => {
     let raf = 0;
@@ -31,6 +34,11 @@ export default function SurveyConfidencePlayground() {
 
       const crowd = Math.round(42 + Math.sin((t + 0.35) * Math.PI * 2) * 18);
       setCrowdUpPct(Math.min(75, Math.max(25, crowd)));
+
+      const boostPhase = (t + 0.18) % 1;
+      const boostWave = Math.abs(Math.sin(boostPhase * Math.PI * 2));
+      setItemBoostMult(Math.round((1.06 + boostWave * 0.28) * 100) / 100);
+      setItemDemoPrice(Math.round(96 + boostWave * 164));
 
       raf = requestAnimationFrame(tick);
     };
@@ -57,8 +65,6 @@ export default function SurveyConfidencePlayground() {
   const crowdDnAdj = Math.max(5, crowdDnClamped);
   const rawMult = isUp ? crowdDnAdj / crowdUpAdj : crowdUpAdj / crowdDnAdj;
   const payoutMult = Math.round(rawMult * 1000) / 1000;
-
-  const streakMult = 1.2;
 
   const dirColor = isUp ? "text-red-400" : "text-blue-400";
 
@@ -193,12 +199,35 @@ export default function SurveyConfidencePlayground() {
         <div className="relative rounded-xl bg-[#0d0f12] border border-emerald-500/20 px-3 py-3 overflow-hidden">
           <div className="absolute inset-0 pointer-events-none shimmer-demo-mask" />
           <p className="text-[10px] text-emerald-400 font-bold mb-3 text-center">적중이라면 받는 크기 줄기</p>
-          <div className="flex items-stretch justify-center gap-2 flex-wrap text-center">
-            <FlowChip label="거는 토큰" value={bet} accent="amber" emphasize />
-            <FlowOp />
-            <FlowChip label="집단배율" sub="많은 쪽 분모 작아짐" value={payoutMult} decimals={2} suffix="배" accent="cyan" />
-            <FlowOp />
-            <FlowChip label="스트릭·이벤트" sub="예시값" value={streakMult} decimals={2} suffix="배" accent="violet" />
+          <div className="w-full overflow-x-auto pb-px">
+            <div className="grid min-w-[17.5rem] w-full grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)_auto_minmax(0,1fr)] items-stretch gap-x-1 sm:gap-x-2 text-center [&>*]:min-w-0">
+              <FlowChip
+                label="거는 토큰"
+                sub="확신·보유 기준"
+                value={bet}
+                accent="amber"
+                emphasize
+              />
+              <FlowOp />
+              <FlowChip
+                label="집단배율"
+                sub="많은 쪽 분모 작아짐"
+                value={payoutMult}
+                decimals={2}
+                suffix="배"
+                accent="cyan"
+              />
+              <FlowOp />
+              <FlowChip
+                label="배율 업 아이템"
+                sub={"토큰으로 구매\n적중 시 곱함"}
+                value={itemBoostMult}
+                decimals={2}
+                suffix="배"
+                accent="violet"
+                footnote={`예시 구매 ${itemDemoPrice.toLocaleString()} 토큰`}
+              />
+            </div>
           </div>
           <p className="text-[10px] text-gray-600 text-center mt-3 leading-snug px-1">
             <span className="text-green-400/90">직전 서버 규칙과 같은 형태</span>입니다. 진짜 수치는 결과 반영 때 다시 따지고, 여긴 패턴만 보여 줍니다.
@@ -217,6 +246,7 @@ function FlowChip({
   suffix = "",
   accent,
   emphasize,
+  footnote,
 }: {
   label: string;
   sub?: string;
@@ -225,6 +255,7 @@ function FlowChip({
   suffix?: string;
   accent: "amber" | "cyan" | "violet";
   emphasize?: boolean;
+  footnote?: string;
 }) {
   const ring =
     accent === "amber"
@@ -235,23 +266,30 @@ function FlowChip({
   const v = decimals > 0 ? value.toFixed(decimals) : String(value);
   return (
     <div
-      className={`min-w-[4.75rem] flex-1 max-w-[7.5rem] rounded-xl border px-2 py-2 bg-[#141414]/95 ${
+      className={`h-full min-w-0 rounded-xl border px-2 py-2 bg-[#141414]/95 flex flex-col ${
         emphasize ? "scale-[1.02] border-amber-400/45 shadow-[0_0_16px_rgba(251,191,36,.15)]" : ring
       }`}
     >
       <div className="text-[9px] text-gray-500 font-bold leading-tight">{label}</div>
-      {sub ? <div className="text-[8px] text-gray-600 mt-0.5 leading-snug">{sub}</div> : null}
-      <div className="text-lg font-black tabular-nums text-white mt-1 tracking-tight">
+      <div className="text-[8px] text-gray-600 mt-0.5 leading-snug min-h-[2rem] whitespace-pre-line flex items-start justify-center">
+        {sub ?? "\u00a0"}
+      </div>
+      <div className="text-lg font-black tabular-nums text-white mt-auto pt-1 tracking-tight shrink-0">
         {v}
         <span className="text-[10px] ml-px text-gray-500 font-bold">{suffix}</span>
       </div>
+      {footnote ? (
+        <div className="text-[7px] text-gray-600 mt-0.5 tabular-nums leading-tight min-h-[0.875rem]">{footnote}</div>
+      ) : (
+        <div className="mt-0.5 min-h-[0.875rem]" aria-hidden />
+      )}
     </div>
   );
 }
 
 function FlowOp() {
   return (
-    <div className="flow-op-x flex items-center text-gray-600 font-black px-px select-none tabular-nums">
+    <div className="flow-op-x flex self-stretch items-center justify-center text-gray-600 font-black px-px select-none tabular-nums text-sm leading-none shrink-0">
       ×
     </div>
   );
