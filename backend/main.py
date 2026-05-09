@@ -1266,12 +1266,24 @@ async def get_my_response(
 
 @app.get("/api/next-survey")
 async def get_next_survey(supabase: Client = Depends(get_supabase)):
-    """다음 거래일 설문 상태 반환 (장마감 후 미리 예측 참여용)"""
+    """다음 거래일 설문 상태 반환 (장마감 후 미리 예측 참여용)
+    레코드가 없으면 자동 생성 후 is_open: true 반환"""
     next_str = next_trading_day_str()
     res = supabase.table("daily_surveys").select("survey_date, is_closed").eq("survey_date", next_str).execute()
-    if res.data and not res.data[0]["is_closed"]:
-        return {"survey_date": next_str, "is_open": True}
-    return {"survey_date": next_str, "is_open": False}
+    if res.data:
+        if not res.data[0]["is_closed"]:
+            return {"survey_date": next_str, "is_open": True}
+        return {"survey_date": next_str, "is_open": False}
+    # 레코드 없으면 자동 생성
+    try:
+        supabase.table("daily_surveys").insert({
+            "survey_date": next_str,
+            "is_closed": False,
+        }).execute()
+        logger.info(f"next-survey: {next_str} 설문 레코드 자동 생성")
+    except Exception as e:
+        logger.warning(f"next-survey: 레코드 생성 실패 (무시): {e}")
+    return {"survey_date": next_str, "is_open": True}
 
 
 # ─────────────────────────────────────────────────────────────────────────────
