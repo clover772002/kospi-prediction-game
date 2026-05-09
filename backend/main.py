@@ -8,17 +8,15 @@ from zoneinfo import ZoneInfo
 
 KST = ZoneInfo("Asia/Seoul")
 
+from contextlib import asynccontextmanager
+
+from krx_calendar import next_trading_day_str, today_date_kst, korea_public_holiday_on
+
+
 def today_kst() -> str:
     """KST 기준 오늘 날짜 (Railway는 UTC이므로 명시적으로 변환)"""
-    return datetime.now(KST).date().isoformat()
+    return today_date_kst().isoformat()
 
-def next_trading_day_str() -> str:
-    """KST 기준 다음 거래일 (주말 건너뜀)"""
-    d = datetime.now(KST).date() + timedelta(days=1)
-    while d.weekday() >= 5:  # 5=토, 6=일
-        d += timedelta(days=1)
-    return d.isoformat()
-from contextlib import asynccontextmanager
 
 import yfinance as yf
 import pytz
@@ -104,7 +102,12 @@ async def get_current_user(request: Request, supabase: Client = Depends(get_supa
 # ─────────────────────────────────────────────────────────────
 
 async def job_22_00():
-    """매일 22:00 - 다음 거래일 코스피 예측 설문 텔레그램+웹푸시 발송"""
+    """매일 22:00 - 다음 거래일 코스피 예측 설문 텔레그램+웹푸시 발송 (법정 공휴일은 생략)"""
+    today_d = today_date_kst()
+    if korea_public_holiday_on(today_d):
+        logger.info(f"22:00 설문·푸시 생략: 오늘({today_d.isoformat()}) 대한민국 법정공휴일")
+        return
+
     sb = _supabase_direct()
     next_str = next_trading_day_str()
 
@@ -334,7 +337,7 @@ async def lifespan(app_instance):
         replace_existing=True,
     )
     scheduler.start()
-    logger.info("스케줄러 시작: 22:00(설문 발송) / 08:45(마감임박) / 09:00(마감) / 15:35(정확도) / 09-15시 30분(KOSPI 스냅샷)")
+    logger.info("스케줄러 시작: 22:00(설문 발송·공휴일 제외) / 08:45(마감임박) / 09:00(마감) / 15:35(정확도) / 09-15시 30분(KOSPI 스냅샷)")
     yield
     scheduler.shutdown()
 
@@ -2335,7 +2338,7 @@ async def telegram_webhook(
 
 @app.post("/api/admin/trigger-survey")
 async def trigger_survey():
-    await job_08_50()
+    await job_22_00()
     return {"success": True, "message": "설문 발송 완료"}
 
 

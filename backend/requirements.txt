@@ -10,3 +10,4 @@ pytz==2024.2
 PyJWT==2.10.1
 pywebpush==2.0.0
 stripe==11.6.0
+holidays==0.83
