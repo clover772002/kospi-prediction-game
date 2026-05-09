@@ -7,6 +7,7 @@ import { getMe, getToday, getDashboard, createChallenge, getMyChallenges, reactT
 import ShareSheet from "@/components/ShareSheet";
 import AppAmbientBackground from "@/components/AppAmbientBackground";
 import AppTabNav from "@/components/AppTabNav";
+import ExpertGapInsightCard from "@/components/ExpertGapInsightCard";
 
 // 연속 적중 스트릭 계산
 function calcStreak(history: DashboardData["history"]): number {
@@ -166,6 +167,16 @@ export default function DashboardPage() {
       setChallenges(ch);
     } catch { /* ignore */ }
   };
+
+  const refreshDashboard = useCallback(async () => {
+    if (!token) return;
+    try {
+      const dashData = await getDashboard(token);
+      setDash(dashData);
+    } catch {
+      /* ignore */
+    }
+  }, [token]);
 
   const showToast = (msg: string) => {
     setChallengeToast(msg);
@@ -743,6 +754,13 @@ export default function DashboardPage() {
           })()}
         </div>
 
+        {today && token && status !== "no_survey" && (
+          <ExpertGapInsightCard
+            accessToken={token}
+            surveyDate={today.survey_date}
+            onBalanceUpdated={() => void refreshDashboard()}
+          />
+        )}
 
         {/* ── 내 통계 + 예측 이력 ──────────────────────────── */}
         <div className="bg-[#1A1A1A] rounded-2xl p-5 border border-[#2A2A2A] fade-up-3">

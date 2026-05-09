@@ -6,7 +6,7 @@ export default function PrivacyPage() {
       <Link href="/" className="text-xs text-gray-500 hover:text-gray-300 mb-8 block">← 돌아가기</Link>
 
       <h1 className="text-xl font-black text-white mb-1">개인정보처리방침</h1>
-      <p className="text-xs text-gray-500 mb-8">최종 수정일: 2026년 5월 5일</p>
+      <p className="text-xs text-gray-500 mb-8">최종 수정일: 2026년 5월 9일</p>
 
       <div className="space-y-8 text-sm leading-relaxed">
 
@@ -46,6 +46,10 @@ export default function PrivacyPage() {
             <li>· <span className="text-white">Supabase</span> — 데이터베이스 및 인증 (미국 소재)</li>
             <li>· <span className="text-white">Vercel</span> — 프론트엔드 호스팅 (미국 소재)</li>
             <li>· <span className="text-white">Railway</span> — 백엔드 서버 (미국 소재)</li>
+            <li>
+              · <span className="text-white">Stripe</span> — 토큰 팩 등 유료 결제 처리 (미국 소재).
+              카드 결제 시 결제 정보는 Stripe 및 카드 네트워크에 따라 필요한 범위에서 처리됩니다. 당사는 원칙적으로 전체 카드 번호를 저장하지 않습니다.
+            </li>
           </ul>
         </section>
 
@@ -72,7 +76,34 @@ export default function PrivacyPage() {
         </section>
 
         <section>
-          <h2 className="text-white font-bold mb-2">7. 방침 변경 안내</h2>
+          <h2 className="text-white font-bold mb-2">7. 디지털 콘텐츠·토큰(플랫폼 크레딛)</h2>
+          <p className="text-gray-400">
+            일부 기능은 서비스 내 토큰을 사용하거나, 유료 결제로 토큰 팩을 구매하여 이용할 수 있습니다.
+            토큰은 현금 또는 외환으로 환전·환급되지 않는 플랫폼 전용 크레딛이며, 인사이트·집계형 콘텐츠 열람 등 서비스 범위 내에서만 소비됩니다.
+          </p>
+          <p className="text-gray-500 text-xs mt-2">
+            집계 및 인사이트는 참고용 정보이며 특정 종목·지수 매매를 권유하거나 수익을 보장하지 않습니다 (투자 자문 아님).
+          </p>
+        </section>
+
+        <section>
+          <h2 className="text-white font-bold mb-2">8. 청약철회·환불(유료 이용)</h2>
+          <p className="text-gray-400">
+            전자상거래법 등 관련 법령에 따라 디지털 콘텐츠·즉시 사용 가능한 플랫폼 크레딧(토큰)의 성격상, 제공이 개시된 후에는 청약철회가 제한될 수 있습니다.
+          </p>
+          <p className="text-gray-400 mt-2">
+            미사용 상태의 결제, 중복 결제, 서비스 오류 등은 이메일로 문의해 주시면 사실관계 확인 후 처리 방안을 안내합니다.
+          </p>
+          <p className="text-xs mt-2">
+            문의:{" "}
+            <a href="mailto:forsmartonly@gmail.com" className="text-blue-400 hover:underline">
+              forsmartonly@gmail.com
+            </a>
+          </p>
+        </section>
+
+        <section>
+          <h2 className="text-white font-bold mb-2">9. 방침 변경 안내</h2>
           <p className="text-gray-400">
             본 방침이 변경될 경우 서비스 내 공지를 통해 안내합니다.
           </p>

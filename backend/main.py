@@ -43,6 +43,18 @@ load_dotenv()
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+try:
+    import stripe as stripe_sdk
+except ImportError:
+    stripe_sdk = None
+
+from insights_catalog import INSIGHT_PRODUCTS, TOKEN_PACKS, paywall_enabled, stripe_configured
+from token_wallet import (
+    entitlement_exists,
+    unlock_insight_with_tokens,
+    grant_tokens_with_ledger,
+)
+
 KST = pytz.timezone("Asia/Seoul")
 
 
@@ -548,6 +560,60 @@ def _get_accuracy_data(supabase: Client) -> tuple[dict, dict]:
     _acc_cache["count"] = pred_count
     _acc_cache["ts"]    = now
     return acc_map, pred_count
+
+
+def _build_daily_expert_gap_payload(supabase: Client, survey_date_str: str) -> dict | None:
+    """
+    원시 설문 응답 기반 고수 가중예측 vs 단순 다수결 차이 (공개 대시보드 집계의 패딩은 적용하지 않음).
+    """
+    res = (
+        supabase.table("survey_responses")
+        .select("user_id, kospi_answer")
+        .eq("survey_date", survey_date_str)
+        .execute()
+    )
+    rows = res.data or []
+    total = len(rows)
+    if total == 0:
+        return None
+    yes = sum(1 for r in rows if r.get("kospi_answer"))
+    simple_pct = round(yes / total * 100)
+    acc_map, pred_count = _get_accuracy_data(supabase)
+    w = _calc_weighted_pct(rows, acc_map, pred_count)
+    if w is None:
+        w = simple_pct
+    gap = w - simple_pct
+    direction_simple = "상승" if simple_pct >= 50 else "하락"
+    direction_weighted = "상승" if w >= 50 else "하락"
+    highlight = "none"
+    if direction_simple != direction_weighted:
+        highlight = "direction_mismatch"
+    elif abs(gap) >= 8:
+        highlight = "strong_gap"
+    elif abs(gap) >= 4:
+        highlight = "moderate_gap"
+
+    bullets = [
+        f"표본 크기는 {total}명의 응답 기준입니다.",
+        f"단순 다수결은 「{direction_simple}」 쪽 {simple_pct}% 형태입니다.",
+        f"누적 적중 반영 가중예측은 「{direction_weighted}」 쪽 지지 형태 {(w)}% 근처로 정렬됩니다.",
+        f"(가중예측 − 단순) 괴리는 {gap:+d} 포인트입니다.",
+        "표본이 작거나 정확도 기록이 짧으면 두 축은 자연히 가까워질 수 있습니다.",
+        "본 리포트는 투자·매매 의사결정이 아닙니다.",
+    ]
+
+    return {
+        "survey_date": survey_date_str,
+        "total_responses": total,
+        "simple_pct": simple_pct,
+        "weighted_pct": w,
+        "gap_points": gap,
+        "direction_simple": direction_simple,
+        "direction_weighted": direction_weighted,
+        "highlight": highlight,
+        "bullets": bullets,
+        "computed_note": "이 값은 패딩·표시 반올림이 없는 원시 분석 결과일 수 있습니다.",
+    }
 
 
 def _build_user_accuracy_map(supabase: Client) -> dict:
@@ -1994,6 +2060,259 @@ async def get_dashboard(
         "tokens": user_tokens,
         "current_streak": user_streak,
     }
+
+
+class InsightUnlockBody(BaseModel):
+    product_slug: str
+    survey_date: str
+    idempotency_key: str
+
+
+class CheckoutPackBody(BaseModel):
+    pack_slug: str
+    success_url: str | None = None
+    cancel_url: str | None = None
+
+
+@app.get("/api/insights/daily-expert-gap")
+async def get_daily_expert_gap(
+    survey_date: str,
+    current_user=Depends(get_current_user),
+    supabase: Client = Depends(get_supabase),
+):
+    """
+    고수 가중예측 vs 단순 다수결 괴리 리포트.
+    paywall 활성 시 열람 entitlement 없으면 data 없이 가격만 반환.
+    """
+    user_id = str(current_user.id)
+    sd = survey_date.strip()
+    if len(sd) != 10 or sd[4] != "-" or sd[7] != "-":
+        raise HTTPException(status_code=400, detail="survey_date 형식은 YYYY-MM-DD 여야 합니다.")
+
+    slug = "daily_expert_gap"
+    if slug not in INSIGHT_PRODUCTS:
+        raise HTTPException(status_code=500, detail="상품 설정 오류")
+
+    meta = INSIGHT_PRODUCTS[slug]
+    price_tokens = int(meta["price_tokens"])
+
+    user_row = supabase.table("users").select("tokens").eq("id", user_id).execute()
+    balance = int(user_row.data[0].get("tokens") or 100) if user_row.data else 100
+
+    try:
+        has_entitlement = entitlement_exists(supabase, user_id, slug, sd)
+    except RuntimeError as e:
+        logger.error(e)
+        raise HTTPException(status_code=503, detail=str(e)) from e
+
+    wall = paywall_enabled()
+    unlocked = (not wall) or has_entitlement
+
+    payload = _build_daily_expert_gap_payload(supabase, sd)
+    if payload is None:
+        return {
+            "accessible": False,
+            "locked": wall and not has_entitlement,
+            "reason": "no_survey_data",
+            "survey_date": sd,
+            "product_slug": slug,
+            "price_tokens": price_tokens,
+            "balance": balance,
+            "title": meta["title"],
+            "data": None,
+        }
+
+    if not unlocked:
+        return {
+            "accessible": False,
+            "locked": True,
+            "survey_date": sd,
+            "product_slug": slug,
+            "price_tokens": price_tokens,
+            "balance": balance,
+            "title": meta["title"],
+            "description": meta.get("description"),
+            "data": None,
+        }
+
+    return {
+        "accessible": True,
+        "locked": False,
+        "survey_date": sd,
+        "product_slug": slug,
+        "price_tokens": price_tokens,
+        "balance": balance,
+        "title": meta["title"],
+        "data": payload,
+    }
+
+
+@app.post("/api/insights/unlock")
+async def post_insight_unlock(
+    body: InsightUnlockBody,
+    current_user=Depends(get_current_user),
+    supabase: Client = Depends(get_supabase),
+):
+    user_id = str(current_user.id)
+    sd = body.survey_date.strip()
+    if len(sd) != 10:
+        raise HTTPException(status_code=400, detail="survey_date 형식 오류")
+    if body.product_slug not in INSIGHT_PRODUCTS:
+        raise HTTPException(status_code=400, detail="알 수 없는 상품입니다.")
+    if not body.idempotency_key or len(body.idempotency_key) < 8:
+        raise HTTPException(status_code=400, detail="idempotency_key가 필요합니다 (8자 이상).")
+
+    meta = INSIGHT_PRODUCTS[body.product_slug]
+    cost = int(meta["price_tokens"])
+
+    if not paywall_enabled():
+        return {"ok": True, "skipped": True, "message": "페이월 비활성"}
+
+    try:
+        out = unlock_insight_with_tokens(
+            supabase,
+            user_id,
+            product_slug=body.product_slug,
+            scope_key=sd,
+            price_tokens=cost,
+            idempotency_key=body.idempotency_key.strip(),
+        )
+    except RuntimeError as e:
+        raise HTTPException(status_code=503, detail=str(e)) from e
+    except Exception as e:
+        logger.error(f"unlock_insight 오류: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="잠금 해제 처리 중 오류가 발생했습니다.") from e
+
+    if not out.get("ok"):
+        raise HTTPException(
+            status_code=402,
+            detail={
+                "error": "insufficient_tokens",
+                "required": out.get("required", cost),
+                "balance": out.get("balance", 0),
+            },
+        )
+    return out
+
+
+@app.get("/api/shop/catalog")
+async def shop_catalog(current_user=Depends(get_current_user)):
+    _ = current_user
+    packs = []
+    for p in TOKEN_PACKS:
+        env_name = p.get("stripe_price_env") or ""
+        price_id = os.getenv(env_name, "").strip() if env_name else ""
+        packs.append(
+            {
+                "slug": p["slug"],
+                "tokens": p["tokens"],
+                "price_label": p.get("price_label"),
+                "stripe_price_configured": bool(price_id),
+            }
+        )
+    return {
+        "insight_products": [
+            {"slug": k, **v} for k, v in INSIGHT_PRODUCTS.items()
+        ],
+        "token_packs": packs,
+        "stripe_ready": bool(stripe_sdk and stripe_configured()),
+        "paywall_enabled": paywall_enabled(),
+    }
+
+
+@app.post("/api/shop/checkout-session")
+async def create_pack_checkout_session(
+    body: CheckoutPackBody,
+    current_user=Depends(get_current_user),
+):
+    if not stripe_sdk or not os.getenv("STRIPE_SECRET_KEY"):
+        raise HTTPException(status_code=503, detail="Stripe 결제가 아직 설정되지 않았습니다.")
+    user_id = str(current_user.id)
+    pack = next((x for x in TOKEN_PACKS if x["slug"] == body.pack_slug), None)
+    if not pack:
+        raise HTTPException(status_code=400, detail="알 수 없는 팩입니다.")
+    env_name = pack.get("stripe_price_env") or ""
+    price_id = os.getenv(env_name, "").strip()
+    if not price_id:
+        raise HTTPException(status_code=503, detail=f"환경변수 {env_name} 가 비어 있습니다.")
+
+    base = os.getenv("PUBLIC_APP_URL", "http://localhost:3000").rstrip("/")
+    success = (body.success_url or f"{base}/shop?paid=1").strip()
+    cancel = (body.cancel_url or f"{base}/shop?cancel=1").strip()
+
+    stripe_sdk.api_key = os.getenv("STRIPE_SECRET_KEY")
+    try:
+        session = stripe_sdk.checkout.Session.create(
+            mode="payment",
+            success_url=success + ("&session_id={CHECKOUT_SESSION_ID}" if "?" in success else "?session_id={CHECKOUT_SESSION_ID}"),
+            cancel_url=cancel,
+            client_reference_id=user_id,
+            metadata={
+                "user_id": user_id,
+                "pack_slug": pack["slug"],
+                "tokens_grant": str(int(pack["tokens"])),
+            },
+            line_items=[{"price": price_id, "quantity": 1}],
+        )
+    except Exception as e:
+        logger.error(f"Stripe checkout 생성 실패: {e}", exc_info=True)
+        raise HTTPException(status_code=502, detail="결제 세션을 만들지 못했습니다.") from e
+
+    return {"url": session.url, "session_id": session.id}
+
+
+@app.post("/api/stripe/webhook")
+async def stripe_webhook_route(request: Request):
+    secret = os.getenv("STRIPE_WEBHOOK_SECRET", "").strip()
+    if not stripe_sdk or not secret:
+        raise HTTPException(status_code=503, detail="웹훅 비활성")
+
+    payload = await request.body()
+    sig = request.headers.get("stripe-signature") or ""
+
+    try:
+        event = stripe_sdk.Webhook.construct_event(payload, sig, secret)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="invalid payload") from None
+    except Exception as e:
+        if type(e).__name__ == "SignatureVerificationError":
+            raise HTTPException(status_code=400, detail="invalid signature") from e
+        logger.warning(f"Stripe webhook construct_event: {e}")
+        raise HTTPException(status_code=400, detail="invalid webhook") from e
+
+    if event["type"] != "checkout.session.completed":
+        return {"received": True}
+
+    sess = event["data"]["object"]
+    meta = sess.get("metadata") or {}
+    uid = meta.get("user_id")
+    grant = meta.get("tokens_grant")
+    sid = sess.get("id")
+
+    if not uid or grant is None or not sid:
+        logger.warning(f"stripe webhook 메타 불완전: {meta}")
+        return {"received": True}
+
+    sb = _supabase_direct()
+
+    try:
+        new_bal = grant_tokens_with_ledger(
+            sb,
+            uid,
+            delta=int(grant),
+            reason="stripe_token_pack",
+            ref_type="stripe_checkout_session",
+            ref_id=str(sid),
+            idempotency_key=f"stripe_checkout:{sid}",
+        )
+        logger.info(f"Stripe 충전 완료 user={uid} +{grant} 잔액={new_bal}")
+    except PermissionError:
+        logger.error(f"Stripe 충전 대상 사용자 없음: {uid}")
+    except Exception as e:
+        logger.error(f"Stripe 충전 처리 실패: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="ledger 실패") from e
+
+    return {"received": True}
 
 
 # ─────────────────────────────────────────────────────────────

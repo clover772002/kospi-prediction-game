@@ -276,3 +276,106 @@ export async function requestRematch(
 ): Promise<{ ok: boolean; challenge_id?: string; survey_date?: string }> {
   return authFetch(`/api/challenges/${challenge_id}/rematch`, token, { method: "POST" });
 }
+
+// ─── 상점 · 인사이트 (토큰/결제 플랜) ────────────────────────
+
+export interface ExpertGapInsightResponse {
+  accessible: boolean;
+  locked?: boolean;
+  reason?: string;
+  survey_date: string;
+  product_slug?: string;
+  price_tokens?: number;
+  balance?: number;
+  title?: string;
+  description?: string;
+  data: {
+    survey_date: string;
+    total_responses: number;
+    simple_pct: number;
+    weighted_pct: number;
+    gap_points: number;
+    bullets: string[];
+    computed_note?: string;
+    highlight?: string;
+  } | null;
+}
+
+export class InsightInsufficientTokensError extends Error {
+  detail: { error?: string; required?: number; balance?: number };
+  constructor(detail: { error?: string; required?: number; balance?: number }) {
+    super("insufficient_tokens");
+    this.name = "InsightInsufficientTokensError";
+    this.detail = detail;
+  }
+}
+
+export async function getExpertGapInsight(accessToken: string, surveyDate: string): Promise<ExpertGapInsightResponse> {
+  const res = await fetch(
+    `${resolveApiBase()}/api/insights/daily-expert-gap?survey_date=${encodeURIComponent(surveyDate)}`,
+    {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    },
+  );
+  if (!res.ok) {
+    const raw = await res.json().catch(() => ({}));
+    const detail =
+      typeof raw.detail === "string"
+        ? raw.detail
+        : "인사이트를 불러오지 못했습니다.";
+    throw new Error(detail);
+  }
+  return res.json();
+}
+
+export async function unlockInsightProduct(
+  accessToken: string,
+  body: { product_slug: string; survey_date: string; idempotency_key: string },
+): Promise<{ ok: boolean; balance?: number; spent?: number; already_unlocked?: boolean }> {
+  const res = await fetch(`${resolveApiBase()}/api/insights/unlock`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${accessToken}`,
+    },
+    body: JSON.stringify(body),
+  });
+  if (res.status === 402) {
+    const raw = await res.json().catch(() => ({}));
+    const d = raw.detail;
+    throw new InsightInsufficientTokensError(
+      typeof d === "object" && d !== null && !Array.isArray(d)
+        ? (d as { error?: string; required?: number; balance?: number })
+        : {},
+    );
+  }
+  if (!res.ok) {
+    const raw = await res.json().catch(() => ({}));
+    throw new Error(typeof raw.detail === "string" ? raw.detail : "잠금 해제에 실패했습니다.");
+  }
+  return res.json();
+}
+
+export interface ShopCatalog {
+  insight_products: { slug: string; title: string; price_tokens: number; description?: string }[];
+  token_packs: { slug: string; tokens: number; price_label?: string; stripe_price_configured: boolean }[];
+  stripe_ready: boolean;
+  paywall_enabled: boolean;
+}
+
+export async function getShopCatalog(accessToken: string): Promise<ShopCatalog> {
+  return authFetch("/api/shop/catalog", accessToken);
+}
+
+export async function createStripePackCheckout(accessToken: string, packSlug: string): Promise<{ url: string }> {
+  const base =
+    typeof window !== "undefined" ? `${window.location.origin}/shop` : "http://localhost:3000/shop";
+  return authFetch<{ url: string }>("/api/shop/checkout-session", accessToken, {
+    method: "POST",
+    body: JSON.stringify({
+      pack_slug: packSlug,
+      success_url: `${base}?paid=1`,
+      cancel_url: `${base}?cancel=1`,
+    }),
+  });
+}
