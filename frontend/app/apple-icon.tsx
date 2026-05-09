@@ -19,7 +19,7 @@ export default function AppleIcon() {
   const L_X   = sc(20);
   const R_X   = L_X + BTN_W + GAP;
   const SVG_H = 180 - HDR;
-  const BTN_Y = Math.round((SVG_H - BTN_H - DEPTH) / 2);
+  const BTN_Y = sc(16);                      // 헤더 아래 16px — 위쪽으로 당김
 
   const CTR_Y   = BTN_Y + Math.round(BTN_H / 2);
   const ARR_TOP = CTR_Y - sc(22);

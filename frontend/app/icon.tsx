@@ -19,7 +19,7 @@ export default function Icon() {
   const L_X   = 20;
   const R_X   = L_X + BTN_W + GAP;          // 98
   const SVG_H = 192 - HDR;                  // 142
-  const BTN_Y = Math.round((SVG_H - BTN_H - DEPTH) / 2);  // 수직 중앙
+  const BTN_Y = 16;                          // 헤더 아래 16px — 위쪽으로 당김
 
   const CTR_Y   = BTN_Y + Math.round(BTN_H / 2);
   const ARR_TOP = CTR_Y - 22;
