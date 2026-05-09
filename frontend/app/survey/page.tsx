@@ -65,6 +65,7 @@ function SurveyPageInner() {
   // 다음 거래일 설문 (장마감 후 미리 참여)
   const [nextSurvey, setNextSurvey] = useState<{ survey_date: string; is_open: boolean } | null>(null);
   const [nextKospiAnswer, setNextKospiAnswer] = useState<boolean | null>(null);
+  const [nextGaugePosition, setNextGaugePosition] = useState<number>(10);
   const [nextAlreadyAnswered, setNextAlreadyAnswered] = useState(false);
   const [nextPreviousAnswer, setNextPreviousAnswer] = useState<boolean | null>(null);
   const [nextSubmitted, setNextSubmitted] = useState(false);
@@ -239,7 +240,7 @@ function SurveyPageInner() {
       const res = await fetch("/api/survey/respond", {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ kospi_answer: nextKospiAnswer, survey_date: nextSurvey.survey_date }),
+        body: JSON.stringify({ kospi_answer: nextKospiAnswer, gauge_position: nextGaugePosition, survey_date: nextSurvey.survey_date }),
       });
       if (!res.ok) {
         const raw = await res.json().catch(() => ({}));
@@ -386,18 +387,14 @@ function SurveyPageInner() {
               </div>
             ) : (
               <>
-                <div className="grid grid-cols-2 gap-3">
-                  <button onClick={() => setNextKospiAnswer(true)}
-                    className={`py-4 rounded-2xl font-black text-lg transition-all active:scale-95 border-2 ${nextKospiAnswer === true ? "bg-green-500 border-green-400 text-white" : "bg-[#111] border-[#333] text-gray-400 hover:border-green-600"}`}>
-                    📈 상승
-                  </button>
-                  <button onClick={() => setNextKospiAnswer(false)}
-                    className={`py-4 rounded-2xl font-black text-lg transition-all active:scale-95 border-2 ${nextKospiAnswer === false ? "bg-red-500 border-red-400 text-white" : "bg-[#111] border-[#333] text-gray-400 hover:border-red-600"}`}>
-                    📉 하락
-                  </button>
-                </div>
+                <GaugeBar
+                  value={nextGaugePosition}
+                  onChange={(v) => { setNextGaugePosition(v); setNextKospiAnswer(v > 0); }}
+                  tokens={userTokens}
+                  disabled={nextSubmitting}
+                />
                 <button onClick={handleNextSubmit}
-                  disabled={nextKospiAnswer === null || nextSubmitting}
+                  disabled={nextSubmitting}
                   className="w-full mt-3 py-4 bg-amber-500 hover:bg-amber-400 disabled:bg-[#333] disabled:text-gray-500 text-white font-black text-base rounded-2xl transition-all active:scale-95">
                   {nextSubmitting ? "제출 중..." : `${getSurveyDayLabel(nextSurvey.survey_date).shortLabel} 예측 제출하기`}
                 </button>
@@ -645,28 +642,12 @@ function SurveyPageInner() {
                   </div>
                 ) : (
                   <>
-                    <div className="grid grid-cols-2 gap-3">
-                      <button
-                        onClick={() => setNextKospiAnswer(true)}
-                        className={`py-4 rounded-2xl font-black text-lg transition-all active:scale-95 border-2 ${
-                          nextKospiAnswer === true
-                            ? "bg-green-500 border-green-400 text-white"
-                            : "bg-[#111] border-[#333] text-gray-400 hover:border-green-600"
-                        }`}
-                      >
-                        📈 오른다
-                      </button>
-                      <button
-                        onClick={() => setNextKospiAnswer(false)}
-                        className={`py-4 rounded-2xl font-black text-lg transition-all active:scale-95 border-2 ${
-                          nextKospiAnswer === false
-                            ? "bg-red-500 border-red-400 text-white"
-                            : "bg-[#111] border-[#333] text-gray-400 hover:border-red-600"
-                        }`}
-                      >
-                        📉 내린다
-                      </button>
-                    </div>
+                    <GaugeBar
+                      value={nextGaugePosition}
+                      onChange={(v) => { setNextGaugePosition(v); setNextKospiAnswer(v > 0); }}
+                      tokens={userTokens}
+                      disabled={nextSubmitting}
+                    />
                     {error && (
                       <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-3 text-red-400 text-sm text-center mt-2">
                         {error}
@@ -674,7 +655,7 @@ function SurveyPageInner() {
                     )}
                     <button
                       onClick={handleNextSubmit}
-                      disabled={nextKospiAnswer === null || nextSubmitting}
+                      disabled={nextSubmitting}
                       className="w-full mt-3 py-4 bg-amber-500 hover:bg-amber-400 disabled:bg-[#333] disabled:text-gray-500 text-white font-black text-base rounded-2xl transition-all active:scale-95"
                     >
                       {nextSubmitting ? "제출 중..." : `${getSurveyDayLabel(nextSurvey.survey_date).shortLabel} 예측 제출하기`}
