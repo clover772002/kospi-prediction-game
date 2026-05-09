@@ -2,7 +2,7 @@
 """
 텔레그램 봇 모듈 v3
 - /start {user_uuid} → 텔레그램 chat_id와 구글 계정 연동
-- 매일 22:00 코스피 O/X 설문 발송 (법정 공휴일 저녁 생략, 08:45 마감임박 리마인더)
+- 매일 22:00 설문 알림 (법정 공휴일 저녁 생략) → 웹 설문 링크만 (확신도 슬라이더는 웹 전용)
 - 장 시작 전 집계 결과 공개
 - 15:35 개인별 정확도 알림
 """
@@ -65,30 +65,17 @@ def _app_base_url() -> str:
     return (os.getenv("PUBLIC_APP_URL") or "https://kospi-prediction-game.vercel.app").rstrip("/")
 
 
-def _survey_keyboard(market: str, date_str: str) -> dict:
-    """코스피 설문 — 방향 + 확신도(게이지) 프리셋. 숫자는 등락률 아님이라 웹과 동일하게 안내함."""
-    if market != "kospi":
-        return {"inline_keyboard": []}
-    d = date_str
+def _survey_web_url() -> str:
+    """웹 설문(슬라이더·1% 단위 확신도). utm 성격으로 src만 붙임."""
+    return f"{_app_base_url()}/survey?src=telegram"
 
-    def gcb(g: int) -> str:
-        return f"{market}:g:{g}:{d}"
 
-    survey_url = f"{_app_base_url()}/survey"
+def _survey_link_markup() -> dict:
+    """인라인 URL 버튼만 (채팅 안에서 확신도 n% 선택은 불가)."""
     return {
-        "inline_keyboard": [
-            [
-                {"text": "📈 강하게", "callback_data": gcb(85)},
-                {"text": "📈 보통", "callback_data": gcb(50)},
-                {"text": "📈 살짝", "callback_data": gcb(25)},
-            ],
-            [
-                {"text": "📉 살짝", "callback_data": gcb(-25)},
-                {"text": "📉 보통", "callback_data": gcb(-50)},
-                {"text": "📉 강하게", "callback_data": gcb(-85)},
-            ],
-            [{"text": "🌐 슬라이더로 정하기 (웹)", "url": survey_url}],
-        ]
+        "inline_keyboard": [[
+            {"text": "📊 웹 설문 열기 (슬라이더 · 1% 단위)", "url": _survey_web_url()},
+        ]],
     }
 
 
@@ -148,10 +135,10 @@ async def handle_start(chat_id: int, user_id_param: str, supabase) -> None:
             await send_message(chat_id,
                 f"✅ <b>연동 완료!</b>\n\n"
                 f"안녕하세요, {name}님!\n\n"
-                f"📊 매일 밤 <b>22:00</b>에 코스피 예측 설문이 발송됩니다.\n"
-                f"⏰ 장 시작 전(<b>~09:00</b>)까지만 응답 가능합니다.\n"
-                f"방향 외에 <b>확신도</b>(배팅 강도)를 고르게 되어 있어요. 세밀한 값은 웹 설문 슬라이더에서 가능합니다.\n"
-                f"📈 장 마감 후 정확도와 순위를 알려드릴게요!"
+                f"📊 매일 밤 <b>22:00</b> 무렵 알림에는 <b>웹 설문 링크</b>만 옵니다.\n"
+                f"⏰ 장 시작 전(<b>~09:00</b>)까지 웹에서 응답해 주세요.\n"
+                f"방향·<b>확신도(슬라이더)</b>는 채팅창 대신 웹에서만 조절할 수 있어요 (1% 단위).\n"
+                f"📈 장 마감 후 정확도와 순위도 알려드릴게요!"
             )
         else:
             await send_message(chat_id,
@@ -164,7 +151,7 @@ async def handle_start(chat_id: int, user_id_param: str, supabase) -> None:
 
 
 async def handle_callback_query(callback_query: dict, supabase) -> None:
-    """인라인 버튼 응답 처리 (코스피 방향 + 확신도 게이지)"""
+    """구버전 인라인(오른다/내린다·프리셋) 메시지 호환만 유지 — 신규 알림에는 버튼 없음."""
     query_id = callback_query["id"]
     chat_id = callback_query["from"]["id"]
     message_id = callback_query["message"]["message_id"]
@@ -294,18 +281,19 @@ async def send_daily_survey_to_all(supabase, date_str: str, is_reminder: bool = 
             if is_reminder:
                 msg = (
                     f"⏰ <b>마감 임박!</b> ({date_str})\n"
-                    f"코스피 예측 설문이 <b>09:00</b>에 마감돼요.\n"
-                    f"아직 참여 안 하셨다면 지금 바로!\n\n"
-                    f"<b>방향 + 확신도</b>(강하게/보통/살짝) 또는 웹 슬라이더로 선택해 주세요."
+                    f"<b>09:00</b> 마감 전까지 웹 설문을 완료해 주세요.\n\n"
+                    f"<b>확신도(슬라이더)</b>는 채팅에서는 못 고르니, 반드시 아래 버튼으로 <b>웹</b>에서 맞춰 주세요.\n"
+                    f"(상승/하락 방향별로 1% 단위까지 조절 가능)"
                 )
             else:
                 msg = (
-                    f"📊 <b>오늘 코스피, 함께 맞춰요!</b> ({date_str})\n"
-                    f"집단지성으로 내일 장을 미리 예측해보세요.\n"
-                    f"⏰ 마감: 내일 <b>09:00</b>\n\n"
-                    f"<b>방향·확신도</b>를 골라주세요. 버튼의 비율은 <b>예상 등락률이 아니라</b> 그 방향에 대한 <b>확신 레벨</b>입니다 (웹 슬라이더와 같은 방식)."
+                    f"📊 <b>내일 코스피 예측</b> ({date_str})\n"
+                    f"아래 버튼으로 <b>웹 설문</b>을 열어 주세요.\n\n"
+                    f"텔레그램 대화창만으로는 슬라이더처럼 <b>1% 단위 확신도</b>를 줄 수 없어,\n"
+                    f"방향·확신도·배팅은 모두 <b>웹</b>에서만 설정합니다.\n"
+                    f"⏰ 마감: 내일 <b>09:00</b>"
                 )
-            await send_message(chat_id, msg, _survey_keyboard("kospi", date_str))
+            await send_message(chat_id, msg, _survey_link_markup())
             sent += 1
         except Exception as e:
             logger.error(f"설문 발송 실패 (chat_id={chat_id}): {e}")

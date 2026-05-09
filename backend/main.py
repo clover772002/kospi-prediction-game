@@ -120,8 +120,8 @@ async def job_22_00():
     await send_daily_survey_to_all(sb, next_str, is_reminder=False)
     await send_web_push_to_all(
         sb,
-        title="📊 내일 코스피, 함께 맞춰요!",
-        body=f"내일 장 예측 설문이 열렸어요. 지금 바로 참여하세요 👆 (마감 09:00)",
+        title="📊 내일 코스피 예측",
+        body="웹 설문에서 슬라이더로 방향·확신도(1% 단위)를 정해 주세요. 마감 09:00",
         notif_type="survey_open",
         url="/survey",
     )
@@ -149,7 +149,7 @@ async def job_08_45():
     await send_web_push_to_all(
         sb,
         title="⏰ 마감 임박! 09:00까지예요",
-        body="아직 코스피 예측 안 하셨나요? 지금 바로 참여하세요 📊",
+        body="웹 설문에서 슬라이더로 방향·확신도(1% 단위)를 확인·제출하세요 📊",
         notif_type="survey_deadline",
         url="/survey",
     )
