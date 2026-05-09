@@ -5,7 +5,7 @@ export const size = { width: 180, height: 180 };
 export const contentType = "image/png";
 
 export default function AppleIcon() {
-  const bg   = "#E8E0D0";
+  const bg   = "#FFFFFF";
   const dark = "#1A1A1A";
   const S    = 180 / 192;
   const sc   = (v: number) => Math.round(v * S);

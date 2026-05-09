@@ -5,7 +5,7 @@ export const size = { width: 192, height: 192 };
 export const contentType = "image/png";
 
 export default function Icon() {
-  const bg   = "#E8E0D0";
+  const bg   = "#FFFFFF";
   const dark = "#1A1A1A";
 
   // 안전 영역: 좌우 20px, 버튼 폭 66px (기존 76→66으로 줄여 모서리 클리핑 방지)
