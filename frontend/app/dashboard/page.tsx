@@ -293,7 +293,13 @@ export default function DashboardPage() {
   // 장마감 후(result)는 누구나 볼 수 있음
   const marketClosed = today?.status === "result";
   // 휴장일(no_survey)에도 게이트 없음 — 예측할 장이 없으므로 누구나 열람 가능
-  const isHolidayDay = !surveyDay;
+  // API status와 무관하게 클라이언트 사이드에서도 주말 여부 직접 체크 (이중 안전망)
+  const isWeekendKST = (() => {
+    const kst = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Seoul" }));
+    const day = kst.getDay();
+    return day === 0 || day === 6;
+  })();
+  const isHolidayDay = !surveyDay || isWeekendKST;
   // 연동 안 됨 → 최우선 / 장마감·휴장일은 게이트 없음
   const gateType: "not_connected" | "no_survey" | null =
     marketClosed || isHolidayDay ? null :
