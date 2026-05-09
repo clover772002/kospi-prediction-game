@@ -316,13 +316,13 @@ export default function DashboardPage() {
 
   const status = today?.status ?? "no_survey";
 
-  // 현재 시각 기준 장 상태 배너
+  // 현재 시각 기준 장 상태 배너 (주말 별도 처리)
   function getMarketStatus(): { label: string; color: string } {
     const now = new Date();
     const kst = new Date(now.toLocaleString("en-US", { timeZone: "Asia/Seoul" }));
-    const h = kst.getHours();
-    const m = kst.getMinutes();
-    const mins = h * 60 + m;
+    const day = kst.getDay();
+    if (day === 0 || day === 6) return { label: "휴장", color: "#6B7280" };
+    const mins = kst.getHours() * 60 + kst.getMinutes();
     if (mins < 9 * 60) return { label: "장시작전", color: "#6B7280" };
     if (mins < 15 * 60 + 30) return { label: "장중", color: "#F59E0B" };
     return { label: "장마감", color: "#22C55E" };
@@ -577,7 +577,8 @@ export default function DashboardPage() {
             const isWeekend = day === 0 || day === 6;
             // 09:00~22:00 사이만 "설문 대기중", 00:00~09:00은 전날 22:00에 이미 열림
             const isPreSurvey = status === "no_survey" && !isWeekend && mins >= 9 * 60 && mins < 22 * 60;
-            const isHoliday = status === "no_survey" && !isPreSurvey && (isWeekend || mins >= 22 * 60);
+            // 주말이면 API status 무관하게 휴장 처리 (백엔드가 잘못된 status를 반환해도 안전)
+            const isHoliday = isWeekend || (status === "no_survey" && !isPreSurvey && mins >= 22 * 60);
             return (
               <>
                 <div className="flex items-center justify-between mb-4">
@@ -624,7 +625,7 @@ export default function DashboardPage() {
             );
           })()}
 
-          {(status === "open" || status === "closed" || status === "result") && today && (() => {
+          {(status === "open" || status === "closed" || status === "result") && !isWeekendKST && today && (() => {
             const myEntry = dash?.history?.find((h) => h.date === today.survey_date);
             return (
               <>
