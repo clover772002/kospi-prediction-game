@@ -265,7 +265,8 @@ function SurveyPageInner() {
           setNextAlreadyAnswered(true);
           setNextPreviousAnswer(data.kospi_answer);
           setNextKospiAnswer(data.kospi_answer);
-          setNextGaugePosition(data.kospi_answer ? 10 : -10);
+          const gp = typeof data.gauge_position === "number" ? data.gauge_position : (data.kospi_answer ? 50 : -50);
+          setNextGaugePosition(gp);
         } else {
           setNextAlreadyAnswered(false);
           setNextPreviousAnswer(null);
@@ -503,7 +504,7 @@ function SurveyPageInner() {
                 <p className="text-xs text-gray-500">예측 참여 여부 확인 중…</p>
               </div>
             ) : nextSubmitted || nextAlreadyAnswered ? (
-              <div className="flex flex-col items-center gap-3 text-center">
+              <div className="flex flex-col items-center gap-3 text-center w-full">
                 <div className="text-4xl">✅</div>
                 <p className="text-white font-bold">{getSurveyDayLabel(nextSurvey.survey_date).shortLabel} 예측 완료!</p>
                 <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-2xl p-4 w-full">
@@ -512,6 +513,24 @@ function SurveyPageInner() {
                     {(nextSubmitted ? nextKospiAnswer : nextPreviousAnswer) ? "📈 상승" : "📉 하락"}
                   </p>
                 </div>
+                <p className="text-[11px] text-gray-500 w-full text-left mt-2">저장된 확신도 · 아래 게이지는 읽기 전용입니다</p>
+                <GaugeBar
+                  value={nextGaugePosition}
+                  onChange={() => {}}
+                  tokens={userTokens}
+                  disabled
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    setNextSubmitted(false);
+                    setNextAlreadyAnswered(false);
+                    setNextGaugePhase("preview");
+                  }}
+                  className="w-full py-3 rounded-xl bg-[#1A1A1A] border border-amber-500/40 text-amber-300 text-sm font-bold hover:bg-amber-500/10 transition-all"
+                >
+                  예측 수정하기 · 게이지 다시 조정
+                </button>
               </div>
             ) : (
               <>
@@ -750,7 +769,7 @@ function SurveyPageInner() {
                     <p className="text-xs text-gray-500">예측 참여 여부 확인 중…</p>
                   </div>
                 ) : nextSubmitted || nextAlreadyAnswered ? (
-                  <div className="flex flex-col items-center gap-3 text-center">
+                  <div className="flex flex-col items-center gap-3 text-center w-full">
                     <div className="text-4xl">✅</div>
                     <p className="text-white font-bold">{getSurveyDayLabel(nextSurvey.survey_date).shortLabel} 예측 완료!</p>
                     <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-2xl p-4 w-full">
@@ -759,14 +778,24 @@ function SurveyPageInner() {
                         {(nextSubmitted ? nextKospiAnswer : nextPreviousAnswer) ? "📈 상승" : "📉 하락"}
                       </p>
                     </div>
-                    {nextAlreadyAnswered && !nextSubmitted && (
-                      <button
-                        onClick={() => { setNextAlreadyAnswered(false); setNextSubmitted(false); setNextGaugePhase("preview"); }}
-                        className="text-xs text-gray-500 underline"
-                      >
-                        다시 선택하기
-                      </button>
-                    )}
+                    <p className="text-[11px] text-gray-500 w-full text-left mt-2">저장된 확신도 · 아래 게이지는 읽기 전용입니다</p>
+                    <GaugeBar
+                      value={nextGaugePosition}
+                      onChange={() => {}}
+                      tokens={userTokens}
+                      disabled
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setNextSubmitted(false);
+                        setNextAlreadyAnswered(false);
+                        setNextGaugePhase("preview");
+                      }}
+                      className="w-full py-3 rounded-xl bg-[#1A1A1A] border border-amber-500/40 text-amber-300 text-sm font-bold hover:bg-amber-500/10 transition-all"
+                    >
+                      예측 수정하기 · 게이지 다시 조정
+                    </button>
                   </div>
                 ) : (
                   <>

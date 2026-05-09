@@ -1255,13 +1255,22 @@ async def get_my_response(
     user_id = str(current_user.id)
     target_date = survey_date or today_kst()
     res = supabase.table("survey_responses") \
-        .select("kospi_answer") \
+        .select("kospi_answer, gauge_position, tokens_bet") \
         .eq("user_id", user_id) \
         .eq("survey_date", target_date) \
         .execute()
     if res.data:
-        return {"answered": True, "kospi_answer": res.data[0]["kospi_answer"]}
-    return {"answered": False, "kospi_answer": None}
+        row = res.data[0]
+        gp = row.get("gauge_position")
+        if gp is None:
+            gp = 50 if row["kospi_answer"] else -50
+        return {
+            "answered": True,
+            "kospi_answer": row["kospi_answer"],
+            "gauge_position": int(gp),
+            "tokens_bet": row.get("tokens_bet"),
+        }
+    return {"answered": False, "kospi_answer": None, "gauge_position": None, "tokens_bet": None}
 
 
 @app.get("/api/next-survey")
