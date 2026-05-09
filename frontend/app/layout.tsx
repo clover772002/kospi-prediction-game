@@ -21,6 +21,14 @@ export default function RootLayout({
 }) {
   return (
     <html lang="ko">
+      <head>
+        {/* React hydration 이전에 beforeinstallprompt 이벤트를 캡처 */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();window.__pwaInstallPrompt=e;});`,
+          }}
+        />
+      </head>
       <body className="bg-[#0D0D0D] text-white min-h-screen">
         <SWRegister />
         <InAppBrowserGate>{children}</InAppBrowserGate>
