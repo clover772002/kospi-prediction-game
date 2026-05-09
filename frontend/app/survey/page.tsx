@@ -277,6 +277,11 @@ function SurveyPageInner() {
 
   const status = today?.status ?? "no_survey";
 
+  // API status와 무관하게 클라이언트에서 주말 여부 직접 판단
+  const _kstNow = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Seoul" }));
+  const _kstDay = _kstNow.getDay();
+  const isWeekendKST = _kstDay === 0 || _kstDay === 6;
+
   return (
     <main className="max-w-md mx-auto min-h-screen pb-36 px-5">
       {/* 독촉 토스트 */}
@@ -286,22 +291,16 @@ function SurveyPageInner() {
         </div>
       )}
 
-      {/* 휴장일 배지 — no_survey + 주말/공휴일 */}
-      {status === "no_survey" && (() => {
-        const kst = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Seoul" }));
-        const day = kst.getDay();
-        const mins = kst.getHours() * 60 + kst.getMinutes();
-        const isWeekend = day === 0 || day === 6;
-        const isEvening = mins >= 22 * 60; // 22시 이후엔 설문 열림 대기
-        if (!isWeekend && !isEvening) return null;
-        const mm = String(kst.getMonth() + 1).padStart(2, "0");
-        const dd = String(kst.getDate()).padStart(2, "0");
+      {/* 휴장일 배지 — 주말이면 status 무관하게 표시 */}
+      {isWeekendKST && (() => {
+        const mm = String(_kstNow.getMonth() + 1).padStart(2, "0");
+        const dd = String(_kstNow.getDate()).padStart(2, "0");
         const dayNames = ["일","월","화","수","목","금","토"];
         return (
           <div className="pt-6 pb-1">
             <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gray-800 border border-gray-700 text-xs text-gray-400">
               <span>🏖️</span>
-              <span>{mm}/{dd}({dayNames[day]}) 오늘은 휴장일이에요</span>
+              <span>{mm}/{dd}({dayNames[_kstDay]}) 오늘은 휴장일이에요</span>
             </div>
           </div>
         );
@@ -424,7 +423,7 @@ function SurveyPageInner() {
       })()}
 
       {/* 설문 진행 중 — 이미 완료됨 (재투표 전) */}
-      {status === "open" && alreadyAnswered && !retrying && (
+      {status === "open" && !isWeekendKST && alreadyAnswered && !retrying && (
         <div className="flex flex-col gap-4 mt-6 fade-up">
           <div className="grid grid-cols-2 gap-3">
             {/* 내 예측 */}
@@ -452,7 +451,7 @@ function SurveyPageInner() {
       )}
 
       {/* 설문 진행 중 — 투표 폼 */}
-      {status === "open" && (!alreadyAnswered || retrying) && !submitted && (
+      {status === "open" && !isWeekendKST && (!alreadyAnswered || retrying) && !submitted && (
         <div className="space-y-6 mt-4 fade-up">
           <div className="bg-amber-500/10 border border-amber-500/30 rounded-2xl p-4 text-center">
             <p className="text-amber-400 font-bold text-sm">⏰ 설문 진행 중 · 장 시작 전 마감</p>
@@ -525,7 +524,7 @@ function SurveyPageInner() {
       )}
 
       {/* 제출 완료 — 내 예측 + 코스피 차트 */}
-      {status === "open" && submitted && (
+      {status === "open" && !isWeekendKST && submitted && (
         <div className="flex flex-col gap-4 mt-6 fade-up">
           <div className="grid grid-cols-2 gap-3">
             <div className="bg-[#1A1A1A] border border-green-500/30 rounded-2xl p-4">
