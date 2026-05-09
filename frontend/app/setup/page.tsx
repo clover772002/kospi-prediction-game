@@ -301,21 +301,64 @@ export default function SetupPage() {
             <span className="text-green-400 text-lg flex-shrink-0">✅</span>
           </div>
 
-          {/* PWA 설치 유도 — 브라우저가 설치 가능 상태일 때만 표시 */}
-          {canInstall && !isStandalone && (
-            <button
-              onClick={async () => {
-                const prompt = (window as Window & { __pwaInstallPrompt?: { prompt(): Promise<void> } }).__pwaInstallPrompt;
-                if (prompt) {
-                  await prompt.prompt();
-                  delete (window as Window & { __pwaInstallPrompt?: unknown }).__pwaInstallPrompt;
-                  setCanInstall(false);
-                }
-              }}
-              className="w-full py-3.5 bg-blue-600 hover:bg-blue-500 active:scale-95 text-white font-black rounded-2xl text-sm transition-all flex items-center justify-center gap-2"
-            >
-              📲 홈 화면에 앱 추가하기
-            </button>
+          {/* PWA 설치 유도 */}
+          {!isStandalone && (
+            canInstall ? (
+              /* Android/Chrome: beforeinstallprompt 지원 */
+              <button
+                onClick={async () => {
+                  const prompt = (window as Window & { __pwaInstallPrompt?: { prompt(): Promise<void> } }).__pwaInstallPrompt;
+                  if (prompt) {
+                    await prompt.prompt();
+                    delete (window as Window & { __pwaInstallPrompt?: unknown }).__pwaInstallPrompt;
+                    setCanInstall(false);
+                  }
+                }}
+                className="w-full py-3.5 bg-blue-600 hover:bg-blue-500 active:scale-95 text-white font-black rounded-2xl text-sm transition-all flex items-center justify-center gap-2"
+              >
+                📲 홈 화면에 앱 추가하기
+              </button>
+            ) : (
+              /* iOS Safari 또는 기타 — 항상 노출되는 간단 가이드 */
+              <div className="bg-[#1A1A1A] border border-orange-500/40 rounded-2xl overflow-hidden">
+                <div className="bg-orange-500/15 px-4 py-3 flex items-center gap-2 border-b border-orange-500/20">
+                  <span className="text-lg">📲</span>
+                  <div>
+                    <p className="font-black text-orange-300 text-sm">홈 화면에 앱 추가하기</p>
+                    <p className="text-[11px] text-orange-400/70">아이콘으로 바로 접속 가능해요</p>
+                  </div>
+                </div>
+                <div className="p-4 space-y-4 text-xs text-gray-400">
+                  {isIOS ? (
+                    <>
+                      <div className="flex items-start gap-3">
+                        <span className="bg-orange-500 text-white text-[10px] font-black px-1.5 py-0.5 rounded-full flex-shrink-0 mt-0.5">1</span>
+                        <p>Safari 하단 가운데 <span className="text-white font-bold">공유(↑) 버튼</span> 탭</p>
+                      </div>
+                      <div className="flex items-start gap-3">
+                        <span className="bg-orange-500 text-white text-[10px] font-black px-1.5 py-0.5 rounded-full flex-shrink-0 mt-0.5">2</span>
+                        <p>팝업을 스크롤해서 <span className="text-white font-bold">홈 화면에 추가</span> 선택</p>
+                      </div>
+                      <div className="flex items-start gap-3">
+                        <span className="bg-orange-500 text-white text-[10px] font-black px-1.5 py-0.5 rounded-full flex-shrink-0 mt-0.5">3</span>
+                        <p>우측 상단 <span className="text-white font-bold">추가</span> 탭 → 완료!</p>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="flex items-start gap-3">
+                        <span className="bg-orange-500 text-white text-[10px] font-black px-1.5 py-0.5 rounded-full flex-shrink-0 mt-0.5">1</span>
+                        <p>브라우저 주소창 오른쪽 <span className="text-white font-bold">⋮ 메뉴</span> 탭</p>
+                      </div>
+                      <div className="flex items-start gap-3">
+                        <span className="bg-orange-500 text-white text-[10px] font-black px-1.5 py-0.5 rounded-full flex-shrink-0 mt-0.5">2</span>
+                        <p><span className="text-white font-bold">홈 화면에 추가</span> 또는 <span className="text-white font-bold">앱 설치</span> 선택</p>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+            )
           )}
 
           {/* 알림 종류 체크박스 */}
