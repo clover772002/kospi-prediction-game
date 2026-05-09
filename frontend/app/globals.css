@@ -165,3 +165,43 @@ body {
   70%  { transform: scale(2.2); opacity: 0; }
   100% { transform: scale(2.2); opacity: 0; }
 }
+
+/* 설문 예시 카드용: 배당 줄기 깜박·쉬머 */
+@keyframes flow-pulse-soft {
+  0%, 100% { opacity: 0.93; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.04); }
+}
+.flow-pulse-soft {
+  animation: flow-pulse-soft 1.8s ease-in-out infinite;
+}
+.flow-pulse-soft-delay {
+  animation: flow-pulse-soft 1.8s ease-in-out infinite;
+  animation-delay: 0.55s;
+}
+
+@keyframes shimmer-demo-sweep {
+  0% { transform: translateX(-120%); }
+  100% { transform: translateX(120%); }
+}
+.shimmer-demo-mask {
+  overflow: hidden;
+  background: linear-gradient(
+    105deg,
+    transparent 0%,
+    rgba(52, 211, 153, 0.14) 45%,
+    rgba(52, 211, 153, 0.06) 50%,
+    transparent 100%
+  );
+  background-size: 45% 100%;
+  background-repeat: no-repeat;
+  animation: shimmer-demo-sweep 4.2s linear infinite;
+}
+
+@keyframes flow-op-blink {
+  0%, 35% { opacity: 0.4; transform: scale(1); color: #6b7280; }
+  50%, 80% { opacity: 1; transform: scale(1.25); color: #6ee7b7; }
+  100% { opacity: 0.4; transform: scale(1); color: #6b7280; }
+}
+.flow-op-x {
+  animation: flow-op-blink 4s ease-in-out infinite;
+}

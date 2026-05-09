@@ -7,6 +7,7 @@ import { getToday, resolveApiBase, TodaySurvey } from "@/lib/api";
 import FlipClock from "@/components/FlipClock";
 import KospiChart from "@/components/KospiChart";
 import GaugeBar from "@/components/GaugeBar";
+import SurveyConfidencePlayground from "@/components/SurveyConfidencePlayground";
 
 interface KospiPrice {
   price: number | null;
@@ -66,21 +67,20 @@ function SurveyGaugeWithPreview({
 }) {
   const isPreview = phase === "preview";
   return (
-    <div className="space-y-3">
+    <div className="space-y-3 w-full min-w-0 box-border">
       {isPreview ? (
         <>
-          <div className="bg-cyan-500/10 border border-cyan-500/30 rounded-xl px-3 py-2.5 text-center space-y-1">
-            <p className="text-cyan-300 text-xs font-black">미리보기 모드</p>
-            <p className="text-[11px] text-gray-400 leading-relaxed">
-              슬라이더를 좌우로 움직여 방향과 배팅 토큰을 확인하세요.<br />
-              <span className="text-gray-500">아직 예측이 제출·저장되지 않았습니다.</span>
-            </p>
-          </div>
+            <div className="bg-cyan-500/10 border border-cyan-500/30 rounded-xl px-3 py-2 text-center w-full min-w-0">
+              <p className="text-cyan-300 text-xs font-black">미리보기 · 얼마나 확신하나요?</p>
+              <p className="text-[10px] text-gray-600 mt-0.5">아래 줄은 연습판(루프) · 그 아래가 실제 참여 게이지</p>
+            </div>
+            <SurveyConfidencePlayground />
           <GaugeBar
             value={gaugeValue}
             onChange={onGaugeChange}
             tokens={userTokens}
             disabled={submitting}
+            beginnerTips={false}
           />
           <button
             type="button"
@@ -224,9 +224,16 @@ function SurveyPageInner() {
         if (data.answered) {
           setAlreadyAnswered(true);
           setPreviousAnswer(data.kospi_answer);
+          const gp =
+            typeof data.gauge_position === "number"
+              ? data.gauge_position
+              : data.kospi_answer
+                ? 50
+                : -50;
           // 수정 중(retrying)이면 유저가 고른 선택을 덮어쓰지 않음
           if (!retryingRef.current) {
             setKospiAnswer(data.kospi_answer);
+            setGaugePosition(gp);
           }
         } else {
           // 수정 중이 아닐 때만 상태 초기화
@@ -234,6 +241,7 @@ function SurveyPageInner() {
             setAlreadyAnswered(false);
             setPreviousAnswer(null);
             setKospiAnswer(null);
+            setGaugePosition(10);
           }
         }
       }
@@ -382,7 +390,7 @@ function SurveyPageInner() {
 
   const BottomNav = () => (
     <nav className="fixed bottom-0 left-0 right-0 bg-[#111] border-t border-[#222] z-50">
-      <div className="max-w-md mx-auto flex">
+      <div className="w-full flex">
       <button onClick={() => router.push("/survey")} className="flex-1 flex flex-col items-center py-3 gap-1 text-white">
         <span className="text-xl">📝</span>
         <span className="text-xs font-bold">설문</span>
@@ -405,7 +413,7 @@ function SurveyPageInner() {
 
   if (loading) {
     return (
-      <main className="max-w-md mx-auto min-h-screen flex items-center justify-center">
+      <main className="w-full min-h-screen flex items-center justify-center">
         <div className="w-8 h-8 border-2 border-white/20 border-t-white rounded-full animate-spin" />
       </main>
     );
@@ -419,7 +427,7 @@ function SurveyPageInner() {
   const isWeekendKST = _kstDay === 0 || _kstDay === 6;
 
   return (
-    <main className="max-w-md mx-auto min-h-screen pb-36 px-5">
+    <main className="w-full min-h-screen pb-36 min-w-0 box-border">
       {/* 독촉 토스트 */}
       {nudgeToast && (
         <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[100] px-4 py-3 bg-orange-500 text-white text-sm font-bold rounded-2xl shadow-xl animate-bounce-in max-w-xs text-center">
@@ -504,22 +512,21 @@ function SurveyPageInner() {
                 <p className="text-xs text-gray-500">예측 참여 여부 확인 중…</p>
               </div>
             ) : nextSubmitted || nextAlreadyAnswered ? (
-              <div className="flex flex-col items-center gap-3 text-center w-full">
-                <div className="text-4xl">✅</div>
-                <p className="text-white font-bold">{getSurveyDayLabel(nextSurvey.survey_date).shortLabel} 예측 완료!</p>
-                <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-2xl p-4 w-full">
-                  <p className="text-xs text-gray-400 mb-1">내 예측</p>
-                  <p className={`font-bold ${(nextSubmitted ? nextKospiAnswer : nextPreviousAnswer) ? "text-green-400" : "text-blue-400"}`}>
-                    {(nextSubmitted ? nextKospiAnswer : nextPreviousAnswer) ? "📈 상승" : "📉 하락"}
-                  </p>
+              <div className="flex flex-col gap-3 w-full items-stretch">
+                <div className="flex flex-col items-center text-center gap-1">
+                  <div className="text-4xl">✅</div>
+                  <p className="text-white font-bold">{getSurveyDayLabel(nextSurvey.survey_date).shortLabel} 예측 완료!</p>
                 </div>
-                <p className="text-[11px] text-gray-500 w-full text-left mt-2">저장된 확신도 · 아래 게이지는 읽기 전용입니다</p>
-                <GaugeBar
-                  value={nextGaugePosition}
-                  onChange={() => {}}
-                  tokens={userTokens}
-                  disabled
-                />
+                <div className="w-full min-w-0 space-y-1">
+                  <p className="text-[11px] text-gray-500">저장된 설정 · 읽기 전용입니다</p>
+                  <GaugeBar
+                    value={nextGaugePosition}
+                    onChange={() => {}}
+                    tokens={userTokens}
+                    disabled
+                    beginnerTips={false}
+                  />
+                </div>
                 <button
                   type="button"
                   onClick={() => {
@@ -600,21 +607,24 @@ function SurveyPageInner() {
       {/* 설문 진행 중 — 이미 완료됨 (재투표 전) */}
       {status === "open" && !isWeekendKST && alreadyAnswered && !retrying && (
         <div className="flex flex-col gap-4 mt-6 fade-up">
-          <div className="grid grid-cols-2 gap-3">
-            {/* 내 예측 */}
-            <div className="bg-[#1A1A1A] border border-green-500/30 rounded-2xl p-4">
-              <p className="text-xs text-gray-400 mb-1">내 예측</p>
-              <p className={`font-black text-lg ${previousAnswer ? "text-green-400" : "text-red-400"}`}>
-                {previousAnswer ? "📈 상승" : "📉 하락"}
-              </p>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 w-full min-w-0">
+            <div className="bg-[#1A1A1A] border border-green-500/30 rounded-2xl p-4 min-w-0 flex flex-col gap-2 w-full">
+              <p className="text-[11px] text-gray-500">읽기 전용입니다</p>
+              <GaugeBar
+                value={gaugePosition}
+                onChange={() => {}}
+                tokens={userTokens}
+                disabled
+                beginnerTips={false}
+              />
               <button
+                type="button"
                 onClick={() => { retryingRef.current = true; setRetrying(true); setSubmitted(false); setTodayGaugePhase("preview"); }}
-                className="mt-2 text-[10px] text-gray-500 border border-[#333] px-2 py-1 rounded-lg hover:border-white/30 transition-all"
+                className="text-[11px] text-gray-500 border border-[#333] px-2 py-1.5 rounded-lg hover:border-white/30 transition-all self-start"
               >
                 변경하기
               </button>
             </div>
-            {/* 오늘 장 */}
             <KospiNowCard price={kospiPrice} status="open" />
           </div>
 
@@ -651,15 +661,20 @@ function SurveyPageInner() {
           )}
 
           {/* 코스피 단일 질문 + GaugeBar */}
-          <div>
-            <p className="font-bold text-white text-base mb-3">
+          <div className="w-full min-w-0">
+            <p className="font-bold text-white text-base mb-1">
               {(() => {
                 const kst = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Seoul" }));
                 const todayStr = `${kst.getFullYear()}-${String(kst.getMonth()+1).padStart(2,"0")}-${String(kst.getDate()).padStart(2,"0")}`;
                 const sd = today?.survey_date ?? todayStr;
                 const { shortLabel } = getSurveyDayLabel(sd);
-                return `📈 코스피 ${shortLabel} 얼마나 확신하나요?`;
+                return `📈 코스피 ${shortLabel}, 오를까요 내릴까요?`;
               })()}
+            </p>
+            <p className="text-sm font-bold text-gray-300 mb-1">얼마나 확신하나요?</p>
+            <p className="text-[11px] text-gray-500 mb-3 leading-relaxed">
+              카드 속 <strong className="text-gray-400">움직이는 연습</strong>을 보더니 · 맨 아래 막대로 실제 참여합니다.
+              숫자(±%)는 <strong className="text-gray-400">등락률</strong>이 아니라 <strong className="text-gray-400">그 방향에 대한 확신</strong>이에요.
             </p>
             <SurveyGaugeWithPreview
               phase={todayGaugePhase}
@@ -683,17 +698,20 @@ function SurveyPageInner() {
         </div>
       )}
 
-
-      {/* 제출 완료 — 내 예측 + 코스피 차트 */}
+      {/* 제출 완료 — 읽기 전용 게이지 + 코스피 차트 */}
       {status === "open" && !isWeekendKST && submitted && (
         <div className="flex flex-col gap-4 mt-6 fade-up">
-          <div className="grid grid-cols-2 gap-3">
-            <div className="bg-[#1A1A1A] border border-green-500/30 rounded-2xl p-4">
-              <p className="text-xs text-gray-400 mb-1">내 예측</p>
-              <p className={`font-black text-lg ${kospiAnswer ? "text-green-400" : "text-red-400"}`}>
-                {kospiAnswer ? "📈 상승" : "📉 하락"}
-              </p>
-              <p className="text-[10px] text-gray-600 mt-1.5">15:35 결과 공개</p>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 w-full min-w-0">
+            <div className="bg-[#1A1A1A] border border-green-500/30 rounded-2xl p-4 min-w-0 flex flex-col gap-2 w-full">
+              <p className="text-[11px] text-gray-500">읽기 전용입니다</p>
+              <GaugeBar
+                value={gaugePosition}
+                onChange={() => {}}
+                tokens={userTokens}
+                disabled
+                beginnerTips={false}
+              />
+              <p className="text-[10px] text-gray-600">15:35 결과 공개</p>
             </div>
             <KospiNowCard price={kospiPrice} status="open" />
           </div>
@@ -705,24 +723,28 @@ function SurveyPageInner() {
         </div>
       )}
 
-      {/* 설문 마감 후 — 내 예측 + 코스피 차트 */}
+      {/* 설문 마감 후 — 읽기 전용 게이지 + 코스피 차트 */}
       {(status === "closed" || status === "result") && !isWeekendKST && (
         <div className="flex flex-col gap-4 mt-6 fade-up">
-          {/* 내 예측 + 오늘 장 나란히 */}
+          {/* 예측 게이지 + 오늘 장 */}
           {(previousAnswer !== null || alreadyAnswered) && (
-            <div className="grid grid-cols-2 gap-3">
-              <div className={`border rounded-2xl p-4 ${
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 w-full min-w-0">
+              <div className={`border rounded-2xl p-4 min-w-0 flex flex-col gap-2 w-full ${
                 status === "result" && today?.kospi_result != null
                   ? (previousAnswer ?? kospiAnswer) === today.kospi_result
                     ? "bg-green-500/10 border-green-500/30"
                     : "bg-red-500/10 border-red-500/20"
                   : "bg-[#1A1A1A] border-[#2A2A2A]"
               }`}>
-                <p className="text-xs text-gray-400 mb-1">내 예측</p>
-                <p className={`font-black text-lg ${(previousAnswer ?? kospiAnswer) ? "text-green-400" : "text-red-400"}`}>
-                  {(previousAnswer ?? kospiAnswer) ? "📈 상승" : "📉 하락"}
-                </p>
-                <div className="mt-1.5">
+                <p className="text-[11px] text-gray-500">읽기 전용입니다</p>
+                <GaugeBar
+                  value={gaugePosition}
+                  onChange={() => {}}
+                  tokens={userTokens}
+                  disabled
+                  beginnerTips={false}
+                />
+                <div className="mt-0.5">
                   {status === "result" && today?.kospi_result != null ? (
                     <span className="text-xl">
                       {(previousAnswer ?? kospiAnswer) === today.kospi_result ? "✅ 적중" : "❌ 빗나감"}
@@ -769,22 +791,21 @@ function SurveyPageInner() {
                     <p className="text-xs text-gray-500">예측 참여 여부 확인 중…</p>
                   </div>
                 ) : nextSubmitted || nextAlreadyAnswered ? (
-                  <div className="flex flex-col items-center gap-3 text-center w-full">
-                    <div className="text-4xl">✅</div>
-                    <p className="text-white font-bold">{getSurveyDayLabel(nextSurvey.survey_date).shortLabel} 예측 완료!</p>
-                    <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-2xl p-4 w-full">
-                      <p className="text-xs text-gray-400 mb-1">내 예측</p>
-                      <p className={`font-bold ${(nextSubmitted ? nextKospiAnswer : nextPreviousAnswer) ? "text-green-400" : "text-blue-400"}`}>
-                        {(nextSubmitted ? nextKospiAnswer : nextPreviousAnswer) ? "📈 상승" : "📉 하락"}
-                      </p>
+                  <div className="flex flex-col gap-3 w-full items-stretch">
+                    <div className="flex flex-col items-center text-center gap-1">
+                      <div className="text-4xl">✅</div>
+                      <p className="text-white font-bold">{getSurveyDayLabel(nextSurvey.survey_date).shortLabel} 예측 완료!</p>
                     </div>
-                    <p className="text-[11px] text-gray-500 w-full text-left mt-2">저장된 확신도 · 아래 게이지는 읽기 전용입니다</p>
-                    <GaugeBar
-                      value={nextGaugePosition}
-                      onChange={() => {}}
-                      tokens={userTokens}
-                      disabled
-                    />
+                    <div className="w-full min-w-0 space-y-1">
+                      <p className="text-[11px] text-gray-500">저장된 설정 · 읽기 전용입니다</p>
+                      <GaugeBar
+                        value={nextGaugePosition}
+                        onChange={() => {}}
+                        tokens={userTokens}
+                        disabled
+                        beginnerTips={false}
+                      />
+                    </div>
                     <button
                       type="button"
                       onClick={() => {

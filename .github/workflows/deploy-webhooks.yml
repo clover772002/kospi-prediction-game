@@ -1,0 +1,50 @@
+# main/master 푸시 시 선택적으로 프로덕션 재배포를 트리거합니다.
+#
+# ── 권장(별도 설정 없음) ──
+#   Vercel: 프로젝트 → Settings → Git → 저장소 연결, Root Directory = frontend
+#   Railway: 프로젝트 → 연결 저장소 → Root = backend 경로 선택
+#    → 푸시 시 자동 배포. 이 경우 아래 Secrets(Deploy Hook)는 비워 두세요. (이중 배포 방지)
+#
+# ── 이 파일을 쓸 때 ──
+#   Git 통합 대신(or 중복 피하기 위해) HTTPS Deploy Hook 만 쓰려면 저장소 Secrets 에:
+#     VERCEL_DEPLOY_HOOK_URL  — Vercel 프로젝트 → Settings → Deploy Hooks
+#     RAILWAY_DEPLOY_HOOK_URL — Railway 서비스 → Settings → Deploy Triggers
+#   비워 두면 해당 job 은 안내 후 스킵합니다.
+
+name: 배포 후크 트리거
+
+on:
+  push:
+    branches: [main, master]
+
+permissions:
+  contents: read
+
+jobs:
+  railway:
+    name: Railway (선택)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy hook 호출
+        env:
+          HOOK_URL: ${{ secrets.RAILWAY_DEPLOY_HOOK_URL }}
+        run: |
+          if [ -z "$HOOK_URL" ]; then
+            echo "RAILWAY_DEPLOY_HOOK_URL 없음 → Railway Git 연동 또는 시크릿 설정 시 자동 배포됩니다."
+            exit 0
+          fi
+          curl -fsS -m 120 -X POST "$HOOK_URL"
+
+  vercel:
+    name: Vercel (선택)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy hook 호출
+        env:
+          HOOK_URL: ${{ secrets.VERCEL_DEPLOY_HOOK_URL }}
+        run: |
+          if [ -z "$HOOK_URL" ]; then
+            echo "VERCEL_DEPLOY_HOOK_URL 없음 → Vercel Git 연동 또는 시크릿 설정 시 자동 배포됩니다."
+            exit 0
+          fi
+          curl -fsS -m 120 -X POST "$HOOK_URL"

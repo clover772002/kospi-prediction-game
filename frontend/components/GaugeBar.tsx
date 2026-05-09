@@ -1,12 +1,14 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useId, useRef, useState } from "react";
 
 interface GaugeBarProps {
   value: number;           // -100 ~ +100 (0 제외)
   onChange: (v: number) => void;
   tokens: number;          // 현재 보유 토큰
   disabled?: boolean;
+  /** false면 안내 숨김 · 생략 시 조작/읽기 전용 각각 맞는 짧은 안내 표시 */
+  beginnerTips?: boolean;
 }
 
 function calcBet(gauge: number, tokens: number) {
@@ -23,7 +25,16 @@ function valueFromTrackFraction(f: number): number {
   return v;
 }
 
-export default function GaugeBar({ value, onChange, tokens, disabled = false }: GaugeBarProps) {
+export default function GaugeBar({
+  value,
+  onChange,
+  tokens,
+  disabled = false,
+  beginnerTips,
+}: GaugeBarProps) {
+  const tipsEnabled = beginnerTips !== false;
+  const tipsInteractive = tipsEnabled && !disabled;
+  const tipsReadonly = tipsEnabled && disabled;
   const trackRef = useRef<HTMLDivElement>(null);
   const draggingRef = useRef(false);
   const [dragging, setDragging] = useState(false);
@@ -102,8 +113,54 @@ export default function GaugeBar({ value, onChange, tokens, disabled = false }: 
   const borderCls = isUp ? "border-red-500/40" : "border-blue-500/40";
   const bgGlow    = isUp ? "bg-red-500/5" : "bg-blue-500/5";
 
+  const helpIdRaw = useId();
+  const helpId = helpIdRaw.includes(":") ? helpIdRaw.replace(/:/g, "") : helpIdRaw;
+
   return (
-    <div className={`rounded-2xl border ${borderCls} ${bgGlow} p-5 space-y-4`}>
+    <div className={`w-full max-w-full min-w-0 rounded-2xl border ${borderCls} ${bgGlow} px-4 py-5 sm:px-5 space-y-4 box-border`}>
+      {tipsReadonly && (
+        <p className="text-[11px] text-gray-500 leading-snug border-b border-[#2A2A2A] pb-3">
+          아래 표시는 <span className="text-gray-400">등락률 예측</span>이 아니라 제출했던 예측의{" "}
+          <span className="text-gray-400">방향·확신</span>(배팅 기준)입니다.
+        </p>
+      )}
+      {tipsInteractive && (
+        <div className="space-y-2 pb-2 border-b border-[#2A2A2A] w-full min-w-0">
+          <p id={helpId} className="text-[11px] text-gray-400 leading-snug">
+            <strong className="text-gray-300 font-bold">얼마나 확신하나요?</strong> 내일 장이{" "}
+            <strong className="text-red-400 font-bold">오를지</strong>·{" "}
+            <strong className="text-blue-400 font-bold">내릴지</strong> 정하고, 그 예측을{" "}
+            <strong className="text-gray-300">얼마나 믿는지</strong>를 막대로 표현해요.
+            막대를 <strong className="text-blue-400">왼쪽</strong>(하락 예상)·
+            <strong className="text-red-400">오른쪽</strong>(상승 예상)으로 움직이면 방향과 확신 정도가 바뀌어요.
+          </p>
+          <details className="group rounded-xl bg-[#111]/90 border border-[#2a2a2a] px-3 py-2">
+            <summary className="text-[11px] text-cyan-400 font-bold cursor-pointer list-none [&::-webkit-details-marker]:hidden flex items-center gap-1">
+              <span>±% 숫자·토큰이 헷갈리면 펼치기</span>
+              <span className="text-gray-600 group-open:rotate-180 transition-transform">▼</span>
+            </summary>
+            <div className="mt-2 text-[11px] text-gray-500 leading-relaxed space-y-1.5 pb-1 w-full min-w-0">
+              <p>
+                <strong className="text-gray-400">얼마나 확신하나요?</strong>에 답하는 값이 ±%로 보일 뿐이에요.{" "}
+                <strong className="text-gray-400">±% 숫자</strong>는 코스피가 내일 몇 % 오를지/내릴지를 적는 게{" "}
+                <strong className="text-gray-400">아닙니다.</strong>
+                같은 말로, 맞았을 때 수익이 몇 %인지와도 무관해요.
+              </p>
+              <p>
+                대신 「그 방향으로 장이 마감될 거라고 <strong className="text-gray-400">얼마나 확신하는지</strong>」를 나타내요.
+                말하자면 같은 <strong className="text-gray-400">자신감</strong> 크기를 숫자로 옮긴 거라고 보면 돼요.
+              </p>
+              <p>
+                가운데(0)에 가까울수록 망설이는 쪽, 양쪽 끝에 가까울수록 그 방향에 <strong className="text-gray-400">강하게 확신</strong>하는 쪽이에요.
+              </p>
+              <p>
+                <strong className="text-gray-400">배팅 토큰</strong>은 그 확신 크기와 보유 토큰에 따라 거는 금액이에요. 적중하면 배당 규칙에 따라 받고, 빗나가면 거는 만큼 잃게 됩니다.
+              </p>
+            </div>
+          </details>
+        </div>
+      )}
+
       {/* 방향 + 게이지 수치 */}
       <div className="flex items-center justify-between">
         <span className={`text-xl font-black ${dirColor}`}>{dirLabel}</span>
@@ -124,7 +181,8 @@ export default function GaugeBar({ value, onChange, tokens, disabled = false }: 
           aria-valuemax={100}
           aria-valuenow={value}
           aria-disabled={disabled}
-          aria-label="확신도 게이지, 드래그하여 조정"
+          aria-label="내일 장 상승·하락 방향과 확신 정도 선택, 좌측 하락 우측 상승"
+          aria-describedby={tipsInteractive ? helpId : undefined}
           className={`relative h-8 w-full rounded-full bg-[#1A1A1A] overflow-hidden border border-[#2A2A2A] ${disabled ? "opacity-50 pointer-events-none" : ""}`}
           onPointerDown={onPointerDown}
           onPointerMove={onPointerMove}
@@ -245,7 +303,7 @@ export default function GaugeBar({ value, onChange, tokens, disabled = false }: 
         <div className="h-px bg-[#222]" />
         <div className="flex justify-between text-xs">
           <span className="text-gray-500">적중 시</span>
-          <span className="text-green-400 font-bold">배당 × 집단반응</span>
+          <span className="text-green-400 font-bold">거는 만큼 × 집단배율 × 스트릭 등</span>
         </div>
         <div className="flex justify-between text-xs">
           <span className="text-gray-500">실패 시</span>
