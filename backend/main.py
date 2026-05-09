@@ -1339,6 +1339,7 @@ async def nudge_group(
     """오늘 설문 미참여 그룹 멤버에게 독촉 알림 발송"""
     from telegram_bot import send_message as tg_send
     from webpush_helper import send_web_push_to_user
+    from urllib.parse import quote
 
     user_id = str(current_user.id)
 
@@ -1397,7 +1398,6 @@ async def nudge_group(
         push_body  = f"[{group_name}] 아직 오늘 코스피 예측 안 하셨네요 👀 얼른 참여해서 순위 지켜내세요! 🏆"
 
         # 링크에 발신자·그룹 정보 포함 — 설문 페이지에서 토스트로 표시
-        from urllib.parse import quote
         nudge_url = f"/survey?nudge_from={quote(sender_masked)}&nudge_group={quote(group_name)}"
 
         sent_any = False
