@@ -154,11 +154,17 @@ function ShopInner() {
             {(catalog?.insight_products ?? []).map((p) => (
               <li
                 key={p.slug}
-                className="rounded-2xl border border-violet-500/25 bg-violet-950/20 px-4 py-3 text-sm"
+                className="rounded-2xl border border-violet-500/25 bg-violet-950/20 px-4 py-3 text-sm space-y-2"
               >
                 <p className="font-bold text-white">{p.title}</p>
                 {p.description ? <p className="text-[11px] text-gray-500 mt-1 leading-relaxed">{p.description}</p> : null}
-                <p className="text-xs text-amber-300 font-black mt-2 tabular-nums">{p.price_tokens} 토큰</p>
+                <p className="text-xs text-amber-300 font-black tabular-nums">{p.price_tokens} 토큰</p>
+                <Link
+                  href="/dashboard"
+                  className="inline-flex text-[11px] font-bold text-violet-300 hover:text-white underline underline-offset-2"
+                >
+                  대시보드에서 열 거래일 고르고 잠금 해제 →
+                </Link>
               </li>
             ))}
           </ul>

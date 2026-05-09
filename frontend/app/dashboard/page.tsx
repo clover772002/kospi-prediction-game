@@ -1,14 +1,14 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { Suspense, useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import Link from "next/link";
 import { getMe, getToday, getDashboard, createChallenge, getMyChallenges, reactToChallenge, requestRematch, acceptChallenge, declineChallenge, getMyGroups, getGroupLeaderboard, UserProfile, TodaySurvey, DashboardData, Challenge, Group, GroupLeaderboard } from "@/lib/api";
 import ShareSheet from "@/components/ShareSheet";
 import AppAmbientBackground from "@/components/AppAmbientBackground";
 import AppTabNav from "@/components/AppTabNav";
-import ExpertGapInsightCard from "@/components/ExpertGapInsightCard";
-import GaugeCrowdInsightCard from "@/components/GaugeCrowdInsightCard";
+import DashboardInsightSection, { DashboardInsightSectionSkeleton } from "@/components/DashboardInsightSection";
 
 // 연속 적중 스트릭 계산
 function calcStreak(history: DashboardData["history"]): number {
@@ -29,7 +29,7 @@ function HistoryRow({ item }: { item: DashboardData["history"][0] }) {
   const tokensBet = item.tokens_bet;
 
   return (
-    <div className={`flex items-center gap-2 rounded-xl px-3 py-3 border ${
+    <div className={`flex flex-wrap items-center gap-x-2 gap-y-1 rounded-xl px-3 py-3 border ${
       hasResult
         ? item.kospi_correct
           ? "bg-green-500/5 border-green-500/20"
@@ -38,7 +38,7 @@ function HistoryRow({ item }: { item: DashboardData["history"][0] }) {
     }`}>
       <p className="text-xs text-gray-500 w-16 flex-shrink-0">{item.date.slice(5)}</p>
 
-      <div className="flex-1 flex items-center gap-2 text-xs">
+      <div className="flex-1 min-w-[120px] flex items-center gap-2 text-xs">
         <span className={isUpBet ? "text-red-400 font-bold" : "text-blue-400 font-bold"}>
           {isUpBet ? "📈" : "📉"}
           {gauge !== null && gauge !== undefined ? ` ${gauge > 0 ? "+" : ""}${gauge}%` : ""}
@@ -48,7 +48,7 @@ function HistoryRow({ item }: { item: DashboardData["history"][0] }) {
         )}
       </div>
 
-      <div className="flex-shrink-0 text-xs text-right">
+      <div className="flex-shrink-0 text-xs text-right flex items-center gap-2 ml-auto">
         {hasResult ? (
           <div className="flex items-center gap-1.5">
             <span>{item.kospi_correct ? "✅" : "❌"}</span>
@@ -61,6 +61,13 @@ function HistoryRow({ item }: { item: DashboardData["history"][0] }) {
         ) : (
           <span className="text-gray-600">대기중</span>
         )}
+        <Link
+          href={`/dashboard?insightsDate=${encodeURIComponent(item.date)}`}
+          prefetch={false}
+          className="text-[10px] font-bold text-violet-300 hover:text-violet-200 whitespace-nowrap underline underline-offset-2"
+        >
+          토큰 인사이트
+        </Link>
       </div>
     </div>
   );
@@ -755,19 +762,15 @@ export default function DashboardPage() {
           })()}
         </div>
 
-        {today && token && (status === "open" || status === "closed" || status === "result") && !isWeekendKST && (
-          <div className="space-y-3">
-            <ExpertGapInsightCard
+        {token && (
+          <Suspense fallback={<DashboardInsightSectionSkeleton />}>
+            <DashboardInsightSection
               accessToken={token}
-              surveyDate={today.survey_date}
+              today={today}
+              dash={dash}
               onBalanceUpdated={() => void refreshDashboard()}
             />
-            <GaugeCrowdInsightCard
-              accessToken={token}
-              surveyDate={today.survey_date}
-              onBalanceUpdated={() => void refreshDashboard()}
-            />
-          </div>
+          </Suspense>
         )}
 
         {/* ── 내 통계 + 예측 이력 ──────────────────────────── */}

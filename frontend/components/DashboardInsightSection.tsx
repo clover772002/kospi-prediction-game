@@ -1,0 +1,157 @@
+"use client";
+
+import { useMemo, useEffect, useState, useCallback } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
+import ExpertGapInsightCard from "@/components/ExpertGapInsightCard";
+import GaugeCrowdInsightCard from "@/components/GaugeCrowdInsightCard";
+import type { DashboardData, TodaySurvey } from "@/lib/api";
+
+const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+
+function uniqueSortedDesc(dates: string[]): string[] {
+  return [...new Set(dates)].sort((a, b) => b.localeCompare(a));
+}
+
+function labelForSurveyDate(iso: string): string {
+  try {
+    const [y, m, day] = iso.split("-").map(Number);
+    const dt = new Date(y, m - 1, day);
+    return dt.toLocaleDateString("ko-KR", { month: "numeric", day: "numeric", weekday: "short" });
+  } catch {
+    return iso.slice(5);
+  }
+}
+
+export default function DashboardInsightSection({
+  accessToken,
+  today,
+  dash,
+  onBalanceUpdated,
+}: {
+  accessToken: string;
+  today: TodaySurvey | null;
+  dash: DashboardData | null;
+  onBalanceUpdated?: () => void;
+}) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  const [recentResultDates, setRecentResultDates] = useState<string[]>([]);
+
+  useEffect(() => {
+    let alive = true;
+    void fetch("/api/public/history", { cache: "no-store" })
+      .then((r) => r.json())
+      .then((j: { history?: Array<{ date?: string }> }) => {
+        const dates = (j.history ?? [])
+          .map((row) => row.date)
+          .filter((d): d is string => typeof d === "string" && DATE_RE.test(d));
+        if (alive) setRecentResultDates(dates);
+      })
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  const isWeekendKST = useMemo(() => {
+    const kst = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Seoul" }));
+    const day = kst.getDay();
+    return day === 0 || day === 6;
+  }, []);
+
+  const canIncludeTodaySurvey = !!(
+    today &&
+    !isWeekendKST &&
+    (today.status === "open" || today.status === "closed" || today.status === "result") &&
+    today.survey_date
+  );
+
+  const insightDateOptions = useMemo(() => {
+    const fromHistory = (dash?.history ?? []).map((h) => h.date).filter(Boolean);
+    const extras: string[] = [];
+    if (canIncludeTodaySurvey && today?.survey_date) extras.push(today.survey_date);
+    return uniqueSortedDesc([...recentResultDates, ...fromHistory, ...extras]);
+  }, [dash?.history, recentResultDates, canIncludeTodaySurvey, today?.survey_date]);
+
+  const [selected, setSelected] = useState<string | null>(null);
+
+  useEffect(() => {
+    const q = searchParams.get("insightsDate");
+    if (q && DATE_RE.test(q) && insightDateOptions.includes(q)) {
+      setSelected(q);
+      return;
+    }
+    if (!insightDateOptions.length) {
+      setSelected(null);
+      return;
+    }
+    setSelected((prev) => {
+      if (prev && insightDateOptions.includes(prev)) return prev;
+      return insightDateOptions[0];
+    });
+  }, [searchParams, insightDateOptions]);
+
+  const onSelectDate = useCallback(
+    (d: string) => {
+      setSelected(d);
+      router.replace(`/dashboard?insightsDate=${encodeURIComponent(d)}`, { scroll: false });
+    },
+    [router],
+  );
+
+  if (!insightDateOptions.length || !selected) return null;
+
+  return (
+    <div className="space-y-3">
+      {insightDateOptions.length >= 2 && (
+        <div className="rounded-xl border border-white/[0.08] bg-[#161616]/90 px-3 py-2.5 flex flex-col gap-1.5">
+          <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wide">토큰 인사이트 · 날짜</p>
+          <label className="text-[11px] text-gray-400 flex flex-col gap-1">
+            <span className="text-gray-500">최근 결과 확정 거래일·내 참여일·이번 설문일을 고를 수 있어요.</span>
+            <select
+              value={selected}
+              onChange={(e) => onSelectDate(e.target.value)}
+              className="mt-1 w-full rounded-lg border border-[#333] bg-[#111] text-white text-sm px-3 py-2 outline-none focus:border-violet-500/50"
+            >
+              {insightDateOptions.map((d) => (
+                <option key={d} value={d}>
+                  {labelForSurveyDate(d)} ({d.slice(5).replace("-", "/")}){today?.survey_date === d ? " · 이번 설문" : ""}
+                </option>
+              ))}
+            </select>
+          </label>
+          <p className="text-[10px] text-gray-600 leading-relaxed">
+            고수·다수결 괴리는 해당 날짜 집계가 있으면 열 수 있습니다. 내 확신도 vs 무리는 그날 본인이 설문한 경우에만 토큰 열람이 적용됩니다.
+          </p>
+        </div>
+      )}
+
+      <ExpertGapInsightCard
+        accessToken={accessToken}
+        surveyDate={selected}
+        onBalanceUpdated={onBalanceUpdated}
+      />
+      <GaugeCrowdInsightCard
+        accessToken={accessToken}
+        surveyDate={selected}
+        onBalanceUpdated={onBalanceUpdated}
+      />
+    </div>
+  );
+}
+
+export function DashboardInsightSectionSkeleton() {
+  return (
+    <div className="space-y-3">
+      <div className="rounded-2xl border border-violet-500/25 bg-violet-500/[0.06] px-4 py-4 animate-pulse">
+        <div className="h-4 w-48 rounded bg-[#333] mb-2" />
+        <div className="h-24 rounded bg-[#222]" />
+      </div>
+      <div className="rounded-2xl border border-teal-500/25 bg-teal-500/[0.06] px-4 py-4 animate-pulse">
+        <div className="h-4 w-40 rounded bg-[#333] mb-2" />
+        <div className="h-24 rounded bg-[#222]" />
+      </div>
+    </div>
+  );
+}
