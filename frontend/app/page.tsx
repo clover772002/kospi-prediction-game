@@ -6,6 +6,7 @@ import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import SurveyConfidencePlayground from "@/components/SurveyConfidencePlayground";
 import DuelConceptPlayground from "@/components/DuelConceptPlayground";
+import ExpertPickRevealPlayground from "@/components/ExpertPickRevealPlayground";
 
 const FEATURES = [
   {
@@ -46,11 +47,12 @@ const FEATURES = [
     },
   },
   {
-    icon: "🔓",
-    title: "응답하면 고수 예측이 열려요",
-    desc: "09:00 마감 후, 적중률 고수들의 집단 예측을 바로 확인",
+    icon: "🎫",
+    title: "토큰으로 고수 선택픽 열람",
+    desc: "모은 토큰으로 강화 예측·고수 진영 방향을 해제해 비교합니다",
     detail: {
-      summary: "설문에 응답한 사람만 볼 수 있어요. 단순 다수결 외에 누적 적중률이 높은 고수들의 가중예측을 함께 공개합니다. 둘이 다를 때가 진짜 중요한 순간이에요.",
+      summary:
+        "설문과 적중으로 쌓은 토큰을 쓰면 오늘의 고수 선택 방향·강화 집계 일부가 펼쳐져요. 단순 다수결과 다른 지점을 보는 데 쓰이고, 실제 차감량·표시 시간은 서비스 정책에 따라 달라질 수 있어요.",
       steps: null,
       mockup: (() => {
         const Bar = ({ yes, no }: { yes: number; no: number }) => (
@@ -251,26 +253,50 @@ export default function LoginPage() {
       <div className="text-center mb-10">
         <div className="text-6xl mb-4">📊</div>
         <h1 className="text-2xl font-black text-white mb-1">오늘 코스피, 함께 맞춰요</h1>
-        <p className="text-yellow-400 text-xs font-bold mb-3 tracking-wide">
-          매일 설문 한 번 · 토큰·순위 속에서 친구와 ⚔ 대결
-        </p>
+        <p className="text-amber-200/90 text-xs font-bold mb-3 tracking-wide">코스피 예측으로 토큰 · 대결하면 더 받기</p>
         <p className="text-gray-400 text-sm leading-relaxed">
-          코스피 방향을 예측하고 · 토큰·연승·전국 순위 속에서 친구들과 ⚔ 대결까지.
+          방향을 맞히면 재화가 쌓이고, 같은 적중이라도 대결 레이어를 타면 더 커지는 구조예요. 모은 토큰으로 고수 선택픽도 열 수 있어요.
         </p>
       </div>
 
-      {/* 설문 확신 — 연습 애니메이션 */}
-      <div className="w-full mb-8 min-w-0">
-        <p className="text-xs text-gray-500 font-bold tracking-wider mb-2">설문 참여 방법 · 확신 게이지</p>
-        <p className="text-[11px] text-gray-600 mb-3">실제 설문 화면과 같은 방식이에요 · 아래는 반복 재생 예시입니다</p>
-        <SurveyConfidencePlayground />
+      {/* ── 큰 틀: 예측·토큰 → 고수픽 → 대결 ───────────────── */}
+      <div className="w-full mb-2 min-w-0">
+        <div className="h-px w-full bg-gradient-to-r from-transparent via-amber-500/30 to-transparent mb-6" aria-hidden />
+        <p className="text-[10px] text-gray-600 font-black tracking-[0.18em] mb-3 uppercase">어떻게 즐기나요</p>
+        <div className="flex flex-wrap justify-center gap-2 mb-4 text-[10px] text-gray-400">
+          <span className="rounded-full border border-amber-500/25 bg-amber-500/[0.07] px-2.5 py-1 font-bold text-amber-100/95">① 예측·토큰</span>
+          <span className="rounded-full border border-yellow-500/20 bg-yellow-500/[0.06] px-2.5 py-1 font-bold text-yellow-100/85">② 고수픽</span>
+          <span className="rounded-full border border-violet-500/25 bg-violet-500/[0.08] px-2.5 py-1 font-bold text-violet-200/90">③ 대결 보너스</span>
+        </div>
       </div>
 
-      {/* 대결 컨셉 — 애니메이션 예시 */}
-      <div className="w-full mb-8 min-w-0">
-        <p className="text-xs text-gray-500 font-bold tracking-wider mb-2">설문 다음엔 뭐 하냐고요? → 대결입니다</p>
-        <p className="text-[11px] text-gray-600 mb-3">순위·대결·토큰·그룹이 한 흐름으로 이어져요 · 전부 데모 장면이에요</p>
-        <DuelConceptPlayground />
+      <div className="w-full mb-8 min-w-0 space-y-8">
+        <section className="min-w-0">
+          <p className="text-[11px] text-amber-200/95 font-black tracking-[0.12em] mb-2">① 코스피 예측 → 토큰</p>
+          <h2 className="text-base font-black text-white mb-1">코스피를 예측하고 토큰을 받아요</h2>
+          <p className="text-[11px] text-gray-600 mb-3 leading-relaxed">
+            확신 게이지·집단배율까지 실제 설문과 같은 패턴입니다 · 아래는 반복 재생 데모입니다
+          </p>
+          <SurveyConfidencePlayground />
+        </section>
+
+        <section className="min-w-0">
+          <p className="text-[11px] text-yellow-400/95 font-black tracking-[0.12em] mb-2">② 토큰 → 고수 선택픽</p>
+          <h2 className="text-base font-black text-white mb-1">토큰으로 고수의 선택을 열람해요</h2>
+          <p className="text-[11px] text-gray-600 mb-3 leading-relaxed">
+            차감·해제 순간은 애니메이션으로 강조해 두었어요 · 비용 표시와 픽 내용은 이해용 예시예요
+          </p>
+          <ExpertPickRevealPlayground />
+        </section>
+
+        <section className="min-w-0">
+          <p className="text-[11px] text-violet-300 font-black tracking-[0.12em] mb-2">③ 대결 → 토큰 한 층 더</p>
+          <h2 className="text-base font-black text-white mb-1">대결까지 가면 토큰이 더 받는 흐름이에요</h2>
+          <p className="text-[11px] text-gray-600 mb-3 leading-relaxed">
+            순위·VS·연승·그룹 독촉까지 한 덱으로 보여 줄 뿐, 전부 반복 재생 장면입니다
+          </p>
+          <DuelConceptPlayground />
+        </section>
       </div>
 
       {/* 아코디언 설명 카드 */}
@@ -373,7 +399,7 @@ export default function LoginPage() {
           {[
             {
               q: "완전 무료인가요?",
-              a: "네, 지금은 전부 무료입니다. 고수 강화예측 열람, 내 정확도 확인, 순위까지 모두 무료예요. 유료 전환 계획이 생기면 사전에 공지합니다.",
+              a: "시작하고 설문 참여 같은 기본 흐름은 무료로 시작해요. 시뮬레이션 토큰을 쓰며 고수 선택픽을 여는 장치가 들어 있고, 유료 과금 계획이 생기면 사전 공지합니다.",
             },
             {
               q: "매일 해야 하나요? 빠지면 불이익이 있나요?",
