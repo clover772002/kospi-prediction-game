@@ -17,6 +17,8 @@ export default function SurveyConfidencePlayground() {
   /** 데모: 토큰으로 산 배율 부스트 배수 (루프 애니메이션, 고정값 아님) */
   const [itemBoostMult, setItemBoostMult] = useState(1.12);
   const [itemDemoPrice, setItemDemoPrice] = useState(120);
+  /** 데모: 대결 참여 시 같은 적중에 붙는 추가 배율 층 (설문만 대비) */
+  const [duelLayerMult, setDuelLayerMult] = useState(1.18);
 
   useEffect(() => {
     let raf = 0;
@@ -39,6 +41,10 @@ export default function SurveyConfidencePlayground() {
       const boostWave = Math.abs(Math.sin(boostPhase * Math.PI * 2));
       setItemBoostMult(Math.round((1.06 + boostWave * 0.28) * 100) / 100);
       setItemDemoPrice(Math.round(96 + boostWave * 164));
+
+      const duelPhase = (t + 0.55) % 1;
+      const duelWave = Math.abs(Math.sin(duelPhase * Math.PI * 2));
+      setDuelLayerMult(Math.round((1.1 + duelWave * 0.28) * 100) / 100);
 
       raf = requestAnimationFrame(tick);
     };
@@ -65,6 +71,10 @@ export default function SurveyConfidencePlayground() {
   const crowdDnAdj = Math.max(5, crowdDnClamped);
   const rawMult = isUp ? crowdDnAdj / crowdUpAdj : crowdUpAdj / crowdDnAdj;
   const payoutMult = Math.round(rawMult * 1000) / 1000;
+
+  const surveyHitTokens = Math.max(1, Math.round(bet * payoutMult * itemBoostMult));
+  const duelHitTokens = Math.max(surveyHitTokens, Math.round(surveyHitTokens * duelLayerMult));
+  const duelExtraTokens = Math.max(0, duelHitTokens - surveyHitTokens);
 
   const dirColor = isUp ? "text-red-400" : "text-blue-400";
 
@@ -195,43 +205,78 @@ export default function SurveyConfidencePlayground() {
           </div>
         </div>
 
-        {/* 적중 시 흐름 애니메이션 */}
-        <div className="relative rounded-xl bg-[#0d0f12] border border-emerald-500/20 px-3 py-3 overflow-hidden">
-          <div className="absolute inset-0 pointer-events-none shimmer-demo-mask" />
-          <p className="text-[10px] text-emerald-400 font-bold mb-3 text-center">적중이라면 받는 크기 줄기</p>
-          <div className="w-full overflow-x-auto pb-px">
-            <div className="grid min-w-[17.5rem] w-full grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)_auto_minmax(0,1fr)] items-stretch gap-x-1 sm:gap-x-2 text-center [&>*]:min-w-0">
-              <FlowChip
-                label="거는 토큰"
-                sub="확신·보유 기준"
-                value={bet}
-                accent="amber"
-                emphasize
-              />
-              <FlowOp />
-              <FlowChip
-                label="집단배율"
-                sub="많은 쪽 분모 작아짐"
-                value={payoutMult}
-                decimals={2}
-                suffix="배"
-                accent="cyan"
-              />
-              <FlowOp />
-              <FlowChip
-                label="배율 업 아이템"
-                sub={"토큰으로 구매\n적중 시 곱함"}
-                value={itemBoostMult}
-                decimals={2}
-                suffix="배"
-                accent="violet"
-                footnote={`예시 구매 ${itemDemoPrice.toLocaleString()} 토큰`}
-              />
-            </div>
+        {/* 적중 시 흐름 + 예상 지급 (쉐이머만 클립 · 칩 애니메이션 안 잘림) */}
+        <div className="relative rounded-xl bg-[#0d0f12] border border-emerald-500/20">
+          <div className="absolute inset-0 rounded-xl overflow-hidden pointer-events-none" aria-hidden>
+            <div className="absolute inset-0 shimmer-demo-mask opacity-[0.55]" />
           </div>
-          <p className="text-[10px] text-gray-600 text-center mt-3 leading-snug px-1">
-            <span className="text-green-400/90">직전 서버 규칙과 같은 형태</span>입니다. 진짜 수치는 결과 반영 때 다시 따지고, 여긴 패턴만 보여 줍니다.
-          </p>
+
+          <div className="relative z-[1] px-2 py-2 space-y-2">
+            <p className="text-[9px] text-emerald-400 font-bold text-center leading-tight">적중 시 받는 토큰까지 한 번에 (데모)</p>
+
+            <div className="w-full overflow-x-auto [-webkit-overflow-scrolling:touch] pb-0.5">
+              <div className="grid min-w-[14rem] w-full grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)_auto_minmax(0,1fr)] items-stretch gap-x-0.5 sm:gap-x-1 text-center [&>*]:min-w-0">
+                <FlowChip
+                  label="거는 토큰"
+                  sub="확신·보유"
+                  value={bet}
+                  accent="amber"
+                  emphasize
+                />
+                <FlowOp />
+                <FlowChip
+                  label="집단배율"
+                  sub="분모 규모"
+                  value={payoutMult}
+                  decimals={2}
+                  suffix="배"
+                  accent="cyan"
+                />
+                <FlowOp />
+                <FlowChip
+                  label="배율 업"
+                  sub={"토큰 구매\n적중 시 곱함"}
+                  value={itemBoostMult}
+                  decimals={2}
+                  suffix="배"
+                  accent="violet"
+                  footnote={`구매 ${itemDemoPrice.toLocaleString()} T`}
+                />
+              </div>
+            </div>
+
+            <div className="rounded-lg border border-emerald-500/25 bg-[#0a100e]/90 px-2 py-2 space-y-1.5">
+              <div className="flex flex-wrap items-baseline justify-center gap-x-2 gap-y-0.5">
+                <span className="text-[8px] text-gray-500 font-bold shrink-0">설문 줄기만 적중 시</span>
+                <span className="text-xs font-black tabular-nums text-emerald-300 hit-token-glow">
+                  +{surveyHitTokens.toLocaleString()}
+                  <span className="text-[9px] font-bold text-gray-500 ml-0.5">토큰</span>
+                </span>
+              </div>
+              <p className="text-[7px] text-gray-600 text-center leading-tight tabular-nums">
+                = {bet.toLocaleString()} × {payoutMult.toFixed(2)} × {itemBoostMult.toFixed(2)}
+              </p>
+              <div className="h-px bg-emerald-500/15" />
+              <div className="flex flex-wrap items-baseline justify-center gap-x-2 gap-y-0.5">
+                <span className="text-[8px] text-violet-300/95 font-bold shrink-0">대결까지 하면 (예시 보너스)</span>
+                <span className="text-[9px] font-black tabular-nums text-violet-200/90">×{duelLayerMult.toFixed(2)}</span>
+                <span className="text-xs font-black tabular-nums text-white">
+                  +{duelHitTokens.toLocaleString()}
+                  <span className="text-[9px] font-bold text-gray-500 ml-0.5">토큰</span>
+                </span>
+                {duelExtraTokens > 0 ? (
+                  <span className="text-[8px] font-bold tabular-nums text-amber-400/90">(+{duelExtraTokens.toLocaleString()})</span>
+                ) : null}
+              </div>
+              <p className="text-[8px] text-gray-500 text-center leading-snug px-0.5">
+                설문만으로는 위 첫 줄까지고, <strong className="text-gray-400">대결</strong>에 들어가면 같은 적중에도 추가 층이 붙는 식으로 이득이 생기게 설계할 수 있어요. 숫자는 이해용 가짜 흐름입니다.
+              </p>
+            </div>
+
+            <p className="text-[8px] text-gray-600 text-center leading-snug px-0.5">
+              <span className="text-green-400/90">곱셈 형태</span>는 서버 규칙과 맞춰 둔 예시이고, 실제 지급은 결과 반영 시점에 다시 계산돼요.
+            </p>
+          </div>
         </div>
       </div>
     </div>
@@ -266,22 +311,24 @@ function FlowChip({
   const v = decimals > 0 ? value.toFixed(decimals) : String(value);
   return (
     <div
-      className={`h-full min-w-0 rounded-xl border px-2 py-2 bg-[#141414]/95 flex flex-col ${
-        emphasize ? "scale-[1.02] border-amber-400/45 shadow-[0_0_16px_rgba(251,191,36,.15)]" : ring
+      className={`h-full min-w-0 rounded-lg border px-1.5 py-1.5 bg-[#141414]/95 flex flex-col ${
+        emphasize
+          ? "border-amber-400/55 shadow-[0_0_12px_rgba(251,191,36,.18)]"
+          : ring
       }`}
     >
-      <div className="text-[9px] text-gray-500 font-bold leading-tight">{label}</div>
-      <div className="text-[8px] text-gray-600 mt-0.5 leading-snug min-h-[2rem] whitespace-pre-line flex items-start justify-center">
+      <div className="text-[7px] sm:text-[8px] text-gray-500 font-bold leading-tight">{label}</div>
+      <div className="text-[7px] text-gray-600 mt-0.5 leading-snug min-h-[1.5rem] whitespace-pre-line flex items-start justify-center">
         {sub ?? "\u00a0"}
       </div>
-      <div className="text-lg font-black tabular-nums text-white mt-auto pt-1 tracking-tight shrink-0">
+      <div className="text-sm font-black tabular-nums text-white mt-auto pt-0.5 tracking-tight shrink-0">
         {v}
-        <span className="text-[10px] ml-px text-gray-500 font-bold">{suffix}</span>
+        <span className="text-[8px] ml-px text-gray-500 font-bold">{suffix}</span>
       </div>
       {footnote ? (
-        <div className="text-[7px] text-gray-600 mt-0.5 tabular-nums leading-tight min-h-[0.875rem]">{footnote}</div>
+        <div className="text-[6px] text-gray-600 mt-0.5 tabular-nums leading-tight min-h-[0.7rem]">{footnote}</div>
       ) : (
-        <div className="mt-0.5 min-h-[0.875rem]" aria-hidden />
+        <div className="mt-0.5 min-h-[0.7rem]" aria-hidden />
       )}
     </div>
   );
@@ -289,7 +336,7 @@ function FlowChip({
 
 function FlowOp() {
   return (
-    <div className="flow-op-x flex self-stretch items-center justify-center text-gray-600 font-black px-px select-none tabular-nums text-sm leading-none shrink-0">
+    <div className="flow-op-x flex self-stretch items-center justify-center text-gray-600 font-black px-px select-none tabular-nums text-xs leading-none shrink-0">
       ×
     </div>
   );
