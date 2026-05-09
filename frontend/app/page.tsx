@@ -273,34 +273,6 @@ export default function LoginPage() {
         <DuelConceptPlayground />
       </div>
 
-      {/* 하루 흐름 — 순환 사이클 */}
-      <div className="w-full mb-8">
-        <p className="text-xs text-gray-500 font-bold mb-3 tracking-widest uppercase">하루 루틴</p>
-        <div className="relative flex items-stretch gap-1">
-          {/* 가로 연결 화살표 배경 */}
-          <div className="absolute top-[28px] left-[10%] right-[10%] h-px bg-[#2A2A2A]" />
-          {[
-            { dot: "bg-blue-500", icon: "📝", time: "장시작 전", label: "집단 설문" },
-            { dot: "bg-yellow-400", icon: "⭐", time: "장시작", label: "고수 강화예측\n무료 공개" },
-            { dot: "bg-green-500", icon: "⚔️", time: "장마감", label: "적중 처리\n대결·순위 반영" },
-          ].map((step, i, arr) => (
-            <div key={i} className="flex-1 flex flex-col items-center text-center relative z-10">
-              <div className={`w-10 h-10 rounded-full ${step.dot} flex items-center justify-center mb-2 text-base shadow-lg`}>
-                {step.icon}
-              </div>
-              <p className="text-[11px] font-black text-white leading-tight">{step.time}</p>
-              {step.label.split("\n").map((line, j) => (
-                <p key={j} className="text-[10px] text-gray-400 leading-tight">{line}</p>
-              ))}
-              {i < arr.length - 1 && (
-                <span className="absolute top-[13px] -right-2 text-gray-600 text-xs z-20">→</span>
-              )}
-            </div>
-          ))}
-        </div>
-        <p className="text-center text-[10px] text-gray-600 mt-3">↻ 매일 반복 · 참여할수록 예측 정확도 향상</p>
-      </div>
-
       {/* 아코디언 설명 카드 */}
       <div className="w-full space-y-2 mb-10">
         {FEATURES.map((item, idx) => {

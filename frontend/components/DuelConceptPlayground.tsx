@@ -47,9 +47,9 @@ export default function DuelConceptPlayground() {
         <div className="flex justify-between gap-1 relative">
           <div className="absolute top-[22px] left-[12%] right-[12%] h-px bg-[#333] z-0" />
           {[
-            { emoji: "📝", label: "예측 저장", sub: "확신·토큰" },
-            { emoji: "🎯", label: "장 마감", sub: "적중 판정" },
-            { emoji: "⚔️", label: "대결·순위", sub: "승패·연승" },
+            { emoji: "🧭", label: "대결준비", sub: "순위·신청·대기" },
+            { emoji: "⚔️", label: "대결", sub: "장중 적중 승부" },
+            { emoji: "📊", label: "결과확인", sub: "승패·토큰·순위" },
           ].map((s, i) => (
             <div key={s.label} className="relative z-10 flex-1 flex flex-col items-center text-center gap-1">
               <div
@@ -152,16 +152,43 @@ export default function DuelConceptPlayground() {
           </div>
         </div>
 
-        {/* 그룹 알림 카드 미니 */}
-        <div className="relative rounded-xl border border-green-500/25 bg-green-950/20 px-3 py-2 duel-nudge-slide">
-          <div className="flex items-start gap-2">
-            <span className="text-lg duel-bell-shake">🔔</span>
-            <div className="min-w-0">
-              <p className="text-[10px] text-green-400 font-black">데모 · 그룹 독촉장 예시</p>
-              <p className="text-[11px] text-gray-300 mt-1 leading-snug">
-                같은 방 친구가 설문 빨리 참여하게 돌촉 → <strong className="text-white">내 대결·순위</strong> 재미가 붙어요.
-              </p>
+        {/* 데모 · 그룹 독촉장 푸시 카드 */}
+        <div className="duel-nudge-slide">
+          <div className="rounded-2xl border border-white/[0.08] bg-gradient-to-br from-[#1c251d] via-[#121614] to-[#0f1210] shadow-[0_12px_40px_rgba(0,0,0,.55),inset_0_1px_0_rgba(255,255,255,.06)] overflow-hidden ring-1 ring-emerald-500/15">
+            <div className="flex items-center justify-between px-3.5 pt-3 pb-1.5">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="relative shrink-0 w-11 h-11 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-lg shadow-emerald-500/25">
+                  <span className="text-lg select-none duel-bell-shake">📣</span>
+                  <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-[9px] font-black text-white flex items-center justify-center border-2 border-[#151818] tabular-nums">
+                    N
+                  </span>
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[10px] text-emerald-400/95 font-black tracking-wide uppercase truncate">데모 알림 · 그룹 독촉장</p>
+                  <p className="text-[11px] font-bold text-white truncate">모의투자 12반 · 김두덕</p>
+                  <p className="text-[9px] text-gray-500 tabular-nums">오후 3:41 · 같은 방 참여 미완</p>
+                </div>
+              </div>
             </div>
+            <div className="mx-3 mb-3 rounded-xl border border-emerald-500/15 bg-black/35 px-3 py-2.5">
+              <div className="flex items-start gap-2">
+                <span className="text-emerald-500/80 shrink-0 text-[10px] font-black mt-0.5">메시지</span>
+                <p className="text-[11px] text-gray-200 leading-snug font-medium">
+                  다들 장 시작 전까지 설문만 눌러주세요 ㅋㅋ 빨리 해야 <span className="text-emerald-300">대결 매칭</span> 돌아가요
+                </p>
+              </div>
+              <div className="mt-2.5 flex gap-2">
+                <span className="flex-1 text-center py-1.5 rounded-lg bg-[#222]/80 text-[9px] font-bold text-gray-500 border border-white/[0.05]">
+                  나중에
+                </span>
+                <span className="flex-1 text-center py-1.5 rounded-lg bg-emerald-600/90 text-[9px] font-black text-white border border-emerald-400/30 shadow-[0_0_12px_rgba(16,185,129,.25)]">
+                  지금 참여
+                </span>
+              </div>
+            </div>
+            <p className="px-3.5 pb-2.5 text-[9px] text-gray-600 leading-snug border-t border-white/[0.04] pt-2">
+              실제 앱에서는 푸시·카톡·SMS 등으로 같은 맥락의 독촉이 갈 수 있어요 · 위 카드는 UI 예시예요.
+            </p>
           </div>
         </div>
 
