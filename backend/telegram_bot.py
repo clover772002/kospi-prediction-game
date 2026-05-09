@@ -60,14 +60,46 @@ async def answer_callback_query(callback_query_id: str, text: str = "", show_ale
         })
 
 
+def _app_base_url() -> str:
+    """웹 설문 슬라이더 링크용"""
+    return (os.getenv("PUBLIC_APP_URL") or "https://kospi-prediction-game.vercel.app").rstrip("/")
+
+
 def _survey_keyboard(market: str, date_str: str) -> dict:
-    """코스피/코스닥 예측 인라인 버튼"""
+    """코스피 설문 — 방향 + 확신도(게이지) 프리셋. 숫자는 등락률 아님이라 웹과 동일하게 안내함."""
+    if market != "kospi":
+        return {"inline_keyboard": []}
+    d = date_str
+
+    def gcb(g: int) -> str:
+        return f"{market}:g:{g}:{d}"
+
+    survey_url = f"{_app_base_url()}/survey"
     return {
-        "inline_keyboard": [[
-            {"text": "📈 오른다", "callback_data": f"{market}:yes:{date_str}"},
-            {"text": "📉 내린다", "callback_data": f"{market}:no:{date_str}"},
-        ]]
+        "inline_keyboard": [
+            [
+                {"text": "📈 강하게", "callback_data": gcb(85)},
+                {"text": "📈 보통", "callback_data": gcb(50)},
+                {"text": "📈 살짝", "callback_data": gcb(25)},
+            ],
+            [
+                {"text": "📉 살짝", "callback_data": gcb(-25)},
+                {"text": "📉 보통", "callback_data": gcb(-50)},
+                {"text": "📉 강하게", "callback_data": gcb(-85)},
+            ],
+            [{"text": "🌐 슬라이더로 정하기 (웹)", "url": survey_url}],
+        ]
     }
+
+
+def _format_gauge_line(gauge: int, tokens_bet: int | None = None) -> str:
+    """사용자 확인용 한 줄 요약."""
+    dire = "상승 예상" if gauge > 0 else "하락 예상"
+    bet = f" · 예상 배팅 약 <b>{tokens_bet}</b>T" if tokens_bet is not None else ""
+    return (
+        f"방향: <b>{dire}</b>\n"
+        f"확신도 레벨: <b>{'+' if gauge > 0 else ''}{gauge}</b>% (등락률 숫자가 아니라, 그 방향에 대한 확신 크기예요){bet}"
+    )
 
 
 # ─────────────────────────────────────────────────────────────
@@ -118,6 +150,7 @@ async def handle_start(chat_id: int, user_id_param: str, supabase) -> None:
                 f"안녕하세요, {name}님!\n\n"
                 f"📊 매일 밤 <b>22:00</b>에 코스피 예측 설문이 발송됩니다.\n"
                 f"⏰ 장 시작 전(<b>~09:00</b>)까지만 응답 가능합니다.\n"
+                f"방향 외에 <b>확신도</b>(배팅 강도)를 고르게 되어 있어요. 세밀한 값은 웹 설문 슬라이더에서 가능합니다.\n"
                 f"📈 장 마감 후 정확도와 순위를 알려드릴게요!"
             )
         else:
@@ -131,21 +164,52 @@ async def handle_start(chat_id: int, user_id_param: str, supabase) -> None:
 
 
 async def handle_callback_query(callback_query: dict, supabase) -> None:
-    """인라인 버튼 응답 처리 (코스피 단일 질문)"""
+    """인라인 버튼 응답 처리 (코스피 방향 + 확신도 게이지)"""
     query_id = callback_query["id"]
     chat_id = callback_query["from"]["id"]
     message_id = callback_query["message"]["message_id"]
     data = callback_query.get("data", "")
 
-    # data format: "kospi:yes:2026-05-05"
     parts = data.split(":")
-    if len(parts) != 3:
+    market = None
+    date_str = ""
+    gauge_position = None
+
+    # 신규: "kospi:g:85:2026-05-05" 또는 "kospi:g:-50:2026-05-05"
+    if len(parts) >= 4 and parts[1] == "g":
+        market = parts[0]
+        try:
+            gauge_position = int(parts[2])
+        except ValueError:
+            await answer_callback_query(query_id, "알 수 없는 확신도 값입니다.")
+            return
+        date_str = parts[3]
+    # 구버전(구 메시지): "kospi:yes:2026-05-05"
+    elif len(parts) == 3:
+        market, answer, date_str = parts
+        if answer == "yes":
+            gauge_position = 50
+        elif answer == "no":
+            gauge_position = -50
+        else:
+            await answer_callback_query(query_id, "알 수 없는 응답입니다.")
+            return
+    else:
         await answer_callback_query(query_id, "알 수 없는 응답입니다.")
         return
 
-    market, answer, date_str = parts
-    is_yes = (answer == "yes")
-    label = "📈 오른다" if is_yes else "📉 내린다"
+    if market != "kospi" or not date_str:
+        await answer_callback_query(query_id, "알 수 없는 응답입니다.")
+        return
+    if gauge_position is None or not (-100 <= gauge_position <= 100) or gauge_position == 0:
+        await answer_callback_query(query_id, "확신도 값이 올바르지 않습니다.", show_alert=True)
+        return
+
+    is_yes = gauge_position > 0
+    dir_label = "📈 오른다" if is_yes else "📉 내린다"
+    tier = abs(gauge_position)
+    tier_word = "강하게" if tier >= 70 else "보통" if tier >= 40 else "살짝"
+    label = f"{dir_label} · {tier_word} 확신 ({'+' if gauge_position > 0 else ''}{gauge_position})"
 
     # 설문 마감 여부 확인
     survey = supabase.table("daily_surveys").select("is_closed").eq("survey_date", date_str).execute()
@@ -162,22 +226,30 @@ async def handle_callback_query(callback_query: dict, supabase) -> None:
     user_id = user_res.data[0]["id"]
 
     try:
+        user_row = supabase.table("users").select("tokens").eq("id", user_id).execute()
+        current_tokens = int(user_row.data[0]["tokens"]) if user_row.data else 100
+        tokens_bet = max(1, round(abs(gauge_position) / 100 * current_tokens))
+
         supabase.table("survey_responses").upsert(
             {
                 "user_id": user_id,
                 "survey_date": date_str,
                 "kospi_answer": is_yes,
                 "kosdaq_answer": False,
+                "gauge_position": gauge_position,
+                "tokens_bet": tokens_bet,
+                "tokens_before": current_tokens,
             },
             on_conflict="user_id,survey_date",
         ).execute()
 
-        await edit_message_text(chat_id, message_id, f"✅ <b>코스피</b> → {label}")
-        await answer_callback_query(query_id, f"코스피: {label}")
-        await send_message(chat_id,
-            f"✅ <b>예측 완료!</b>\n\n"
-            f"코스피: {label}\n\n"
-            f"📊 09:00에 집계 결과를 알려드립니다!"
+        summary = _format_gauge_line(gauge_position, tokens_bet)
+        await edit_message_text(chat_id, message_id, f"✅ <b>코스피</b> 선택 완료\n{label}")
+        await answer_callback_query(query_id, f"저장했어요 · {dir_label}")
+        await send_message(
+            chat_id,
+            f"✅ <b>예측 완료!</b>\n\n{summary}\n\n"
+            f"📊 09:00에 집계 결과를 알려드립니다!",
         )
     except Exception as e:
         logger.exception("응답 저장 오류")
@@ -224,14 +296,14 @@ async def send_daily_survey_to_all(supabase, date_str: str, is_reminder: bool = 
                     f"⏰ <b>마감 임박!</b> ({date_str})\n"
                     f"코스피 예측 설문이 <b>09:00</b>에 마감돼요.\n"
                     f"아직 참여 안 하셨다면 지금 바로!\n\n"
-                    f"<b>코스피</b>가 오늘 오를까요?"
+                    f"<b>방향 + 확신도</b>(강하게/보통/살짝) 또는 웹 슬라이더로 선택해 주세요."
                 )
             else:
                 msg = (
                     f"📊 <b>오늘 코스피, 함께 맞춰요!</b> ({date_str})\n"
                     f"집단지성으로 내일 장을 미리 예측해보세요.\n"
                     f"⏰ 마감: 내일 <b>09:00</b>\n\n"
-                    f"<b>코스피</b>가 내일 오를까요?"
+                    f"<b>방향·확신도</b>를 골라주세요. 버튼의 비율은 <b>예상 등락률이 아니라</b> 그 방향에 대한 <b>확신 레벨</b>입니다 (웹 슬라이더와 같은 방식)."
                 )
             await send_message(chat_id, msg, _survey_keyboard("kospi", date_str))
             sent += 1
