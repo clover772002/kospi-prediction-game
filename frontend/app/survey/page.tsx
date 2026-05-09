@@ -309,6 +309,25 @@ function SurveyPageInner() {
       <div className="pt-4 pb-6 flex items-center justify-between gap-3">
         <div>
           {(() => {
+            if (isWeekendKST) {
+              // 주말: 다음 거래일 날짜 계산
+              const next = new Date(_kstNow);
+              next.setDate(next.getDate() + 1);
+              next.setHours(0, 0, 0, 0);
+              while (next.getDay() === 0 || next.getDay() === 6) next.setDate(next.getDate() + 1);
+              const dayNames = ["일","월","화","수","목","금","토"];
+              const mm = String(next.getMonth() + 1).padStart(2, "0");
+              const dd = String(next.getDate()).padStart(2, "0");
+              const nextDateStr = `${next.getFullYear()}.${mm}.${dd}`;
+              return (
+                <>
+                  <h1 className="text-lg font-black text-white leading-tight">
+                    {dayNames[next.getDay()]}요일 장 예측
+                  </h1>
+                  <p className="text-xs text-gray-500 mt-0.5">{nextDateStr} (KST)</p>
+                </>
+              );
+            }
             const kst = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Seoul" }));
             const todayStr = `${kst.getFullYear()}-${String(kst.getMonth()+1).padStart(2,"0")}-${String(kst.getDate()).padStart(2,"0")}`;
             const surveyDate = today?.survey_date ?? todayStr;
@@ -545,7 +564,7 @@ function SurveyPageInner() {
       )}
 
       {/* 설문 마감 후 — 내 예측 + 코스피 차트 */}
-      {(status === "closed" || status === "result") && (
+      {(status === "closed" || status === "result") && !isWeekendKST && (
         <div className="flex flex-col gap-4 mt-6 fade-up">
           {/* 내 예측 + 오늘 장 나란히 */}
           {(previousAnswer !== null || alreadyAnswered) && (

@@ -4,10 +4,29 @@ import { useEffect, useState, useRef } from "react";
 
 type CountdownInfo = { seconds: number; label: string; sublabel: string };
 
+function getNextTradingOpen(from: Date): CountdownInfo {
+  const target = new Date(from);
+  target.setDate(target.getDate() + 1);
+  target.setHours(9, 0, 0, 0);
+  while (target.getDay() === 0 || target.getDay() === 6) target.setDate(target.getDate() + 1);
+  const days = ["일","월","화","수","목","금","토"];
+  const mm = String(target.getMonth() + 1).padStart(2, "0");
+  const dd = String(target.getDate()).padStart(2, "0");
+  return {
+    seconds: Math.max(0, Math.floor((target.getTime() - from.getTime()) / 1000)),
+    label: "장 시작까지",
+    sublabel: `${mm}/${dd}(${days[target.getDay()]}) 09:00 개장`,
+  };
+}
+
 function getCountdown(): CountdownInfo {
   const now = new Date();
   const kst = new Date(now.toLocaleString("en-US", { timeZone: "Asia/Seoul" }));
+  const day = kst.getDay();
   const mins = kst.getHours() * 60 + kst.getMinutes();
+
+  // 주말이면 항상 다음 거래일 장시작까지
+  if (day === 0 || day === 6) return getNextTradingOpen(kst);
 
   const target = new Date(kst);
 
@@ -32,22 +51,7 @@ function getCountdown(): CountdownInfo {
   }
 
   // 22:00 ~ 09:00 → 다음 거래일 장시작까지
-  if (mins >= 22 * 60) {
-    target.setDate(target.getDate() + 1);
-  }
-  target.setHours(9, 0, 0, 0);
-  while (target.getDay() === 0 || target.getDay() === 6) {
-    target.setDate(target.getDate() + 1);
-  }
-  const days = ["일","월","화","수","목","금","토"];
-  const mm = String(target.getMonth() + 1).padStart(2, "0");
-  const dd = String(target.getDate()).padStart(2, "0");
-  const dayKor = days[target.getDay()];
-  return {
-    seconds: Math.max(0, Math.floor((target.getTime() - kst.getTime()) / 1000)),
-    label: "장 시작까지",
-    sublabel: `${mm}/${dd}(${dayKor}) 09:00 개장`,
-  };
+  return getNextTradingOpen(kst);
 }
 
 function pad(n: number) {
