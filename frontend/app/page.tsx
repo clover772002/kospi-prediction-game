@@ -5,28 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import SurveyConfidencePlayground from "@/components/SurveyConfidencePlayground";
-
-type HistoryItem = {
-  date: string;
-  total: number;
-  kospi_yes_pct: number;
-  majority_up: boolean;
-  weighted_pct: number | null;
-  weighted_up: boolean;
-  actual_up: boolean;
-  change_pct: number | null;
-  majority_correct: boolean;
-  weighted_correct: boolean;
-};
-
-type PublicHistory = {
-  history: HistoryItem[];
-  stats: {
-    total_days: number;
-    majority_accuracy: number;
-    weighted_accuracy: number;
-  };
-};
+import DuelConceptPlayground from "@/components/DuelConceptPlayground";
 
 const FEATURES = [
   {
@@ -192,7 +171,6 @@ export default function LoginPage() {
   const [signing, setSigning] = useState<"google" | "kakao" | null>(null);
   const [openIdx, setOpenIdx] = useState<number | null>(null);
   const [browserType, setBrowserType] = useState<"kakao" | "inapp" | "normal">("normal");
-  const [publicHistory, setPublicHistory] = useState<PublicHistory | null>(null);
 
   useEffect(() => {
     const type = detectBrowser();
@@ -208,11 +186,6 @@ export default function LoginPage() {
         setLoading(false);
       }
     });
-    // 공개 실적 데이터 로드
-    fetch("/api/public/history", { cache: "no-store" })
-      .then((r) => r.json())
-      .then((d) => setPublicHistory(d))
-      .catch(() => {});
   }, [router]);
 
   const handleLogin = async (provider: "google" | "kakao") => {
@@ -278,10 +251,11 @@ export default function LoginPage() {
       <div className="text-center mb-10">
         <div className="text-6xl mb-4">📊</div>
         <h1 className="text-2xl font-black text-white mb-1">오늘 코스피, 함께 맞춰요</h1>
-        <p className="text-yellow-400 text-xs font-bold mb-3 tracking-wide">매일 1딸깍으로 설문 참여 · 프리미엄 예측 데이터 수령</p>
+        <p className="text-yellow-400 text-xs font-bold mb-3 tracking-wide">
+          매일 설문 한 번 · 토큰·순위 속에서 친구와 ⚔ 대결
+        </p>
         <p className="text-gray-400 text-sm leading-relaxed">
-          코스피가 오를지 내릴지 클릭 한 번만 하면<br />
-          향상된 집단 예측값을 무료로 열람할 수 있습니다.
+          코스피 방향을 예측하고 · 토큰·연승·전국 순위 속에서 친구들과 ⚔ 대결까지.
         </p>
       </div>
 
@@ -292,98 +266,12 @@ export default function LoginPage() {
         <SurveyConfidencePlayground />
       </div>
 
-      {/* 집단지성 실적 트래커 */}
-      {publicHistory && publicHistory.history.length > 0 && (
-        <div className="w-full mb-8">
-          <div className="flex items-center justify-between mb-3">
-            <p className="text-xs text-gray-500 font-bold tracking-widest uppercase">누적 적중률</p>
-            <div className="flex gap-2 text-xs">
-              <span className="text-gray-500">단순통계</span>
-              <span className="font-black text-white">{publicHistory.stats.majority_accuracy}%</span>
-              <span className="text-gray-600">·</span>
-              <span className="text-yellow-400">⭐ 고수 강화예측</span>
-              <span className="font-black text-yellow-400">{publicHistory.stats.weighted_accuracy}%</span>
-            </div>
-          </div>
-
-          {/* 정확도 비교 바 */}
-          <div className="bg-[#1A1A1A] rounded-2xl p-4 border border-[#2A2A2A] mb-3">
-            <div className="space-y-2">
-              {[
-                { label: "단순통계", pct: publicHistory.stats.majority_accuracy, color: "bg-gray-500" },
-                { label: "⭐ 고수 강화예측", pct: publicHistory.stats.weighted_accuracy, color: "bg-yellow-400" },
-              ].map((item) => (
-                <div key={item.label}>
-                  <div className="flex justify-between text-xs mb-1">
-                    <span className="text-gray-400">{item.label}</span>
-                    <span className="text-white font-black">{item.pct}%</span>
-                  </div>
-                  <div className="bg-[#111] rounded-full h-3 overflow-hidden">
-                    <div className={`h-full ${item.color} rounded-full transition-all`} style={{ width: `${item.pct}%` }} />
-                  </div>
-                </div>
-              ))}
-            </div>
-            <p className="text-xs text-gray-600 mt-3">* 최근 {publicHistory.stats.total_days}일 실제 데이터 기준</p>
-          </div>
-
-          {/* 날짜별 예측 결과 카드 */}
-          <div className="space-y-2">
-            {publicHistory.history.slice(0, 7).map((item) => {
-              const mmdd = item.date.slice(5).replace("-", "/");
-              const actualLabel = item.actual_up ? "▲ 상승" : "▼ 하락";
-              const actualColor = item.actual_up ? "text-red-400" : "text-blue-400";
-              const changeTxt = item.change_pct != null
-                ? `${item.change_pct > 0 ? "+" : ""}${item.change_pct}%`
-                : "";
-              return (
-                <div
-                  key={item.date}
-                  className="bg-[#1A1A1A] rounded-2xl border border-[#2A2A2A] px-4 py-3"
-                >
-                  {/* 날짜 + 실제결과 — 좌측 밀착 배치 */}
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="text-white font-black text-sm">{mmdd}</span>
-                    <span className={`text-xs font-bold ${actualColor}`}>{actualLabel}</span>
-                    {changeTxt && (
-                      <span className={`text-xs font-bold ${item.actual_up ? "text-red-400" : "text-blue-400"}`}>
-                        {changeTxt}
-                      </span>
-                    )}
-                  </div>
-
-                  {/* 예측 vs 결과 */}
-                  <div className="grid grid-cols-2 gap-2">
-                    {/* 단순통계 */}
-                    <div className={`rounded-xl p-2.5 flex items-center justify-between ${item.majority_correct ? "bg-green-500/10 border border-green-500/30" : "bg-red-500/10 border border-red-500/20"}`}>
-                      <div>
-                        <p className="text-xs text-gray-500 mb-0.5">단순통계</p>
-                        <p className="text-xs font-bold text-white">
-                          {item.majority_up ? "▲ 상승" : "▼ 하락"} {item.kospi_yes_pct}%
-                        </p>
-                      </div>
-                      <span className="text-lg">{item.majority_correct ? "✅" : "❌"}</span>
-                    </div>
-                    {/* 고수 강화예측 */}
-                    <div className={`rounded-xl p-2.5 flex items-center justify-between ${item.weighted_correct ? "bg-green-500/10 border border-green-500/30" : "bg-red-500/10 border border-red-500/20"}`}>
-                      <div>
-                        <p className="text-xs text-yellow-400 mb-0.5">⭐ 고수 강화예측</p>
-                        <p className="text-xs font-bold text-white">
-                          {item.weighted_up ? "▲ 상승" : "▼ 하락"} {item.weighted_pct ?? "-"}%
-                        </p>
-                      </div>
-                      <span className="text-lg">{item.weighted_correct ? "✅" : "❌"}</span>
-                    </div>
-                  </div>
-
-                  {/* 참여자 수 */}
-                  <p className="text-xs text-gray-600 mt-2 text-right">{item.total}명 참여</p>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
+      {/* 대결 컨셉 — 애니메이션 예시 */}
+      <div className="w-full mb-8 min-w-0">
+        <p className="text-xs text-gray-500 font-bold tracking-wider mb-2">설문 다음엔 뭐 하냐고요? → 대결입니다</p>
+        <p className="text-[11px] text-gray-600 mb-3">순위·대결·토큰·그룹이 한 흐름으로 이어져요 · 전부 데모 장면이에요</p>
+        <DuelConceptPlayground />
+      </div>
 
       {/* 하루 흐름 — 순환 사이클 */}
       <div className="w-full mb-8">
@@ -394,7 +282,7 @@ export default function LoginPage() {
           {[
             { dot: "bg-blue-500", icon: "📝", time: "장시작 전", label: "집단 설문" },
             { dot: "bg-yellow-400", icon: "⭐", time: "장시작", label: "고수 강화예측\n무료 공개" },
-            { dot: "bg-green-500", icon: "📊", time: "장마감", label: "데이터 강화" },
+            { dot: "bg-green-500", icon: "⚔️", time: "장마감", label: "적중 처리\n대결·순위 반영" },
           ].map((step, i, arr) => (
             <div key={i} className="flex-1 flex flex-col items-center text-center relative z-10">
               <div className={`w-10 h-10 rounded-full ${step.dot} flex items-center justify-center mb-2 text-base shadow-lg`}>

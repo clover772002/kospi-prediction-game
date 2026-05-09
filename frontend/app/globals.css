@@ -205,3 +205,85 @@ body {
 .flow-op-x {
   animation: flow-op-blink 4s ease-in-out infinite;
 }
+
+/* ── 대결 안내 카드 (로그인 랜딩) ──────────────────────── */
+@keyframes duel-step-scale {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.06); }
+}
+.duel-step-active-scale {
+  animation: duel-step-scale 1.2s ease-in-out infinite;
+}
+
+@keyframes duel-vs-pulse {
+  0%, 100% { transform: scale(1) rotate(0deg); filter: drop-shadow(0 0 6px rgba(139,92,246,.35)); }
+  50% { transform: scale(1.15) rotate(-6deg); filter: drop-shadow(0 0 14px rgba(244,114,182,.55)); }
+}
+.duel-vs-icon {
+  animation: duel-vs-pulse 2.2s ease-in-out infinite;
+}
+
+@keyframes duel-bg-orbit {
+  0% { background-position: 0% 50%; }
+  100% { background-position: 200% 50%; }
+}
+.duel-bg-orbit {
+  background: linear-gradient(120deg, transparent 30%, rgba(139,92,246,0.06) 50%, transparent 70%);
+  background-size: 200% 100%;
+  animation: duel-bg-orbit 5s linear infinite;
+}
+
+@keyframes duel-rank-sheen {
+  0%, 100% { opacity: 0.85; }
+  50% { opacity: 1; filter: brightness(1.15); }
+}
+.duel-rank-fill {
+  animation: duel-rank-sheen 2.4s ease-in-out infinite;
+}
+
+@keyframes duel-token-glow {
+  0%, 100% { box-shadow: inset 0 0 0 0 transparent; }
+  50% { box-shadow: inset 0 -8px 20px rgba(251,191,36,0.12); }
+}
+.duel-token-pulse {
+  animation: duel-token-glow 2s ease-in-out infinite;
+}
+
+.duel-streak-fire {
+  animation: fireGlow 1.2s ease-in-out infinite;
+}
+
+@keyframes duel-row-highlight {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.01); }
+}
+.duel-row-pop {
+  animation: duel-row-highlight 1.15s ease-in-out infinite;
+}
+
+@keyframes duel-name-pulse {
+  0%, 100% { text-shadow: 0 0 0 transparent; color: inherit; }
+  50% { text-shadow: 0 0 12px rgba(34,211,238,.5); }
+}
+.duel-name-glow {
+  animation: duel-name-pulse 2s ease-in-out infinite;
+}
+
+@keyframes duel-slide-x {
+  0%, 100% { transform: translateX(0); opacity: 1; }
+  40% { transform: translateX(4px); }
+  60% { transform: translateX(-3px); }
+}
+.duel-nudge-slide {
+  animation: duel-slide-x 5s ease-in-out infinite;
+}
+
+@keyframes duel-shake-y {
+  0%, 90% { transform: rotate(0); }
+  92% { transform: rotate(-7deg); }
+  94% { transform: rotate(7deg); }
+  96%, 100% { transform: rotate(0); }
+}
+.duel-bell-shake {
+  animation: duel-shake-y 4s ease-in-out infinite;
+}
