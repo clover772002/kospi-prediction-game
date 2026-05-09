@@ -76,13 +76,11 @@ function SurveyPageInner() {
       const data = await getToday();
       setToday(data);
       setError(null);
-      // 결과 공개 후 or 주말(no_survey)이면 다음 거래일 설문 확인
-      if (data.status === "result" || data.status === "no_survey") {
-        fetch("/api/next-survey", { cache: "no-store" })
-          .then((r) => r.json())
-          .then((d) => setNextSurvey(d))
-          .catch(() => {});
-      }
+      // 항상 다음 거래일 설문 확인 (주말 포함)
+      fetch("/api/next-survey", { cache: "no-store" })
+        .then((r) => r.json())
+        .then((d) => setNextSurvey(d))
+        .catch(() => {});
     } catch {
       setError("설문 정보를 불러오지 못했습니다.");
     } finally {
@@ -360,7 +358,7 @@ function SurveyPageInner() {
 
       {/* 설문 없음 — 대기중 vs 휴장일 구분 */}
       {/* 주말·no_survey 상태에서 다음 거래일 예측 섹션 */}
-      {status === "no_survey" && nextSurvey?.is_open && (
+      {(status === "no_survey" || isWeekendKST) && nextSurvey?.is_open && (
         <div className="mt-4 space-y-4">
           <div className="border-t border-[#2A2A2A] pt-5">
             {(() => {
