@@ -34,9 +34,8 @@ export default function GaugeBar({ value, onChange, tokens, disabled = false }: 
     onChange(direction * 100);
   }, [onChange, disabled]);
 
-  // 게이지 바 너비 (좌: 하락 파랑, 우: 상승 빨강)
-  const leftPct  = isUp ? 0 : abs;   // 하락 방향 채움
-  const rightPct = isUp ? abs : 0;   // 상승 방향 채움
+  // 중앙(50%)에서 바깥으로 채움: +는 오른쪽 반칸, -는 왼쪽 반칸
+  const halfSpanPct = (abs / 100) * 50;
 
   const dirLabel  = isUp ? "📈 상승" : "📉 하락";
   const dirColor  = isUp ? "text-red-400" : "text-blue-400";
@@ -53,23 +52,27 @@ export default function GaugeBar({ value, onChange, tokens, disabled = false }: 
         </span>
       </div>
 
-      {/* 게이지 바 */}
+      {/* 게이지 바: 0이 중앙, 막대는 중앙에서 ±방향으로만 성장 */}
       <div className="relative h-8 bg-[#1A1A1A] rounded-full overflow-hidden border border-[#2A2A2A]">
-        {/* 하락 (파랑, 왼쪽 채움) */}
-        <div
-          className="absolute left-0 top-0 h-full bg-blue-500 transition-all duration-150"
-          style={{ width: `${leftPct / 2}%` }}
-        />
-        {/* 상승 (빨강, 오른쪽 채움) */}
-        <div
-          className="absolute right-0 top-0 h-full bg-red-500 transition-all duration-150"
-          style={{ width: `${rightPct / 2}%` }}
-        />
+        {isUp ? (
+          <div
+            className="absolute top-0 left-1/2 h-full bg-red-500 transition-all duration-150"
+            style={{ width: `${halfSpanPct}%` }}
+          />
+        ) : (
+          <div
+            className="absolute top-0 h-full bg-blue-500 transition-all duration-150"
+            style={{
+              right: "50%",
+              width: `${halfSpanPct}%`,
+            }}
+          />
+        )}
         {/* 중앙선 */}
-        <div className="absolute left-1/2 top-0 h-full w-0.5 bg-[#333] -translate-x-1/2" />
+        <div className="absolute left-1/2 top-0 z-10 h-full w-0.5 bg-[#333] -translate-x-1/2 pointer-events-none" />
         {/* 현재 위치 핸들 */}
         <div
-          className={`absolute top-1/2 -translate-y-1/2 w-5 h-5 rounded-full border-2 shadow-lg transition-all duration-150 ${isUp ? "bg-red-400 border-red-300" : "bg-blue-400 border-blue-300"}`}
+          className={`absolute top-1/2 z-20 -translate-y-1/2 w-5 h-5 rounded-full border-2 shadow-lg transition-all duration-150 pointer-events-none ${isUp ? "bg-red-400 border-red-300" : "bg-blue-400 border-blue-300"}`}
           style={{ left: `calc(${50 + value / 2}% - 10px)` }}
         />
       </div>
