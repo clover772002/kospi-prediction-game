@@ -302,31 +302,36 @@ export default function SetupPage() {
           </div>
 
           {/* PWA 설치 — 한 줄 버튼 */}
-          {!isStandalone && (
+          {!isStandalone && !isIOS && (
             <div className="flex items-center justify-between bg-[#1A1A1A] border border-[#2A2A2A] rounded-2xl px-4 py-4">
               <div className="flex items-center gap-3">
                 <span className="text-xl">📲</span>
                 <span className="font-bold text-sm text-white">홈 화면에 추가</span>
               </div>
-              {canInstall ? (
-                <button
-                  onClick={async () => {
-                    const p = (window as Window & { __pwaInstallPrompt?: { prompt(): Promise<void> } }).__pwaInstallPrompt;
-                    if (p) {
-                      await p.prompt();
-                      delete (window as Window & { __pwaInstallPrompt?: unknown }).__pwaInstallPrompt;
-                      setCanInstall(false);
-                    }
-                  }}
-                  className="bg-blue-600 hover:bg-blue-500 active:scale-95 text-white text-xs font-black px-4 py-2 rounded-xl transition-all"
-                >
-                  설치
-                </button>
-              ) : isIOS ? (
-                <span className="text-[11px] text-orange-400 font-bold">Safari 공유 → 홈추가</span>
-              ) : (
-                <span className="text-[11px] text-gray-500">브라우저 ⋮ → 앱 설치</span>
-              )}
+              <button
+                onClick={async () => {
+                  const p = (window as Window & { __pwaInstallPrompt?: { prompt(): Promise<void> } }).__pwaInstallPrompt;
+                  if (p) {
+                    await p.prompt();
+                    delete (window as Window & { __pwaInstallPrompt?: unknown }).__pwaInstallPrompt;
+                    setCanInstall(false);
+                  } else {
+                    alert("Chrome 주소창 오른쪽 ⋮ 메뉴를 탭한 뒤\n'앱 설치' 또는 '홈 화면에 추가'를 선택해주세요.");
+                  }
+                }}
+                className="bg-blue-600 hover:bg-blue-500 active:scale-95 text-white text-xs font-black px-4 py-2 rounded-xl transition-all"
+              >
+                설치
+              </button>
+            </div>
+          )}
+          {!isStandalone && isIOS && (
+            <div className="flex items-center justify-between bg-[#1A1A1A] border border-[#2A2A2A] rounded-2xl px-4 py-4">
+              <div className="flex items-center gap-3">
+                <span className="text-xl">📲</span>
+                <span className="font-bold text-sm text-white">홈 화면에 추가</span>
+              </div>
+              <span className="text-[11px] text-orange-400 font-bold">Safari 공유 → 홈추가</span>
             </div>
           )}
 
