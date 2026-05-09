@@ -8,6 +8,8 @@ import FlipClock from "@/components/FlipClock";
 import KospiChart from "@/components/KospiChart";
 import GaugeBar from "@/components/GaugeBar";
 import SurveyConfidencePlayground from "@/components/SurveyConfidencePlayground";
+import AppAmbientBackground from "@/components/AppAmbientBackground";
+import AppTabNav from "@/components/AppTabNav";
 
 interface KospiPrice {
   price: number | null;
@@ -388,33 +390,13 @@ function SurveyPageInner() {
     }
   };
 
-  const BottomNav = () => (
-    <nav className="fixed bottom-0 left-0 right-0 bg-[#111] border-t border-[#222] z-50">
-      <div className="w-full flex">
-      <button onClick={() => router.push("/survey")} className="flex-1 flex flex-col items-center py-3 gap-1 text-white">
-        <span className="text-xl">📝</span>
-        <span className="text-xs font-bold">설문</span>
-      </button>
-      <button onClick={() => router.push("/dashboard")} className="flex-1 flex flex-col items-center py-3 gap-1 text-gray-500 hover:text-gray-300 transition-colors">
-        <span className="text-xl">📊</span>
-        <span className="text-xs font-medium">대시보드</span>
-      </button>
-      <button onClick={() => router.push("/groups")} className="flex-1 flex flex-col items-center py-3 gap-1 text-gray-500 hover:text-gray-300 transition-colors">
-        <span className="text-xl">👥</span>
-        <span className="text-xs font-medium">그룹</span>
-      </button>
-      <button onClick={() => router.push("/setup")} className="flex-1 flex flex-col items-center py-3 gap-1 text-gray-500 hover:text-gray-300 transition-colors">
-        <span className="text-xl">⚙️</span>
-        <span className="text-xs font-medium">설정</span>
-      </button>
-      </div>
-    </nav>
-  );
-
   if (loading) {
     return (
-      <main className="w-full min-h-screen flex items-center justify-center">
-        <div className="w-8 h-8 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+      <main className="relative flex min-h-screen w-full items-center justify-center">
+        <AppAmbientBackground />
+        <div className="relative z-10 flex flex-col items-center gap-2">
+          <div className="w-8 h-8 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+        </div>
       </main>
     );
   }
@@ -427,7 +409,9 @@ function SurveyPageInner() {
   const isWeekendKST = _kstDay === 0 || _kstDay === 6;
 
   return (
-    <main className="w-full min-h-screen pb-36 min-w-0 box-border">
+    <main className="relative w-full min-h-screen pb-36 min-w-0 box-border">
+      <AppAmbientBackground />
+      <div className="relative z-10">
       {/* 독촉 토스트 */}
       {nudgeToast && (
         <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[100] px-4 py-3 bg-orange-500 text-white text-sm font-bold rounded-2xl shadow-xl animate-bounce-in max-w-xs text-center">
@@ -846,7 +830,9 @@ function SurveyPageInner() {
         </div>
       )}
 
-      <BottomNav />
+      </div>
+
+      <AppTabNav />
     </main>
   );
 }

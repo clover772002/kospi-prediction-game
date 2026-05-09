@@ -4,7 +4,7 @@ import { usePathname } from "next/navigation";
 import ShareSheet from "@/components/ShareSheet";
 
 // BottomNav가 있는 페이지 목록
-const PAGES_WITH_NAV = ["/dashboard", "/setup", "/survey"];
+const PAGES_WITH_NAV = ["/dashboard", "/setup", "/survey", "/groups"];
 
 export default function FloatingShareBanner() {
   const pathname = usePathname();

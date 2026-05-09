@@ -8,6 +8,8 @@ import {
   Group, GroupLeaderboard,
 } from "@/lib/api";
 import ShareSheet from "@/components/ShareSheet";
+import AppAmbientBackground from "@/components/AppAmbientBackground";
+import AppTabNav from "@/components/AppTabNav";
 
 export default function GroupsPage() {
   const router = useRouter();
@@ -113,13 +115,18 @@ export default function GroupsPage() {
   const medals = ["🥇", "🥈", "🥉"];
 
   if (loading) return (
-    <main className="max-w-md mx-auto min-h-screen flex items-center justify-center bg-[#111]">
+    <main className="relative max-w-md mx-auto min-h-screen flex items-center justify-center">
+      <AppAmbientBackground />
+      <div className="relative z-10">
       <div className="w-8 h-8 border-2 border-green-500/30 border-t-green-500 rounded-full animate-spin" />
+      </div>
     </main>
   );
 
   return (
-    <main className="max-w-md mx-auto min-h-screen pb-28 px-5 bg-[#111] text-white">
+    <main className="relative max-w-md mx-auto min-h-screen pb-28 px-5 text-white">
+      <AppAmbientBackground />
+      <div className="relative z-10">
       {/* 플로팅 토스트 */}
       {msg && (
         <div className={`fixed top-5 left-1/2 -translate-x-1/2 z-[70] max-w-sm w-[calc(100%-2rem)] px-5 py-3.5 rounded-2xl text-sm font-bold text-center shadow-lg transition-all animate-[fadeUp_0.25s_ease-out] ${msg.ok ? "bg-green-500 text-white" : "bg-red-500 text-white"}`}>
@@ -372,23 +379,9 @@ export default function GroupsPage() {
         </div>
       )}
 
-      {/* 하단 내비 */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-[#111] border-t border-[#222] z-50">
-        <div className="max-w-md mx-auto flex">
-          <button onClick={() => router.push("/survey")} className="flex-1 flex flex-col items-center py-3 gap-1 text-gray-500 hover:text-gray-300 transition-colors">
-            <span className="text-xl">📝</span><span className="text-xs font-medium">설문</span>
-          </button>
-          <button onClick={() => router.push("/dashboard")} className="flex-1 flex flex-col items-center py-3 gap-1 text-gray-500 hover:text-gray-300 transition-colors">
-            <span className="text-xl">📊</span><span className="text-xs font-medium">대시보드</span>
-          </button>
-          <button className="flex-1 flex flex-col items-center py-3 gap-1 text-green-400">
-            <span className="text-xl">👥</span><span className="text-xs font-bold">그룹</span>
-          </button>
-          <button onClick={() => router.push("/setup")} className="flex-1 flex flex-col items-center py-3 gap-1 text-gray-500 hover:text-gray-300 transition-colors">
-            <span className="text-xl">⚙️</span><span className="text-xs font-medium">설정</span>
-          </button>
-        </div>
-      </nav>
+      </div>
+
+      <AppTabNav />
     </main>
   );
 }

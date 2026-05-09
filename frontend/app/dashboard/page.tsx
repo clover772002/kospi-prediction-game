@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { getMe, getToday, getDashboard, createChallenge, getMyChallenges, reactToChallenge, requestRematch, acceptChallenge, declineChallenge, getMyGroups, getGroupLeaderboard, UserProfile, TodaySurvey, DashboardData, Challenge, Group, GroupLeaderboard } from "@/lib/api";
 import ShareSheet from "@/components/ShareSheet";
+import AppAmbientBackground from "@/components/AppAmbientBackground";
+import AppTabNav from "@/components/AppTabNav";
 
 // 연속 적중 스트릭 계산
 function calcStreak(history: DashboardData["history"]): number {
@@ -262,8 +264,9 @@ export default function DashboardPage() {
 
   if (loading) {
     return (
-      <main className="max-w-md mx-auto min-h-screen flex items-center justify-center">
-        <div className="text-center space-y-3">
+      <main className="relative max-w-md mx-auto min-h-screen flex items-center justify-center">
+        <AppAmbientBackground />
+        <div className="relative z-10 text-center space-y-3">
           <div className="w-10 h-10 border-2 border-blue-500/30 border-t-blue-500 rounded-full animate-spin mx-auto" />
           <p className="text-sm text-gray-400">데이터 불러오는 중...</p>
           <p className="text-xs text-gray-600">10초 내로 자동 해결됩니다</p>
@@ -274,8 +277,9 @@ export default function DashboardPage() {
 
   if (error) {
     return (
-      <main className="max-w-md mx-auto min-h-screen flex items-center justify-center px-6">
-        <div className="text-center space-y-4">
+      <main className="relative max-w-md mx-auto min-h-screen flex items-center justify-center px-6">
+        <AppAmbientBackground />
+        <div className="relative z-10 text-center space-y-4">
           <div className="text-5xl">⚠️</div>
           <p className="font-bold text-lg">오류가 발생했습니다</p>
           <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4 text-left">
@@ -384,6 +388,8 @@ export default function DashboardPage() {
 
   return (
     <main className="max-w-md mx-auto min-h-screen pb-36 px-5 relative">
+      <AppAmbientBackground />
+      <div className="relative z-10">
       {/* ── 결과 공유 카드 팝업 ── */}
       {showResultCard && today && (
         <div
@@ -1260,23 +1266,8 @@ export default function DashboardPage() {
           </div>
         )}
 
-      {/* 하단 내비 */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-[#111] border-t border-[#222] z-50">
-        <div className="max-w-md mx-auto flex">
-          <button onClick={() => router.push("/survey")} className="flex-1 flex flex-col items-center py-3 gap-1 text-gray-500 hover:text-gray-300 transition-colors">
-            <span className="text-xl">📝</span><span className="text-xs font-medium">설문</span>
-          </button>
-          <button className="flex-1 flex flex-col items-center py-3 gap-1 text-blue-400">
-            <span className="text-xl">📊</span><span className="text-xs font-bold">대시보드</span>
-          </button>
-          <button onClick={() => router.push("/groups")} className="flex-1 flex flex-col items-center py-3 gap-1 text-gray-500 hover:text-gray-300 transition-colors">
-            <span className="text-xl">👥</span><span className="text-xs font-medium">그룹</span>
-          </button>
-          <button onClick={() => router.push("/setup")} className="flex-1 flex flex-col items-center py-3 gap-1 text-gray-500 hover:text-gray-300 transition-colors">
-            <span className="text-xl">⚙️</span><span className="text-xs font-medium">설정</span>
-          </button>
-        </div>
-      </nav>
+      </div>
+      <AppTabNav />
     </main>
   );
 }

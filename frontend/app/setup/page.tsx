@@ -4,6 +4,8 @@ import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { getMe, unlinkTelegram, getVapidPublicKey, savePushSubscription, deletePushSubscription, savePushPreferences, createGroup, joinGroup, getMyGroups, leaveGroup, UserProfile, Group, PushPreferences } from "@/lib/api";
+import AppAmbientBackground from "@/components/AppAmbientBackground";
+import AppTabNav from "@/components/AppTabNav";
 
 const BOT_USERNAME = process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME || "Profitchat123bot";
 
@@ -194,14 +196,19 @@ export default function SetupPage() {
 
   if (loading) {
     return (
-      <main className="max-w-md mx-auto min-h-screen flex items-center justify-center">
+      <main className="relative max-w-md mx-auto min-h-screen flex items-center justify-center">
+        <AppAmbientBackground />
+        <div className="relative z-10">
         <div className="w-8 h-8 border-2 border-blue-500/30 border-t-blue-500 rounded-full animate-spin" />
+        </div>
       </main>
     );
   }
 
   return (
-    <main className="max-w-md mx-auto min-h-screen pb-36 px-5">
+    <main className="relative max-w-md mx-auto min-h-screen pb-36 px-5">
+      <AppAmbientBackground />
+      <div className="relative z-10">
       {/* 헤더 */}
       <div className="pt-8 pb-6 flex items-center justify-between">
         <div>
@@ -730,24 +737,9 @@ export default function SetupPage() {
         </div>
       )}
 
-      {/* 하단 내비 */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-[#111] border-t border-[#222] z-50">
-        <div className="max-w-md mx-auto flex">
-          <button onClick={() => router.push("/survey")} className="flex-1 flex flex-col items-center py-3 gap-1 text-gray-500 hover:text-gray-300 transition-colors">
-            <span className="text-xl">📝</span><span className="text-xs font-medium">설문</span>
-          </button>
-          <button onClick={() => router.push("/dashboard")} className="flex-1 flex flex-col items-center py-3 gap-1 text-gray-500 hover:text-gray-300 transition-colors">
-            <span className="text-xl">📊</span><span className="text-xs font-medium">대시보드</span>
-          </button>
-          <button onClick={() => router.push("/groups")} className="flex-1 flex flex-col items-center py-3 gap-1 text-gray-500 hover:text-gray-300 transition-colors">
-            <span className="text-xl">👥</span><span className="text-xs font-medium">그룹</span>
-          </button>
-          <button className="flex-1 flex flex-col items-center py-3 gap-1 text-blue-400">
-            <span className="text-xl">⚙️</span>
-            <span className="text-xs font-bold">설정</span>
-          </button>
-        </div>
-      </nav>
+      </div>
+
+      <AppTabNav />
     </main>
   );
 }
