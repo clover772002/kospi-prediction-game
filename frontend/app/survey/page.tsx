@@ -38,6 +38,97 @@ function getSurveyDayLabel(surveyDate: string): { isNextDay: boolean; label: str
   return { isNextDay: true, label: `다음 거래일 장 예측 (${mm}/${dd} ${dayKor})`, shortLabel: `${mm}/${dd}(${dayKor})` };
 }
 
+/** 설문 게이지: 미리보기(조작만) → 확정 후 제출 */
+type GaugeSubmitPhase = "preview" | "locked";
+
+function SurveyGaugeWithPreview({
+  phase,
+  setPhase,
+  gaugeValue,
+  onGaugeChange,
+  userTokens,
+  submitting,
+  lockBtnClass,
+  submitBtnClass,
+  submitLabel,
+  onSubmit,
+}: {
+  phase: GaugeSubmitPhase;
+  setPhase: (p: GaugeSubmitPhase) => void;
+  gaugeValue: number;
+  onGaugeChange: (v: number) => void;
+  userTokens: number;
+  submitting: boolean;
+  lockBtnClass: string;
+  submitBtnClass: string;
+  submitLabel: string;
+  onSubmit: () => void | Promise<void>;
+}) {
+  const isPreview = phase === "preview";
+  return (
+    <div className="space-y-3">
+      {isPreview ? (
+        <>
+          <div className="bg-cyan-500/10 border border-cyan-500/30 rounded-xl px-3 py-2.5 text-center space-y-1">
+            <p className="text-cyan-300 text-xs font-black">미리보기 모드</p>
+            <p className="text-[11px] text-gray-400 leading-relaxed">
+              슬라이더를 좌우로 움직여 방향과 배팅 토큰을 확인하세요.<br />
+              <span className="text-gray-500">아직 예측이 제출·저장되지 않았습니다.</span>
+            </p>
+          </div>
+          <GaugeBar
+            value={gaugeValue}
+            onChange={onGaugeChange}
+            tokens={userTokens}
+            disabled={submitting}
+          />
+          <button
+            type="button"
+            onClick={() => setPhase("locked")}
+            disabled={submitting}
+            className={`w-full py-4 font-black text-base rounded-2xl transition-all active:scale-95 ${lockBtnClass}`}
+          >
+            이 설정으로 확정하기
+          </button>
+        </>
+      ) : (
+        <>
+          <div className="bg-[#1A1A1A] border border-emerald-500/25 rounded-xl px-3 py-2 text-center">
+            <p className="text-emerald-400 text-xs font-black">예측 확정됨 · 아래 설정으로 서버에 보냅니다</p>
+          </div>
+          <GaugeBar
+            value={gaugeValue}
+            onChange={onGaugeChange}
+            tokens={userTokens}
+            disabled
+          />
+          <button
+            type="button"
+            onClick={() => setPhase("preview")}
+            disabled={submitting}
+            className="w-full py-3 bg-[#1A1A1A] border border-[#333] text-gray-300 hover:border-gray-500 text-sm font-bold rounded-xl transition-all"
+          >
+            미리보기로 다시 조정
+          </button>
+          <button
+            type="button"
+            onClick={() => void onSubmit()}
+            disabled={submitting}
+            className={`w-full py-4 font-black text-base rounded-2xl transition-all active:scale-95 ${submitBtnClass}`}
+          >
+            {submitting ? (
+              <span className="flex items-center justify-center gap-2">
+                <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                제출 중...
+              </span>
+            ) : submitLabel}
+          </button>
+        </>
+      )}
+    </div>
+  );
+}
+
 function SurveyPageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -71,6 +162,9 @@ function SurveyPageInner() {
   const [nextSubmitted, setNextSubmitted] = useState(false);
   const [nextSubmitting, setNextSubmitting] = useState(false);
   const [nextMyResponseLoading, setNextMyResponseLoading] = useState(false);
+  /** 게이지: 미리보기만 vs 확정 후 제출 */
+  const [todayGaugePhase, setTodayGaugePhase] = useState<GaugeSubmitPhase>("preview");
+  const [nextGaugePhase, setNextGaugePhase] = useState<GaugeSubmitPhase>("preview");
 
   const loadToday = useCallback(async () => {
     try {
@@ -178,6 +272,7 @@ function SurveyPageInner() {
           setNextSubmitted(false);
           setNextGaugePosition(10);
           setNextKospiAnswer(true);
+          setNextGaugePhase("preview");
         }
       } finally {
         if (!cancelled) setNextMyResponseLoading(false);
@@ -209,6 +304,16 @@ function SurveyPageInner() {
     });
     return () => subscription.unsubscribe();
   }, [router, loadToday, checkMyResponse]);
+
+  // 거래일/설문이 바뀌면 오늘 설문 게이지는 다시 미리보기부터
+  useEffect(() => {
+    setTodayGaugePhase("preview");
+  }, [today?.survey_date, today?.status]);
+
+  // 다음 거래일 미리설문 대상 날짜가 바뀌면 게이지 단계 초기화
+  useEffect(() => {
+    setNextGaugePhase("preview");
+  }, [nextSurvey?.survey_date]);
 
   const handleSubmit = async () => {
     if (!token || kospiAnswer === null) return;
@@ -410,17 +515,18 @@ function SurveyPageInner() {
               </div>
             ) : (
               <>
-                <GaugeBar
-                  value={nextGaugePosition}
-                  onChange={(v) => { setNextGaugePosition(v); setNextKospiAnswer(v > 0); }}
-                  tokens={userTokens}
-                  disabled={nextSubmitting}
+                <SurveyGaugeWithPreview
+                  phase={nextGaugePhase}
+                  setPhase={setNextGaugePhase}
+                  gaugeValue={nextGaugePosition}
+                  onGaugeChange={(v) => { setNextGaugePosition(v); setNextKospiAnswer(v > 0); }}
+                  userTokens={userTokens}
+                  submitting={nextSubmitting}
+                  lockBtnClass="bg-amber-500 hover:bg-amber-400 disabled:bg-[#333] disabled:text-gray-500 text-white"
+                  submitBtnClass="bg-amber-500 hover:bg-amber-400 disabled:bg-[#333] disabled:text-gray-500 text-white"
+                  submitLabel={`${getSurveyDayLabel(nextSurvey.survey_date).shortLabel} 예측 제출하기`}
+                  onSubmit={handleNextSubmit}
                 />
-                <button onClick={handleNextSubmit}
-                  disabled={nextSubmitting}
-                  className="w-full mt-3 py-4 bg-amber-500 hover:bg-amber-400 disabled:bg-[#333] disabled:text-gray-500 text-white font-black text-base rounded-2xl transition-all active:scale-95">
-                  {nextSubmitting ? "제출 중..." : `${getSurveyDayLabel(nextSurvey.survey_date).shortLabel} 예측 제출하기`}
-                </button>
               </>
             )}
           </div>
@@ -483,7 +589,7 @@ function SurveyPageInner() {
                 {previousAnswer ? "📈 상승" : "📉 하락"}
               </p>
               <button
-                onClick={() => { retryingRef.current = true; setRetrying(true); setSubmitted(false); }}
+                onClick={() => { retryingRef.current = true; setRetrying(true); setSubmitted(false); setTodayGaugePhase("preview"); }}
                 className="mt-2 text-[10px] text-gray-500 border border-[#333] px-2 py-1 rounded-lg hover:border-white/30 transition-all"
               >
                 변경하기
@@ -536,11 +642,17 @@ function SurveyPageInner() {
                 return `📈 코스피 ${shortLabel} 얼마나 확신하나요?`;
               })()}
             </p>
-            <GaugeBar
-              value={gaugePosition}
-              onChange={(v) => { setGaugePosition(v); setKospiAnswer(v > 0); }}
-              tokens={userTokens}
-              disabled={submitting}
+            <SurveyGaugeWithPreview
+              phase={todayGaugePhase}
+              setPhase={setTodayGaugePhase}
+              gaugeValue={gaugePosition}
+              onGaugeChange={(v) => { setGaugePosition(v); setKospiAnswer(v > 0); }}
+              userTokens={userTokens}
+              submitting={submitting}
+              lockBtnClass="bg-cyan-600 hover:bg-cyan-500 disabled:bg-[#333] disabled:text-gray-500 text-white"
+              submitBtnClass="bg-blue-600 hover:bg-blue-500 disabled:bg-[#333] disabled:text-gray-500 text-white"
+              submitLabel={retrying ? "예측 변경하기" : "예측 제출하기"}
+              onSubmit={handleSubmit}
             />
           </div>
 
@@ -549,21 +661,9 @@ function SurveyPageInner() {
               {error}
             </div>
           )}
-
-          <button
-            onClick={handleSubmit}
-            disabled={submitting}
-            className="w-full py-4 bg-blue-600 hover:bg-blue-500 disabled:bg-[#333] disabled:text-gray-500 text-white font-black text-base rounded-2xl transition-all active:scale-95"
-          >
-            {submitting ? (
-              <span className="flex items-center justify-center gap-2">
-                <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                제출 중...
-              </span>
-            ) : retrying ? "예측 변경하기" : "예측 제출하기"}
-          </button>
         </div>
       )}
+
 
       {/* 제출 완료 — 내 예측 + 코스피 차트 */}
       {status === "open" && !isWeekendKST && submitted && (
@@ -661,7 +761,7 @@ function SurveyPageInner() {
                     </div>
                     {nextAlreadyAnswered && !nextSubmitted && (
                       <button
-                        onClick={() => { setNextAlreadyAnswered(false); setNextSubmitted(false); }}
+                        onClick={() => { setNextAlreadyAnswered(false); setNextSubmitted(false); setNextGaugePhase("preview"); }}
                         className="text-xs text-gray-500 underline"
                       >
                         다시 선택하기
@@ -670,24 +770,23 @@ function SurveyPageInner() {
                   </div>
                 ) : (
                   <>
-                    <GaugeBar
-                      value={nextGaugePosition}
-                      onChange={(v) => { setNextGaugePosition(v); setNextKospiAnswer(v > 0); }}
-                      tokens={userTokens}
-                      disabled={nextSubmitting}
+                    <SurveyGaugeWithPreview
+                      phase={nextGaugePhase}
+                      setPhase={setNextGaugePhase}
+                      gaugeValue={nextGaugePosition}
+                      onGaugeChange={(v) => { setNextGaugePosition(v); setNextKospiAnswer(v > 0); }}
+                      userTokens={userTokens}
+                      submitting={nextSubmitting}
+                      lockBtnClass="bg-amber-500 hover:bg-amber-400 disabled:bg-[#333] disabled:text-gray-500 text-white"
+                      submitBtnClass="bg-amber-500 hover:bg-amber-400 disabled:bg-[#333] disabled:text-gray-500 text-white"
+                      submitLabel={`${getSurveyDayLabel(nextSurvey.survey_date).shortLabel} 예측 제출하기`}
+                      onSubmit={handleNextSubmit}
                     />
                     {error && (
                       <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-3 text-red-400 text-sm text-center mt-2">
                         {error}
                       </div>
                     )}
-                    <button
-                      onClick={handleNextSubmit}
-                      disabled={nextSubmitting}
-                      className="w-full mt-3 py-4 bg-amber-500 hover:bg-amber-400 disabled:bg-[#333] disabled:text-gray-500 text-white font-black text-base rounded-2xl transition-all active:scale-95"
-                    >
-                      {nextSubmitting ? "제출 중..." : `${getSurveyDayLabel(nextSurvey.survey_date).shortLabel} 예측 제출하기`}
-                    </button>
                   </>
                 )}
               </div>
