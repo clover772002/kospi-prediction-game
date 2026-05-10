@@ -123,35 +123,35 @@ export function DashboardInsightSectionSkeleton() {
     <div className="space-y-3">
       <div className="rounded-2xl border border-violet-500/25 bg-violet-500/[0.06] px-4 py-4 animate-pulse">
         <div className="h-4 w-48 rounded bg-[#333] mb-2" />
-        <div className="h-24 rounded bg-[#222]" />
+        <div className="h-36 rounded-lg bg-[#222]" />
       </div>
       <div className="rounded-2xl border border-sky-500/25 bg-sky-500/[0.06] px-4 py-4 animate-pulse">
         <div className="h-4 w-52 rounded bg-[#333] mb-2" />
-        <div className="h-24 rounded bg-[#222]" />
+        <div className="h-36 rounded-lg bg-[#222]" />
       </div>
       <div className="rounded-2xl border border-emerald-500/25 bg-emerald-500/[0.06] px-4 py-4 animate-pulse">
         <div className="h-4 w-52 rounded bg-[#333] mb-2" />
-        <div className="h-24 rounded bg-[#222]" />
+        <div className="h-36 rounded-lg bg-[#222]" />
       </div>
       <div className="rounded-2xl border border-amber-500/25 bg-amber-500/[0.06] px-4 py-4 animate-pulse">
         <div className="h-4 w-56 rounded bg-[#333] mb-2" />
-        <div className="h-24 rounded bg-[#222]" />
+        <div className="h-36 rounded-lg bg-[#222]" />
       </div>
       <div className="rounded-2xl border border-indigo-500/25 bg-indigo-500/[0.06] px-4 py-4 animate-pulse">
         <div className="h-4 w-52 rounded bg-[#333] mb-2" />
-        <div className="h-24 rounded bg-[#222]" />
+        <div className="h-36 rounded-lg bg-[#222]" />
       </div>
       <div className="rounded-2xl border border-slate-500/25 bg-slate-600/[0.08] px-4 py-4 animate-pulse">
         <div className="h-4 w-52 rounded bg-[#333] mb-2" />
-        <div className="h-24 rounded bg-[#222]" />
+        <div className="h-36 rounded-lg bg-[#222]" />
       </div>
       <div className="rounded-2xl border border-rose-500/25 bg-rose-500/[0.06] px-4 py-4 animate-pulse">
         <div className="h-4 w-44 rounded bg-[#333] mb-2" />
-        <div className="h-24 rounded bg-[#222]" />
+        <div className="h-36 rounded-lg bg-[#222]" />
       </div>
       <div className="rounded-2xl border border-teal-500/25 bg-teal-500/[0.06] px-4 py-4 animate-pulse">
         <div className="h-4 w-40 rounded bg-[#333] mb-2" />
-        <div className="h-24 rounded bg-[#222]" />
+        <div className="h-36 rounded-lg bg-[#222]" />
       </div>
     </div>
   );

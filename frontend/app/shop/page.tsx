@@ -5,8 +5,10 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import { createStripePackCheckout, getShopCatalog, purchaseConsumable, ShopCatalog, ShopConsumableProduct } from "@/lib/api";
+import InsightAnimatedPreview from "@/components/InsightAnimatedPreview";
 import AppAmbientBackground from "@/components/AppAmbientBackground";
 import AppTabNav from "@/components/AppTabNav";
+import { isInsightProductSlug } from "@/lib/insight_card_meta";
 
 function ShopInner() {
   const router = useRouter();
@@ -202,11 +204,23 @@ function ShopInner() {
             {(catalog?.insight_products ?? []).map((p) => (
               <li
                 key={p.slug}
-                className="rounded-2xl border border-violet-500/25 bg-violet-950/20 px-4 py-3 text-sm space-y-2"
+                className="rounded-2xl border border-violet-500/25 bg-violet-950/20 px-4 py-3 text-sm space-y-3"
               >
-                <p className="font-bold text-white">{p.title}</p>
-                {p.description ? <p className="text-[11px] text-gray-500 mt-1 leading-relaxed">{p.description}</p> : null}
-                <p className="text-xs text-amber-300 font-black tabular-nums">{p.price_tokens} 토큰</p>
+                <div className="flex items-start justify-between gap-2 flex-wrap">
+                  <p className="font-bold text-white min-w-0 flex-1">{p.title}</p>
+                  <p className="text-xs text-amber-300 font-black tabular-nums shrink-0">{p.price_tokens} 토큰</p>
+                </div>
+                {isInsightProductSlug(p.slug) ? <InsightAnimatedPreview slug={p.slug} /> : null}
+                {p.description ? (
+                  <details className="group border-t border-white/[0.06] pt-2">
+                    <summary className="cursor-pointer list-none text-[10px] font-bold text-gray-500 hover:text-gray-400 [&::-webkit-details-marker]:hidden">
+                      상품 안내
+                      <span className="text-gray-600 ml-1 font-normal opacity-70 group-open:hidden">열기</span>
+                      <span className="text-gray-600 ml-1 font-normal opacity-70 hidden group-open:inline">접기</span>
+                    </summary>
+                    <p className="text-[11px] text-gray-500 mt-2 leading-relaxed">{p.description}</p>
+                  </details>
+                ) : null}
                 <Link
                   href="/dashboard"
                   className="inline-flex text-[11px] font-bold text-violet-300 hover:text-white underline underline-offset-2"
