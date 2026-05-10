@@ -16,6 +16,9 @@ export function resolveApiBase(): string {
   return RAILWAY_URL;
 }
 
+/** 인사이트 GET이 캐시돼 예전 UI·옛 reason이 남지 않도록 */
+const insightFetchInit: RequestInit = { cache: "no-store" };
+
 async function authFetch<T>(path: string, token: string, options: RequestInit = {}): Promise<T> {
   const res = await fetch(`${resolveApiBase()}${path}`, {
     ...options,
@@ -314,6 +317,7 @@ export async function getExpertGapInsight(accessToken: string, surveyDate: strin
   const res = await fetch(
     `${resolveApiBase()}/api/insights/daily-expert-gap?survey_date=${encodeURIComponent(surveyDate)}`,
     {
+      ...insightFetchInit,
       headers: { Authorization: `Bearer ${accessToken}` },
     },
   );
@@ -356,7 +360,7 @@ export interface GaugeCrowdInsightResponse {
 export async function getGaugeCrowdInsight(accessToken: string, surveyDate: string): Promise<GaugeCrowdInsightResponse> {
   const res = await fetch(
     `${resolveApiBase()}/api/insights/my-gauge-vs-crowd?survey_date=${encodeURIComponent(surveyDate)}`,
-    { headers: { Authorization: `Bearer ${accessToken}` } },
+    { ...insightFetchInit, headers: { Authorization: `Bearer ${accessToken}` } },
   );
   if (!res.ok) {
     const raw = await res.json().catch(() => ({}));
@@ -448,7 +452,7 @@ export async function getRollingCrowdInsight(
 ): Promise<RollingCrowdInsightResponse> {
   const res = await fetch(
     `${resolveApiBase()}/api/insights/rolling-crowd-summary?survey_date=${encodeURIComponent(surveyDateAsEndDate)}`,
-    { headers: { Authorization: `Bearer ${accessToken}` } },
+    { ...insightFetchInit, headers: { Authorization: `Bearer ${accessToken}` } },
   );
   if (!res.ok) {
     const raw = await res.json().catch(() => ({}));
@@ -498,6 +502,7 @@ export async function getGroupVsGlobalInsight(
 ): Promise<GroupVsGlobalInsightResponse> {
   const q = `survey_date=${encodeURIComponent(surveyDate)}&group_id=${encodeURIComponent(groupId)}`;
   const res = await fetch(`${resolveApiBase()}/api/insights/group-vs-global-snapshot?${q}`, {
+    ...insightFetchInit,
     headers: { Authorization: `Bearer ${accessToken}` },
   });
   if (!res.ok) {
@@ -542,7 +547,7 @@ export async function getTimeSliceAccuracyInsight(
 ): Promise<TimeSliceAccuracyInsightResponse> {
   const res = await fetch(
     `${resolveApiBase()}/api/insights/time-slice-accuracy?survey_date=${encodeURIComponent(surveyDate)}`,
-    { headers: { Authorization: `Bearer ${accessToken}` } },
+    { ...insightFetchInit, headers: { Authorization: `Bearer ${accessToken}` } },
   );
   if (!res.ok) {
     const raw = await res.json().catch(() => ({}));
@@ -588,7 +593,7 @@ export async function getExpertVoteTimeProfileInsight(
 ): Promise<VoteTimeProfileInsightResponse> {
   const res = await fetch(
     `${resolveApiBase()}/api/insights/expert-vote-time-profile?survey_date=${encodeURIComponent(surveyDate)}`,
-    { headers: { Authorization: `Bearer ${accessToken}` } },
+    { ...insightFetchInit, headers: { Authorization: `Bearer ${accessToken}` } },
   );
   if (!res.ok) {
     const raw = await res.json().catch(() => ({}));
@@ -605,7 +610,7 @@ export async function getNoviceVoteTimeProfileInsight(
 ): Promise<VoteTimeProfileInsightResponse> {
   const res = await fetch(
     `${resolveApiBase()}/api/insights/novice-vote-time-profile?survey_date=${encodeURIComponent(surveyDate)}`,
-    { headers: { Authorization: `Bearer ${accessToken}` } },
+    { ...insightFetchInit, headers: { Authorization: `Bearer ${accessToken}` } },
   );
   if (!res.ok) {
     const raw = await res.json().catch(() => ({}));

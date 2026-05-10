@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useConfirmShopOnInsufficientTokens } from "@/hooks/useConfirmShopOnInsufficientTokens";
 import InsightAnimatedPreview from "@/components/InsightAnimatedPreview";
+import InsightUnavailableCard from "@/components/InsightUnavailableCard";
 import InsightTokenPriceButton from "@/components/InsightTokenPriceButton";
 import InsightDetailDisclosure from "@/components/InsightDetailDisclosure";
 import { insightMeta } from "@/lib/insight_card_meta";
@@ -114,11 +115,17 @@ export default function TimeSliceAccuracyInsightCard({ accessToken, surveyDate, 
     data.reason === "no_timestamp_data" ||
     data.reason === "insufficient_total_timestamps"
   ) {
+    const body = reasonExplain();
     return (
-      <div className="rounded-2xl border border-[#2A2A2A] bg-[#141414]/80 px-4 py-3 space-y-1.5 fade-up-2">
-        <p className="text-xs text-gray-400 leading-relaxed">{reasonExplain()}</p>
-        <p className="text-[10px] text-gray-600 tabular-nums">{data.survey_date}</p>
-      </div>
+      <InsightUnavailableCard
+        variant="amber"
+        slug="time_slice_accuracy"
+        title={data.title ?? "시간대별 무드"}
+        surveyDate={data.survey_date}
+        badgeExtra="· 파도 B"
+      >
+        {body ? <p className="text-xs text-gray-400 leading-relaxed">{body}</p> : null}
+      </InsightUnavailableCard>
     );
   }
 

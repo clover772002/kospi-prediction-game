@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useConfirmShopOnInsufficientTokens } from "@/hooks/useConfirmShopOnInsufficientTokens";
 import InsightAnimatedPreview from "@/components/InsightAnimatedPreview";
+import InsightUnavailableCard from "@/components/InsightUnavailableCard";
 import InsightTokenPriceButton from "@/components/InsightTokenPriceButton";
 import InsightDetailDisclosure from "@/components/InsightDetailDisclosure";
 import { insightMeta } from "@/lib/insight_card_meta";
@@ -100,40 +101,49 @@ export default function GaugeCrowdInsightCard({ accessToken, surveyDate, onBalan
 
   if (data.reason === "not_participated") {
     return (
-      <div className="rounded-2xl border border-teal-500/25 bg-[#141414]/80 px-4 py-4 space-y-2 fade-up-2">
-        <p className="text-[10px] font-black text-teal-300 uppercase tracking-wide">토큰 인사이트</p>
-        <p className="text-sm font-black text-white">{data.title ?? "내 확신도, 같은 편 속 위치"}</p>
-        <p className="text-xs text-gray-400">
+      <InsightUnavailableCard
+        variant="teal"
+        slug={PRODUCT_SLUG}
+        title={data.title ?? "내 확신도, 같은 편 속 위치"}
+        surveyDate={data.survey_date}
+        footer={
+          <Link
+            href="/survey"
+            className="inline-block py-3 px-4 rounded-xl bg-teal-600 hover:bg-teal-500 text-white text-xs font-black text-center w-full transition-colors"
+          >
+            설문 하러 가기
+          </Link>
+        }
+      >
+        <p className="text-xs text-gray-400 leading-relaxed">
           그날(<span className="tabular-nums text-gray-300">{data.survey_date}</span>) 설문에 아직 참여하지 않았어요. 같은 편 속 비교를 보려면 먼저 설문을 제출해 주세요.
         </p>
-        <Link
-          href="/survey"
-          className="inline-block mt-2 py-3 px-4 rounded-xl bg-teal-600 hover:bg-teal-500 text-white text-xs font-black text-center w-full transition-colors"
-        >
-          설문 하러 가기
-        </Link>
-      </div>
+      </InsightUnavailableCard>
     );
   }
 
   if (data.reason === "no_survey_data") {
     return (
-      <div className="rounded-2xl border border-[#2A2A2A] bg-[#141414]/80 px-4 py-3 text-xs text-gray-500 fade-up-2 space-y-1">
-        <p>
-          거래일 <span className="tabular-nums text-gray-400">{data.survey_date}</span>에 유효한 게이지 응답이 부족해 비교 카드를 만들 수 없어요.
+      <InsightUnavailableCard
+        variant="teal"
+        slug={PRODUCT_SLUG}
+        title={data.title ?? "내 확신도, 같은 편 속 위치"}
+        surveyDate={data.survey_date}
+      >
+        <p className="text-xs text-gray-400 leading-relaxed">
+          거래일 <span className="tabular-nums text-gray-300">{data.survey_date}</span>에 유효한 게이지 응답이 부족해 비교 카드를 만들 수 없어요.
         </p>
-      </div>
+      </InsightUnavailableCard>
     );
   }
 
   if (data.reason === "cohort_too_small") {
     return (
-      <div className="rounded-2xl border border-orange-500/25 bg-orange-950/20 px-4 py-3 space-y-1.5 fade-up-2">
-        <p className="text-xs text-orange-200/90">{data.title}</p>
+      <InsightUnavailableCard variant="orange" slug={PRODUCT_SLUG} title={data.title ?? "내 확신도, 같은 편 속 위치"} surveyDate={data.survey_date}>
         <p className="text-[11px] text-gray-400 leading-relaxed">
-          같은 방향(상승 또는 하락)으로 응답한 사람이 최소 {MIN_SAME_DIRECTION_PEER}명은 있어야 익명으로 무리 속 위치를 보여 줄 수 있어요. 사람이 더 모이면 이 카드를 다시 열어보세요.
+          같은 방향(상승 또는 하락)으로 응답한 사람이 최소 <span className="text-gray-300">{MIN_SAME_DIRECTION_PEER}명</span>은 있어야 익명으로 무리 속 위치를 보여 줄 수 있어요. 사람이 더 모이면 이 카드를 다시 열어보세요.
         </p>
-      </div>
+      </InsightUnavailableCard>
     );
   }
 

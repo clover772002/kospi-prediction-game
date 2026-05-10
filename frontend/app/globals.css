@@ -94,6 +94,210 @@ body {
 .fade-up-4 { animation: fadeUp 0.45s ease-out 0.35s both; }
 .fade-up-5 { animation: fadeUp 0.45s ease-out 0.45s both; }
 
+/* ── 인사이트 ‘표본 부족’ 카드 (Tailwind 동적 조합 누락 대비 — 항상 전체 카드·미리보기·상세가 보이게) ── */
+.iu-card.iu-var-violet {
+  border-color: rgba(167, 139, 250, 0.32);
+  background: linear-gradient(to bottom, rgba(46, 16, 101, 0.38), rgba(20, 20, 20, 0.94));
+  box-shadow: 0 0 28px rgba(139, 92, 246, 0.07);
+}
+.iu-card.iu-var-violet .iu-stripe {
+  background: rgba(196, 181, 253, 0.78);
+  box-shadow: 0 0 14px rgba(167, 139, 250, 0.42);
+}
+.iu-card.iu-var-violet .iu-badge {
+  color: rgb(216, 180, 254);
+}
+.iu-card.iu-var-violet .iu-panel {
+  border-color: rgba(196, 181, 253, 0.22);
+  background: rgba(46, 16, 101, 0.32);
+}
+.iu-card.iu-var-violet .iu-disclosure-trigger {
+  color: rgba(196, 181, 253, 0.88);
+}
+.iu-card.iu-var-violet .iu-disclosure-trigger:hover {
+  color: rgb(221, 214, 254);
+}
+
+.iu-card.iu-var-sky {
+  border-color: rgba(56, 189, 248, 0.35);
+  background: linear-gradient(to bottom, rgba(7, 47, 73, 0.45), rgba(20, 20, 20, 0.94));
+  box-shadow: 0 0 28px rgba(56, 189, 248, 0.08);
+}
+.iu-card.iu-var-sky .iu-stripe {
+  background: rgba(56, 189, 248, 0.85);
+  box-shadow: 0 0 14px rgba(56, 189, 248, 0.38);
+}
+.iu-card.iu-var-sky .iu-badge {
+  color: rgb(125, 211, 252);
+}
+.iu-card.iu-var-sky .iu-panel {
+  border-color: rgba(56, 189, 248, 0.24);
+  background: rgba(7, 47, 73, 0.28);
+}
+.iu-card.iu-var-sky .iu-disclosure-trigger {
+  color: rgba(56, 189, 248, 0.9);
+}
+.iu-card.iu-var-sky .iu-disclosure-trigger:hover {
+  color: rgb(186, 230, 253);
+}
+
+.iu-card.iu-var-emerald {
+  border-color: rgba(52, 211, 153, 0.35);
+  background: linear-gradient(to bottom, rgba(6, 78, 59, 0.42), rgba(20, 20, 20, 0.94));
+  box-shadow: 0 0 28px rgba(52, 211, 153, 0.06);
+}
+.iu-card.iu-var-emerald .iu-stripe {
+  background: rgba(52, 211, 153, 0.78);
+  box-shadow: 0 0 14px rgba(52, 211, 153, 0.4);
+}
+.iu-card.iu-var-emerald .iu-badge {
+  color: rgb(110, 231, 183);
+}
+.iu-card.iu-var-emerald .iu-panel {
+  border-color: rgba(52, 211, 153, 0.22);
+  background: rgba(6, 78, 59, 0.3);
+}
+.iu-card.iu-var-emerald .iu-disclosure-trigger {
+  color: rgba(110, 231, 183, 0.9);
+}
+.iu-card.iu-var-emerald .iu-disclosure-trigger:hover {
+  color: rgb(167, 243, 208);
+}
+
+.iu-card.iu-var-amber {
+  border-color: rgba(251, 191, 36, 0.36);
+  background: linear-gradient(to bottom, rgba(69, 39, 0, 0.48), rgba(20, 20, 20, 0.94));
+}
+.iu-card.iu-var-amber .iu-stripe {
+  background: rgba(251, 191, 36, 0.88);
+  box-shadow: 0 0 14px rgba(251, 191, 36, 0.4);
+}
+.iu-card.iu-var-amber .iu-badge {
+  color: rgb(253, 230, 138);
+}
+.iu-card.iu-var-amber .iu-panel {
+  border-color: rgba(251, 191, 36, 0.28);
+  background: rgba(69, 26, 3, 0.35);
+}
+.iu-card.iu-var-amber .iu-disclosure-trigger {
+  color: rgba(252, 211, 77, 0.92);
+}
+.iu-card.iu-var-amber .iu-disclosure-trigger:hover {
+  color: rgb(253, 230, 138);
+}
+
+.iu-card.iu-var-indigo {
+  border-color: rgba(129, 140, 248, 0.35);
+  background: linear-gradient(to bottom, rgba(30, 27, 75, 0.45), rgba(20, 20, 20, 0.94));
+}
+.iu-card.iu-var-indigo .iu-stripe {
+  background: rgba(129, 140, 248, 0.78);
+  box-shadow: 0 0 14px rgba(129, 140, 248, 0.4);
+}
+.iu-card.iu-var-indigo .iu-badge {
+  color: rgb(165, 180, 252);
+}
+.iu-card.iu-var-indigo .iu-panel {
+  border-color: rgba(129, 140, 248, 0.24);
+  background: rgba(30, 27, 75, 0.32);
+}
+.iu-card.iu-var-indigo .iu-disclosure-trigger {
+  color: rgba(165, 180, 252, 0.92);
+}
+.iu-card.iu-var-indigo .iu-disclosure-trigger:hover {
+  color: rgb(199, 210, 254);
+}
+
+.iu-card.iu-var-slate {
+  border-color: rgba(148, 163, 184, 0.35);
+  background: linear-gradient(to bottom, rgba(15, 23, 42, 0.62), rgba(20, 20, 20, 0.94));
+}
+.iu-card.iu-var-slate .iu-stripe {
+  background: rgba(148, 163, 184, 0.65);
+  box-shadow: 0 0 12px rgba(148, 163, 184, 0.32);
+}
+.iu-card.iu-var-slate .iu-badge {
+  color: rgb(203, 213, 225);
+}
+.iu-card.iu-var-slate .iu-panel {
+  border-color: rgba(148, 163, 184, 0.22);
+  background: rgba(15, 23, 42, 0.48);
+}
+.iu-card.iu-var-slate .iu-disclosure-trigger {
+  color: rgba(203, 213, 225, 0.88);
+}
+.iu-card.iu-var-slate .iu-disclosure-trigger:hover {
+  color: rgb(226, 232, 240);
+}
+
+.iu-card.iu-var-rose {
+  border-color: rgba(251, 113, 133, 0.32);
+  background: linear-gradient(to bottom, rgba(76, 5, 25, 0.42), rgba(20, 20, 20, 0.94));
+  box-shadow: 0 0 28px rgba(251, 113, 133, 0.06);
+}
+.iu-card.iu-var-rose .iu-stripe {
+  background: rgba(251, 113, 133, 0.78);
+  box-shadow: 0 0 14px rgba(251, 113, 133, 0.38);
+}
+.iu-card.iu-var-rose .iu-badge {
+  color: rgb(253, 164, 175);
+}
+.iu-card.iu-var-rose .iu-panel {
+  border-color: rgba(251, 113, 133, 0.24);
+  background: rgba(76, 5, 25, 0.32);
+}
+.iu-card.iu-var-rose .iu-disclosure-trigger {
+  color: rgba(253, 164, 175, 0.9);
+}
+.iu-card.iu-var-rose .iu-disclosure-trigger:hover {
+  color: rgb(254, 205, 211);
+}
+
+.iu-card.iu-var-teal {
+  border-color: rgba(45, 212, 191, 0.32);
+  background: linear-gradient(to bottom, rgba(6, 51, 48, 0.42), rgba(20, 20, 20, 0.94));
+  box-shadow: 0 0 28px rgba(45, 212, 191, 0.06);
+}
+.iu-card.iu-var-teal .iu-stripe {
+  background: rgba(45, 212, 191, 0.78);
+  box-shadow: 0 0 14px rgba(45, 212, 191, 0.38);
+}
+.iu-card.iu-var-teal .iu-badge {
+  color: rgb(153, 246, 228);
+}
+.iu-card.iu-var-teal .iu-panel {
+  border-color: rgba(45, 212, 191, 0.24);
+  background: rgba(6, 51, 48, 0.3);
+}
+.iu-card.iu-var-teal .iu-disclosure-trigger {
+  color: rgba(153, 246, 228, 0.9);
+}
+.iu-card.iu-var-teal .iu-disclosure-trigger:hover {
+  color: rgb(204, 251, 241);
+}
+
+.iu-card.iu-var-orange {
+  border-color: rgba(251, 146, 60, 0.32);
+  background: linear-gradient(to bottom, rgba(67, 20, 7, 0.42), rgba(20, 20, 20, 0.94));
+}
+.iu-card.iu-var-orange .iu-stripe {
+  background: rgba(251, 146, 60, 0.78);
+  box-shadow: 0 0 14px rgba(251, 146, 60, 0.38);
+}
+.iu-card.iu-var-orange .iu-badge {
+  color: rgb(253, 186, 116);
+}
+.iu-card.iu-var-orange .iu-panel {
+  border-color: rgba(251, 146, 60, 0.24);
+  background: rgba(67, 20, 7, 0.32);
+}
+.iu-card.iu-var-orange .iu-disclosure-trigger {
+  color: rgba(253, 186, 116, 0.92);
+}
+.iu-card.iu-var-orange .iu-disclosure-trigger:hover {
+  color: rgb(254, 215, 170);
+}
+
 /* ── 토큰 인사이트: 미리보기 차트 애니(SVG 막대·스파크·게이지) ─ */
 @keyframes ip-bar-rise-kf {
   from {

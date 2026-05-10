@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import type { Group } from "@/lib/api";
 import { useConfirmShopOnInsufficientTokens } from "@/hooks/useConfirmShopOnInsufficientTokens";
 import InsightAnimatedPreview from "@/components/InsightAnimatedPreview";
+import InsightUnavailableCard from "@/components/InsightUnavailableCard";
 import InsightTokenPriceButton from "@/components/InsightTokenPriceButton";
 import InsightDetailDisclosure from "@/components/InsightDetailDisclosure";
 import { insightMeta } from "@/lib/insight_card_meta";
@@ -94,15 +95,37 @@ export default function GroupVsGlobalInsightCard({
 
   if (groups.length === 0) {
     return (
-      <div className="rounded-2xl border border-[#2A2A2A] bg-[#141414]/80 px-4 py-3 space-y-1.5 fade-up-2">
+      <InsightUnavailableCard
+        variant="emerald"
+        slug="group_vs_global_snapshot"
+        title="내 그룹 vs 전체"
+        surveyDate={surveyDate}
+      >
         <p className="text-xs text-gray-400 leading-relaxed">
           그룹에 참여한 뒤에만「내 그룹 vs 전체」인사이트를 열 수 있어요. 그룹 화면에서 초대 코드로 들어오면 됩니다.
         </p>
-      </div>
+      </InsightUnavailableCard>
     );
   }
 
   if (!groupId) return null;
+
+  const groupPickerEl = (
+    <label className="text-[11px] text-gray-400 flex flex-col gap-1">
+      <span className="text-gray-500">비교할 그룹</span>
+      <select
+        value={groupId}
+        onChange={(e) => setGroupId(e.target.value)}
+        className="rounded-lg border border-[#333] bg-[#111] text-white text-sm px-3 py-2 outline-none focus:border-emerald-500/50"
+      >
+        {groups.map((g) => (
+          <option key={g.group_id} value={g.group_id}>
+            {g.name} ({g.member_count}명)
+          </option>
+        ))}
+      </select>
+    </label>
+  );
 
   if (loading) {
     return (
@@ -128,30 +151,48 @@ export default function GroupVsGlobalInsightCard({
 
   if (data.reason === "not_group_member") {
     return (
-      <div className="rounded-2xl border border-[#2A2A2A] bg-[#141414]/80 px-4 py-3 text-xs text-gray-400 fade-up-2">
-        선택한 그룹에 속해 있지 않아 이 카드를 볼 수 없어요.
-      </div>
+      <InsightUnavailableCard
+        variant="emerald"
+        slug="group_vs_global_snapshot"
+        title={data.title ?? "그룹 vs 전체"}
+        surveyDate={data.survey_date}
+        footer={groupPickerEl}
+      >
+        <p className="text-xs text-gray-400 leading-relaxed">선택한 그룹에 속해 있지 않아 이 카드를 볼 수 없어요.</p>
+      </InsightUnavailableCard>
     );
   }
 
   if (data.reason === "no_survey_data") {
     return (
-      <div className="rounded-2xl border border-[#2A2A2A] bg-[#141414]/80 px-4 py-3 space-y-1.5 fade-up-2">
+      <InsightUnavailableCard
+        variant="emerald"
+        slug="group_vs_global_snapshot"
+        title={data.title ?? "그룹 vs 전체"}
+        surveyDate={data.survey_date}
+        footer={groupPickerEl}
+      >
         <p className="text-xs text-gray-400 leading-relaxed">
           이 거래일(<span className="text-gray-300 tabular-nums">{data.survey_date}</span>)에는 아직 무리 설문 응답이 없습니다.
         </p>
-      </div>
+      </InsightUnavailableCard>
     );
   }
 
   if (data.reason === "insufficient_group_sample") {
     return (
-      <div className="rounded-2xl border border-[#2A2A2A] bg-[#141414]/80 px-4 py-3 space-y-1.5 fade-up-2">
+      <InsightUnavailableCard
+        variant="emerald"
+        slug="group_vs_global_snapshot"
+        title={data.title ?? "그룹 vs 전체"}
+        surveyDate={data.survey_date}
+        footer={groupPickerEl}
+      >
         <p className="text-xs text-gray-400 leading-relaxed">
           그룹 참가자 중 그날 설문한 인원이 <span className="text-gray-300">8명</span> 미만이라 이 스냅샷은 열 수 없습니다(토큰 차감 없음).
           멤버가 더 모이거나 같은 날 응답이 늘면 다시 시도할 수 있어요.
         </p>
-      </div>
+      </InsightUnavailableCard>
     );
   }
 
@@ -195,20 +236,7 @@ export default function GroupVsGlobalInsightCard({
             </>
           ) : null}
         </InsightDetailDisclosure>
-        <label className="text-[11px] text-gray-400 flex flex-col gap-1">
-          <span className="text-gray-500">비교할 그룹</span>
-          <select
-            value={groupId}
-            onChange={(e) => setGroupId(e.target.value)}
-            className="rounded-lg border border-[#333] bg-[#111] text-white text-sm px-3 py-2 outline-none focus:border-emerald-500/50"
-          >
-            {groups.map((g) => (
-              <option key={g.group_id} value={g.group_id}>
-                {g.name} ({g.member_count}명)
-              </option>
-            ))}
-          </select>
-        </label>
+        {groupPickerEl}
       </div>
 
       {!locked ? (

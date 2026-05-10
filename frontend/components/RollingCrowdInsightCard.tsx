@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useConfirmShopOnInsufficientTokens } from "@/hooks/useConfirmShopOnInsufficientTokens";
 import InsightAnimatedPreview from "@/components/InsightAnimatedPreview";
+import InsightUnavailableCard from "@/components/InsightUnavailableCard";
 import InsightTokenPriceButton from "@/components/InsightTokenPriceButton";
 import InsightDetailDisclosure from "@/components/InsightDetailDisclosure";
 import { insightMeta } from "@/lib/insight_card_meta";
@@ -100,11 +101,17 @@ export default function RollingCrowdInsightCard({
 
   if (data.reason === "no_survey_data") {
     return (
-      <div className="rounded-2xl border border-[#2A2A2A] bg-[#141414]/80 px-4 py-3 space-y-1.5 fade-up-2">
+      <InsightUnavailableCard
+        variant="sky"
+        slug="rolling_crowd_summary"
+        title={data.title ?? "7거래일 무리 요약"}
+        surveyDate={data.survey_date}
+        surveyDatePrefix="종료 "
+      >
         <p className="text-xs text-gray-400 leading-relaxed">
-          이 종료 거래일(<span className="text-gray-300 tabular-nums">{data.survey_date}</span>) 근처 7거래일 구간에 표시할 설문 집계가 아직 없어요.
+          이 종료 거래일 근처 7거래일 구간에 표시할 설문 집계가 아직 없어요.
         </p>
-      </div>
+      </InsightUnavailableCard>
     );
   }
 

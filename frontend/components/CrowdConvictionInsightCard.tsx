@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useConfirmShopOnInsufficientTokens } from "@/hooks/useConfirmShopOnInsufficientTokens";
 import InsightAnimatedPreview from "@/components/InsightAnimatedPreview";
+import InsightUnavailableCard from "@/components/InsightUnavailableCard";
 import InsightTokenPriceButton from "@/components/InsightTokenPriceButton";
 import InsightDetailDisclosure from "@/components/InsightDetailDisclosure";
 import { insightMeta } from "@/lib/insight_card_meta";
@@ -95,26 +96,36 @@ export default function CrowdConvictionInsightCard({ accessToken, surveyDate, on
 
   if (data.reason === "no_survey_data") {
     return (
-      <div className="rounded-2xl border border-[#2A2A2A] bg-[#141414]/80 px-4 py-3 space-y-1.5 fade-up-2">
+      <InsightUnavailableCard
+        variant="rose"
+        slug="crowd_conviction_spread"
+        title={data.title ?? "무리 확신 분포"}
+        surveyDate={data.survey_date}
+      >
         <p className="text-xs text-gray-400 leading-relaxed">
           이 거래일(<span className="text-gray-300 tabular-nums">{data.survey_date}</span>)에는 아직 게이지를 쓸 수 있는 설문 응답이 없어 무리 분포를 만들 수 없어요.
         </p>
-        <p className="text-[10px] text-gray-600 leading-relaxed">
-          응답이 모이면 이 카드에서 집계를 시도합니다. 최소 <span className="text-gray-500">20</span>명 이상 필요해요.
+        <p className="text-[10px] text-gray-500 leading-relaxed">
+          응답이 모이면 이 카드에서 집계를 시도합니다. 최소 <span className="text-gray-400">20</span>명 이상 필요해요.
         </p>
-      </div>
+      </InsightUnavailableCard>
     );
   }
 
   if (data.reason === "insufficient_sample") {
     return (
-      <div className="rounded-2xl border border-[#2A2A2A] bg-[#141414]/80 px-4 py-3 space-y-1.5 fade-up-2">
+      <InsightUnavailableCard
+        variant="rose"
+        slug="crowd_conviction_spread"
+        title={data.title ?? "무리 확신 분포"}
+        surveyDate={data.survey_date}
+      >
         <p className="text-xs text-gray-400 leading-relaxed">
           이 거래일에는 게이지 응답이 있지만, 통계적으로 의미 있는 한 장 요약을 보여 주려면{" "}
           <span className="text-gray-300">최소 20명</span> 이상이 필요해요. 조금 더 모이면 같은 카드에서 열람할 수 있어요.
         </p>
-        <p className="text-[10px] text-gray-600 leading-relaxed">교육·게임 회고용 집계이며 투자 권유가 아닙니다.</p>
-      </div>
+        <p className="text-[10px] text-gray-500 leading-relaxed">교육·게임 회고용 집계이며 투자 권유가 아닙니다.</p>
+      </InsightUnavailableCard>
     );
   }
 

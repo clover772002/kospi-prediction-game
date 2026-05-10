@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useConfirmShopOnInsufficientTokens } from "@/hooks/useConfirmShopOnInsufficientTokens";
 import InsightAnimatedPreview from "@/components/InsightAnimatedPreview";
+import InsightUnavailableCard from "@/components/InsightUnavailableCard";
 import InsightTokenPriceButton from "@/components/InsightTokenPriceButton";
 import InsightDetailDisclosure from "@/components/InsightDetailDisclosure";
 import { insightMeta } from "@/lib/insight_card_meta";
@@ -73,7 +74,7 @@ export default function ExpertGapInsightCard({ accessToken, surveyDate, onBalanc
 
   if (loading) {
     return (
-      <div className="rounded-2xl border border-amber-500/25 bg-amber-500/[0.06] px-4 py-4 fade-up-2 animate-pulse">
+      <div className="rounded-2xl border border-violet-500/25 bg-violet-500/[0.06] px-4 py-4 fade-up-2 animate-pulse">
         <div className="h-4 w-40 rounded bg-[#333] mb-2" />
         <div className="h-16 rounded bg-[#222]" />
       </div>
@@ -95,14 +96,19 @@ export default function ExpertGapInsightCard({ accessToken, surveyDate, onBalanc
 
   if (data.reason === "no_survey_data") {
     return (
-      <div className="rounded-2xl border border-[#2A2A2A] bg-[#141414]/80 px-4 py-3 space-y-1.5 fade-up-2">
+      <InsightUnavailableCard
+        variant="violet"
+        slug="daily_expert_gap"
+        title={data.title ?? "고수·다수결 차이"}
+        surveyDate={data.survey_date}
+      >
         <p className="text-xs text-gray-400 leading-relaxed">
           이 거래일(<span className="text-gray-300 tabular-nums">{data.survey_date}</span>)에는 아직 설문 응답이 없어 차이 리포트를 만들 수 없어요.
         </p>
-        <p className="text-[10px] text-gray-600 leading-relaxed">
+        <p className="text-[10px] text-gray-500 leading-relaxed">
           설문이 열린 뒤 참여자 응답이 쌓이면 같은 카드에서 집계가 표시됩니다. 장 시작 전·직후에는 비어 있는 경우가 있어요.
         </p>
-      </div>
+      </InsightUnavailableCard>
     );
   }
 
