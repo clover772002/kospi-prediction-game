@@ -127,7 +127,6 @@ export default function CrowdConvictionInsightCard({ accessToken, surveyDate, on
         <div className="min-w-0 flex-1">
           <p className="text-[10px] font-black text-rose-300 uppercase tracking-wide">토큰 인사이트</p>
           <p className="text-sm font-black text-white mt-0.5">{data.title ?? "무리 확신 분포"}</p>
-          <InsightAnimatedPreview slug="crowd_conviction_spread" />
           <p className="text-[10px] text-gray-600 mt-0.5">{data.survey_date}</p>
         </div>
         <div className="flex items-center gap-2 shrink-0">
@@ -143,6 +142,7 @@ export default function CrowdConvictionInsightCard({ accessToken, surveyDate, on
           </span>
         </div>
       </div>
+      <InsightAnimatedPreview slug="crowd_conviction_spread" />
       <InsightDetailDisclosure accentSummaryClass="text-rose-400/85 hover:text-rose-300">
         <p>{META.hint}</p>
         {locked ? (

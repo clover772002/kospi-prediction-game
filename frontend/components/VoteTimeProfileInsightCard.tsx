@@ -161,7 +161,6 @@ export default function VoteTimeProfileInsightCard({ accessToken, surveyDate, co
         <div className="min-w-0 flex-1">
           <p className={`text-[10px] font-black ${accentText} uppercase tracking-wide`}>토큰 인사이트 · 파도 B</p>
           <p className="text-sm font-black text-white mt-0.5">{data.title ?? (cohort === "expert" ? "고수 시간" : "하수 시간")}</p>
-          <InsightAnimatedPreview slug={slug as InsightProductSlug} />
           <p className="text-[10px] text-gray-600 mt-0.5">{data.survey_date}</p>
         </div>
         <div className="flex items-center gap-2 shrink-0">
@@ -177,6 +176,7 @@ export default function VoteTimeProfileInsightCard({ accessToken, surveyDate, co
           </span>
         </div>
       </div>
+      <InsightAnimatedPreview slug={slug as InsightProductSlug} />
       <InsightDetailDisclosure accentSummaryClass={disclosureAccent}>
         <p>{META.hint}</p>
         {locked ? (

@@ -117,7 +117,6 @@ export default function RollingCrowdInsightCard({
         <div className="min-w-0 flex-1">
           <p className="text-[10px] font-black text-sky-300 uppercase tracking-wide">토큰 인사이트</p>
           <p className="text-sm font-black text-white mt-0.5">{data.title ?? "7거래일 무리 요약"}</p>
-          <InsightAnimatedPreview slug="rolling_crowd_summary" />
           <p className="text-[10px] text-gray-600 mt-0.5 tabular-nums">종료 {data.survey_date}</p>
         </div>
         <div className="flex items-center gap-2 shrink-0">
@@ -133,6 +132,7 @@ export default function RollingCrowdInsightCard({
           </span>
         </div>
       </div>
+      <InsightAnimatedPreview slug="rolling_crowd_summary" />
       <InsightDetailDisclosure accentSummaryClass="text-sky-400/85 hover:text-sky-300">
         <p>{META.hint}</p>
         {locked ? (

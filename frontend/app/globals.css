@@ -132,16 +132,6 @@ body {
   }
 }
 
-@keyframes ip-gauge-knob-kf {
-  0%,
-  100% {
-    transform: translate(108px, 37px);
-  }
-  50% {
-    transform: translate(184px, 37px);
-  }
-}
-
 @keyframes insight-preview-mount-kf {
   from {
     opacity: 0;
@@ -181,10 +171,6 @@ body {
       ip-spark-draw-kf 1.55s cubic-bezier(0.4, 0, 0.2, 1) forwards 0.08s,
       ip-spark-breathe-kf 3.1s ease-in-out 1.65s infinite;
   }
-
-  .ip-gauge-knob {
-    animation: ip-gauge-knob-kf 2.9s ease-in-out infinite alternate;
-  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -209,11 +195,6 @@ body {
     animation: none !important;
     opacity: 1 !important;
     filter: none !important;
-  }
-
-  .ip-gauge-knob {
-    animation: none !important;
-    transform: translate(144px, 37px);
   }
 }
 

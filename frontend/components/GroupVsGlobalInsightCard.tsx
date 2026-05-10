@@ -168,7 +168,6 @@ export default function GroupVsGlobalInsightCard({
           <div className="min-w-0 flex-1">
             <p className="text-[10px] font-black text-emerald-300 uppercase tracking-wide">토큰 인사이트</p>
             <p className="text-sm font-black text-white mt-0.5">{data.title ?? "그룹 vs 전체"}</p>
-            <InsightAnimatedPreview slug="group_vs_global_snapshot" />
             <p className="text-[10px] text-gray-600 mt-0.5 tabular-nums">{data.survey_date}</p>
           </div>
           <div className="flex items-center gap-2 shrink-0">
@@ -184,6 +183,7 @@ export default function GroupVsGlobalInsightCard({
             </span>
           </div>
         </div>
+        <InsightAnimatedPreview slug="group_vs_global_snapshot" />
         <InsightDetailDisclosure accentSummaryClass="text-emerald-400/85 hover:text-emerald-300">
           <p>{META.hint}</p>
           {locked ? (

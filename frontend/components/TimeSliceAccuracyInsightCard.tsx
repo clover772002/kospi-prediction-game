@@ -131,7 +131,6 @@ export default function TimeSliceAccuracyInsightCard({ accessToken, surveyDate, 
         <div className="min-w-0 flex-1">
           <p className="text-[10px] font-black text-amber-300 uppercase tracking-wide">토큰 인사이트 · 파도 B</p>
           <p className="text-sm font-black text-white mt-0.5">{data.title ?? "시간대별 무드"}</p>
-          <InsightAnimatedPreview slug="time_slice_accuracy" />
           <p className="text-[10px] text-gray-600 mt-0.5">{data.survey_date}</p>
         </div>
         <div className="flex items-center gap-2 shrink-0">
@@ -147,6 +146,7 @@ export default function TimeSliceAccuracyInsightCard({ accessToken, surveyDate, 
           </span>
         </div>
       </div>
+      <InsightAnimatedPreview slug="time_slice_accuracy" />
       <InsightDetailDisclosure accentSummaryClass="text-amber-400/85 hover:text-amber-300">
         <p>{META.hint}</p>
         {locked ? (

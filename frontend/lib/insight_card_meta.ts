@@ -1,8 +1,8 @@
-/** 인사이트 카드 헤더 안내·가격(backend/insights_catalog.py 의 price_tokens 동기화). instantExample 은 차트 미리보기 아래 보조 문구(hint는 접기 상세). */
+/** INSIGHT_CARD_META: 가격은 backend/insights_catalog.py 와 동기화. instantExample 은 차트 아래 「한 줄 안내」접기 전용, hint 는 상세 설명 접기. */
 export const INSIGHT_CARD_META = {
   daily_expert_gap: {
     priceTokens: 120,
-    /** 미리보기 도표 아래 짧은 보조 설명 */
+    /** 「한 줄 안내」접기 안에 넣는 텍스트(hint와 별도·짧음) */
     instantExample: "예: 그날 단순%·가중%·차이(pt) 요약 카드",
     hint:
       "해당 거래일 집계가 준비되면 열립니다. 누적 적중 반영 가중예측과 단순 다수결의 차이를 한 장으로 봅니다. 개별 응답은 포함하지 않습니다.",
