@@ -7,6 +7,7 @@ import InsightUnavailableCard from "@/components/InsightUnavailableCard";
 import InsightTokenPriceButton from "@/components/InsightTokenPriceButton";
 import InsightDetailDisclosure from "@/components/InsightDetailDisclosure";
 import { insightMeta } from "@/lib/insight_card_meta";
+import { useInsightDashLayout } from "@/hooks/useInsightDashLayout";
 import {
   getExpertGapInsight,
   unlockInsightProduct,
@@ -25,6 +26,7 @@ interface Props {
 /** 대시보드용: 해당 거래일 고수·다수결 차이 인사이트 (토큰 잠금) */
 export default function ExpertGapInsightCard({ accessToken, surveyDate, onBalanceUpdated }: Props) {
   const confirmShopOnInsufficientTokens = useConfirmShopOnInsufficientTokens();
+  const d = useInsightDashLayout();
   const [loading, setLoading] = useState(true);
   const [unlocking, setUnlocking] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -74,9 +76,11 @@ export default function ExpertGapInsightCard({ accessToken, surveyDate, onBalanc
 
   if (loading) {
     return (
-      <div className="rounded-2xl border border-violet-500/25 bg-violet-500/[0.06] px-4 py-4 fade-up-2 animate-pulse">
-        <div className="h-4 w-40 rounded bg-[#333] mb-2" />
-        <div className="h-16 rounded bg-[#222]" />
+      <div
+        className={`${d.cardRound} border border-violet-500/25 bg-violet-500/[0.06] ${d.cardPad} fade-up-2 animate-pulse`}
+      >
+        <div className={`${d.c ? "h-2 w-32 mb-1" : "h-4 w-40 mb-2"} rounded bg-[#333]`} />
+        <div className={`${d.c ? "h-6" : "h-16"} rounded bg-[#222]`} />
       </div>
     );
   }
@@ -116,14 +120,18 @@ export default function ExpertGapInsightCard({ accessToken, surveyDate, onBalanc
   const priceTokens = data.price_tokens ?? META.priceTokens;
 
   return (
-    <div className="rounded-2xl border border-violet-500/30 bg-gradient-to-b from-violet-950/25 to-[#141414]/90 px-4 py-4 space-y-3 fade-up-2 shadow-[0_0_28px_rgba(139,92,246,.08)]">
-      <div className="flex items-start justify-between gap-2">
+    <div
+      className={`${d.cardRound} border border-violet-500/30 bg-gradient-to-b from-violet-950/25 to-[#141414]/90 ${d.cardPad} ${d.cardGap} fade-up-2 ${
+        d.c ? "" : "shadow-[0_0_28px_rgba(139,92,246,.08)]"
+      }`}
+    >
+      <div className={`flex items-start justify-between ${d.rowGap}`}>
         <div className="min-w-0 flex-1">
-          <p className="text-[10px] font-black text-violet-300 uppercase tracking-wide">토큰 인사이트</p>
-          <p className="text-sm font-black text-white mt-0.5">{data.title ?? "고수·다수결 차이"}</p>
-          <p className="text-[10px] text-gray-600 mt-0.5">{data.survey_date}</p>
+          <p className={`${d.badge} font-black text-violet-300 uppercase tracking-wide`}>토큰 인사이트</p>
+          <p className={`${d.titleClass} text-white mt-0.5`}>{data.title ?? "고수·다수결 차이"}</p>
+          <p className={`${d.subDate} text-gray-600 mt-0.5`}>{data.survey_date}</p>
         </div>
-        <div className="flex items-center gap-2 shrink-0">
+        <div className={`flex items-center ${d.rowGap} shrink-0`}>
           <InsightTokenPriceButton
             priceTokens={priceTokens}
             className="border-violet-500/45 bg-violet-500/15 text-violet-100 hover:bg-violet-500/25"
@@ -131,7 +139,7 @@ export default function ExpertGapInsightCard({ accessToken, surveyDate, onBalanc
             unlocking={unlocking}
             onActivate={() => void handleUnlock()}
           />
-          <span className="text-xl" aria-hidden>
+          <span className={d.icon} aria-hidden>
             {locked ? "🔐" : "✨"}
           </span>
         </div>
@@ -149,8 +157,8 @@ export default function ExpertGapInsightCard({ accessToken, surveyDate, onBalanc
 
       {!locked ? (
         <>
-          <p className="text-[10px] text-gray-500">{data.data?.computed_note}</p>
-          <ul className="space-y-2 text-[11px] text-gray-300 leading-snug">
+          <p className={`${d.computed} text-gray-500`}>{data.data?.computed_note}</p>
+          <ul className={`${d.list} text-gray-300`}>
             {(data.data?.bullets ?? []).map((line) => (
               <li key={line.slice(0, 48)} className="flex gap-2">
                 <span className="text-violet-400 font-bold shrink-0">·</span>
@@ -158,7 +166,7 @@ export default function ExpertGapInsightCard({ accessToken, surveyDate, onBalanc
               </li>
             ))}
           </ul>
-          <div className="flex gap-4 text-[10px] tabular-nums text-gray-500 pt-1 border-t border-white/[0.06]">
+          <div className={`flex ${d.dash} tabular-nums text-gray-500 pt-1 border-t border-white/[0.06]`}>
             <span>단순 {data.data?.simple_pct ?? "–"}%</span>
             <span>가중 {data.data?.weighted_pct ?? "–"}%</span>
             <span>차이 {data.data?.gap_points != null ? `${data.data.gap_points > 0 ? "+" : ""}${data.data.gap_points}` : "–"}pt</span>

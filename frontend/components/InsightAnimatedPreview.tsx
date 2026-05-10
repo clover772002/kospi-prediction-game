@@ -3,6 +3,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import type { InsightProductSlug } from "@/lib/insight_card_meta";
 import { INSIGHT_CARD_META } from "@/lib/insight_card_meta";
+import { useInsightDashboardCompact } from "@/contexts/InsightDashboardCompactContext";
 
 type Theme = {
   primary: string;
@@ -238,6 +239,7 @@ function GaugeKnob({
 export default function InsightAnimatedPreview({ slug }: { slug: InsightProductSlug }) {
   const caption = INSIGHT_CARD_META[slug].instantExample;
   const theme = THEMES[slug];
+  const dashCompact = useInsightDashboardCompact();
   const { dLine, approxLen } = buildSparkLine();
   const reduceMotion = usePrefersReducedMotion();
 
@@ -364,6 +366,24 @@ export default function InsightAnimatedPreview({ slug }: { slug: InsightProductS
   }
 
   const aspectRatio = `${VB_W} / ${VB_H}`;
+
+  if (dashCompact) {
+    return (
+      <div className="insight-preview-mount w-full flex items-center justify-center max-h-[40px] overflow-hidden opacity-90">
+        <svg
+          role="img"
+          aria-label="이 인사이트에서 보게 되는 차트 형태 미리보기"
+          viewBox={`0 0 ${VB_W} ${VB_H}`}
+          preserveAspectRatio="xMidYMid meet"
+          style={{ aspectRatio }}
+          className="w-full h-9 max-h-9 shrink-0"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          {svgInner}
+        </svg>
+      </div>
+    );
+  }
 
   return (
     <div className="insight-preview-mount w-full">

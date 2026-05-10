@@ -7,6 +7,7 @@ import InsightUnavailableCard from "@/components/InsightUnavailableCard";
 import InsightTokenPriceButton from "@/components/InsightTokenPriceButton";
 import InsightDetailDisclosure from "@/components/InsightDetailDisclosure";
 import { insightMeta } from "@/lib/insight_card_meta";
+import { useInsightDashLayout } from "@/hooks/useInsightDashLayout";
 import {
   getRollingCrowdInsight,
   RollingCrowdInsightResponse,
@@ -30,6 +31,7 @@ export default function RollingCrowdInsightCard({
   onBalanceUpdated,
 }: Props) {
   const confirmShopOnInsufficientTokens = useConfirmShopOnInsufficientTokens();
+  const d = useInsightDashLayout();
   const [loading, setLoading] = useState(true);
   const [unlocking, setUnlocking] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -79,9 +81,9 @@ export default function RollingCrowdInsightCard({
 
   if (loading) {
     return (
-      <div className="rounded-2xl border border-sky-500/25 bg-sky-500/[0.06] px-4 py-4 fade-up-2 animate-pulse">
-        <div className="h-4 w-52 rounded bg-[#333] mb-2" />
-        <div className="h-20 rounded bg-[#222]" />
+      <div className={`${d.cardRound} border border-sky-500/25 bg-sky-500/[0.06] ${d.cardPad} fade-up-2 animate-pulse`}>
+        <div className={`${d.c ? "h-2 w-40 mb-1" : "h-4 w-52 mb-2"} rounded bg-[#333]`} />
+        <div className={`${d.c ? "h-7" : "h-20"} rounded bg-[#222]`} />
       </div>
     );
   }
@@ -119,14 +121,18 @@ export default function RollingCrowdInsightCard({
   const priceTokens = data.price_tokens ?? META.priceTokens;
 
   return (
-    <div className="rounded-2xl border border-sky-500/35 bg-gradient-to-b from-sky-950/30 to-[#141414]/90 px-4 py-4 space-y-3 fade-up-2 shadow-[0_0_28px_rgba(56,189,248,.08)]">
-      <div className="flex items-start justify-between gap-2">
+    <div
+      className={`${d.cardRound} border border-sky-500/35 bg-gradient-to-b from-sky-950/30 to-[#141414]/90 ${d.cardPad} ${d.cardGap} fade-up-2 ${
+        d.c ? "" : "shadow-[0_0_28px_rgba(56,189,248,.08)]"
+      }`}
+    >
+      <div className={`flex items-start justify-between ${d.rowGap}`}>
         <div className="min-w-0 flex-1">
-          <p className="text-[10px] font-black text-sky-300 uppercase tracking-wide">토큰 인사이트</p>
-          <p className="text-sm font-black text-white mt-0.5">{data.title ?? "7거래일 무리 요약"}</p>
-          <p className="text-[10px] text-gray-600 mt-0.5 tabular-nums">종료 {data.survey_date}</p>
+          <p className={`${d.badge} font-black text-sky-300 uppercase tracking-wide`}>토큰 인사이트</p>
+          <p className={`${d.titleClass} text-white mt-0.5`}>{data.title ?? "7거래일 무리 요약"}</p>
+          <p className={`${d.subDate} text-gray-600 mt-0.5 tabular-nums`}>종료 {data.survey_date}</p>
         </div>
-        <div className="flex items-center gap-2 shrink-0">
+        <div className={`flex items-center ${d.rowGap} shrink-0`}>
           <InsightTokenPriceButton
             priceTokens={priceTokens}
             className="border-sky-500/45 bg-sky-500/15 text-sky-100 hover:bg-sky-500/25"
@@ -134,7 +140,7 @@ export default function RollingCrowdInsightCard({
             unlocking={unlocking}
             onActivate={() => void handleUnlock()}
           />
-          <span className="text-xl" aria-hidden>
+          <span className={d.icon} aria-hidden>
             {locked ? "🔐" : "✨"}
           </span>
         </div>
@@ -152,28 +158,28 @@ export default function RollingCrowdInsightCard({
 
       {!locked ? (
         <>
-          <p className="text-[10px] text-gray-500">{data.data?.computed_note}</p>
+          <p className={`${d.computed} text-gray-500`}>{data.data?.computed_note}</p>
           <div className="overflow-x-auto rounded-lg border border-white/[0.06]">
-            <table className="w-full text-[10px] text-left tabular-nums">
+            <table className={`w-full text-left tabular-nums ${d.tableWrap}`}>
               <thead className="text-gray-500 border-b border-white/[0.06]">
                 <tr>
-                  <th className="py-2 pl-2 pr-1 font-bold">거래일</th>
-                  <th className="py-2 px-1 font-bold">n</th>
-                  <th className="py-2 px-1 font-bold">다수결</th>
-                  <th className="py-2 px-1 font-bold">가중</th>
-                  <th className="py-2 pr-2 font-bold">차이</th>
+                  <th className={`${d.thPad} pl-2 pr-1 font-bold`}>거래일</th>
+                  <th className={`${d.thPad} px-1 font-bold`}>n</th>
+                  <th className={`${d.thPad} px-1 font-bold`}>다수결</th>
+                  <th className={`${d.thPad} px-1 font-bold`}>가중</th>
+                  <th className={`${d.thPad} pr-2 font-bold`}>차이</th>
                 </tr>
               </thead>
               <tbody className="text-gray-300">
                 {(data.data?.series ?? []).map((row, i) => (
                   <tr key={row.survey_date + i} className="border-b border-white/[0.04] last:border-0">
-                    <td className="py-1.5 pl-2 pr-1 text-gray-400">{row.survey_date.slice(5)}</td>
-                    <td className="py-1.5 px-1">{row.n}</td>
-                    <td className="py-1.5 px-1">{row.sample_ok && row.simple_pct != null ? `${row.simple_pct}%` : "—"}</td>
-                    <td className="py-1.5 px-1">
+                    <td className={`${d.tdPad} pl-2 pr-1 text-gray-400`}>{row.survey_date.slice(5)}</td>
+                    <td className={`${d.tdPad} px-1`}>{row.n}</td>
+                    <td className={`${d.tdPad} px-1`}>{row.sample_ok && row.simple_pct != null ? `${row.simple_pct}%` : "—"}</td>
+                    <td className={`${d.tdPad} px-1`}>
                       {row.sample_ok && row.weighted_pct != null ? `${row.weighted_pct}%` : "부족"}
                     </td>
-                    <td className="py-1.5 pr-2">
+                    <td className={`${d.tdPad} pr-2`}>
                       {row.sample_ok && row.gap_points != null ? `${row.gap_points > 0 ? "+" : ""}${row.gap_points}` : "—"}
                     </td>
                   </tr>
@@ -181,7 +187,7 @@ export default function RollingCrowdInsightCard({
               </tbody>
             </table>
           </div>
-          <ul className="space-y-2 text-[11px] text-gray-300 leading-snug pt-1">
+          <ul className={`${d.list} text-gray-300 pt-1`}>
             {(data.data?.bullets ?? []).map((line) => (
               <li key={line.slice(0, 52)} className="flex gap-2">
                 <span className="text-sky-400 font-bold shrink-0">·</span>

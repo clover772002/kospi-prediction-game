@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import InsightAnimatedPreview from "@/components/InsightAnimatedPreview";
 import InsightDetailDisclosure from "@/components/InsightDetailDisclosure";
 import { insightMeta, type InsightProductSlug } from "@/lib/insight_card_meta";
+import { useInsightDashLayout } from "@/hooks/useInsightDashLayout";
 
 export type InsightUnavailableVariant =
   | "violet"
@@ -41,29 +42,38 @@ export default function InsightUnavailableCard({
   footer,
 }: Props) {
   const META = insightMeta(slug);
+  const { c, cardRound, cardPad, cardGap, badge, titleClass, subDate } = useInsightDashLayout();
   /** 테마 색상은 globals.css의 .iu-card.iu-var-* (프로덕션에서 Tailwind가 동적 클래스를 누락해도 유지) */
   const v = variant;
 
   return (
     <div
-      className={`iu-card iu-var-${v} relative overflow-hidden rounded-2xl border pl-5 pr-4 py-4 space-y-3 fade-up-2`}
+      className={`iu-card iu-var-${v} relative overflow-hidden border ${cardRound} ${cardPad} ${cardGap} fade-up-2 ${
+        c ? "pl-3" : "pl-5 pr-4"
+      } ${c ? "pr-2" : ""}`}
     >
       <span
-        className="iu-stripe pointer-events-none absolute left-0 top-4 bottom-4 w-[3px] rounded-r-full"
+        className={`iu-stripe pointer-events-none absolute left-0 rounded-r-full ${
+          c ? "top-2 bottom-2 w-[2px]" : "top-4 bottom-4 w-[3px]"
+        }`}
         aria-hidden
       />
       <div className="min-w-0">
-        <p className="iu-badge text-[10px] font-black uppercase tracking-wide">
+        <p className={`iu-badge ${badge} font-black uppercase tracking-wide`}>
           토큰 인사이트{badgeExtra ? ` ${badgeExtra}` : ""}
         </p>
-        <p className="text-sm font-black text-white mt-0.5">{title}</p>
-        <p className="text-[10px] text-gray-600 mt-0.5 tabular-nums">
+        <p className={`${titleClass} text-white mt-0.5`}>{title}</p>
+        <p className={`${subDate} text-gray-600 mt-0.5 tabular-nums`}>
           {surveyDatePrefix}
           {surveyDate}
         </p>
       </div>
       <InsightAnimatedPreview slug={slug} />
-      <div className="iu-panel rounded-xl border border-solid px-3 py-2.5 space-y-1.5">{children}</div>
+      <div
+        className={`iu-panel rounded-xl border border-solid ${c ? "px-2 py-1.5 space-y-0.5" : "px-3 py-2.5 space-y-1.5"}`}
+      >
+        {children}
+      </div>
       <InsightDetailDisclosure accentSummaryClass="iu-disclosure-trigger">
         <p>{META.hint}</p>
       </InsightDetailDisclosure>

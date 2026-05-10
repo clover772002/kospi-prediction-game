@@ -7,6 +7,7 @@ import InsightUnavailableCard from "@/components/InsightUnavailableCard";
 import InsightTokenPriceButton from "@/components/InsightTokenPriceButton";
 import InsightDetailDisclosure from "@/components/InsightDetailDisclosure";
 import { insightMeta, type InsightProductSlug } from "@/lib/insight_card_meta";
+import { useInsightDashLayout } from "@/hooks/useInsightDashLayout";
 import {
   getExpertLeaderPickInsight,
   getNoviceLeaderPickInsight,
@@ -31,6 +32,7 @@ export default function CohortLeaderPickInsightCard({
   onBalanceUpdated,
 }: Props) {
   const confirmShopOnInsufficientTokens = useConfirmShopOnInsufficientTokens();
+  const ix = useInsightDashLayout();
   const slug = cohort === "expert" ? "expert_leader_pick" : "novice_leader_pick";
   const META = useMemo(() => insightMeta(slug as InsightProductSlug), [slug]);
 
@@ -90,14 +92,14 @@ export default function CohortLeaderPickInsightCard({
   if (loading) {
     return (
       <div
-        className={`rounded-2xl border px-4 py-4 fade-up-2 animate-pulse ${
+        className={`${ix.cardRound} border ${ix.cardPad} fade-up-2 animate-pulse ${
           cohort === "expert"
             ? "border-violet-500/25 bg-violet-500/[0.06]"
             : "border-slate-500/25 bg-slate-500/[0.06]"
         }`}
       >
-        <div className="h-4 w-56 rounded bg-[#333] mb-2" />
-        <div className="h-20 rounded bg-[#222]" />
+        <div className={`${ix.c ? "h-2 w-44 mb-1" : "h-4 w-56 mb-2"} rounded bg-[#333]`} />
+        <div className={`${ix.c ? "h-7" : "h-20"} rounded bg-[#222]`} />
       </div>
     );
   }
@@ -156,21 +158,21 @@ export default function CohortLeaderPickInsightCard({
       ? "text-violet-400/85 hover:text-violet-300"
       : "text-slate-400/90 hover:text-slate-300";
 
-  const d = data.data;
+  const pick = data.data;
 
   return (
     <div
-      className={`rounded-2xl border ${accentBorder} bg-gradient-to-b ${
+      className={`${ix.cardRound} border ${accentBorder} bg-gradient-to-b ${
         cohort === "expert" ? "from-violet-950/35" : "from-slate-900/40"
-      } to-[#141414]/90 px-4 py-4 space-y-3 fade-up-2`}
+      } to-[#141414]/90 ${ix.cardPad} ${ix.cardGap} fade-up-2`}
     >
-      <div className="flex items-start justify-between gap-2">
+      <div className={`flex items-start justify-between ${ix.rowGap}`}>
         <div className="min-w-0 flex-1">
-          <p className={`text-[10px] font-black ${accentText} uppercase tracking-wide`}>토큰 인사이트 · 파도 B</p>
-          <p className="text-sm font-black text-white mt-0.5">{data.title ?? (cohort === "expert" ? "오늘의 고수 1위 픽" : "오늘의 하수 1위 픽")}</p>
-          <p className="text-[10px] text-gray-600 mt-0.5">{data.survey_date}</p>
+          <p className={`${ix.badge} font-black ${accentText} uppercase tracking-wide`}>토큰 인사이트 · 파도 B</p>
+          <p className={`${ix.titleClass} text-white mt-0.5`}>{data.title ?? (cohort === "expert" ? "오늘의 고수 1위 픽" : "오늘의 하수 1위 픽")}</p>
+          <p className={`${ix.subDate} text-gray-600 mt-0.5`}>{data.survey_date}</p>
         </div>
-        <div className="flex items-center gap-2 shrink-0">
+        <div className={`flex items-center ${ix.rowGap} shrink-0`}>
           <InsightTokenPriceButton
             priceTokens={priceTokens}
             className={priceChipClass}
@@ -178,7 +180,7 @@ export default function CohortLeaderPickInsightCard({
             unlocking={unlocking}
             onActivate={() => void handleUnlock()}
           />
-          <span className="text-xl" aria-hidden>
+          <span className={ix.icon} aria-hidden>
             {locked ? "🔐" : "✨"}
           </span>
         </div>
@@ -193,22 +195,26 @@ export default function CohortLeaderPickInsightCard({
         ) : null}
       </InsightDetailDisclosure>
 
-      {!locked && d ? (
+      {!locked && pick ? (
         <>
-          <p className="text-[10px] text-gray-500">{d.computed_note}</p>
-          <div className="rounded-xl border border-white/[0.08] bg-black/25 px-3 py-3 space-y-2">
-            <p className="text-[11px] text-gray-500">
-              <span className="text-gray-400 font-bold">{d.rank_label_ko}</span> · 세그먼트 {d.segment_n}명
+          <p className={`${ix.computed} text-gray-500`}>{pick.computed_note}</p>
+          <div
+            className={`rounded-xl border border-white/[0.08] bg-black/25 space-y-1 ${
+              ix.c ? "px-2 py-1.5" : "px-3 py-3 space-y-2"
+            }`}
+          >
+            <p className={`${ix.c ? "text-[9px]" : "text-[11px]"} text-gray-500`}>
+              <span className="text-gray-400 font-bold">{pick.rank_label_ko}</span> · 세그먼트 {pick.segment_n}명
             </p>
-            <p className="text-sm font-black text-white">
-              <span className="text-gray-500 font-normal">{d.leader_masked_name}</span>
+            <p className={`${ix.c ? "text-xs" : "text-sm"} font-black text-white`}>
+              <span className="text-gray-500 font-normal">{pick.leader_masked_name}</span>
               <span className="mx-2 text-gray-600">·</span>
-              <span className="tabular-nums">{d.leader_accuracy_pct}%</span>
+              <span className="tabular-nums">{pick.leader_accuracy_pct}%</span>
             </p>
-            <p className="text-base font-black text-white tracking-tight">{d.direction_label_ko}</p>
+            <p className={`${ix.c ? "text-[11px]" : "text-base"} font-black text-white tracking-tight`}>{pick.direction_label_ko}</p>
           </div>
-          <ul className="space-y-2 text-[11px] text-gray-300 leading-snug pt-1">
-            {(d.bullets ?? []).map((line) => (
+          <ul className={`${ix.list} text-gray-300 pt-1`}>
+            {(pick.bullets ?? []).map((line) => (
               <li key={line.slice(0, 52)} className="flex gap-2">
                 <span className={`${accentText} font-bold shrink-0`}>·</span>
                 <span>{line}</span>

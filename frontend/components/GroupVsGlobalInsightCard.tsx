@@ -8,6 +8,7 @@ import InsightUnavailableCard from "@/components/InsightUnavailableCard";
 import InsightTokenPriceButton from "@/components/InsightTokenPriceButton";
 import InsightDetailDisclosure from "@/components/InsightDetailDisclosure";
 import { insightMeta } from "@/lib/insight_card_meta";
+import { useInsightDashLayout } from "@/hooks/useInsightDashLayout";
 import {
   getGroupVsGlobalInsight,
   GroupVsGlobalInsightResponse,
@@ -32,6 +33,7 @@ export default function GroupVsGlobalInsightCard({
   onBalanceUpdated,
 }: Props) {
   const confirmShopOnInsufficientTokens = useConfirmShopOnInsufficientTokens();
+  const d = useInsightDashLayout();
   const [groupId, setGroupId] = useState<string>(() => groups[0]?.group_id ?? "");
   const [loading, setLoading] = useState(true);
   const [unlocking, setUnlocking] = useState(false);
@@ -111,12 +113,14 @@ export default function GroupVsGlobalInsightCard({
   if (!groupId) return null;
 
   const groupPickerEl = (
-    <label className="text-[11px] text-gray-400 flex flex-col gap-1">
+    <label className={`${d.c ? "text-[9px]" : "text-[11px]"} text-gray-400 flex flex-col gap-0.5`}>
       <span className="text-gray-500">비교할 그룹</span>
       <select
         value={groupId}
         onChange={(e) => setGroupId(e.target.value)}
-        className="rounded-lg border border-[#333] bg-[#111] text-white text-sm px-3 py-2 outline-none focus:border-emerald-500/50"
+        className={`rounded-lg border border-[#333] bg-[#111] text-white outline-none focus:border-emerald-500/50 ${
+          d.c ? "text-xs px-2 py-1" : "text-sm px-3 py-2"
+        }`}
       >
         {groups.map((g) => (
           <option key={g.group_id} value={g.group_id}>
@@ -129,9 +133,9 @@ export default function GroupVsGlobalInsightCard({
 
   if (loading) {
     return (
-      <div className="rounded-2xl border border-emerald-500/25 bg-emerald-500/[0.06] px-4 py-4 fade-up-2 animate-pulse">
-        <div className="h-4 w-52 rounded bg-[#333] mb-2" />
-        <div className="h-16 rounded bg-[#222]" />
+      <div className={`${d.cardRound} border border-emerald-500/25 bg-emerald-500/[0.06] ${d.cardPad} fade-up-2 animate-pulse`}>
+        <div className={`${d.c ? "h-2 w-44 mb-1" : "h-4 w-52 mb-2"} rounded bg-[#333]`} />
+        <div className={`${d.c ? "h-6" : "h-16"} rounded bg-[#222]`} />
       </div>
     );
   }
@@ -203,15 +207,19 @@ export default function GroupVsGlobalInsightCard({
     groups.find((g) => g.group_id === groupId)?.name ?? data.data?.group_name ?? "그룹";
 
   return (
-    <div className="rounded-2xl border border-emerald-500/35 bg-gradient-to-b from-emerald-950/30 to-[#141414]/90 px-4 py-4 space-y-3 fade-up-2 shadow-[0_0_28px_rgba(52,211,153,.07)]">
-      <div className="flex flex-col gap-2">
-        <div className="flex items-start justify-between gap-2">
+    <div
+      className={`${d.cardRound} border border-emerald-500/35 bg-gradient-to-b from-emerald-950/30 to-[#141414]/90 ${d.cardPad} ${d.cardGap} fade-up-2 ${
+        d.c ? "" : "shadow-[0_0_28px_rgba(52,211,153,.07)]"
+      }`}
+    >
+      <div className={`flex flex-col ${d.c ? "gap-1" : "gap-2"}`}>
+        <div className={`flex items-start justify-between ${d.rowGap}`}>
           <div className="min-w-0 flex-1">
-            <p className="text-[10px] font-black text-emerald-300 uppercase tracking-wide">토큰 인사이트</p>
-            <p className="text-sm font-black text-white mt-0.5">{data.title ?? "그룹 vs 전체"}</p>
-            <p className="text-[10px] text-gray-600 mt-0.5 tabular-nums">{data.survey_date}</p>
+            <p className={`${d.badge} font-black text-emerald-300 uppercase tracking-wide`}>토큰 인사이트</p>
+            <p className={`${d.titleClass} text-white mt-0.5`}>{data.title ?? "그룹 vs 전체"}</p>
+            <p className={`${d.subDate} text-gray-600 mt-0.5 tabular-nums`}>{data.survey_date}</p>
           </div>
-          <div className="flex items-center gap-2 shrink-0">
+          <div className={`flex items-center ${d.rowGap} shrink-0`}>
             <InsightTokenPriceButton
               priceTokens={priceTokens}
               className="border-emerald-500/45 bg-emerald-500/15 text-emerald-100 hover:bg-emerald-500/25"
@@ -219,7 +227,7 @@ export default function GroupVsGlobalInsightCard({
               unlocking={unlocking}
               onActivate={() => void handleUnlock()}
             />
-            <span className="text-xl" aria-hidden>
+            <span className={d.icon} aria-hidden>
               {locked ? "🔐" : "✨"}
             </span>
           </div>
@@ -241,8 +249,12 @@ export default function GroupVsGlobalInsightCard({
 
       {!locked ? (
         <>
-          <p className="text-[10px] text-gray-500">{data.data?.computed_note}</p>
-          <div className="grid grid-cols-2 gap-2 text-[10px] tabular-nums border border-white/[0.06] rounded-lg p-2">
+          <p className={`${d.computed} text-gray-500`}>{data.data?.computed_note}</p>
+          <div
+            className={`grid grid-cols-2 border border-white/[0.06] rounded-lg tabular-nums ${
+              d.c ? "gap-1 p-1 text-[8px]" : "gap-2 p-2 text-[10px]"
+            }`}
+          >
             <div className="text-gray-500">그룹 n / 전체 n</div>
             <div className="text-right text-gray-200">
               {data.data?.group.n} / {data.data?.global.n}
@@ -256,7 +268,7 @@ export default function GroupVsGlobalInsightCard({
             <div className="text-gray-500">전체 가중%</div>
             <div className="text-right">{data.data?.global.weighted_pct ?? "–"}%</div>
           </div>
-          <ul className="space-y-2 text-[11px] text-gray-300 leading-snug">
+          <ul className={`${d.list} text-gray-300`}>
             {(data.data?.bullets ?? []).map((line) => (
               <li key={line.slice(0, 52)} className="flex gap-2">
                 <span className="text-emerald-400 font-bold shrink-0">·</span>

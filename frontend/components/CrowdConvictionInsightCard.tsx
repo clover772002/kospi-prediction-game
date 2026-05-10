@@ -7,6 +7,7 @@ import InsightUnavailableCard from "@/components/InsightUnavailableCard";
 import InsightTokenPriceButton from "@/components/InsightTokenPriceButton";
 import InsightDetailDisclosure from "@/components/InsightDetailDisclosure";
 import { insightMeta } from "@/lib/insight_card_meta";
+import { useInsightDashLayout } from "@/hooks/useInsightDashLayout";
 import {
   getCrowdConvictionInsight,
   CrowdConvictionInsightResponse,
@@ -25,6 +26,7 @@ interface Props {
 /** 대시보드용: 무리 확신(게이지) 분포 요약 (토큰 잠금, 최소 표본 n≥20) */
 export default function CrowdConvictionInsightCard({ accessToken, surveyDate, onBalanceUpdated }: Props) {
   const confirmShopOnInsufficientTokens = useConfirmShopOnInsufficientTokens();
+  const ix = useInsightDashLayout();
   const [loading, setLoading] = useState(true);
   const [unlocking, setUnlocking] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -74,9 +76,9 @@ export default function CrowdConvictionInsightCard({ accessToken, surveyDate, on
 
   if (loading) {
     return (
-      <div className="rounded-2xl border border-rose-500/25 bg-rose-500/[0.06] px-4 py-4 fade-up-2 animate-pulse">
-        <div className="h-4 w-44 rounded bg-[#333] mb-2" />
-        <div className="h-16 rounded bg-[#222]" />
+      <div className={`${ix.cardRound} border border-rose-500/25 bg-rose-500/[0.06] ${ix.cardPad} fade-up-2 animate-pulse`}>
+        <div className={`${ix.c ? "h-2 w-36 mb-1" : "h-4 w-44 mb-2"} rounded bg-[#333]`} />
+        <div className={`${ix.c ? "h-6" : "h-16"} rounded bg-[#222]`} />
       </div>
     );
   }
@@ -133,14 +135,18 @@ export default function CrowdConvictionInsightCard({ accessToken, surveyDate, on
   const priceTokens = data.price_tokens ?? META.priceTokens;
 
   return (
-    <div className="rounded-2xl border border-rose-500/30 bg-gradient-to-b from-rose-950/[0.35] to-[#141414]/90 px-4 py-4 space-y-3 fade-up-2 shadow-[0_0_28px_rgba(251,113,133,.07)]">
-      <div className="flex items-start justify-between gap-2">
+    <div
+      className={`${ix.cardRound} border border-rose-500/30 bg-gradient-to-b from-rose-950/[0.35] to-[#141414]/90 ${ix.cardPad} ${ix.cardGap} fade-up-2 ${
+        ix.c ? "" : "shadow-[0_0_28px_rgba(251,113,133,.07)]"
+      }`}
+    >
+      <div className={`flex items-start justify-between ${ix.rowGap}`}>
         <div className="min-w-0 flex-1">
-          <p className="text-[10px] font-black text-rose-300 uppercase tracking-wide">토큰 인사이트</p>
-          <p className="text-sm font-black text-white mt-0.5">{data.title ?? "무리 확신 분포"}</p>
-          <p className="text-[10px] text-gray-600 mt-0.5">{data.survey_date}</p>
+          <p className={`${ix.badge} font-black text-rose-300 uppercase tracking-wide`}>토큰 인사이트</p>
+          <p className={`${ix.titleClass} text-white mt-0.5`}>{data.title ?? "무리 확신 분포"}</p>
+          <p className={`${ix.subDate} text-gray-600 mt-0.5`}>{data.survey_date}</p>
         </div>
-        <div className="flex items-center gap-2 shrink-0">
+        <div className={`flex items-center ${ix.rowGap} shrink-0`}>
           <InsightTokenPriceButton
             priceTokens={priceTokens}
             className="border-rose-500/45 bg-rose-500/15 text-rose-100 hover:bg-rose-500/25"
@@ -148,7 +154,7 @@ export default function CrowdConvictionInsightCard({ accessToken, surveyDate, on
             unlocking={unlocking}
             onActivate={() => void handleUnlock()}
           />
-          <span className="text-xl" aria-hidden>
+          <span className={ix.icon} aria-hidden>
             {locked ? "🔐" : "✨"}
           </span>
         </div>
@@ -166,8 +172,8 @@ export default function CrowdConvictionInsightCard({ accessToken, surveyDate, on
 
       {!locked ? (
         <>
-          <p className="text-[10px] text-gray-500">{data.data?.computed_note}</p>
-          <ul className="space-y-2 text-[11px] text-gray-300 leading-snug">
+          <p className={`${ix.computed} text-gray-500`}>{data.data?.computed_note}</p>
+          <ul className={`${ix.list} text-gray-300`}>
             {(data.data?.bullets ?? []).map((line) => (
               <li key={line.slice(0, 48)} className="flex gap-2">
                 <span className="text-rose-400 font-bold shrink-0">·</span>
@@ -175,7 +181,7 @@ export default function CrowdConvictionInsightCard({ accessToken, surveyDate, on
               </li>
             ))}
           </ul>
-          <div className="flex flex-wrap gap-3 text-[10px] tabular-nums text-gray-500 pt-1 border-t border-white/[0.06]">
+          <div className={`flex flex-wrap tabular-nums text-gray-500 pt-1 border-t border-white/[0.06] ${ix.c ? "gap-1.5 text-[9px]" : "gap-3 text-[10px]"}`}>
             <span>n {data.data?.n ?? "–"}</span>
             <span>평균 {data.data?.mean ?? "–"}</span>
             <span>σ {data.data?.stdev ?? "–"}</span>

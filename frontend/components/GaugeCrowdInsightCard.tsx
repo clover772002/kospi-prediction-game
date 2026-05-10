@@ -8,6 +8,7 @@ import InsightUnavailableCard from "@/components/InsightUnavailableCard";
 import InsightTokenPriceButton from "@/components/InsightTokenPriceButton";
 import InsightDetailDisclosure from "@/components/InsightDetailDisclosure";
 import { insightMeta } from "@/lib/insight_card_meta";
+import { useInsightDashLayout } from "@/hooks/useInsightDashLayout";
 import {
   getGaugeCrowdInsight,
   unlockInsightProduct,
@@ -30,6 +31,7 @@ const MIN_SAME_DIRECTION_PEER = 5;
 /** 그날 같은 방향 무리 속 내 확신도 위치 (토큰 잠금) */
 export default function GaugeCrowdInsightCard({ accessToken, surveyDate, onBalanceUpdated }: Props) {
   const confirmShopOnInsufficientTokens = useConfirmShopOnInsufficientTokens();
+  const ix = useInsightDashLayout();
   const [loading, setLoading] = useState(true);
   const [unlocking, setUnlocking] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -79,9 +81,9 @@ export default function GaugeCrowdInsightCard({ accessToken, surveyDate, onBalan
 
   if (loading) {
     return (
-      <div className="rounded-2xl border border-teal-500/25 bg-teal-500/[0.06] px-4 py-4 fade-up-2 animate-pulse">
-        <div className="h-4 w-48 rounded bg-[#333] mb-2" />
-        <div className="h-16 rounded bg-[#222]" />
+      <div className={`${ix.cardRound} border border-teal-500/25 bg-teal-500/[0.06] ${ix.cardPad} fade-up-2 animate-pulse`}>
+        <div className={`${ix.c ? "h-2 w-40 mb-1" : "h-4 w-48 mb-2"} rounded bg-[#333]`} />
+        <div className={`${ix.c ? "h-6" : "h-16"} rounded bg-[#222]`} />
       </div>
     );
   }
@@ -151,14 +153,18 @@ export default function GaugeCrowdInsightCard({ accessToken, surveyDate, onBalan
   const priceTokens = data.price_tokens ?? META.priceTokens;
 
   return (
-    <div className="rounded-2xl border border-teal-500/30 bg-gradient-to-b from-teal-950/25 to-[#141414]/90 px-4 py-4 space-y-3 fade-up-2 shadow-[0_0_28px_rgba(45,212,191,.07)]">
-      <div className="flex items-start justify-between gap-2">
+    <div
+      className={`${ix.cardRound} border border-teal-500/30 bg-gradient-to-b from-teal-950/25 to-[#141414]/90 ${ix.cardPad} ${ix.cardGap} fade-up-2 ${
+        ix.c ? "" : "shadow-[0_0_28px_rgba(45,212,191,.07)]"
+      }`}
+    >
+      <div className={`flex items-start justify-between ${ix.rowGap}`}>
         <div className="min-w-0 flex-1">
-          <p className="text-[10px] font-black text-teal-300 uppercase tracking-wide">토큰 인사이트</p>
-          <p className="text-sm font-black text-white mt-0.5">{data.title ?? "내 확신도, 같은 편 속 위치"}</p>
-          <p className="text-[10px] text-gray-600 mt-0.5">{data.survey_date}</p>
+          <p className={`${ix.badge} font-black text-teal-300 uppercase tracking-wide`}>토큰 인사이트</p>
+          <p className={`${ix.titleClass} text-white mt-0.5`}>{data.title ?? "내 확신도, 같은 편 속 위치"}</p>
+          <p className={`${ix.subDate} text-gray-600 mt-0.5`}>{data.survey_date}</p>
         </div>
-        <div className="flex items-center gap-2 shrink-0">
+        <div className={`flex items-center ${ix.rowGap} shrink-0`}>
           <InsightTokenPriceButton
             priceTokens={priceTokens}
             className="border-teal-500/45 bg-teal-500/15 text-teal-100 hover:bg-teal-500/25"
@@ -166,7 +172,7 @@ export default function GaugeCrowdInsightCard({ accessToken, surveyDate, onBalan
             unlocking={unlocking}
             onActivate={() => void handleUnlock()}
           />
-          <span className="text-xl" aria-hidden>
+          <span className={ix.icon} aria-hidden>
             {paywallLocked ? "🔐" : "🪞"}
           </span>
         </div>
@@ -184,8 +190,8 @@ export default function GaugeCrowdInsightCard({ accessToken, surveyDate, onBalan
 
       {paywallLocked ? null : (
         <>
-          <p className="text-[10px] text-gray-500">{data.data?.computed_note}</p>
-          <div className="flex gap-4 text-[11px] tabular-nums text-gray-400 flex-wrap pt-1">
+          <p className={`${ix.computed} text-gray-500`}>{data.data?.computed_note}</p>
+          <div className={`flex tabular-nums text-gray-400 flex-wrap pt-1 ${ix.c ? "gap-x-2 gap-y-0 text-[9px]" : "gap-4 text-[11px]"}`}>
             <span>
               무리 속 밴드:{" "}
               <span className="text-teal-300 font-bold">{data.data?.conviction_band ?? "–"}</span>
@@ -194,7 +200,7 @@ export default function GaugeCrowdInsightCard({ accessToken, surveyDate, onBalan
             <span>약한 편 비율 쪽 {data.data?.strength_vs_cohort_pct ?? "–"}%</span>
             <span>무리 {data.data?.cohort_size ?? "–"}명</span>
           </div>
-          <ul className="space-y-2 text-[11px] text-gray-300 leading-snug">
+          <ul className={`${ix.list} text-gray-300`}>
             {(data.data?.bullets ?? []).map((line) => (
               <li key={line.slice(0, 48)} className="flex gap-2">
                 <span className="text-teal-400 font-bold shrink-0">·</span>

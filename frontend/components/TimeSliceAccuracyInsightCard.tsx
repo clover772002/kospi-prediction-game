@@ -7,6 +7,7 @@ import InsightUnavailableCard from "@/components/InsightUnavailableCard";
 import InsightTokenPriceButton from "@/components/InsightTokenPriceButton";
 import InsightDetailDisclosure from "@/components/InsightDetailDisclosure";
 import { insightMeta } from "@/lib/insight_card_meta";
+import { useInsightDashLayout } from "@/hooks/useInsightDashLayout";
 import {
   getTimeSliceAccuracyInsight,
   TimeSliceAccuracyInsightResponse,
@@ -25,6 +26,7 @@ interface Props {
 /** 파도 B — 시간대별 응답·적중 무드(KST 버킷, responded_at 필요) */
 export default function TimeSliceAccuracyInsightCard({ accessToken, surveyDate, onBalanceUpdated }: Props) {
   const confirmShopOnInsufficientTokens = useConfirmShopOnInsufficientTokens();
+  const d = useInsightDashLayout();
   const [loading, setLoading] = useState(true);
   const [unlocking, setUnlocking] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -74,9 +76,9 @@ export default function TimeSliceAccuracyInsightCard({ accessToken, surveyDate, 
 
   if (loading) {
     return (
-      <div className="rounded-2xl border border-amber-500/25 bg-amber-500/[0.06] px-4 py-4 fade-up-2 animate-pulse">
-        <div className="h-4 w-56 rounded bg-[#333] mb-2" />
-        <div className="h-20 rounded bg-[#222]" />
+      <div className={`${d.cardRound} border border-amber-500/25 bg-amber-500/[0.06] ${d.cardPad} fade-up-2 animate-pulse`}>
+        <div className={`${d.c ? "h-2 w-52 mb-1" : "h-4 w-56 mb-2"} rounded bg-[#333]`} />
+        <div className={`${d.c ? "h-8" : "h-20"} rounded bg-[#222]`} />
       </div>
     );
   }
@@ -133,14 +135,14 @@ export default function TimeSliceAccuracyInsightCard({ accessToken, surveyDate, 
   const priceTokens = data.price_tokens ?? META.priceTokens;
 
   return (
-    <div className="rounded-2xl border border-amber-500/35 bg-gradient-to-b from-amber-950/[0.35] to-[#141414]/90 px-4 py-4 space-y-3 fade-up-2">
-      <div className="flex items-start justify-between gap-2">
+    <div className={`${d.cardRound} border border-amber-500/35 bg-gradient-to-b from-amber-950/[0.35] to-[#141414]/90 ${d.cardPad} ${d.cardGap} fade-up-2`}>
+      <div className={`flex items-start justify-between ${d.rowGap}`}>
         <div className="min-w-0 flex-1">
-          <p className="text-[10px] font-black text-amber-300 uppercase tracking-wide">토큰 인사이트 · 파도 B</p>
-          <p className="text-sm font-black text-white mt-0.5">{data.title ?? "시간대별 무드"}</p>
-          <p className="text-[10px] text-gray-600 mt-0.5">{data.survey_date}</p>
+          <p className={`${d.badge} font-black text-amber-300 uppercase tracking-wide`}>토큰 인사이트 · 파도 B</p>
+          <p className={`${d.titleClass} text-white mt-0.5`}>{data.title ?? "시간대별 무드"}</p>
+          <p className={`${d.subDate} text-gray-600 mt-0.5`}>{data.survey_date}</p>
         </div>
-        <div className="flex items-center gap-2 shrink-0">
+        <div className={`flex items-center ${d.rowGap} shrink-0`}>
           <InsightTokenPriceButton
             priceTokens={priceTokens}
             className="border-amber-500/45 bg-amber-500/15 text-amber-100 hover:bg-amber-500/25"
@@ -148,7 +150,7 @@ export default function TimeSliceAccuracyInsightCard({ accessToken, surveyDate, 
             unlocking={unlocking}
             onActivate={() => void handleUnlock()}
           />
-          <span className="text-xl" aria-hidden>
+          <span className={d.icon} aria-hidden>
             {locked ? "🔐" : "✨"}
           </span>
         </div>
@@ -165,28 +167,28 @@ export default function TimeSliceAccuracyInsightCard({ accessToken, surveyDate, 
 
       {!locked ? (
         <>
-          <p className="text-[10px] text-gray-500">{data.data?.computed_note}</p>
-          <p className="text-[10px] text-gray-500">
+          <p className={`${d.computed} text-gray-500`}>{data.data?.computed_note}</p>
+          <p className={`${d.computed} text-gray-500`}>
             결과 확정 여부: {data.data?.kospi_result_known ? "코스피 결과 반영 가능" : "분포만(결과 미확정)"} · 시각 기록 건수{" "}
             {data.data?.total_with_timestamp ?? "–"}
           </p>
           <div className="overflow-x-auto rounded-lg border border-white/[0.06]">
-            <table className="w-full text-[10px] text-left tabular-nums">
+            <table className={`w-full text-left tabular-nums ${d.tableWrap}`}>
               <thead className="text-gray-500 border-b border-white/[0.06]">
                 <tr>
-                  <th className="py-2 pl-2 pr-1 font-bold">버킷(KST)</th>
-                  <th className="py-2 px-1 font-bold">n</th>
-                  <th className="py-2 px-1 font-bold">분포%</th>
-                  <th className="py-2 pr-2 font-bold">적중%</th>
+                  <th className={`${d.thPad} pl-2 pr-1 font-bold`}>버킷(KST)</th>
+                  <th className={`${d.thPad} px-1 font-bold`}>n</th>
+                  <th className={`${d.thPad} px-1 font-bold`}>분포%</th>
+                  <th className={`${d.thPad} pr-2 font-bold`}>적중%</th>
                 </tr>
               </thead>
               <tbody className="text-gray-300">
                 {(data.data?.buckets ?? []).map((row) => (
                   <tr key={row.bucket_id} className="border-b border-white/[0.04] last:border-0">
-                    <td className="py-1.5 pl-2 pr-1 text-gray-400">{row.label_ko}</td>
-                    <td className="py-1.5 px-1">{row.n}</td>
-                    <td className="py-1.5 px-1">{row.sample_ok ? `${row.pct_of_timed_day}%` : "—"}</td>
-                    <td className="py-1.5 pr-2">
+                    <td className={`${d.tdPad} pl-2 pr-1 text-gray-400`}>{row.label_ko}</td>
+                    <td className={`${d.tdPad} px-1`}>{row.n}</td>
+                    <td className={`${d.tdPad} px-1`}>{row.sample_ok ? `${row.pct_of_timed_day}%` : "—"}</td>
+                    <td className={`${d.tdPad} pr-2`}>
                       {data.data?.kospi_result_known && row.sample_ok && row.correct_pct_snapshot != null
                         ? `${row.correct_pct_snapshot}%`
                         : "—"}
@@ -196,7 +198,7 @@ export default function TimeSliceAccuracyInsightCard({ accessToken, surveyDate, 
               </tbody>
             </table>
           </div>
-          <ul className="space-y-2 text-[11px] text-gray-300 leading-snug pt-1">
+          <ul className={`${d.list} text-gray-300 pt-1`}>
             {(data.data?.bullets ?? []).map((line) => (
               <li key={line.slice(0, 52)} className="flex gap-2">
                 <span className="text-amber-400 font-bold shrink-0">·</span>

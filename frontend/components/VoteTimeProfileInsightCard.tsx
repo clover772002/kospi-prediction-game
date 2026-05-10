@@ -7,6 +7,7 @@ import InsightUnavailableCard from "@/components/InsightUnavailableCard";
 import InsightTokenPriceButton from "@/components/InsightTokenPriceButton";
 import InsightDetailDisclosure from "@/components/InsightDetailDisclosure";
 import { insightMeta, type InsightProductSlug } from "@/lib/insight_card_meta";
+import { useInsightDashLayout } from "@/hooks/useInsightDashLayout";
 import {
   getExpertVoteTimeProfileInsight,
   getNoviceVoteTimeProfileInsight,
@@ -26,6 +27,7 @@ interface Props {
 
 export default function VoteTimeProfileInsightCard({ accessToken, surveyDate, cohort, onBalanceUpdated }: Props) {
   const confirmShopOnInsufficientTokens = useConfirmShopOnInsufficientTokens();
+  const ix = useInsightDashLayout();
   const slug = cohort === "expert" ? "expert_vote_time_profile" : "novice_vote_time_profile";
   const META = useMemo(() => insightMeta(slug as InsightProductSlug), [slug]);
 
@@ -86,12 +88,12 @@ export default function VoteTimeProfileInsightCard({ accessToken, surveyDate, co
   if (loading) {
     return (
       <div
-        className={`rounded-2xl border px-4 py-4 fade-up-2 animate-pulse ${
+        className={`${ix.cardRound} border ${ix.cardPad} fade-up-2 animate-pulse ${
           cohort === "expert" ? "border-indigo-500/25 bg-indigo-500/[0.06]" : "border-slate-500/25 bg-slate-500/[0.06]"
         }`}
       >
-        <div className="h-4 w-52 rounded bg-[#333] mb-2" />
-        <div className="h-20 rounded bg-[#222]" />
+        <div className={`${ix.c ? "h-2 w-40 mb-1" : "h-4 w-52 mb-2"} rounded bg-[#333]`} />
+        <div className={`${ix.c ? "h-7" : "h-20"} rounded bg-[#222]`} />
       </div>
     );
   }
@@ -162,17 +164,17 @@ export default function VoteTimeProfileInsightCard({ accessToken, surveyDate, co
 
   return (
     <div
-      className={`rounded-2xl border ${accentBorder} bg-gradient-to-b ${
+      className={`${ix.cardRound} border ${accentBorder} bg-gradient-to-b ${
         cohort === "expert" ? "from-indigo-950/30" : "from-slate-900/40"
-      } to-[#141414]/90 px-4 py-4 space-y-3 fade-up-2`}
+      } to-[#141414]/90 ${ix.cardPad} ${ix.cardGap} fade-up-2`}
     >
-      <div className="flex items-start justify-between gap-2">
+      <div className={`flex items-start justify-between ${ix.rowGap}`}>
         <div className="min-w-0 flex-1">
-          <p className={`text-[10px] font-black ${accentText} uppercase tracking-wide`}>토큰 인사이트 · 파도 B</p>
-          <p className="text-sm font-black text-white mt-0.5">{data.title ?? (cohort === "expert" ? "고수 시간" : "하수 시간")}</p>
-          <p className="text-[10px] text-gray-600 mt-0.5">{data.survey_date}</p>
+          <p className={`${ix.badge} font-black ${accentText} uppercase tracking-wide`}>토큰 인사이트 · 파도 B</p>
+          <p className={`${ix.titleClass} text-white mt-0.5`}>{data.title ?? (cohort === "expert" ? "고수 시간" : "하수 시간")}</p>
+          <p className={`${ix.subDate} text-gray-600 mt-0.5`}>{data.survey_date}</p>
         </div>
-        <div className="flex items-center gap-2 shrink-0">
+        <div className={`flex items-center ${ix.rowGap} shrink-0`}>
           <InsightTokenPriceButton
             priceTokens={priceTokens}
             className={priceChipClass}
@@ -180,7 +182,7 @@ export default function VoteTimeProfileInsightCard({ accessToken, surveyDate, co
             unlocking={unlocking}
             onActivate={() => void handleUnlock()}
           />
-          <span className="text-xl" aria-hidden>
+          <span className={ix.icon} aria-hidden>
             {locked ? "🔐" : "✨"}
           </span>
         </div>
@@ -198,32 +200,32 @@ export default function VoteTimeProfileInsightCard({ accessToken, surveyDate, co
 
       {!locked ? (
         <>
-          <p className="text-[10px] text-gray-500">{data.data?.computed_note}</p>
-          <p className="text-[10px] text-gray-400 tabular-nums">
+          <p className={`${ix.computed} text-gray-500`}>{data.data?.computed_note}</p>
+          <p className={`${ix.computed} text-gray-400 tabular-nums`}>
             {data.data?.segment_label_ko} 시각기록 {data.data?.segment_with_timestamp_n ?? "–"}명 · 전체 시각기록{" "}
             {data.data?.global_with_timestamp_n ?? "–"}명
           </p>
           <div className="overflow-x-auto rounded-lg border border-white/[0.06]">
-            <table className="w-full text-[10px] text-left tabular-nums">
+            <table className={`w-full text-left tabular-nums ${ix.tableWrap}`}>
               <thead className="text-gray-500 border-b border-white/[0.06]">
                 <tr>
-                  <th className="py-2 pl-2 pr-1 font-bold">버킷</th>
-                  <th className="py-2 px-1 font-bold">세그%</th>
-                  <th className="py-2 pr-2 font-bold">전체%</th>
+                  <th className={`${ix.thPad} pl-2 pr-1 font-bold`}>버킷</th>
+                  <th className={`${ix.thPad} px-1 font-bold`}>세그%</th>
+                  <th className={`${ix.thPad} pr-2 font-bold`}>전체%</th>
                 </tr>
               </thead>
               <tbody className="text-gray-300">
                 {(data.data?.buckets ?? []).map((row) => (
                   <tr key={row.bucket_id} className="border-b border-white/[0.04] last:border-0">
-                    <td className="py-1.5 pl-2 pr-1 text-gray-400">{row.label_ko}</td>
-                    <td className="py-1.5 px-1">{row.segment_share_pct}%</td>
-                    <td className="py-1.5 pr-2">{row.global_share_pct}%</td>
+                    <td className={`${ix.tdPad} pl-2 pr-1 text-gray-400`}>{row.label_ko}</td>
+                    <td className={`${ix.tdPad} px-1`}>{row.segment_share_pct}%</td>
+                    <td className={`${ix.tdPad} pr-2`}>{row.global_share_pct}%</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
-          <ul className="space-y-2 text-[11px] text-gray-300 leading-snug pt-1">
+          <ul className={`${ix.list} text-gray-300 pt-1`}>
             {(data.data?.bullets ?? []).map((line) => (
               <li key={line.slice(0, 52)} className="flex gap-2">
                 <span className={`${accentText} font-bold shrink-0`}>·</span>
