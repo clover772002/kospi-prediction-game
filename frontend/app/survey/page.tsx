@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback, useRef, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import { getToday, resolveApiBase, TodaySurvey } from "@/lib/api";
 import FlipClock from "@/components/FlipClock";
@@ -148,9 +149,6 @@ function SurveyPageInner() {
   const [userStreak, setUserStreak] = useState<number>(0);
   const [alreadyAnswered, setAlreadyAnswered] = useState(false);
   const [previousAnswer, setPreviousAnswer] = useState<boolean | null>(null);
-  const [retrying, setRetrying] = useState(false);
-  // ref로 retrying 상태 추적 — checkMyResponse의 useCallback 클로저에서 접근용
-  const retryingRef = useRef(false);
 
   const [kospiPrice, setKospiPrice] = useState<KospiPrice | null>(null);
   const priceTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -232,19 +230,13 @@ function SurveyPageInner() {
               : data.kospi_answer
                 ? 50
                 : -50;
-          // 수정 중(retrying)이면 유저가 고른 선택을 덮어쓰지 않음
-          if (!retryingRef.current) {
-            setKospiAnswer(data.kospi_answer);
-            setGaugePosition(gp);
-          }
+          setKospiAnswer(data.kospi_answer);
+          setGaugePosition(gp);
         } else {
-          // 수정 중이 아닐 때만 상태 초기화
-          if (!retryingRef.current) {
-            setAlreadyAnswered(false);
-            setPreviousAnswer(null);
-            setKospiAnswer(null);
-            setGaugePosition(10);
-          }
+          setAlreadyAnswered(false);
+          setPreviousAnswer(null);
+          setKospiAnswer(null);
+          setGaugePosition(10);
         }
       }
     } catch {
@@ -303,14 +295,26 @@ function SurveyPageInner() {
       if (session) {
         setToken(session.access_token);
         loadToday();
-        checkMyResponse(session.access_token);
-        // 토큰 잔액 + 스트릭 조회
-        fetch(`${resolveApiBase()}/api/dashboard`, {
-          headers: { Authorization: `Bearer ${session.access_token}` },
-        }).then(r => r.json()).then(d => {
-          if (typeof d.tokens === "number") setUserTokens(d.tokens);
-          if (typeof d.current_streak === "number") setUserStreak(d.current_streak);
-        }).catch(() => {});
+        void (async () => {
+          try {
+            await fetch(`/api/survey/sync-presubmit`, {
+              method: "POST",
+              headers: { Authorization: `Bearer ${session.access_token}` },
+            });
+          } catch {
+            /* noop */
+          }
+          await checkMyResponse(session.access_token);
+          fetch(`${resolveApiBase()}/api/dashboard`, {
+            headers: { Authorization: `Bearer ${session.access_token}` },
+          })
+            .then((r) => r.json())
+            .then((d) => {
+              if (typeof d.tokens === "number") setUserTokens(d.tokens);
+              if (typeof d.current_streak === "number") setUserStreak(d.current_streak);
+            })
+            .catch(() => {});
+        })();
       }
     });
     return () => subscription.unsubscribe();
@@ -352,8 +356,6 @@ function SurveyPageInner() {
       setSubmitted(true);
       setAlreadyAnswered(true);
       setPreviousAnswer(kospiAnswer);
-      retryingRef.current = false;
-      setRetrying(false);
     } catch (e: unknown) {
       const raw = e instanceof Error ? e.message : String(e);
       if (/failed\s*to\s*fetch|load\s*failed|network\s*error/i.test(raw) || !raw) {
@@ -511,17 +513,14 @@ function SurveyPageInner() {
                     beginnerTips={false}
                   />
                 </div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setNextSubmitted(false);
-                    setNextAlreadyAnswered(false);
-                    setNextGaugePhase("preview");
-                  }}
-                  className="w-full py-3 rounded-xl bg-[#1A1A1A] border border-amber-500/40 text-amber-300 text-sm font-bold hover:bg-amber-500/10 transition-all"
-                >
-                  예측 수정하기 · 게이지 다시 조정
-                </button>
+                <div className="rounded-xl border border-amber-500/25 bg-black/20 px-3 py-2 space-y-2 text-center">
+                  <p className="text-[11px] text-gray-400 leading-relaxed">
+                    이 거래일 응답은 1회 확정 후 바로 수정할 수 없어요. 상점의 재투표·게이지·방향 아이템을 확인해 주세요.
+                  </p>
+                  <Link href="/shop" className="text-[11px] font-bold text-amber-400 hover:text-amber-200 underline underline-offset-2">
+                    상점 이동
+                  </Link>
+                </div>
               </div>
             ) : (
               <>
@@ -588,8 +587,8 @@ function SurveyPageInner() {
         );
       })()}
 
-      {/* 설문 진행 중 — 이미 완료됨 (재투표 전) */}
-      {status === "open" && !isWeekendKST && alreadyAnswered && !retrying && (
+      {/* 설문 진행 중 — 이미 완료됨 */}
+      {status === "open" && !isWeekendKST && alreadyAnswered && (
         <div className="flex flex-col gap-4 mt-6 fade-up">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 w-full min-w-0">
             <div className="bg-[#1A1A1A] border border-green-500/30 rounded-2xl p-4 min-w-0 flex flex-col gap-2 w-full">
@@ -601,13 +600,84 @@ function SurveyPageInner() {
                 disabled
                 beginnerTips={false}
               />
-              <button
-                type="button"
-                onClick={() => { retryingRef.current = true; setRetrying(true); setSubmitted(false); setTodayGaugePhase("preview"); }}
-                className="text-[11px] text-gray-500 border border-[#333] px-2 py-1.5 rounded-lg hover:border-white/30 transition-all self-start"
-              >
-                변경하기
-              </button>
+              <div className="rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 space-y-2">
+                <p className="text-[11px] text-gray-400 leading-relaxed">
+                  같은 거래일에는 첫 전송 후 바로 수정할 수 없습니다. 상점에서 「재투표 1회」를 구매한 뒤 다시 제출하거나, 「게이지만 조정」「방향만 반전」 아이템을 활용할 수 있습니다.
+                </p>
+                <Link
+                  href="/shop"
+                  className="inline-block text-[11px] font-bold text-amber-400 hover:text-amber-200 underline underline-offset-2"
+                >
+                  토큰 상점 가기 →
+                </Link>
+                {token && today?.survey_date ? (
+                  <div className="flex flex-col gap-1.5 pt-1 border-t border-white/10 mt-2">
+                    <p className="text-[10px] text-gray-500">아이템을 이미 샀다면 이 거래일에 바로 적용해 보세요.</p>
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        className="text-[10px] font-bold px-2 py-1 rounded-md bg-white/10 hover:bg-white/15"
+                        onClick={async () => {
+                          if (!token || !today.survey_date) return;
+                          const inp = window.prompt("새 게이지 -100~100 (0 제외, 방향은 그대로)", String(gaugePosition));
+                          const n = inp != null ? Number(inp) : NaN;
+                          if (!Number.isFinite(n) || n === 0 || n < -100 || n > 100) return;
+                          setError(null);
+                          try {
+                            const res = await fetch(`/api/survey/adjust-gauge`, {
+                              method: "POST",
+                              headers: {
+                                "Content-Type": "application/json",
+                                Authorization: `Bearer ${token}`,
+                              },
+                              body: JSON.stringify({ survey_date: today.survey_date, gauge_position: n }),
+                            });
+                            const raw = await res.json().catch(() => ({}));
+                            if (!res.ok) {
+                              throw new Error(typeof raw.detail === "string" ? raw.detail : "적용 실패");
+                            }
+                            setGaugePosition(n);
+                            setKospiAnswer(n > 0);
+                          } catch (e: unknown) {
+                            setError(e instanceof Error ? e.message : "적용하지 못했습니다.");
+                          }
+                        }}
+                      >
+                        게이지만 적용
+                      </button>
+                      <button
+                        type="button"
+                        className="text-[10px] font-bold px-2 py-1 rounded-md bg-white/10 hover:bg-white/15"
+                        onClick={async () => {
+                          if (!token || !today.survey_date) return;
+                          setError(null);
+                          try {
+                            const res = await fetch(`/api/survey/flip-direction`, {
+                              method: "POST",
+                              headers: {
+                                "Content-Type": "application/json",
+                                Authorization: `Bearer ${token}`,
+                              },
+                              body: JSON.stringify({ survey_date: today.survey_date }),
+                            });
+                            const raw = await res.json().catch(() => ({}));
+                            if (!res.ok) {
+                              throw new Error(typeof raw.detail === "string" ? raw.detail : "적용 실패");
+                            }
+                            setGaugePosition((g) => (g === 0 ? g : -g));
+                            setKospiAnswer((prev) => (prev === null ? prev : !prev));
+                          } catch (e: unknown) {
+                            setError(e instanceof Error ? e.message : "적용하지 못했습니다.");
+                          }
+                        }}
+                      >
+                        방향만 반전
+                      </button>
+                    </div>
+                    {error ? <p className="text-[10px] text-red-400 mt-1">{error}</p> : null}
+                  </div>
+                ) : null}
+              </div>
             </div>
             <KospiNowCard price={kospiPrice} status="open" />
           </div>
@@ -620,17 +690,11 @@ function SurveyPageInner() {
       )}
 
       {/* 설문 진행 중 — 투표 폼 */}
-      {status === "open" && !isWeekendKST && (!alreadyAnswered || retrying) && !submitted && (
+      {status === "open" && !isWeekendKST && !alreadyAnswered && !submitted && (
         <div className="space-y-6 mt-4 fade-up">
           <div className="bg-amber-500/10 border border-amber-500/30 rounded-2xl p-4 text-center">
             <p className="text-amber-400 font-bold text-sm">⏰ 설문 진행 중 · 장 시작 전 마감</p>
           </div>
-
-          {retrying && (
-            <div className="bg-blue-500/10 border border-blue-500/30 rounded-xl p-3 text-blue-400 text-sm text-center">
-              예측을 변경할 수 있어요. 선택 후 제출하세요.
-            </div>
-          )}
 
           {/* 스트릭 뱃지 */}
           {userStreak >= 3 && (
@@ -669,7 +733,7 @@ function SurveyPageInner() {
               submitting={submitting}
               lockBtnClass="bg-cyan-600 hover:bg-cyan-500 disabled:bg-[#333] disabled:text-gray-500 text-white"
               submitBtnClass="bg-blue-600 hover:bg-blue-500 disabled:bg-[#333] disabled:text-gray-500 text-white"
-              submitLabel={retrying ? "예측 변경하기" : "예측 제출하기"}
+              submitLabel="예측 제출하기"
               onSubmit={handleSubmit}
             />
           </div>
@@ -790,17 +854,14 @@ function SurveyPageInner() {
                         beginnerTips={false}
                       />
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setNextSubmitted(false);
-                        setNextAlreadyAnswered(false);
-                        setNextGaugePhase("preview");
-                      }}
-                      className="w-full py-3 rounded-xl bg-[#1A1A1A] border border-amber-500/40 text-amber-300 text-sm font-bold hover:bg-amber-500/10 transition-all"
-                    >
-                      예측 수정하기 · 게이지 다시 조정
-                    </button>
+                    <div className="rounded-xl border border-amber-500/25 bg-black/20 px-3 py-2 space-y-2 text-center">
+                      <p className="text-[11px] text-gray-400 leading-relaxed">
+                        이 거래일 응답은 1회 확정 후 바로 수정할 수 없어요. 상점의 재투표·게이지·방향 아이템을 확인해 주세요.
+                      </p>
+                      <Link href="/shop" className="text-[11px] font-bold text-amber-400 hover:text-amber-200 underline underline-offset-2">
+                        상점 이동
+                      </Link>
+                    </div>
                   </div>
                 ) : (
                   <>

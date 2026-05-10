@@ -43,6 +43,42 @@ def next_trading_day_from(d: date) -> date:
     return cur
 
 
+def last_trading_day_on_or_before(d: date) -> date:
+    """d가 속한 역방향 탐색: 첫 KRX 근거 거래일까지 일수를 깎으며 찾음."""
+    cur = d
+    for _ in range(400):
+        if is_krx_trading_day(cur):
+            return cur
+        cur -= timedelta(days=1)
+    raise ValueError("400일 이내 거래일을 찾지 못했습니다.")
+
+
+def previous_trading_day_before(d: date) -> date:
+    """정확히 d보다 이전의 가장 가까운 거래일."""
+    cur = d - timedelta(days=1)
+    for _ in range(400):
+        if is_krx_trading_day(cur):
+            return cur
+        cur -= timedelta(days=1)
+    raise ValueError("이전 거래일을 찾지 못했습니다.")
+
+
+def last_n_trading_days_inclusive_through(end_calendar: date, n: int) -> list[date]:
+    """
+    end_calendar를 포함하여 거래일 n개 구간을 **과거→현재 순(오름차순)**으로 반환.
+    end가 비거래일이면 직전 거래일까지 당김해서 그 일을 종료 거래일로 둠.
+    """
+    if n < 1:
+        raise ValueError("n은 1 이상이어야 합니다.")
+    anchor = last_trading_day_on_or_before(end_calendar)
+    newest_first: list[date] = []
+    cur = anchor
+    for _ in range(n):
+        newest_first.append(cur)
+        cur = previous_trading_day_before(cur)
+    return list(reversed(newest_first))
+
+
 def today_date_kst() -> date:
     """한국 시간 기준 오늘 날짜."""
     return datetime.now(KST).date()

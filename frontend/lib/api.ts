@@ -369,9 +369,256 @@ export async function getGaugeCrowdInsight(accessToken: string, surveyDate: stri
   return res.json();
 }
 
+export interface CrowdConvictionInsightResponse {
+  accessible: boolean;
+  locked?: boolean;
+  reason?: string | null;
+  survey_date: string;
+  product_slug?: string;
+  price_tokens?: number;
+  balance?: number;
+  title?: string;
+  description?: string;
+  data: {
+    survey_date: string;
+    n: number;
+    bull_side_count: number;
+    bear_side_count: number;
+    mean: number;
+    stdev: number;
+    q1: number;
+    median: number;
+    q3: number;
+    min: number;
+    max: number;
+    mean_abs: number;
+    bullets: string[];
+    computed_note?: string;
+  } | null;
+}
+
+export async function getCrowdConvictionInsight(
+  accessToken: string,
+  surveyDate: string,
+): Promise<CrowdConvictionInsightResponse> {
+  const res = await fetch(
+    `${resolveApiBase()}/api/insights/crowd-conviction-spread?survey_date=${encodeURIComponent(surveyDate)}`,
+    { headers: { Authorization: `Bearer ${accessToken}` } },
+  );
+  if (!res.ok) {
+    const raw = await res.json().catch(() => ({}));
+    const detail =
+      typeof raw.detail === "string"
+        ? raw.detail
+        : "인사이트를 불러오지 못했습니다.";
+    throw new Error(detail);
+  }
+  return res.json();
+}
+
+export interface RollingCrowdInsightResponse {
+  accessible: boolean;
+  locked?: boolean;
+  reason?: string | null;
+  survey_date: string;
+  product_slug?: string;
+  price_tokens?: number;
+  balance?: number;
+  title?: string;
+  description?: string;
+  data: {
+    end_date: string;
+    window_trading_days: number;
+    series: Array<{
+      survey_date: string;
+      sample_ok: boolean;
+      n: number;
+      simple_pct: number | null;
+      weighted_pct: number | null;
+      gap_points: number | null;
+    }>;
+    bullets: string[];
+    computed_note?: string;
+  } | null;
+}
+
+export async function getRollingCrowdInsight(
+  accessToken: string,
+  surveyDateAsEndDate: string,
+): Promise<RollingCrowdInsightResponse> {
+  const res = await fetch(
+    `${resolveApiBase()}/api/insights/rolling-crowd-summary?survey_date=${encodeURIComponent(surveyDateAsEndDate)}`,
+    { headers: { Authorization: `Bearer ${accessToken}` } },
+  );
+  if (!res.ok) {
+    const raw = await res.json().catch(() => ({}));
+    throw new Error(
+      typeof raw.detail === "string" ? raw.detail : "인사이트를 불러오지 못했습니다.",
+    );
+  }
+  return res.json();
+}
+
+export interface GroupVsGlobalInsightResponse {
+  accessible: boolean;
+  locked?: boolean;
+  reason?: string | null;
+  survey_date: string;
+  group_id?: string;
+  product_slug?: string;
+  price_tokens?: number;
+  balance?: number;
+  title?: string;
+  description?: string;
+  data: {
+    survey_date: string;
+    group_id: string;
+    group_name: string;
+    group: {
+      n: number;
+      simple_pct: number;
+      weighted_pct: number;
+      gap_points: number;
+    };
+    global: {
+      n: number;
+      simple_pct: number;
+      weighted_pct: number;
+      gap_points: number;
+    };
+    bullets: string[];
+    computed_note?: string;
+  } | null;
+}
+
+export async function getGroupVsGlobalInsight(
+  accessToken: string,
+  surveyDate: string,
+  groupId: string,
+): Promise<GroupVsGlobalInsightResponse> {
+  const q = `survey_date=${encodeURIComponent(surveyDate)}&group_id=${encodeURIComponent(groupId)}`;
+  const res = await fetch(`${resolveApiBase()}/api/insights/group-vs-global-snapshot?${q}`, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+  if (!res.ok) {
+    const raw = await res.json().catch(() => ({}));
+    throw new Error(
+      typeof raw.detail === "string" ? raw.detail : "인사이트를 불러오지 못했습니다.",
+    );
+  }
+  return res.json();
+}
+
+export interface TimeSliceAccuracyInsightResponse {
+  accessible: boolean;
+  locked?: boolean;
+  reason?: string | null;
+  survey_date: string;
+  product_slug?: string;
+  price_tokens?: number;
+  balance?: number;
+  title?: string;
+  description?: string;
+  data: {
+    survey_date: string;
+    total_with_timestamp: number;
+    kospi_result_known: boolean;
+    buckets: Array<{
+      bucket_id: string;
+      label_ko: string;
+      n: number;
+      sample_ok: boolean;
+      pct_of_timed_day: number;
+      correct_pct_snapshot: number | null;
+    }>;
+    bullets: string[];
+    computed_note?: string;
+  } | null;
+}
+
+export async function getTimeSliceAccuracyInsight(
+  accessToken: string,
+  surveyDate: string,
+): Promise<TimeSliceAccuracyInsightResponse> {
+  const res = await fetch(
+    `${resolveApiBase()}/api/insights/time-slice-accuracy?survey_date=${encodeURIComponent(surveyDate)}`,
+    { headers: { Authorization: `Bearer ${accessToken}` } },
+  );
+  if (!res.ok) {
+    const raw = await res.json().catch(() => ({}));
+    throw new Error(
+      typeof raw.detail === "string" ? raw.detail : "인사이트를 불러오지 못했습니다.",
+    );
+  }
+  return res.json();
+}
+
+export interface VoteTimeProfileInsightResponse {
+  accessible: boolean;
+  locked?: boolean;
+  reason?: string | null;
+  survey_date: string;
+  product_slug?: string;
+  price_tokens?: number;
+  balance?: number;
+  title?: string;
+  description?: string;
+  data: {
+    survey_date: string;
+    cohort: string;
+    segment_label_ko: string;
+    segment_with_timestamp_n: number;
+    global_with_timestamp_n: number;
+    buckets: Array<{
+      bucket_id: string;
+      label_ko: string;
+      segment_n: number;
+      global_n: number;
+      segment_share_pct: number;
+      global_share_pct: number;
+    }>;
+    bullets: string[];
+    computed_note?: string;
+  } | null;
+}
+
+export async function getExpertVoteTimeProfileInsight(
+  accessToken: string,
+  surveyDate: string,
+): Promise<VoteTimeProfileInsightResponse> {
+  const res = await fetch(
+    `${resolveApiBase()}/api/insights/expert-vote-time-profile?survey_date=${encodeURIComponent(surveyDate)}`,
+    { headers: { Authorization: `Bearer ${accessToken}` } },
+  );
+  if (!res.ok) {
+    const raw = await res.json().catch(() => ({}));
+    throw new Error(
+      typeof raw.detail === "string" ? raw.detail : "인사이트를 불러오지 못했습니다.",
+    );
+  }
+  return res.json();
+}
+
+export async function getNoviceVoteTimeProfileInsight(
+  accessToken: string,
+  surveyDate: string,
+): Promise<VoteTimeProfileInsightResponse> {
+  const res = await fetch(
+    `${resolveApiBase()}/api/insights/novice-vote-time-profile?survey_date=${encodeURIComponent(surveyDate)}`,
+    { headers: { Authorization: `Bearer ${accessToken}` } },
+  );
+  if (!res.ok) {
+    const raw = await res.json().catch(() => ({}));
+    throw new Error(
+      typeof raw.detail === "string" ? raw.detail : "인사이트를 불러오지 못했습니다.",
+    );
+  }
+  return res.json();
+}
+
 export async function unlockInsightProduct(
   accessToken: string,
-  body: { product_slug: string; survey_date: string; idempotency_key: string },
+  body: { product_slug: string; survey_date: string; idempotency_key: string; group_id?: string },
 ): Promise<{ ok: boolean; balance?: number; spent?: number; already_unlocked?: boolean }> {
   const res = await fetch(`${resolveApiBase()}/api/insights/unlock`, {
     method: "POST",
@@ -397,8 +644,20 @@ export async function unlockInsightProduct(
   return res.json();
 }
 
+export interface ShopConsumableProduct {
+  slug: string;
+  title: string;
+  price_tokens: number;
+  description?: string;
+  category?: string;
+  requires_survey_date?: boolean;
+  requires_gauge_payload?: boolean;
+  rakeback_pct?: number;
+}
+
 export interface ShopCatalog {
   insight_products: { slug: string; title: string; price_tokens: number; description?: string }[];
+  consumable_products?: ShopConsumableProduct[];
   token_packs: { slug: string; tokens: number; price_label?: string; stripe_price_configured: boolean }[];
   stripe_ready: boolean;
   paywall_enabled: boolean;
@@ -406,6 +665,42 @@ export interface ShopCatalog {
 
 export async function getShopCatalog(accessToken: string): Promise<ShopCatalog> {
   return authFetch("/api/shop/catalog", accessToken);
+}
+
+export async function purchaseConsumable(
+  accessToken: string,
+  body: {
+    consumable_slug: string;
+    survey_date?: string | null;
+    gauge_position?: number | null;
+    idempotency_key: string;
+  },
+): Promise<Record<string, unknown>> {
+  const res = await fetch(`${resolveApiBase()}/api/consumables/purchase`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${accessToken}`,
+    },
+    body: JSON.stringify({
+      consumable_slug: body.consumable_slug,
+      survey_date: body.survey_date ?? null,
+      gauge_position: body.gauge_position ?? null,
+      idempotency_key: body.idempotency_key,
+    }),
+  });
+  if (!res.ok) {
+    const raw = await res.json().catch(() => ({}));
+    const d = raw.detail;
+    throw new Error(
+      typeof d === "string"
+        ? d
+        : typeof d === "object" && d !== null && "message" in d
+          ? String((d as { message?: unknown }).message)
+          : "구매 처리에 실패했습니다.",
+    );
+  }
+  return res.json() as Promise<Record<string, unknown>>;
 }
 
 export async function createStripePackCheckout(accessToken: string, packSlug: string): Promise<{ url: string }> {

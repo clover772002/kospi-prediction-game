@@ -15,6 +15,8 @@ from webpush_helper import send_web_push_to_user
 load_dotenv()
 logger = logging.getLogger(__name__)
 
+from survey_writes import persist_survey_answer, SurveySubmissionLocked, apply_pending_presubmits
+
 pending_answers: dict = {}  # 미사용 (단일 질문 전환 후 즉시 저장)
 
 
@@ -204,6 +206,8 @@ async def handle_callback_query(callback_query: dict, supabase) -> None:
         await answer_callback_query(query_id, "⏰ 설문이 마감되었습니다 (09:00 이후)", show_alert=True)
         return
 
+    survey_closed = bool(survey.data[0]["is_closed"]) if survey.data else False
+
     # 유저 조회
     user_res = supabase.table("users").select("id").eq("telegram_chat_id", chat_id).execute()
     if not user_res.data:
@@ -213,23 +217,20 @@ async def handle_callback_query(callback_query: dict, supabase) -> None:
     user_id = user_res.data[0]["id"]
 
     try:
-        user_row = supabase.table("users").select("tokens").eq("id", user_id).execute()
-        current_tokens = int(user_row.data[0]["tokens"]) if user_row.data else 100
-        tokens_bet = max(1, round(abs(gauge_position) / 100 * current_tokens))
+        apply_pending_presubmits(supabase, str(user_id))
+        try:
+            out = persist_survey_answer(
+                supabase,
+                str(user_id),
+                date_str,
+                gauge_position,
+                survey_closed=survey_closed,
+            )
+        except SurveySubmissionLocked as e:
+            await answer_callback_query(query_id, e.detail[:180], show_alert=True)
+            return
 
-        supabase.table("survey_responses").upsert(
-            {
-                "user_id": user_id,
-                "survey_date": date_str,
-                "kospi_answer": is_yes,
-                "kosdaq_answer": False,
-                "gauge_position": gauge_position,
-                "tokens_bet": tokens_bet,
-                "tokens_before": current_tokens,
-            },
-            on_conflict="user_id,survey_date",
-        ).execute()
-
+        tokens_bet = out.get("tokens_bet")
         summary = _format_gauge_line(gauge_position, tokens_bet)
         await edit_message_text(chat_id, message_id, f"✅ <b>코스피</b> 선택 완료\n{label}")
         await answer_callback_query(query_id, f"저장했어요 · {dir_label}")

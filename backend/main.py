@@ -3,6 +3,8 @@ import os
 import asyncio
 import time
 import logging
+import math
+import statistics
 from datetime import date, timedelta, datetime, timezone
 from zoneinfo import ZoneInfo
 
@@ -10,7 +12,12 @@ KST = ZoneInfo("Asia/Seoul")
 
 from contextlib import asynccontextmanager
 
-from krx_calendar import next_trading_day_str, today_date_kst, korea_public_holiday_on
+from krx_calendar import (
+    next_trading_day_str,
+    today_date_kst,
+    korea_public_holiday_on,
+    last_n_trading_days_inclusive_through,
+)
 
 
 def today_kst() -> str:
@@ -47,6 +54,15 @@ except ImportError:
     stripe_sdk = None
 
 from insights_catalog import INSIGHT_PRODUCTS, TOKEN_PACKS, paywall_enabled, stripe_configured
+from consumables_catalog import CONSUMABLE_PRODUCTS
+from consumables_service import purchase_consumable
+from survey_writes import (
+    SurveySubmissionLocked,
+    persist_survey_answer,
+    apply_gauge_adjust_once,
+    apply_direction_flip_once,
+    apply_pending_presubmits,
+)
 from token_wallet import (
     entitlement_exists,
     unlock_insight_with_tokens,
@@ -620,6 +636,22 @@ def _build_daily_expert_gap_payload(supabase: Client, survey_date_str: str) -> d
 
 
 _MIN_GAUGE_COHORT = 5  # 같은 방향 무리 최소 인원
+_MIN_CROWD_CONVICTION_SAMPLE = 20  # crowd_conviction_spread: 플랜 표본 하한
+_ROLLING_CROWD_WINDOW_TRADING_DAYS = 7
+_MIN_ROLLING_DAY_RESPONSES = 5
+_MIN_GROUP_GLOBAL_RESPONSES = 8
+_MIN_TIME_SLICE_BUCKET_N = 8
+_MIN_TOTAL_TIMESTAMPS_WAVE_B = 30
+_MIN_SEGMENT_TIMESTAMPS_VOTE_PROFILE = 15
+_SEGMENT_PRED_COUNT_MIN = 5
+_EXPERT_NOVICE_FRAC = 0.30
+_TIME_SLICE_BUCKET_LABEL_ID = ["pre_market_kst", "morning_trade_kst", "midday_trade_kst", "late_trade_kst"]
+_TIME_SLICE_BUCKET_LABEL_KO = [
+    "[00:00,09:00) KST",
+    "[09:00,12:30) KST",
+    "[12:30,15:30) KST",
+    "[15:30,24:00] KST",
+]
 
 
 def _coerce_gauge_from_row(row: dict) -> int | None:
@@ -717,6 +749,517 @@ def _build_my_gauge_vs_crowd_payload(supabase: Client, survey_date_str: str, use
             "conviction_band": band,
             "bullets": bullets,
             "computed_note": "같은 방향(상승/하락) 참가자만 한 무리로 묶었습니다. 게이지가 없던 옛 응답은 방향만으로 ±50으로 둡니다.",
+        },
+        None,
+    )
+
+
+def _build_crowd_conviction_spread_payload(
+    supabase: Client, survey_date_str: str
+) -> tuple[dict | None, str | None]:
+    """
+    그날 무리의 gauge_position 분포 요약(익명 집계).
+    반환: (payload, reason) — no_survey_data | insufficient_sample | None
+    """
+    res = (
+        supabase.table("survey_responses")
+        .select("gauge_position, kospi_answer")
+        .eq("survey_date", survey_date_str)
+        .execute()
+    )
+    rows = res.data or []
+    gauges: list[int] = []
+    for r in rows:
+        g = _coerce_gauge_from_row(r)
+        if g is not None:
+            gauges.append(g)
+    n = len(gauges)
+    if n == 0:
+        return (None, "no_survey_data")
+    if n < _MIN_CROWD_CONVICTION_SAMPLE:
+        return (None, "insufficient_sample")
+
+    mean_v = statistics.mean(gauges)
+    stdev_v = statistics.stdev(gauges) if n > 1 else 0.0
+    try:
+        qs = statistics.quantiles(gauges, n=4, method="inclusive")
+        q1, median_v, q3 = qs[0], qs[1], qs[2]
+    except statistics.StatisticsError:
+        sg = sorted(gauges)
+        median_v = statistics.median(sg)
+        mid = len(sg) // 2
+        low = sg[:mid] if len(sg) % 2 else sg[:mid]
+        high = sg[mid + 1 :] if len(sg) % 2 else sg[mid:]
+        q1 = statistics.median(low) if low else median_v
+        q3 = statistics.median(high) if high else median_v
+
+    abs_vals = [abs(x) for x in gauges]
+    mean_abs = statistics.mean(abs_vals)
+
+    bulls = sum(1 for x in gauges if x > 0)
+    bears = sum(1 for x in gauges if x < 0)
+
+    bullets = [
+        f"유효 게이지 응답 {n}명 기준 분포입니다. (상승 편 {bulls}명 · 하락 편 {bears}명)",
+        f"게이지 평균은 약 {mean_v:+.1f} (상승 쪽이 +, 하락 쪽이 −에 가깝습니다).",
+        f"확신 세기(절댓값) 평균은 약 {mean_abs:.1f}입니다.",
+        f"1사분위(Q1) {q1:+.0f} · 중앙값 {median_v:+.0f} · 3사분위(Q3) {q3:+.0f}.",
+        f"표준편차(표본)는 약 {stdev_v:.1f} — 분산이 클수록 그날 무리의 확신이 한쪽으로 덜 몰렸을 수 있습니다.",
+        "등락 예측이 아니라 그날 참가자들의 ‘얼마나 빡세게 찍었는지’ 분위만 보는 카드예요.",
+        "투자·매매 의사결정이 아니며 수익을 보장하지 않습니다.",
+    ]
+
+    return (
+        {
+            "survey_date": survey_date_str,
+            "n": n,
+            "bull_side_count": bulls,
+            "bear_side_count": bears,
+            "mean": round(mean_v, 2),
+            "stdev": round(stdev_v, 2),
+            "q1": round(float(q1), 2),
+            "median": round(float(median_v), 2),
+            "q3": round(float(q3), 2),
+            "min": min(gauges),
+            "max": max(gauges),
+            "mean_abs": round(mean_abs, 2),
+            "bullets": bullets,
+            "computed_note": "옛 응답에 게이지가 없으면 방향만으로 ±50으로 둔 값이 섞일 수 있습니다.",
+        },
+        None,
+    )
+
+
+def _daily_simple_weighted_pct(
+    supabase: Client,
+    survey_date_str: str,
+    acc_map: dict,
+    pred_count: dict,
+) -> tuple[int | None, int | None, int]:
+    """설문 응답이 있는 날만: (simple_pct, weighted_pct, total). total==0 이면 None, None, 0."""
+    res = (
+        supabase.table("survey_responses")
+        .select("user_id, kospi_answer")
+        .eq("survey_date", survey_date_str)
+        .execute()
+    )
+    rows = res.data or []
+    total = len(rows)
+    if total == 0:
+        return None, None, 0
+    yes = sum(1 for r in rows if r.get("kospi_answer"))
+    simple_pct = round(yes / total * 100)
+    w = _calc_weighted_pct(rows, acc_map, pred_count)
+    if w is None:
+        w = simple_pct
+    return simple_pct, w, total
+
+
+def _percentages_from_vote_rows(
+    rows: list, acc_map: dict, pred_count: dict
+) -> tuple[int | None, int | None]:
+    if not rows:
+        return None, None
+    yes = sum(1 for r in rows if r.get("kospi_answer"))
+    total = len(rows)
+    simple_pct = round(yes / total * 100)
+    w = _calc_weighted_pct(rows, acc_map, pred_count)
+    if w is None:
+        w = simple_pct
+    return simple_pct, w
+
+
+def _build_rolling_crowd_summary_payload(supabase: Client, end_date_str: str) -> tuple[dict | None, str | None]:
+    """
+    종료 거래일 기준 직전 포함 7거래일 — 일자별 다수결·가중(플랜 표본 미만이면 해당 일만 표본 부족).
+    """
+    try:
+        end_d = datetime.strptime(end_date_str, "%Y-%m-%d").date()
+    except ValueError:
+        return (None, "no_survey_data")
+    try:
+        dates = last_n_trading_days_inclusive_through(end_d, _ROLLING_CROWD_WINDOW_TRADING_DAYS)
+    except ValueError:
+        return (None, "no_survey_data")
+
+    acc_map, pred_count = _get_accuracy_data(supabase)
+    series: list[dict] = []
+    any_responses = False
+    ok_days = 0
+    for cal in dates:
+        ds = cal.isoformat()
+        sp, wp, total = _daily_simple_weighted_pct(supabase, ds, acc_map, pred_count)
+        sample_ok = total >= _MIN_ROLLING_DAY_RESPONSES
+        if total > 0:
+            any_responses = True
+        if sample_ok:
+            ok_days += 1
+        gap = None
+        if sample_ok and sp is not None and wp is not None:
+            gap = wp - sp
+        series.append(
+            {
+                "survey_date": ds,
+                "sample_ok": sample_ok,
+                "n": total,
+                "simple_pct": sp if sample_ok else None,
+                "weighted_pct": wp if sample_ok else None,
+                "gap_points": gap,
+            }
+        )
+
+    if not any_responses:
+        return (None, "no_survey_data")
+
+    first_s = series[0]["survey_date"]
+    last_s = series[-1]["survey_date"]
+    bullets = [
+        f"종료 거래일 {end_date_str} 기준, 직전 포함 {_ROLLING_CROWD_WINDOW_TRADING_DAYS}거래일({first_s} ~ {last_s}) 흐름입니다.",
+        "각 날짜는 해당일 설문 응답만으로 다수결·가중예측 축을 같은 방식으로 계산했습니다.",
+        f"표본이 {_MIN_ROLLING_DAY_RESPONSES}명 미만인 거래일은 ‘표본 부족’으로 숫자를 숨깁니다.",
+        f"숫자가 있는 날은 {ok_days}거래일입니다. 한날만 보는 카드와 묶어 과대·과소 해석을 줄이는 용도예요.",
+        "투자·매매 의사결정이 아니며 수익을 보장하지 않습니다.",
+    ]
+
+    return (
+        {
+            "end_date": end_date_str,
+            "window_trading_days": _ROLLING_CROWD_WINDOW_TRADING_DAYS,
+            "series": series,
+            "bullets": bullets,
+            "computed_note": "가중예측은 누적 적중(`accuracy_records`) 베이스이며, 종료일이 주말이면 직전 거래일까지 당겨 맞춥니다.",
+        },
+        None,
+    )
+
+
+def _build_group_vs_global_snapshot_payload(
+    supabase: Client, survey_date_str: str, group_id: str, requesting_user_id: str
+) -> tuple[dict | None, str | None]:
+    """그룹 멤버만. 그룹 응답 n 미만이면 insufficient_group_sample."""
+    mem = (
+        supabase.table("group_members")
+        .select("id")
+        .eq("group_id", group_id)
+        .eq("user_id", requesting_user_id)
+        .limit(1)
+        .execute()
+    )
+    if not mem.data:
+        return (None, "not_group_member")
+
+    ginfo = supabase.table("groups").select("name").eq("id", group_id).execute()
+    gname = ginfo.data[0]["name"] if ginfo.data else "그룹"
+
+    mrows = supabase.table("group_members").select("user_id").eq("group_id", group_id).execute()
+    member_ids = {m["user_id"] for m in (mrows.data or [])}
+
+    res = (
+        supabase.table("survey_responses")
+        .select("user_id, kospi_answer")
+        .eq("survey_date", survey_date_str)
+        .execute()
+    )
+    all_rows = res.data or []
+    if len(all_rows) == 0:
+        return (None, "no_survey_data")
+
+    grp_rows = [r for r in all_rows if r.get("user_id") in member_ids]
+    gn = len(grp_rows)
+    if gn < _MIN_GROUP_GLOBAL_RESPONSES:
+        return (None, "insufficient_group_sample")
+
+    acc_map, pred_count = _get_accuracy_data(supabase)
+    g_simple, g_weighted = _percentages_from_vote_rows(grp_rows, acc_map, pred_count)
+    gl_simple, gl_weighted = _percentages_from_vote_rows(all_rows, acc_map, pred_count)
+    assert g_simple is not None and g_weighted is not None
+    assert gl_simple is not None and gl_weighted is not None
+
+    bullets = [
+        f"「{gname}」 그룹이 그날 설문에 응답한 인원은 {gn}명 (전체 무리 {len(all_rows)}명)입니다.",
+        f"그룹: 다수결 약 {g_simple}% 형태, 가중예측 축 약 {g_weighted}% (차이 {g_weighted - g_simple:+d}pt).",
+        f"전체: 다수결 약 {gl_simple}% · 가중 약 {gl_weighted}% (차이 {gl_weighted - gl_simple:+d}pt).",
+        "좁은 무리와 넓은 무리의 그날 ‘기울기’ 차이만 비교합니다. 개인 이름·원시 응답은 없습니다.",
+        "투자·매매 의사결정이 아니며 수익을 보장하지 않습니다.",
+    ]
+
+    return (
+        {
+            "survey_date": survey_date_str,
+            "group_id": group_id,
+            "group_name": gname,
+            "group": {
+                "n": gn,
+                "simple_pct": g_simple,
+                "weighted_pct": g_weighted,
+                "gap_points": g_weighted - g_simple,
+            },
+            "global": {
+                "n": len(all_rows),
+                "simple_pct": gl_simple,
+                "weighted_pct": gl_weighted,
+                "gap_points": gl_weighted - gl_simple,
+            },
+            "bullets": bullets,
+            "computed_note": "그룹·전체 모두 같은 날 같은 가중예측 정의입니다.",
+        },
+        None,
+    )
+
+
+def _wave_b_fetch_survey_with_responded_at(
+    supabase: Client, survey_date_str: str
+) -> tuple[list[dict] | None, str | None]:
+    """err: time_field_unavailable 만 구분한다."""
+    try:
+        res = (
+            supabase.table("survey_responses")
+            .select("user_id, kospi_answer, responded_at")
+            .eq("survey_date", survey_date_str)
+            .execute()
+        )
+        return res.data or [], None
+    except Exception as e:
+        logger.warning("survey_responses.responded_at 조회 실패(스키마·RLS 등): %s", e)
+        return None, "time_field_unavailable"
+
+
+def _parse_responded_at_kst(recorded_at) -> datetime | None:
+    if recorded_at is None:
+        return None
+    if isinstance(recorded_at, datetime):
+        dt = recorded_at
+    else:
+        s = str(recorded_at).replace("Z", "+00:00")
+        try:
+            dt = datetime.fromisoformat(s)
+        except ValueError:
+            return None
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    return dt.astimezone(KST)
+
+
+def _bucket_index_from_kst_local(dt_kst: datetime) -> int:
+    sec = dt_kst.hour * 3600 + dt_kst.minute * 60 + dt_kst.second
+    if sec < 9 * 3600:
+        return 0
+    if sec < int(12.5 * 3600):
+        return 1
+    if sec < int(15.5 * 3600):
+        return 2
+    return 3
+
+
+def _kospi_result_for_survey_day(supabase: Client, survey_date_str: str) -> tuple[bool | None, bool]:
+    """(실제 결정 또는 None 미확정, daily_surveys 행 존재 여부)"""
+    row = (
+        supabase.table("daily_surveys")
+        .select("kospi_result")
+        .eq("survey_date", survey_date_str)
+        .limit(1)
+        .execute()
+    )
+    if not row.data:
+        return None, False
+    kr = row.data[0].get("kospi_result")
+    if kr is None:
+        return None, True
+    return bool(kr), True
+
+
+def _wave_b_expert_and_novice_ids(
+    day_user_ids: set[str], acc_map: dict, pred_count: dict
+) -> tuple[set[str], set[str]]:
+    """pred_count 충족 응답자 기준 고수층 상위·하위 30% 규격(중복 가능성 제거)."""
+    eligible = [u for u in day_user_ids if int(pred_count.get(u, 0) or 0) >= _SEGMENT_PRED_COUNT_MIN]
+    if not eligible:
+        return set(), set()
+
+    cut = max(1, math.ceil(len(eligible) * _EXPERT_NOVICE_FRAC))
+
+    def acc_of(u: str) -> float:
+        return float(acc_map.get(u, 0.5))
+
+    best_order = sorted(eligible, key=lambda u: (-acc_of(u), str(u)))
+    worst_order = sorted(eligible, key=lambda u: (acc_of(u), str(u)))
+
+    experts = set(best_order[:cut])
+    novices: list[str] = []
+    for u in worst_order:
+        if u in experts:
+            continue
+        novices.append(u)
+        if len(novices) >= cut:
+            break
+    if len(novices) < cut:
+        for u in worst_order:
+            if u in novices:
+                continue
+            novices.append(u)
+            if len(novices) >= cut:
+                break
+    return experts, set(novices)
+
+
+def _timed_user_bucket_records(rows: list[dict]) -> list[tuple[str, bool, int]]:
+    out: list[tuple[str, bool, int]] = []
+    for r in rows:
+        uid = r.get("user_id")
+        ka = r.get("kospi_answer")
+        if uid is None or ka is None:
+            continue
+        dt_k = _parse_responded_at_kst(r.get("responded_at"))
+        if dt_k is None:
+            continue
+        b = _bucket_index_from_kst_local(dt_k)
+        out.append((str(uid), bool(ka), b))
+    return out
+
+
+def _build_time_slice_accuracy_payload(
+    supabase: Client, survey_date_str: str
+) -> tuple[dict | None, str | None]:
+    rows, err = _wave_b_fetch_survey_with_responded_at(supabase, survey_date_str)
+    if err == "time_field_unavailable":
+        return None, "time_field_unavailable"
+    if not rows:
+        return None, "no_survey_data"
+
+    kr, _has_daily = _kospi_result_for_survey_day(supabase, survey_date_str)
+    results_known = kr is not None
+
+    timed = _timed_user_bucket_records(rows)
+    total_ts = len(timed)
+    if total_ts == 0:
+        return None, "no_timestamp_data"
+    if total_ts < _MIN_TOTAL_TIMESTAMPS_WAVE_B:
+        return None, "insufficient_total_timestamps"
+
+    counts = [0, 0, 0, 0]
+    correct_counts = [0, 0, 0, 0]
+    for uid, voted_up, bix in timed:
+        counts[bix] += 1
+        if results_known and kr is not None:
+            if voted_up == kr:
+                correct_counts[bix] += 1
+
+    bucket_rows = []
+    for i in range(4):
+        n_i = counts[i]
+        ok = n_i >= _MIN_TIME_SLICE_BUCKET_N
+        acc_pct = None
+        if results_known and ok and kr is not None and n_i > 0:
+            acc_pct = int(round(100 * correct_counts[i] / n_i))
+        bucket_rows.append(
+            {
+                "bucket_id": _TIME_SLICE_BUCKET_LABEL_ID[i],
+                "label_ko": _TIME_SLICE_BUCKET_LABEL_KO[i],
+                "n": n_i,
+                "sample_ok": ok,
+                "pct_of_timed_day": round(100 * n_i / total_ts),
+                "correct_pct_snapshot": acc_pct if (results_known and ok) else None,
+            }
+        )
+
+    bullets = [
+        f"그날 제출 시각이 기록된 응답만 {total_ts}건으로 시간대 무드를 봅니다.",
+        (
+            "해당 거래일 코스피 결과가 확정되어 버킷별 적중 비율을 표시했습니다."
+            if results_known
+            else "아직 결과가 확정되지 않아 버킷별 분포비율만 보여 줍니다. 적중률은 결과 확정 후에 붙습니다."
+        ),
+        f"버킷별 최소 표본 미달({_MIN_TIME_SLICE_BUCKET_N}명 미만) 구간은 감춘 수치예요.",
+        "시각 미기록 응답은 교육·게임 카드에서는 제외됩니다.",
+        "투자·매매 의사결정이 아니며 수익을 보장하지 않습니다.",
+    ]
+
+    return (
+        {
+            "survey_date": survey_date_str,
+            "total_with_timestamp": total_ts,
+            "kospi_result_known": results_known,
+            "buckets": bucket_rows,
+            "bullets": bullets,
+            "computed_note": "버킷은 KST 현지 시각으로만 나눕니다. 코스피 결과는 daily_surveys.kospi_result 기준입니다.",
+        },
+        None,
+    )
+
+
+def _build_vote_time_profile_payload(
+    supabase: Client, survey_date_str: str, cohort: str
+) -> tuple[dict | None, str | None]:
+    """cohort: expert | novice"""
+    rows, err = _wave_b_fetch_survey_with_responded_at(supabase, survey_date_str)
+    if err == "time_field_unavailable":
+        return None, "time_field_unavailable"
+    if not rows:
+        return None, "no_survey_data"
+
+    acc_map, pred_count = _get_accuracy_data(supabase)
+    day_uids = {str(r["user_id"]) for r in rows if r.get("user_id")}
+    experts, novices = _wave_b_expert_and_novice_ids(day_uids, acc_map, pred_count)
+    segment_ids = experts if cohort == "expert" else novices
+    cohort_title = "고수층" if cohort == "expert" else "하수층"
+    label_hint = (
+        "(누적 적중·예측횟수 규격으로 정함)"
+        if cohort == "expert"
+        else "(고수 규격의 대칭 하위 규격)"
+    )
+
+    if not segment_ids:
+        return None, "segment_empty"
+
+    timed = _timed_user_bucket_records(rows)
+    total_seg = sum(1 for uid, _, _ in timed if uid in segment_ids)
+    total_gl = len(timed)
+
+    if total_gl < _MIN_TOTAL_TIMESTAMPS_WAVE_B:
+        return None, "insufficient_total_timestamps"
+    if total_seg < _MIN_SEGMENT_TIMESTAMPS_VOTE_PROFILE:
+        return None, "insufficient_segment_timestamps"
+
+    seg_counts = [0, 0, 0, 0]
+    gl_counts = [0, 0, 0, 0]
+    for uid, _ka, bix in timed:
+        gl_counts[bix] += 1
+        if uid in segment_ids:
+            seg_counts[bix] += 1
+
+    bucket_summ = []
+    for i in range(4):
+        g = gl_counts[i]
+        s_i = seg_counts[i]
+        bucket_summ.append(
+            {
+                "bucket_id": _TIME_SLICE_BUCKET_LABEL_ID[i],
+                "label_ko": _TIME_SLICE_BUCKET_LABEL_KO[i],
+                "segment_n": s_i,
+                "global_n": g,
+                "segment_share_pct": round(100 * s_i / total_seg) if total_seg else 0,
+                "global_share_pct": round(100 * g / total_gl) if total_gl else 0,
+            }
+        )
+
+    bullets = [
+        f"※ {cohort_title} {label_hint}: 그날 응답 중 pred_count ≥ {_SEGMENT_PRED_COUNT_MIN} 인 유저만 자격에 넣고, 적중률 기준 상·하위 각 약 30%를 골랐습니다.",
+        f"시각이 기록된 응답만 집계해 {cohort_title} {total_seg}건·전체 {total_gl}건을 비교합니다.",
+        "버킷은 time_slice 카드와 동일한 KST 경계입니다.",
+        "개인 이름·타임라인 노출 없이 집계만 제공합니다.",
+        "투자·매매 의사결정이 아니며 수익을 보장하지 않습니다.",
+    ]
+
+    return (
+        {
+            "survey_date": survey_date_str,
+            "cohort": cohort,
+            "segment_label_ko": cohort_title,
+            "segment_with_timestamp_n": total_seg,
+            "global_with_timestamp_n": total_gl,
+            "buckets": bucket_summ,
+            "bullets": bullets,
+            "computed_note": "동률 순위 타이브레이크는 user_id 문자열 오름차순입니다.",
         },
         None,
     )
@@ -1076,13 +1619,14 @@ async def admin_set_kospi_result(
         ).execute()
 
         # 유저 토큰 + 스트릭 조회
-        u_row = supabase.table("users").select("tokens, current_streak, game_over_count").eq("id", uid).execute()
+        u_row = supabase.table("users").select("tokens, current_streak, game_over_count, streak_shield_charges").eq("id", uid).execute()
         if not u_row.data:
             continue
         u = u_row.data[0]
         tokens = u.get("tokens") or 100
         streak = u.get("current_streak") or 0
         game_over_count = u.get("game_over_count") or 0
+        shield_charges = int(u.get("streak_shield_charges") or 0)
 
         # 배당배율 계산
         payout_mult = round(crowd_dn / crowd_up, 3) if is_up_bet else round(crowd_up / crowd_dn, 3)
@@ -1096,6 +1640,7 @@ async def admin_set_kospi_result(
         # 참여 보상 (+5 단독, +10 그룹)
         participation_bonus = 10 if uid in group_user_ids else 5
 
+        new_shields = shield_charges
         if correct:
             won = int(tokens_bet * payout_mult * streak_mult)
             new_tokens = tokens + won + participation_bonus
@@ -1103,7 +1648,12 @@ async def admin_set_kospi_result(
         else:
             won = -tokens_bet
             new_tokens = tokens - tokens_bet + participation_bonus
-            new_streak = 0
+            if shield_charges > 0:
+                new_shields = shield_charges - 1
+                new_streak = streak
+            else:
+                new_shields = shield_charges
+                new_streak = 0
 
         game_over = new_tokens <= 0
         if game_over:
@@ -1115,6 +1665,7 @@ async def admin_set_kospi_result(
             "tokens": new_tokens,
             "current_streak": new_streak,
             "game_over_count": game_over_count,
+            "streak_shield_charges": new_shields,
         }).eq("id", uid).execute()
 
         supabase.table("survey_responses").update({
@@ -1344,12 +1895,8 @@ async def web_survey_respond(
     current_user=Depends(get_current_user),
     supabase: Client = Depends(get_supabase),
 ):
-    """웹에서 설문 응답 제출"""
-    from datetime import datetime, timezone
-    import pytz
-
+    """웹에서 설문 응답 제출. 동일 거래일은 1회만(재투표 아이템으로 1회 수정)."""
     user_id = str(current_user.id)
-    today_str = today_kst()
 
     # users 테이블에 유저가 없으면 자동 생성 (FK 오류 방지)
     try:
@@ -1366,55 +1913,52 @@ async def web_survey_respond(
         logger.warning(f"survey/respond: 유저 생성 시도 중 오류 (무시): {e}")
 
     body = await request.json()
-    # gauge_position: -100 ~ +100 (음수=하락, 양수=상승). 없으면 50(상승 기본)
     gauge_position = body.get("gauge_position")
     if gauge_position is not None:
         gauge_position = int(gauge_position)
         if not (-100 <= gauge_position <= 100) or gauge_position == 0:
             raise HTTPException(status_code=422, detail="gauge_position은 -100~100 범위의 0이 아닌 값이어야 합니다.")
-        # gauge_position으로 방향 결정
         kospi_answer = gauge_position > 0
     else:
         kospi_answer = body.get("kospi_answer")
-        gauge_position = 50 if kospi_answer else -50  # 기존 호환성
+        gauge_position = 50 if kospi_answer else -50
 
-    # 클라이언트가 survey_date를 명시하면 그걸 사용, 없으면 오늘
+    today_str = today_kst()
     target_date = body.get("survey_date") or today_str
 
     if kospi_answer is None:
         raise HTTPException(status_code=422, detail="kospi_answer 또는 gauge_position이 필요합니다.")
 
-    # 해당 날짜 설문 존재 여부 + 마감 여부 확인
     survey_res = supabase.table("daily_surveys").select("*").eq("survey_date", target_date).execute()
     if not survey_res.data:
         raise HTTPException(status_code=400, detail="해당 날짜의 설문이 없습니다.")
     survey = survey_res.data[0]
-    if survey.get("is_closed"):
-        raise HTTPException(status_code=400, detail="설문이 마감됐습니다.")
+    survey_closed = bool(survey.get("is_closed"))
 
-    # 현재 토큰 조회 (배팅액 계산용 — 실제 차감은 결과 정산 시)
-    user_row = supabase.table("users").select("tokens").eq("id", user_id).execute()
-    current_tokens = user_row.data[0]["tokens"] if user_row.data else 100
-    tokens_bet = max(1, round(abs(gauge_position) / 100 * current_tokens))
+    apply_pending_presubmits(supabase, user_id)
 
     try:
-        supabase.table("survey_responses").upsert(
-            {
-                "user_id": user_id,
-                "survey_date": target_date,
-                "kospi_answer": bool(kospi_answer),
-                "kosdaq_answer": False,
-                "gauge_position": gauge_position,
-                "tokens_bet": tokens_bet,
-                "tokens_before": current_tokens,
-            },
-            on_conflict="user_id,survey_date",
-        ).execute()
+        out = persist_survey_answer(
+            supabase,
+            user_id,
+            target_date,
+            gauge_position,
+            survey_closed=survey_closed,
+        )
+    except SurveySubmissionLocked as e:
+        raise HTTPException(status_code=400, detail=e.detail) from e
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
     except Exception as e:
-        logger.exception("survey_responses upsert 오류")
-        raise HTTPException(status_code=500, detail=f"응답 저장 중 오류: {e}")
+        logger.exception("survey_responses 저장 오류")
+        raise HTTPException(status_code=500, detail=f"응답 저장 중 오류: {e}") from e
 
-    return {"success": True, "survey_date": target_date, "tokens_bet": tokens_bet, "current_tokens": current_tokens}
+    return {
+        "success": True,
+        "survey_date": out["survey_date"],
+        "tokens_bet": out["tokens_bet"],
+        "current_tokens": out["current_tokens"],
+    }
 
 
 @app.get("/api/survey/my-response")
@@ -1443,6 +1987,110 @@ async def get_my_response(
             "tokens_bet": row.get("tokens_bet"),
         }
     return {"answered": False, "kospi_answer": None, "gauge_position": None, "tokens_bet": None}
+
+
+class SurveyGaugeAdjustBody(BaseModel):
+    survey_date: str
+    gauge_position: int
+
+
+class SurveyDateBody(BaseModel):
+    survey_date: str
+
+
+class ConsumablePurchaseBody(BaseModel):
+    consumable_slug: str
+    survey_date: str | None = None
+    gauge_position: int | None = None
+    idempotency_key: str
+
+
+@app.post("/api/survey/sync-presubmit")
+async def survey_sync_presubmit(
+    current_user=Depends(get_current_user),
+    supabase: Client = Depends(get_supabase),
+):
+    """예약 건 적용 스케줄·설문 오픈과 맞물리게 클라에서 호출."""
+    uid = str(current_user.id)
+    applied = apply_pending_presubmits(supabase, uid)
+    return {"ok": True, "applied_survey_dates": applied}
+
+
+@app.post("/api/survey/adjust-gauge")
+async def survey_adjust_gauge(
+    body: SurveyGaugeAdjustBody,
+    current_user=Depends(get_current_user),
+    supabase: Client = Depends(get_supabase),
+):
+    sd = body.survey_date.strip()
+    if len(sd) != 10:
+        raise HTTPException(status_code=400, detail="survey_date 형식 오류")
+    srv = supabase.table("daily_surveys").select("is_closed").eq("survey_date", sd).execute()
+    if not srv.data:
+        raise HTTPException(status_code=400, detail="해당 설문 없음")
+    try:
+        out = apply_gauge_adjust_once(
+            supabase, str(current_user.id), sd, body.gauge_position, survey_closed=bool(srv.data[0]["is_closed"])
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
+    except Exception as e:
+        logger.exception("adjust-gauge")
+        raise HTTPException(status_code=500, detail=str(e)) from e
+    return {"success": True, **out}
+
+
+@app.post("/api/survey/flip-direction")
+async def survey_flip_direction(
+    body: SurveyDateBody,
+    current_user=Depends(get_current_user),
+    supabase: Client = Depends(get_supabase),
+):
+    sd = body.survey_date.strip()
+    if len(sd) != 10:
+        raise HTTPException(status_code=400, detail="survey_date 형식 오류")
+    srv = supabase.table("daily_surveys").select("is_closed").eq("survey_date", sd).execute()
+    if not srv.data:
+        raise HTTPException(status_code=400, detail="해당 설문 없음")
+    try:
+        out = apply_direction_flip_once(
+            supabase, str(current_user.id), sd, survey_closed=bool(srv.data[0]["is_closed"])
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
+    except Exception as e:
+        logger.exception("flip-direction")
+        raise HTTPException(status_code=500, detail=str(e)) from e
+    return {"success": True, **out}
+
+
+@app.post("/api/consumables/purchase")
+async def post_consumable_purchase(
+    body: ConsumablePurchaseBody,
+    current_user=Depends(get_current_user),
+    supabase: Client = Depends(get_supabase),
+):
+    if not body.idempotency_key or len(body.idempotency_key) < 8:
+        raise HTTPException(status_code=400, detail="idempotency_key가 필요합니다 (8자 이상).")
+    if body.consumable_slug not in CONSUMABLE_PRODUCTS:
+        raise HTTPException(status_code=400, detail="알 수 없는 소모품입니다.")
+    try:
+        out = purchase_consumable(
+            supabase,
+            str(current_user.id),
+            body.consumable_slug,
+            idempotency_key=body.idempotency_key.strip(),
+            survey_date=body.survey_date,
+            gauge_position=body.gauge_position,
+        )
+    except RuntimeError:
+        raise HTTPException(status_code=503, detail="토큰 동시성 충돌 — 잠시 후 다시 시도해 주세요.") from None
+    if not out.get("ok"):
+        code = 400
+        if out.get("error") == "insufficient_tokens":
+            code = 402
+        raise HTTPException(status_code=code, detail=out)
+    return out
 
 
 @app.get("/api/next-survey")
@@ -2172,6 +2820,7 @@ class InsightUnlockBody(BaseModel):
     product_slug: str
     survey_date: str
     idempotency_key: str
+    group_id: str | None = None
 
 
 class CheckoutPackBody(BaseModel):
@@ -2187,7 +2836,7 @@ async def get_daily_expert_gap(
     supabase: Client = Depends(get_supabase),
 ):
     """
-    고수 가중예측 vs 단순 다수결 괴리 리포트.
+    고수 가중예측 vs 단순 다수결 차이 리포트.
     paywall 활성 시 열람 entitlement 없으면 data 없이 가격만 반환.
     """
     user_id = str(current_user.id)
@@ -2348,6 +2997,397 @@ async def get_my_gauge_vs_crowd(
     }
 
 
+@app.get("/api/insights/crowd-conviction-spread")
+async def get_crowd_conviction_spread(
+    survey_date: str,
+    current_user=Depends(get_current_user),
+    supabase: Client = Depends(get_supabase),
+):
+    """
+    무리 게이지(확신) 분포 요약 — 본인 참여 불필요, 최소 표본(n≥20) 미만이면 열람·차감 대상 없음.
+    """
+    user_id = str(current_user.id)
+    sd = survey_date.strip()
+    if len(sd) != 10 or sd[4] != "-" or sd[7] != "-":
+        raise HTTPException(status_code=400, detail="survey_date 형식은 YYYY-MM-DD 여야 합니다.")
+
+    slug = "crowd_conviction_spread"
+    if slug not in INSIGHT_PRODUCTS:
+        raise HTTPException(status_code=500, detail="상품 설정 오류")
+    meta = INSIGHT_PRODUCTS[slug]
+    price_tokens = int(meta["price_tokens"])
+
+    user_row = supabase.table("users").select("tokens").eq("id", user_id).execute()
+    balance = int(user_row.data[0].get("tokens") or 100) if user_row.data else 100
+
+    has_entitlement = entitlement_exists(supabase, user_id, slug, sd)
+    wall = paywall_enabled()
+    unlocked = (not wall) or has_entitlement
+
+    payload, err_reason = _build_crowd_conviction_spread_payload(supabase, sd)
+
+    if err_reason == "no_survey_data":
+        return {
+            "accessible": False,
+            "locked": wall and not has_entitlement,
+            "reason": "no_survey_data",
+            "survey_date": sd,
+            "product_slug": slug,
+            "price_tokens": price_tokens,
+            "balance": balance,
+            "title": meta["title"],
+            "data": None,
+        }
+
+    if err_reason == "insufficient_sample":
+        return {
+            "accessible": False,
+            "locked": False,
+            "reason": "insufficient_sample",
+            "survey_date": sd,
+            "product_slug": slug,
+            "price_tokens": price_tokens,
+            "balance": balance,
+            "title": meta["title"],
+            "description": meta.get("description"),
+            "data": None,
+        }
+
+    assert payload is not None
+
+    if not unlocked:
+        return {
+            "accessible": False,
+            "locked": True,
+            "survey_date": sd,
+            "product_slug": slug,
+            "price_tokens": price_tokens,
+            "balance": balance,
+            "title": meta["title"],
+            "description": meta.get("description"),
+            "data": None,
+        }
+
+    return {
+        "accessible": True,
+        "locked": False,
+        "survey_date": sd,
+        "product_slug": slug,
+        "price_tokens": price_tokens,
+        "balance": balance,
+        "title": meta["title"],
+        "reason": None,
+        "data": payload,
+    }
+
+
+@app.get("/api/insights/rolling-crowd-summary")
+async def get_rolling_crowd_summary(
+    survey_date: str,
+    current_user=Depends(get_current_user),
+    supabase: Client = Depends(get_supabase),
+):
+    """
+    최근 7거래일 무리 요약. 쿼리 survey_date는 **종료 거래일**(윈도우의 마지막 날 후보 — 비거래일이면 직전 거래일로 보정되어 집계).
+    """
+    user_id = str(current_user.id)
+    sd = survey_date.strip()
+    if len(sd) != 10 or sd[4] != "-" or sd[7] != "-":
+        raise HTTPException(status_code=400, detail="survey_date 형식은 YYYY-MM-DD 여야 합니다.")
+
+    slug = "rolling_crowd_summary"
+    if slug not in INSIGHT_PRODUCTS:
+        raise HTTPException(status_code=500, detail="상품 설정 오류")
+    meta = INSIGHT_PRODUCTS[slug]
+    price_tokens = int(meta["price_tokens"])
+
+    user_row = supabase.table("users").select("tokens").eq("id", user_id).execute()
+    balance = int(user_row.data[0].get("tokens") or 100) if user_row.data else 100
+
+    has_entitlement = entitlement_exists(supabase, user_id, slug, sd)
+    wall = paywall_enabled()
+    unlocked = (not wall) or has_entitlement
+
+    payload, err_reason = _build_rolling_crowd_summary_payload(supabase, sd)
+
+    if err_reason == "no_survey_data":
+        return {
+            "accessible": False,
+            "locked": wall and not has_entitlement,
+            "reason": "no_survey_data",
+            "survey_date": sd,
+            "product_slug": slug,
+            "price_tokens": price_tokens,
+            "balance": balance,
+            "title": meta["title"],
+            "data": None,
+        }
+
+    assert payload is not None
+
+    if not unlocked:
+        return {
+            "accessible": False,
+            "locked": True,
+            "survey_date": sd,
+            "product_slug": slug,
+            "price_tokens": price_tokens,
+            "balance": balance,
+            "title": meta["title"],
+            "description": meta.get("description"),
+            "data": None,
+        }
+
+    return {
+        "accessible": True,
+        "locked": False,
+        "survey_date": sd,
+        "product_slug": slug,
+        "price_tokens": price_tokens,
+        "balance": balance,
+        "title": meta["title"],
+        "reason": None,
+        "data": payload,
+    }
+
+
+@app.get("/api/insights/group-vs-global-snapshot")
+async def get_group_vs_global_snapshot(
+    survey_date: str,
+    group_id: str,
+    current_user=Depends(get_current_user),
+    supabase: Client = Depends(get_supabase),
+):
+    """내 그룹 vs 전체. scope_key는 `survey_date:group_id`"""
+    user_id = str(current_user.id)
+    sd = survey_date.strip()
+    gid = group_id.strip()
+    if len(sd) != 10 or sd[4] != "-" or sd[7] != "-":
+        raise HTTPException(status_code=400, detail="survey_date 형식은 YYYY-MM-DD 여야 합니다.")
+    if len(gid) < 30:
+        raise HTTPException(status_code=400, detail="group_id가 올바르지 않습니다.")
+
+    slug = "group_vs_global_snapshot"
+    if slug not in INSIGHT_PRODUCTS:
+        raise HTTPException(status_code=500, detail="상품 설정 오류")
+    meta = INSIGHT_PRODUCTS[slug]
+    price_tokens = int(meta["price_tokens"])
+
+    scope_key = f"{sd}:{gid}"
+    user_row = supabase.table("users").select("tokens").eq("id", user_id).execute()
+    balance = int(user_row.data[0].get("tokens") or 100) if user_row.data else 100
+
+    has_entitlement = entitlement_exists(supabase, user_id, slug, scope_key)
+    wall = paywall_enabled()
+    unlocked = (not wall) or has_entitlement
+
+    payload, err_reason = _build_group_vs_global_snapshot_payload(supabase, sd, gid, user_id)
+
+    if err_reason == "not_group_member":
+        return {
+            "accessible": False,
+            "locked": False,
+            "reason": "not_group_member",
+            "survey_date": sd,
+            "group_id": gid,
+            "product_slug": slug,
+            "price_tokens": price_tokens,
+            "balance": balance,
+            "title": meta["title"],
+            "description": meta.get("description"),
+            "data": None,
+        }
+
+    if err_reason == "no_survey_data":
+        return {
+            "accessible": False,
+            "locked": wall and not has_entitlement,
+            "reason": "no_survey_data",
+            "survey_date": sd,
+            "group_id": gid,
+            "product_slug": slug,
+            "price_tokens": price_tokens,
+            "balance": balance,
+            "title": meta["title"],
+            "data": None,
+        }
+
+    if err_reason == "insufficient_group_sample":
+        return {
+            "accessible": False,
+            "locked": False,
+            "reason": "insufficient_group_sample",
+            "survey_date": sd,
+            "group_id": gid,
+            "product_slug": slug,
+            "price_tokens": price_tokens,
+            "balance": balance,
+            "title": meta["title"],
+            "description": meta.get("description"),
+            "data": None,
+        }
+
+    assert payload is not None
+
+    if not unlocked:
+        return {
+            "accessible": False,
+            "locked": True,
+            "survey_date": sd,
+            "group_id": gid,
+            "product_slug": slug,
+            "price_tokens": price_tokens,
+            "balance": balance,
+            "title": meta["title"],
+            "description": meta.get("description"),
+            "data": None,
+        }
+
+    return {
+        "accessible": True,
+        "locked": False,
+        "survey_date": sd,
+        "group_id": gid,
+        "product_slug": slug,
+        "price_tokens": price_tokens,
+        "balance": balance,
+        "title": meta["title"],
+        "reason": None,
+        "data": payload,
+    }
+
+
+def _unlock_precheck_wave_b_insight(supabase: Client, product_slug: str, survey_date_iso: str) -> None:
+    """데이터 불충족 시 400으로 잠금 해제 차단."""
+    if product_slug == "time_slice_accuracy":
+        _, er = _build_time_slice_accuracy_payload(supabase, survey_date_iso)
+    elif product_slug == "expert_vote_time_profile":
+        _, er = _build_vote_time_profile_payload(supabase, survey_date_iso, "expert")
+    elif product_slug == "novice_vote_time_profile":
+        _, er = _build_vote_time_profile_payload(supabase, survey_date_iso, "novice")
+    else:
+        return
+    if er is None:
+        return
+    if er == "time_field_unavailable":
+        raise HTTPException(status_code=400, detail="responded_at 시각 필드를 조회할 수 없습니다. 마이그레이션 확인을 해 주세요.")
+    if er == "no_survey_data":
+        raise HTTPException(status_code=400, detail="그날 설문 응답이 없어 구매할 수 없습니다.")
+    if er == "no_timestamp_data":
+        raise HTTPException(status_code=400, detail="해당 거래일에 제출 시각이 기록된 응답이 없습니다.")
+    if er == "insufficient_total_timestamps":
+        raise HTTPException(
+            status_code=400,
+            detail=f"시각이 기록된 응답이 {_MIN_TOTAL_TIMESTAMPS_WAVE_B}건 미만이면 구매할 수 없습니다.",
+        )
+    if er == "segment_empty":
+        raise HTTPException(status_code=400, detail="고수/하수층을 구분할 표본 자격군이 부족합니다.")
+    if er == "insufficient_segment_timestamps":
+        raise HTTPException(
+            status_code=400,
+            detail=f"{_MIN_SEGMENT_TIMESTAMPS_VOTE_PROFILE}명 미만이면 해당 세그먼트 시간 카드를 살 수 없습니다.",
+        )
+    raise HTTPException(status_code=400, detail="이 거래일은 아직 카드 제공 조건을 만족하지 않습니다.")
+
+
+@app.get("/api/insights/time-slice-accuracy")
+async def get_time_slice_accuracy(
+    survey_date: str,
+    current_user=Depends(get_current_user),
+    supabase: Client = Depends(get_supabase),
+):
+    user_id = str(current_user.id)
+    sd = survey_date.strip()
+    if len(sd) != 10 or sd[4] != "-" or sd[7] != "-":
+        raise HTTPException(status_code=400, detail="survey_date 형식은 YYYY-MM-DD 여야 합니다.")
+    slug = "time_slice_accuracy"
+    meta = INSIGHT_PRODUCTS[slug]
+    price_tokens = int(meta["price_tokens"])
+    balance = _user_token_balance_safe(supabase, user_id)
+    has_entitlement = entitlement_exists(supabase, user_id, slug, sd)
+    wall = paywall_enabled()
+    unlocked = (not wall) or has_entitlement
+
+    payload, err_reason = _build_time_slice_accuracy_payload(supabase, sd)
+    soft = lambda **kw: {**kw, "survey_date": sd, "product_slug": slug, "price_tokens": price_tokens, "balance": balance, "title": meta["title"]}
+
+    if err_reason == "time_field_unavailable":
+        return soft(accessible=False, locked=False, reason="time_field_unavailable", description=meta.get("description"), data=None)
+    if err_reason == "no_survey_data":
+        return soft(accessible=False, locked=wall and not has_entitlement, reason="no_survey_data", data=None)
+    if err_reason == "no_timestamp_data":
+        return soft(accessible=False, locked=False, reason="no_timestamp_data", description=meta.get("description"), data=None)
+    if err_reason == "insufficient_total_timestamps":
+        return soft(accessible=False, locked=False, reason="insufficient_total_timestamps", description=meta.get("description"), data=None)
+
+    assert payload is not None
+    if not unlocked:
+        return soft(accessible=False, locked=True, description=meta.get("description"), data=None)
+
+    return {
+        **soft(accessible=True, locked=False),
+        "reason": None,
+        "data": payload,
+    }
+
+
+@app.get("/api/insights/expert-vote-time-profile")
+async def get_expert_vote_time_profile(
+    survey_date: str,
+    current_user=Depends(get_current_user),
+    supabase: Client = Depends(get_supabase),
+):
+    return _vote_time_profile_insight_response(supabase, str(current_user.id), survey_date.strip(), "expert")
+
+
+@app.get("/api/insights/novice-vote-time-profile")
+async def get_novice_vote_time_profile(
+    survey_date: str,
+    current_user=Depends(get_current_user),
+    supabase: Client = Depends(get_supabase),
+):
+    return _vote_time_profile_insight_response(supabase, str(current_user.id), survey_date.strip(), "novice")
+
+
+def _user_token_balance_safe(supabase: Client, user_id: str) -> int:
+    user_row = supabase.table("users").select("tokens").eq("id", user_id).execute()
+    return int(user_row.data[0].get("tokens") or 100) if user_row.data else 100
+
+
+def _vote_time_profile_insight_response(
+    supabase: Client, user_id: str, sd: str, cohort: str
+) -> dict:
+    if len(sd) != 10 or sd[4] != "-" or sd[7] != "-":
+        raise HTTPException(status_code=400, detail="survey_date 형식은 YYYY-MM-DD 여야 합니다.")
+    slug = "expert_vote_time_profile" if cohort == "expert" else "novice_vote_time_profile"
+    meta = INSIGHT_PRODUCTS[slug]
+    price_tokens = int(meta["price_tokens"])
+    balance = _user_token_balance_safe(supabase, user_id)
+    has_entitlement = entitlement_exists(supabase, user_id, slug, sd)
+    wall = paywall_enabled()
+    unlocked = (not wall) or has_entitlement
+
+    payload, err_reason = _build_vote_time_profile_payload(supabase, sd, cohort)
+    soft = lambda **kw: {**kw, "survey_date": sd, "product_slug": slug, "price_tokens": price_tokens, "balance": balance, "title": meta["title"]}
+
+    if err_reason == "time_field_unavailable":
+        return soft(accessible=False, locked=False, reason="time_field_unavailable", description=meta.get("description"), data=None)
+    if err_reason == "no_survey_data":
+        return soft(accessible=False, locked=wall and not has_entitlement, reason="no_survey_data", data=None)
+    if err_reason == "segment_empty":
+        return soft(accessible=False, locked=False, reason="segment_empty", description=meta.get("description"), data=None)
+    if err_reason == "insufficient_total_timestamps":
+        return soft(accessible=False, locked=False, reason="insufficient_total_timestamps", description=meta.get("description"), data=None)
+    if err_reason == "insufficient_segment_timestamps":
+        return soft(accessible=False, locked=False, reason="insufficient_segment_timestamps", description=meta.get("description"), data=None)
+
+    assert payload is not None
+    if not unlocked:
+        return soft(accessible=False, locked=True, description=meta.get("description"), data=None)
+
+    return {**soft(accessible=True, locked=False), "reason": None, "data": payload}
+
+
 @app.post("/api/insights/unlock")
 async def post_insight_unlock(
     body: InsightUnlockBody,
@@ -2356,8 +3396,8 @@ async def post_insight_unlock(
 ):
     user_id = str(current_user.id)
     sd = body.survey_date.strip()
-    if len(sd) != 10:
-        raise HTTPException(status_code=400, detail="survey_date 형식 오류")
+    if len(sd) != 10 or sd[4] != "-" or sd[7] != "-":
+        raise HTTPException(status_code=400, detail="survey_date 형식 오류(YEAR-MM-DD)")
     if body.product_slug not in INSIGHT_PRODUCTS:
         raise HTTPException(status_code=400, detail="알 수 없는 상품입니다.")
     if not body.idempotency_key or len(body.idempotency_key) < 8:
@@ -2365,6 +3405,22 @@ async def post_insight_unlock(
 
     meta = INSIGHT_PRODUCTS[body.product_slug]
     cost = int(meta["price_tokens"])
+
+    scope_key = sd
+    if body.product_slug == "group_vs_global_snapshot":
+        gid = (body.group_id or "").strip()
+        if len(gid) < 30:
+            raise HTTPException(status_code=400, detail="group_vs_global_snapshot는 유효한 group_id가 필요합니다.")
+        scope_key = f"{sd}:{gid}"
+        _, pre_err = _build_group_vs_global_snapshot_payload(supabase, sd, gid, user_id)
+        if pre_err == "not_group_member":
+            raise HTTPException(status_code=403, detail="해당 그룹 멤버만 잠금 해제할 수 있습니다.")
+        if pre_err == "no_survey_data":
+            raise HTTPException(status_code=400, detail="그날 설문 응답이 없어 구매할 수 없습니다.")
+        if pre_err == "insufficient_group_sample":
+            raise HTTPException(status_code=400, detail=f"그룹 응답이 {_MIN_GROUP_GLOBAL_RESPONSES}명 미만이면 구매할 수 없습니다.")
+
+    _unlock_precheck_wave_b_insight(supabase, body.product_slug, sd)
 
     if not paywall_enabled():
         return {"ok": True, "skipped": True, "message": "페이월 비활성"}
@@ -2374,7 +3430,7 @@ async def post_insight_unlock(
             supabase,
             user_id,
             product_slug=body.product_slug,
-            scope_key=sd,
+            scope_key=scope_key,
             price_tokens=cost,
             idempotency_key=body.idempotency_key.strip(),
         )
@@ -2414,6 +3470,9 @@ async def shop_catalog(current_user=Depends(get_current_user)):
     return {
         "insight_products": [
             {"slug": k, **v} for k, v in INSIGHT_PRODUCTS.items()
+        ],
+        "consumable_products": [
+            {"slug": k, **v} for k, v in CONSUMABLE_PRODUCTS.items()
         ],
         "token_packs": packs,
         "stripe_ready": bool(stripe_sdk and stripe_configured()),

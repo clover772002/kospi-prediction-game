@@ -768,6 +768,7 @@ export default function DashboardPage() {
               accessToken={token}
               today={today}
               dash={dash}
+              groups={myGroups}
               onBalanceUpdated={() => void refreshDashboard()}
             />
           </Suspense>

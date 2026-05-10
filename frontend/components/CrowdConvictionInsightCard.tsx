@@ -3,9 +3,9 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import {
-  getExpertGapInsight,
+  getCrowdConvictionInsight,
+  CrowdConvictionInsightResponse,
   unlockInsightProduct,
-  ExpertGapInsightResponse,
   InsightInsufficientTokensError,
 } from "@/lib/api";
 
@@ -15,18 +15,18 @@ interface Props {
   onBalanceUpdated?: () => void;
 }
 
-/** 대시보드용: 해당 거래일 고수·다수결 차이 인사이트 (토큰 잠금) */
-export default function ExpertGapInsightCard({ accessToken, surveyDate, onBalanceUpdated }: Props) {
+/** 대시보드용: 무리 확신(게이지) 분포 요약 (토큰 잠금, 최소 표본 n≥20) */
+export default function CrowdConvictionInsightCard({ accessToken, surveyDate, onBalanceUpdated }: Props) {
   const [loading, setLoading] = useState(true);
   const [unlocking, setUnlocking] = useState(false);
   const [err, setErr] = useState<string | null>(null);
-  const [data, setData] = useState<ExpertGapInsightResponse | null>(null);
+  const [data, setData] = useState<CrowdConvictionInsightResponse | null>(null);
 
   const load = useCallback(async () => {
     setErr(null);
     setLoading(true);
     try {
-      const r = await getExpertGapInsight(accessToken, surveyDate);
+      const r = await getCrowdConvictionInsight(accessToken, surveyDate);
       setData(r);
     } catch (e: unknown) {
       setErr(e instanceof Error ? e.message : String(e));
@@ -44,7 +44,7 @@ export default function ExpertGapInsightCard({ accessToken, surveyDate, onBalanc
     setErr(null);
     try {
       await unlockInsightProduct(accessToken, {
-        product_slug: "daily_expert_gap",
+        product_slug: "crowd_conviction_spread",
         survey_date: surveyDate,
         idempotency_key:
           typeof crypto !== "undefined" && crypto.randomUUID
@@ -68,8 +68,8 @@ export default function ExpertGapInsightCard({ accessToken, surveyDate, onBalanc
 
   if (loading) {
     return (
-      <div className="rounded-2xl border border-amber-500/25 bg-amber-500/[0.06] px-4 py-4 fade-up-2 animate-pulse">
-        <div className="h-4 w-40 rounded bg-[#333] mb-2" />
+      <div className="rounded-2xl border border-rose-500/25 bg-rose-500/[0.06] px-4 py-4 fade-up-2 animate-pulse">
+        <div className="h-4 w-44 rounded bg-[#333] mb-2" />
         <div className="h-16 rounded bg-[#222]" />
       </div>
     );
@@ -92,11 +92,23 @@ export default function ExpertGapInsightCard({ accessToken, surveyDate, onBalanc
     return (
       <div className="rounded-2xl border border-[#2A2A2A] bg-[#141414]/80 px-4 py-3 space-y-1.5 fade-up-2">
         <p className="text-xs text-gray-400 leading-relaxed">
-          이 거래일(<span className="text-gray-300 tabular-nums">{data.survey_date}</span>)에는 아직 설문 응답이 없어 차이 리포트를 만들 수 없어요.
+          이 거래일(<span className="text-gray-300 tabular-nums">{data.survey_date}</span>)에는 아직 게이지를 쓸 수 있는 설문 응답이 없어 무리 분포를 만들 수 없어요.
         </p>
         <p className="text-[10px] text-gray-600 leading-relaxed">
-          설문이 열린 뒤 참여자 응답이 쌓이면 같은 카드에서 집계가 표시됩니다. 장 시작 전·직후에는 비어 있는 경우가 있어요.
+          응답이 모이면 이 카드에서 집계를 시도합니다. 최소 <span className="text-gray-500">20</span>명 이상 필요해요.
         </p>
+      </div>
+    );
+  }
+
+  if (data.reason === "insufficient_sample") {
+    return (
+      <div className="rounded-2xl border border-[#2A2A2A] bg-[#141414]/80 px-4 py-3 space-y-1.5 fade-up-2">
+        <p className="text-xs text-gray-400 leading-relaxed">
+          이 거래일에는 게이지 응답이 있지만, 통계적으로 의미 있는 한 장 요약을 보여 주려면{" "}
+          <span className="text-gray-300">최소 20명</span> 이상이 필요해요. 조금 더 모이면 같은 카드에서 열람할 수 있어요.
+        </p>
+        <p className="text-[10px] text-gray-600 leading-relaxed">교육·게임 회고용 집계이며 투자 권유가 아닙니다.</p>
       </div>
     );
   }
@@ -104,11 +116,11 @@ export default function ExpertGapInsightCard({ accessToken, surveyDate, onBalanc
   const locked = data.locked === true || !data.accessible;
 
   return (
-    <div className="rounded-2xl border border-violet-500/30 bg-gradient-to-b from-violet-950/25 to-[#141414]/90 px-4 py-4 space-y-3 fade-up-2 shadow-[0_0_28px_rgba(139,92,246,.08)]">
+    <div className="rounded-2xl border border-rose-500/30 bg-gradient-to-b from-rose-950/[0.35] to-[#141414]/90 px-4 py-4 space-y-3 fade-up-2 shadow-[0_0_28px_rgba(251,113,133,.07)]">
       <div className="flex items-start justify-between gap-2">
         <div>
-          <p className="text-[10px] font-black text-violet-300 uppercase tracking-wide">토큰 인사이트</p>
-          <p className="text-sm font-black text-white mt-0.5">{data.title ?? "고수·다수결 차이"}</p>
+          <p className="text-[10px] font-black text-rose-300 uppercase tracking-wide">토큰 인사이트</p>
+          <p className="text-sm font-black text-white mt-0.5">{data.title ?? "무리 확신 분포"}</p>
           <p className="text-[10px] text-gray-600 mt-0.5">{data.survey_date}</p>
         </div>
         {locked ? (
@@ -126,10 +138,10 @@ export default function ExpertGapInsightCard({ accessToken, surveyDate, onBalanc
         <div className="space-y-3">
           <p className="text-xs text-gray-400 leading-relaxed">
             {data.description ??
-              "누적 적중 반영 가중예측과 단순 다수결의 차이를 한 장으로 정리합니다. 개인별 응답은 포함하지 않습니다."}
+              "그날 참가자들의 게이지 분포를 한 장으로 요약합니다. 개인별 원시값은 포함하지 않습니다."}
           </p>
           <div className="flex flex-wrap items-center gap-2 text-[11px]">
-            <span className="text-amber-300 font-black tabular-nums">{data.price_tokens ?? 80} 토큰으로 열람</span>
+            <span className="text-rose-300 font-black tabular-nums">{data.price_tokens ?? 60} 토큰으로 열람</span>
             <span className="text-gray-600">·</span>
             <span className="text-gray-500 tabular-nums">보유 {data.balance ?? "–"} 💰</span>
           </div>
@@ -139,7 +151,7 @@ export default function ExpertGapInsightCard({ accessToken, surveyDate, onBalanc
               type="button"
               onClick={() => void handleUnlock()}
               disabled={unlocking}
-              className="flex-1 min-w-[8rem] py-3 rounded-xl bg-violet-600 hover:bg-violet-500 disabled:opacity-50 text-white text-xs font-black transition-all active:scale-[0.98]"
+              className="flex-1 min-w-[8rem] py-3 rounded-xl bg-rose-700 hover:bg-rose-600 disabled:opacity-50 text-white text-xs font-black transition-all active:scale-[0.98]"
             >
               {unlocking ? "처리 중…" : "토큰으로 잠금 해제"}
             </button>
@@ -157,15 +169,18 @@ export default function ExpertGapInsightCard({ accessToken, surveyDate, onBalanc
           <ul className="space-y-2 text-[11px] text-gray-300 leading-snug">
             {(data.data?.bullets ?? []).map((line) => (
               <li key={line.slice(0, 48)} className="flex gap-2">
-                <span className="text-violet-400 font-bold shrink-0">·</span>
+                <span className="text-rose-400 font-bold shrink-0">·</span>
                 <span>{line}</span>
               </li>
             ))}
           </ul>
-          <div className="flex gap-4 text-[10px] tabular-nums text-gray-500 pt-1 border-t border-white/[0.06]">
-            <span>단순 {data.data?.simple_pct ?? "–"}%</span>
-            <span>가중 {data.data?.weighted_pct ?? "–"}%</span>
-            <span>차이 {data.data?.gap_points != null ? `${data.data.gap_points > 0 ? "+" : ""}${data.data.gap_points}` : "–"}pt</span>
+          <div className="flex flex-wrap gap-3 text-[10px] tabular-nums text-gray-500 pt-1 border-t border-white/[0.06]">
+            <span>n {data.data?.n ?? "–"}</span>
+            <span>평균 {data.data?.mean ?? "–"}</span>
+            <span>σ {data.data?.stdev ?? "–"}</span>
+            <span>
+              Q1~Q3 {data.data?.q1 ?? "–"} / {data.data?.median ?? "–"} / {data.data?.q3 ?? "–"}
+            </span>
           </div>
         </>
       )}

@@ -6,14 +6,44 @@
 
 INSIGHT_PRODUCTS = {
     "daily_expert_gap": {
-        "title": "고수·다수결 괴리 스냅샷",
-        "price_tokens": 80,
+        "title": "고수·다수결 차이 스냅샷",
+        "price_tokens": 120,
         "description": "집단의 단순 다수결 비율과 가중예측(누적 적중 반영)의 차이 요약입니다. 과거 거래일도 날짜별로 같은 방식으로 열람합니다. 매매·투자 조언이 아니며 개인별 응답은 포함하지 않습니다.",
     },
     "my_gauge_vs_crowd": {
         "title": "내 확신도, 같은 편 속 위치",
-        "price_tokens": 70,
+        "price_tokens": 80,
         "description": "그날 같은 방향(상승·하락)으로 예측한 참가자 중에서 내 확신(게이지)이 얼마나 강한지 집계로 보여 줍니다. 매매·투자 조언이 아닙니다.",
+    },
+    "crowd_conviction_spread": {
+        "title": "무리 확신(게이지) 분포 한 장",
+        "price_tokens": 60,
+        "description": "그날 참가자들의 게이지(확신 방향·세기) 분포를 평균·편차·분위 등으로 요약합니다. 개인별 응답은 보이지 않습니다. 교육·게임 회고용이며 투자 권유가 아닙니다.",
+    },
+    "rolling_crowd_summary": {
+        "title": "최근 7거래일 무리 요약",
+        "price_tokens": 140,
+        "description": "선택한 날을 끝으로 최근 거래일 7개 구간의 다수결·가중예측(누적 적중 반영)을 한 줄 시계열로 묶었습니다. 일자별 표본 부족이면 해당 일만 빠집니다. 개인별 응답 없음.",
+    },
+    "group_vs_global_snapshot": {
+        "title": "내 그룹 vs 전체 스냅샷",
+        "price_tokens": 110,
+        "description": "해당 거래일에 내가 속한 그룹 참가자 집합만 따로 묶어, 전체 무리와 같은 축(다수결 vs 가중)으로 한 장 비교합니다. 그룹 응답이 일정 인원 미만이면 제공하지 않습니다.",
+    },
+    "time_slice_accuracy": {
+        "title": "시간대별 응답·적중 무드",
+        "price_tokens": 130,
+        "description": "그날 응답 시각(KST)을 버킷으로 묶어 분포를 보여 주며, 해당일 코스피 결과가 확정된 뒤에는 버킷별 적중 비율을 덧붙입니다. 시각 미기록 응답은 제외합니다. 교육·게임 회고용이며 투자 조언이 아닙니다.",
+    },
+    "expert_vote_time_profile": {
+        "title": "고수층 투표 시간 분포 한 장",
+        "price_tokens": 100,
+        "description": "누적 적중 프로필로 정의된 고수층만 따로 묶어, 그날 투표가 몰린 KST 시간대를 전체 무리와 비교한 요약입니다. 최소 표본 규칙을 만족할 때만 열람됩니다.",
+    },
+    "novice_vote_time_profile": {
+        "title": "하수층 투표 시간 분포 한 장",
+        "price_tokens": 90,
+        "description": "고수층과 동일 규약의 하위 층에 대한 대칭 비교 카드입니다. 비하 표현 없이 시간대 집계만 제공합니다.",
     },
 }
 

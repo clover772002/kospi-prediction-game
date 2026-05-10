@@ -161,6 +161,69 @@ def unlock_insight_with_tokens(
     return {"ok": True, "already_unlocked": False, "balance": balance_after, "spent": price_tokens}
 
 
+def spend_tokens_idempotent(
+    supabase: Client,
+    user_id: str,
+    *,
+    amount: int,
+    reason: str,
+    ref_type: str | None,
+    ref_id: str | None,
+    idempotency_key: str,
+) -> dict[str, Any]:
+    """양수 차감(소모품 구매 등). 동일 멱등 키면 이미 처리된 것으로 보고 현재 잔액 반환."""
+    if amount <= 0:
+        raise ValueError("spend_tokens_idempotent: amount must be positive")
+
+    try:
+        if ledger_exists_by_idempotency(supabase, user_id, idempotency_key):
+            u = supabase.table("users").select("tokens").eq("id", user_id).execute()
+            bal = int(u.data[0].get("tokens") or 100) if u.data else 100
+            return {"ok": True, "spent": False, "balance": bal}
+    except Exception:
+        pass
+
+    urow = supabase.table("users").select("tokens").eq("id", user_id).execute()
+    if not urow.data:
+        raise PermissionError("user_not_found")
+    balance_before = int(urow.data[0].get("tokens") or 100)
+    if balance_before < amount:
+        return {
+            "ok": False,
+            "spent": False,
+            "error": "insufficient_tokens",
+            "required": amount,
+            "balance": balance_before,
+        }
+    balance_after = balance_before - amount
+    upd = (
+        supabase.table("users")
+        .update({"tokens": balance_after})
+        .eq("id", user_id)
+        .eq("tokens", balance_before)
+        .execute()
+    )
+    if not upd.data:
+        logger.warning(f"토큰 동시성 충돌 spend user={user_id}")
+        raise RuntimeError("concurrent_token_update")
+    try:
+        insert_ledger(
+            supabase,
+            user_id,
+            delta=-amount,
+            reason=reason,
+            ref_type=ref_type,
+            ref_id=ref_id,
+            idempotency_key=idempotency_key,
+            balance_after=balance_after,
+        )
+    except Exception as e:
+        logger.error(f"spend ledger 실패 user={user_id}: {e}")
+        supabase.table("users").update({"tokens": balance_before}).eq("id", user_id).execute()
+        raise
+    return {"ok": True, "spent": True, "balance": balance_after, "paid": amount}
+
+
 def grant_tokens_with_ledger(
     supabase: Client,
     user_id: str,

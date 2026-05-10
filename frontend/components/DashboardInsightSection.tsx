@@ -3,8 +3,13 @@
 import { useMemo, useEffect, useState, useCallback } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import ExpertGapInsightCard from "@/components/ExpertGapInsightCard";
+import RollingCrowdInsightCard from "@/components/RollingCrowdInsightCard";
+import GroupVsGlobalInsightCard from "@/components/GroupVsGlobalInsightCard";
+import TimeSliceAccuracyInsightCard from "@/components/TimeSliceAccuracyInsightCard";
+import VoteTimeProfileInsightCard from "@/components/VoteTimeProfileInsightCard";
+import CrowdConvictionInsightCard from "@/components/CrowdConvictionInsightCard";
 import GaugeCrowdInsightCard from "@/components/GaugeCrowdInsightCard";
-import type { DashboardData, TodaySurvey } from "@/lib/api";
+import type { DashboardData, TodaySurvey, Group } from "@/lib/api";
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -26,11 +31,13 @@ export default function DashboardInsightSection({
   accessToken,
   today,
   dash,
+  groups = [],
   onBalanceUpdated,
 }: {
   accessToken: string;
   today: TodaySurvey | null;
   dash: DashboardData | null;
+  groups?: Group[];
   onBalanceUpdated?: () => void;
 }) {
   const router = useRouter();
@@ -122,12 +129,45 @@ export default function DashboardInsightSection({
             </select>
           </label>
           <p className="text-[10px] text-gray-600 leading-relaxed">
-            고수·다수결 괴리는 해당 날짜 집계가 있으면 열 수 있습니다. 내 확신도 vs 무리는 그날 본인이 설문한 경우에만 토큰 열람이 적용됩니다.
+            고수·다수결 차이는 해당 날짜 집계가 있으면 열 수 있습니다. 「최근 7거래일」요약은 선택한 날짜를 <span className="text-gray-500">종료 거래일</span>로 잡습니다(주말이면 자동으로 직전 장일 기준으로 맞춤). 무리 확신 분포는 같은 날 게이지 응답이{" "}
+            <span className="text-gray-500">20</span>
+            명 이상일 때 열람됩니다. 그룹 vs 전체는 그날 해당 그룹 응답이 <span className="text-gray-500">8</span>
+            명 이상일 때만 가능합니다. 시간대·세그먼트 인사이트(<span className="text-gray-500">responded_at</span>)는 시각 기록된 응답이{" "}
+            <span className="text-gray-500">30</span>건 이상(세그먼트는 <span className="text-gray-500">15</span>
+            명)일 때 안정적인 요약으로 열람됩니다. 내 확신도 vs 무리는 그날 본인이 설문한 경우에만 토큰 열람이 적용됩니다.
           </p>
         </div>
       )}
 
       <ExpertGapInsightCard
+        accessToken={accessToken}
+        surveyDate={selected}
+        onBalanceUpdated={onBalanceUpdated}
+      />
+      <RollingCrowdInsightCard
+        accessToken={accessToken}
+        surveyDateAsEndDate={selected}
+        onBalanceUpdated={onBalanceUpdated}
+      />
+      <GroupVsGlobalInsightCard
+        accessToken={accessToken}
+        surveyDate={selected}
+        groups={groups ?? []}
+        onBalanceUpdated={onBalanceUpdated}
+      />
+      <TimeSliceAccuracyInsightCard
+        accessToken={accessToken}
+        surveyDate={selected}
+        onBalanceUpdated={onBalanceUpdated}
+      />
+      <VoteTimeProfileInsightCard
+        accessToken={accessToken}
+        surveyDate={selected}
+        cohort="expert"
+        onBalanceUpdated={onBalanceUpdated}
+      />
+      <VoteTimeProfileInsightCard accessToken={accessToken} surveyDate={selected} cohort="novice" onBalanceUpdated={onBalanceUpdated} />
+      <CrowdConvictionInsightCard
         accessToken={accessToken}
         surveyDate={selected}
         onBalanceUpdated={onBalanceUpdated}
@@ -146,6 +186,30 @@ export function DashboardInsightSectionSkeleton() {
     <div className="space-y-3">
       <div className="rounded-2xl border border-violet-500/25 bg-violet-500/[0.06] px-4 py-4 animate-pulse">
         <div className="h-4 w-48 rounded bg-[#333] mb-2" />
+        <div className="h-24 rounded bg-[#222]" />
+      </div>
+      <div className="rounded-2xl border border-sky-500/25 bg-sky-500/[0.06] px-4 py-4 animate-pulse">
+        <div className="h-4 w-52 rounded bg-[#333] mb-2" />
+        <div className="h-24 rounded bg-[#222]" />
+      </div>
+      <div className="rounded-2xl border border-emerald-500/25 bg-emerald-500/[0.06] px-4 py-4 animate-pulse">
+        <div className="h-4 w-52 rounded bg-[#333] mb-2" />
+        <div className="h-24 rounded bg-[#222]" />
+      </div>
+      <div className="rounded-2xl border border-amber-500/25 bg-amber-500/[0.06] px-4 py-4 animate-pulse">
+        <div className="h-4 w-56 rounded bg-[#333] mb-2" />
+        <div className="h-24 rounded bg-[#222]" />
+      </div>
+      <div className="rounded-2xl border border-indigo-500/25 bg-indigo-500/[0.06] px-4 py-4 animate-pulse">
+        <div className="h-4 w-52 rounded bg-[#333] mb-2" />
+        <div className="h-24 rounded bg-[#222]" />
+      </div>
+      <div className="rounded-2xl border border-slate-500/25 bg-slate-600/[0.08] px-4 py-4 animate-pulse">
+        <div className="h-4 w-52 rounded bg-[#333] mb-2" />
+        <div className="h-24 rounded bg-[#222]" />
+      </div>
+      <div className="rounded-2xl border border-rose-500/25 bg-rose-500/[0.06] px-4 py-4 animate-pulse">
+        <div className="h-4 w-44 rounded bg-[#333] mb-2" />
         <div className="h-24 rounded bg-[#222]" />
       </div>
       <div className="rounded-2xl border border-teal-500/25 bg-teal-500/[0.06] px-4 py-4 animate-pulse">

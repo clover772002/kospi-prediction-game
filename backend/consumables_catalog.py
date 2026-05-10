@@ -1,0 +1,93 @@
+# -*- coding: utf-8 -*-
+"""설문 규칙 변경용 소모품(토큰 결제 후 grant·환급·예약 등)."""
+
+CONSUMABLE_PRODUCTS = {
+    "vote_redo_once": {
+        "title": "재투표 1회",
+        "category": "item",
+        "price_tokens": 50,
+        "description": (
+            "해당 거래일 설문에 이미 응답한 뒤, 답을 한 번 더 바꿀 수 있는 권한입니다. "
+            "구매 후 설문 화면에서 다시 제출하면 소비됩니다. 매매·투자 조언이 아닙니다."
+        ),
+        "requires_survey_date": True,
+    },
+    "gauge_adjust_keep_direction_once": {
+        "title": "게이지만 1회 조정 (방향 유지)",
+        "category": "item",
+        "price_tokens": 30,
+        "description": (
+            "이미 제출한 답변의 방향(상승·하락)은 그대로 두고, 확신 슬라이더(게이지) 값만 한 번 수정합니다."
+        ),
+        "requires_survey_date": True,
+    },
+    "direction_flip_keep_magnitude_once": {
+        "title": "방향만 반전 (확신 강도 유지)",
+        "category": "item",
+        "price_tokens": 30,
+        "description": (
+            "확신 강도(절대값)는 유지하고 상승·하락만 한 번 바꿉니다. 게이지 부호만 반전됩니다."
+        ),
+        "requires_survey_date": True,
+    },
+    "survey_vote_presubmit_once": {
+        "title": "예약 답변 1건",
+        "category": "item",
+        "price_tokens": 40,
+        "description": (
+            "지정한 거래일 설문에, 나중에 앱 접속 없이 적용되는 답변을 하나 예약합니다. "
+            "(해당 일 설문이 열려 있고 아직 미응답일 때 서버가 반영. 설문 페이지를 열면 자동 시도합니다.)"
+        ),
+        "requires_survey_date": True,
+        "requires_gauge_payload": True,
+    },
+    "streak_protect_next_miss": {
+        "title": "연승 카운트 보호",
+        "category": "item",
+        "price_tokens": 90,
+        "description": (
+            "다음 한 번 결과가 오답이어도 연승(스트릭) 숫자는 리셋되지 않습니다. "
+            "배팅·토큰 정산 결과 자체는 기존 게임 규칙과 동일합니다."
+        ),
+        "requires_survey_date": False,
+    },
+    "rakeback_daily_loss_pct10": {
+        "title": "배팅 손실 환급 10%",
+        "category": "item",
+        "price_tokens": 40,
+        "description": (
+            "특정 거래일 결과 정산이 끝난 뒤 그날 기록된 배팅 손실액(tokens_won<0 의 절대값)의 10%를 토큰으로 돌려받습니다. "
+            "(참여 보너스·연속 배당 등은 포함하지 않음.) 같은 날 같은 티어는 한 번만."
+        ),
+        "rakeback_pct": 10,
+        "requires_survey_date": True,
+    },
+    "rakeback_daily_loss_pct20": {
+        "title": "배팅 손실 환급 20%",
+        "category": "item",
+        "price_tokens": 70,
+        "description": "배팅 손실액의 20% 환급. 조건 동일.",
+        "rakeback_pct": 20,
+        "requires_survey_date": True,
+    },
+    "rakeback_daily_loss_pct50": {
+        "title": "배팅 손실 환급 50%",
+        "category": "item",
+        "price_tokens": 110,
+        "description": "배팅 손실액의 50% 환급. 조건 동일.",
+        "rakeback_pct": 50,
+        "requires_survey_date": True,
+    },
+    "rakeback_daily_loss_pct100": {
+        "title": "배팅 손실 환급 100%",
+        "category": "item",
+        "price_tokens": 220,
+        "description": "배팅 손실액의 100% 환급에 가까움 (밸런스 테스트용 과금 가정). 같은 날 같은 티어만.",
+        "rakeback_pct": 100,
+        "requires_survey_date": True,
+    },
+}
+
+
+def consumable_known(slug: str) -> bool:
+    return slug in CONSUMABLE_PRODUCTS
