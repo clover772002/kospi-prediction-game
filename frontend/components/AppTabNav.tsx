@@ -5,7 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 const TABS = [
   { href: "/survey", label: "설문", icon: "📝", activeClass: "app-tab-survey" },
   { href: "/dashboard", label: "대시보드", icon: "📊", activeClass: "app-tab-dashboard" },
-  { href: "/shop", label: "상점", icon: "💎", activeClass: "app-tab-shop" },
+  { href: "/shop", label: "아이템", icon: "💎", activeClass: "app-tab-shop" },
   { href: "/groups", label: "그룹", icon: "👥", activeClass: "app-tab-groups" },
   { href: "/setup", label: "설정", icon: "⚙️", activeClass: "app-tab-setup" },
 ] as const;
