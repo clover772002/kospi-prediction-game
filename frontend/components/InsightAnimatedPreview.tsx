@@ -62,11 +62,21 @@ const THEMES: Record<InsightProductSlug, Theme> = {
   },
 };
 
-/** 넓은 카드폭 미리보기용 캔버스 (viewBox 사용자 단위) */
-const VB_W = 560;
-const VB_H = 100;
-const BASE_Y = 78;
-const MAX_H = 52;
+/** 가로폭 활용 · 세로도 충분히 확보(~2.2:1) — 카드 폭만큼 키우면 높이도 같이 따라감(aspect-ratio) */
+const VB_W = 480;
+const VB_H = 220;
+
+const TITLE_Y = 22;
+const TITLE_FS = 13;
+const PANEL_X = 16;
+const PANEL_Y = 40;
+const PANEL_W = VB_W - 32;
+/** 차트 패널(배경) 높이: 베이스라인 포함 */
+const PANEL_H = VB_H - PANEL_Y - 18;
+/** 막대·스파크가 서는 바닥선 */
+const BASELINE_Y = PANEL_Y + PANEL_H - 10;
+/** 막대 최대 높이(픽셀, viewBox 단위) */
+const BAR_MAX = BASELINE_Y - PANEL_Y - 44;
 
 function usePrefersReducedMotion(): boolean {
   const [v, setV] = useState(false);
@@ -82,24 +92,24 @@ function usePrefersReducedMotion(): boolean {
 
 function Bars({ heights, fillForIndex }: { heights: number[]; fillForIndex: (i: number) => string }) {
   const n = heights.length;
-  const gap = 6;
-  const barSlot = (VB_W - 40 - (n - 1) * gap) / n;
-  const innerW = Math.max(5, barSlot - 5);
+  const gap = 7;
+  const barSlot = (VB_W - 36 - (n - 1) * gap) / n;
+  const innerW = Math.max(7, Math.min(barSlot - 6, barSlot * 0.82));
 
   return (
     <>
       {heights.map((fr, i) => {
-        const h = Math.max(8, fr * MAX_H);
-        const cx = 20 + barSlot / 2 + i * (barSlot + gap);
+        const h = Math.max(10, fr * BAR_MAX);
+        const cx = 18 + barSlot / 2 + i * (barSlot + gap);
         return (
-          <g key={i} transform={`translate(${cx} ${BASE_Y})`}>
+          <g key={i} transform={`translate(${cx} ${BASELINE_Y})`}>
             <g className="ip-bar-rise-group" style={{ animationDelay: `${i * 70}ms` }}>
               <rect
                 x={-innerW / 2}
                 y={-h}
                 width={innerW}
                 height={h}
-                rx={4}
+                rx={5}
                 fill={fillForIndex(i)}
                 className="ip-bar-shape"
                 style={{ animationDelay: `${400 + i * 50}ms` }}
@@ -112,30 +122,52 @@ function Bars({ heights, fillForIndex }: { heights: number[]; fillForIndex: (i: 
   );
 }
 
+/** 스파크: 패널 안에서 세로 진폭을 크게 줌 */
 function buildSparkLine(): { dLine: string; approxLen: number } {
-  const ys = [68, 58, 64, 48, 56, 52, 62];
-  const xs = ys.map((_, i) => 36 + (i * (VB_W - 72)) / (ys.length - 1));
+  const yLo = BASELINE_Y - 14;
+  const yHi = PANEL_Y + 46;
+  const samples = [0.85, 0.35, 0.55, 0.08, 0.42, 0.28, 0.62];
+  const ys = samples.map((t) => yLo - t * (yLo - yHi));
+  const xs = ys.map((_, i) => 28 + (i * (VB_W - 56)) / (ys.length - 1));
   const dLine = ys.map((y, i) => `${i === 0 ? "M" : "L"} ${xs[i]} ${y}`).join(" ");
-  return { dLine, approxLen: 420 };
+  const approxLen = 480;
+  return { dLine, approxLen };
 }
 
 function SvgBackdrop({ theme }: { theme: Theme }) {
   return (
     <>
-      <rect x="14" y="14" width={VB_W - 28} height="74" rx="14" fill={theme.soft} stroke={theme.grid} strokeWidth="1.2" />
-      <line x1="22" y1={BASE_Y} x2={VB_W - 22} y2={BASE_Y} stroke={theme.grid} strokeWidth="1.8" strokeLinecap="round" />
+      <rect
+        x={PANEL_X}
+        y={PANEL_Y}
+        width={PANEL_W}
+        height={PANEL_H}
+        rx="16"
+        fill={theme.soft}
+        stroke={theme.grid}
+        strokeWidth="1.2"
+      />
+      <line
+        x1={PANEL_X + 10}
+        y1={BASELINE_Y}
+        x2={VB_W - PANEL_X - 10}
+        y2={BASELINE_Y}
+        stroke={theme.grid}
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
     </>
   );
 }
 
 function DualBarLegend({ labels }: { labels: [string, string] }) {
-  const mid = Math.floor(VB_W / 2) + 8;
+  const mid = Math.floor(VB_W * 0.52);
   return (
-    <g fontSize="11" fill="rgba(180,190,205,0.78)" fontWeight="700">
-      <text x="26" y="22">
+    <g fontSize={TITLE_FS} fill="rgba(190,198,212,0.88)" fontWeight="700">
+      <text x="28" y={PANEL_Y + 26}>
         {labels[0]}
       </text>
-      <text x={mid} y="22">
+      <text x={mid} y={PANEL_Y + 26}>
         {labels[1]}
       </text>
     </g>
@@ -144,7 +176,7 @@ function DualBarLegend({ labels }: { labels: [string, string] }) {
 
 function SvgTitle({ children }: { children: string }) {
   return (
-    <text x="26" y="22" fill="rgba(180,190,205,0.78)" fontSize="11" fontWeight="700">
+    <text x="28" y={TITLE_Y} fill="rgba(190,198,212,0.88)" fontSize={TITLE_FS} fontWeight="700">
       {children}
     </text>
   );
@@ -171,15 +203,22 @@ function GaugeKnob({
     const mid = (cx1 + cx2) / 2;
     return (
       <g transform={`translate(${mid},${cy})`}>
-        <circle r={r} fill={fill} stroke={stroke} strokeWidth="2" />
+        <circle r={r} fill={fill} stroke={stroke} strokeWidth="2.25" />
       </g>
     );
   }
   const values = `${cx1},${cy}; ${cx2},${cy}; ${cx1},${cy}`;
   return (
     <g>
-      <animateTransform attributeName="transform" type="translate" dur="2.9s" repeatCount="indefinite" values={values} keyTimes="0;0.5;1" />
-      <circle cx={0} cy={0} r={r} fill={fill} stroke={stroke} strokeWidth="2" />
+      <animateTransform
+        attributeName="transform"
+        type="translate"
+        dur="2.9s"
+        repeatCount="indefinite"
+        values={values}
+        keyTimes="0;0.5;1"
+      />
+      <circle cx={0} cy={0} r={r} fill={fill} stroke={stroke} strokeWidth="2.25" />
     </g>
   );
 }
@@ -190,12 +229,12 @@ export default function InsightAnimatedPreview({ slug }: { slug: InsightProductS
   const { dLine, approxLen } = buildSparkLine();
   const reduceMotion = usePrefersReducedMotion();
 
-  const gxTrack = Math.round(VB_W * 0.16);
-  const gwTrack = Math.round(VB_W * 0.68);
-  const gxKnobLeft = gxTrack + 48;
-  const gxKnobRight = gxTrack + gwTrack - 48;
-  const gyTrack = 50;
-  const gyLine = gyTrack + 11;
+  const gxTrack = Math.round(VB_W * 0.14);
+  const gwTrack = Math.round(VB_W * 0.72);
+  const gxKnobLeft = gxTrack + Math.round(gwTrack * 0.12);
+  const gxKnobRight = gxTrack + Math.round(gwTrack * 0.88);
+  const gyTrack = Math.round(BASELINE_Y - 54);
+  const gyLine = gyTrack + 14;
 
   let svgInner: ReactNode;
   switch (slug) {
@@ -217,7 +256,7 @@ export default function InsightAnimatedPreview({ slug }: { slug: InsightProductS
             d={dLine}
             fill="none"
             stroke={theme.primary}
-            strokeWidth={3.4}
+            strokeWidth={4}
             strokeLinecap="round"
             strokeLinejoin="round"
             className="ip-spark-line"
@@ -269,21 +308,40 @@ export default function InsightAnimatedPreview({ slug }: { slug: InsightProductS
         <>
           <SvgBackdrop theme={theme} />
           <SvgTitle>같은 편 속 내 위치</SvgTitle>
-          <rect x={gxTrack} y={gyTrack} width={gwTrack} height="22" rx="9" fill="rgba(0,0,0,0.38)" stroke={theme.grid} />
+          <rect x={gxTrack} y={gyTrack} width={gwTrack} height="26" rx="11" fill="rgba(0,0,0,0.42)" stroke={theme.grid} />
           <rect
-            x={gxTrack + Math.round(gwTrack * 0.22)}
-            y={gyTrack + 5}
-            width={Math.round(gwTrack * 0.38)}
-            height="12"
-            rx="5"
+            x={gxTrack + Math.round(gwTrack * 0.2)}
+            y={gyTrack + 6}
+            width={Math.round(gwTrack * 0.42)}
+            height="14"
+            rx="6"
             fill={theme.soft}
           />
-          <line x1={gxTrack} y1={gyLine} x2={gxTrack + gwTrack} y2={gyLine} stroke={theme.secondary} strokeWidth="1.4" opacity={0.5} strokeLinecap="round" />
-          <GaugeKnob cx1={gxKnobLeft} cx2={gxKnobRight} cy={gyLine} r={11} fill={theme.primary} stroke="rgba(255,255,255,0.88)" reduceMotion={reduceMotion} />
+          <line
+            x1={gxTrack}
+            y1={gyLine}
+            x2={gxTrack + gwTrack}
+            y2={gyLine}
+            stroke={theme.secondary}
+            strokeWidth="1.75"
+            opacity={0.55}
+            strokeLinecap="round"
+          />
+          <GaugeKnob
+            cx1={gxKnobLeft}
+            cx2={gxKnobRight}
+            cy={gyLine}
+            r={12.5}
+            fill={theme.primary}
+            stroke="rgba(255,255,255,0.9)"
+            reduceMotion={reduceMotion}
+          />
         </>
       );
       break;
   }
+
+  const aspectRatio = `${VB_W} / ${VB_H}`;
 
   return (
     <div className="insight-preview-mount w-full">
@@ -292,7 +350,8 @@ export default function InsightAnimatedPreview({ slug }: { slug: InsightProductS
         aria-label="이 인사이트에서 보게 되는 차트 형태 미리보기"
         viewBox={`0 0 ${VB_W} ${VB_H}`}
         preserveAspectRatio="xMidYMid meet"
-        className="w-full h-auto min-h-[88px] max-h-[160px]"
+        style={{ aspectRatio }}
+        className="w-full h-auto min-h-[120px]"
         xmlns="http://www.w3.org/2000/svg"
       >
         {svgInner}
