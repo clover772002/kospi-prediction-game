@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useConfirmShopOnInsufficientTokens } from "@/hooks/useConfirmShopOnInsufficientTokens";
+import InsightInstantExampleLine from "@/components/InsightInstantExampleLine";
 import InsightTokenPriceButton from "@/components/InsightTokenPriceButton";
 import InsightDetailDisclosure from "@/components/InsightDetailDisclosure";
 import { insightMeta } from "@/lib/insight_card_meta";
@@ -116,12 +117,12 @@ export default function RollingCrowdInsightCard({
         <div className="min-w-0 flex-1">
           <p className="text-[10px] font-black text-sky-300 uppercase tracking-wide">토큰 인사이트</p>
           <p className="text-sm font-black text-white mt-0.5">{data.title ?? "7거래일 무리 요약"}</p>
+          <InsightInstantExampleLine text={META.instantExample} />
           <p className="text-[10px] text-gray-600 mt-0.5 tabular-nums">종료 {data.survey_date}</p>
         </div>
-        <div className="flex items-start gap-2 shrink-0 pt-0.5">
+        <div className="flex items-center gap-2 shrink-0">
           <InsightTokenPriceButton
             priceTokens={priceTokens}
-            instantExample={META.instantExample}
             className="border-sky-500/45 bg-sky-500/15 text-sky-100 hover:bg-sky-500/25"
             locked={locked}
             unlocking={unlocking}

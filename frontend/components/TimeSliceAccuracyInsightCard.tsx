@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useConfirmShopOnInsufficientTokens } from "@/hooks/useConfirmShopOnInsufficientTokens";
+import InsightInstantExampleLine from "@/components/InsightInstantExampleLine";
 import InsightTokenPriceButton from "@/components/InsightTokenPriceButton";
 import InsightDetailDisclosure from "@/components/InsightDetailDisclosure";
 import { insightMeta } from "@/lib/insight_card_meta";
@@ -130,12 +131,12 @@ export default function TimeSliceAccuracyInsightCard({ accessToken, surveyDate, 
         <div className="min-w-0 flex-1">
           <p className="text-[10px] font-black text-amber-300 uppercase tracking-wide">토큰 인사이트 · 파도 B</p>
           <p className="text-sm font-black text-white mt-0.5">{data.title ?? "시간대별 무드"}</p>
+          <InsightInstantExampleLine text={META.instantExample} />
           <p className="text-[10px] text-gray-600 mt-0.5">{data.survey_date}</p>
         </div>
-        <div className="flex items-start gap-2 shrink-0 pt-0.5">
+        <div className="flex items-center gap-2 shrink-0">
           <InsightTokenPriceButton
             priceTokens={priceTokens}
-            instantExample={META.instantExample}
             className="border-amber-500/45 bg-amber-500/15 text-amber-100 hover:bg-amber-500/25"
             locked={locked}
             unlocking={unlocking}
