@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useConfirmShopOnInsufficientTokens } from "@/hooks/useConfirmShopOnInsufficientTokens";
-import InsightInstantExampleLine from "@/components/InsightInstantExampleLine";
+import InsightAnimatedPreview from "@/components/InsightAnimatedPreview";
 import InsightTokenPriceButton from "@/components/InsightTokenPriceButton";
 import InsightDetailDisclosure from "@/components/InsightDetailDisclosure";
 import { insightMeta } from "@/lib/insight_card_meta";
@@ -146,7 +146,7 @@ export default function GaugeCrowdInsightCard({ accessToken, surveyDate, onBalan
         <div className="min-w-0 flex-1">
           <p className="text-[10px] font-black text-teal-300 uppercase tracking-wide">토큰 인사이트</p>
           <p className="text-sm font-black text-white mt-0.5">{data.title ?? "내 확신도, 같은 편 속 위치"}</p>
-          <InsightInstantExampleLine text={META.instantExample} />
+          <InsightAnimatedPreview slug="my_gauge_vs_crowd" />
           <p className="text-[10px] text-gray-600 mt-0.5">{data.survey_date}</p>
         </div>
         <div className="flex items-center gap-2 shrink-0">

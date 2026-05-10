@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState, useMemo } from "react";
 import { useConfirmShopOnInsufficientTokens } from "@/hooks/useConfirmShopOnInsufficientTokens";
-import InsightInstantExampleLine from "@/components/InsightInstantExampleLine";
+import InsightAnimatedPreview from "@/components/InsightAnimatedPreview";
 import InsightTokenPriceButton from "@/components/InsightTokenPriceButton";
 import InsightDetailDisclosure from "@/components/InsightDetailDisclosure";
 import { insightMeta, type InsightProductSlug } from "@/lib/insight_card_meta";
@@ -161,7 +161,7 @@ export default function VoteTimeProfileInsightCard({ accessToken, surveyDate, co
         <div className="min-w-0 flex-1">
           <p className={`text-[10px] font-black ${accentText} uppercase tracking-wide`}>토큰 인사이트 · 파도 B</p>
           <p className="text-sm font-black text-white mt-0.5">{data.title ?? (cohort === "expert" ? "고수 시간" : "하수 시간")}</p>
-          <InsightInstantExampleLine text={META.instantExample} />
+          <InsightAnimatedPreview slug={slug as InsightProductSlug} />
           <p className="text-[10px] text-gray-600 mt-0.5">{data.survey_date}</p>
         </div>
         <div className="flex items-center gap-2 shrink-0">

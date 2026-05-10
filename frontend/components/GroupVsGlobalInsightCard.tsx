@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import type { Group } from "@/lib/api";
 import { useConfirmShopOnInsufficientTokens } from "@/hooks/useConfirmShopOnInsufficientTokens";
-import InsightInstantExampleLine from "@/components/InsightInstantExampleLine";
+import InsightAnimatedPreview from "@/components/InsightAnimatedPreview";
 import InsightTokenPriceButton from "@/components/InsightTokenPriceButton";
 import InsightDetailDisclosure from "@/components/InsightDetailDisclosure";
 import { insightMeta } from "@/lib/insight_card_meta";
@@ -168,7 +168,7 @@ export default function GroupVsGlobalInsightCard({
           <div className="min-w-0 flex-1">
             <p className="text-[10px] font-black text-emerald-300 uppercase tracking-wide">토큰 인사이트</p>
             <p className="text-sm font-black text-white mt-0.5">{data.title ?? "그룹 vs 전체"}</p>
-            <InsightInstantExampleLine text={META.instantExample} />
+            <InsightAnimatedPreview slug="group_vs_global_snapshot" />
             <p className="text-[10px] text-gray-600 mt-0.5 tabular-nums">{data.survey_date}</p>
           </div>
           <div className="flex items-center gap-2 shrink-0">

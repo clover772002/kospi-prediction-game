@@ -94,57 +94,125 @@ body {
 .fade-up-4 { animation: fadeUp 0.45s ease-out 0.35s both; }
 .fade-up-5 { animation: fadeUp 0.45s ease-out 0.45s both; }
 
-/* ── 토큰 인사이트 카드: 예시 한 줄(전환 유도) ─────────── */
-@keyframes insight-example-line-reveal {
-  0% {
-    opacity: 0;
-    transform: translateY(16px) scale(0.97);
-    filter: blur(4px);
+/* ── 토큰 인사이트: 미리보기 차트 애니(SVG 막대·스파크·게이지) ─ */
+@keyframes ip-bar-rise-kf {
+  from {
+    transform: scaleY(0);
   }
-  55% {
-    opacity: 1;
-    transform: translateY(-3px) scale(1.02);
-    filter: blur(0);
-  }
-  100% {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-    filter: blur(0);
+  to {
+    transform: scaleY(1);
   }
 }
 
-@keyframes insight-example-line-glow-loop {
+@keyframes ip-bar-breathe-kf {
   0%,
   100% {
-    opacity: 0.86;
-    color: #9ca3af;
-    text-shadow: 0 0 0 transparent;
+    transform: scaleY(1);
   }
-  35% {
-    opacity: 1;
-    color: #e5e7eb;
-    text-shadow: 0 0 18px rgba(250, 204, 21, 0.22), 0 0 32px rgba(167, 139, 250, 0.12);
-  }
-  70% {
-    opacity: 0.94;
-    color: #d1d5db;
-    text-shadow: 0 0 12px rgba(52, 211, 153, 0.14);
+  50% {
+    transform: scaleY(0.84);
   }
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  .insight-instant-example-line {
-    animation: insight-example-line-reveal 0.84s cubic-bezier(0.22, 1, 0.36, 1) both;
+@keyframes ip-spark-draw-kf {
+  to {
+    stroke-dashoffset: 0;
   }
-  .insight-instant-example-line__pulse {
-    animation: insight-example-line-glow-loop 3.6s ease-in-out 0.9s infinite;
+}
+
+@keyframes ip-spark-breathe-kf {
+  0%,
+  100% {
+    opacity: 0.78;
+    filter: drop-shadow(0 0 0 transparent);
+  }
+  50% {
+    opacity: 1;
+    filter: drop-shadow(0 0 10px rgba(56, 189, 248, 0.35));
+  }
+}
+
+@keyframes ip-gauge-knob-kf {
+  0%,
+  100% {
+    transform: translate(108px, 37px);
+  }
+  50% {
+    transform: translate(184px, 37px);
+  }
+}
+
+@keyframes insight-preview-mount-kf {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.ip-bar-rise-group {
+  transform-origin: center bottom;
+  transform-box: fill-box;
+}
+
+.ip-bar-shape {
+  transform-origin: center bottom;
+  transform-box: fill-box;
+}
+
+  .insight-preview-mount {
+    animation: insight-preview-mount-kf 0.52s ease-out both;
+  }
+
+  .ip-bar-rise-group {
+    animation: ip-bar-rise-kf 0.92s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  }
+
+  .ip-bar-shape {
+    animation: ip-bar-breathe-kf 2.75s ease-in-out infinite;
+  }
+
+  .ip-spark-line {
+    animation:
+      ip-spark-draw-kf 1.55s cubic-bezier(0.4, 0, 0.2, 1) forwards 0.08s,
+      ip-spark-breathe-kf 3.1s ease-in-out 1.65s infinite;
+  }
+
+  .ip-gauge-knob {
+    animation: ip-gauge-knob-kf 2.9s ease-in-out infinite alternate;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .insight-instant-example-line,
-  .insight-instant-example-line__pulse {
+  .insight-preview-mount {
     animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+
+  .ip-bar-rise-group {
+    animation: none !important;
+    transform: scaleY(1) !important;
+  }
+
+  .ip-bar-shape {
+    animation: none !important;
+    transform: none !important;
+  }
+
+  .ip-spark-line {
+    stroke-dashoffset: 0 !important;
+    animation: none !important;
+    opacity: 1 !important;
+    filter: none !important;
+  }
+
+  .ip-gauge-knob {
+    animation: none !important;
+    transform: translate(144px, 37px);
   }
 }
 
