@@ -37,6 +37,18 @@ export const INSIGHT_CARD_META = {
     hint:
       "고수 카드와 같은 규칙으로 하위 층만 따로 묶습니다. 통계 비교용이며 비하 표현 없이 집계만 제공합니다.",
   },
+  expert_leader_pick: {
+    priceTokens: 95,
+    instantExample: "예: 고수층 규격 중 그날 1순위 — 코스피 방향 픽 한 줄",
+    hint:
+      "그날 설문 응답자 중 무리 규격 고수층에 들어간 사람만 대상입니다. 적중률 1순위(동률 시 id순) 한 명의 상·하 선택만 초성 마스킹 닉네임과 함께 표시합니다. 투자 조언이 아닙니다.",
+  },
+  novice_leader_pick: {
+    priceTokens: 85,
+    instantExample: "예: 하수층 규격 중 그날 1순위 — 코스피 방향 픽 한 줄",
+    hint:
+      "고수 카드와 동일한 무리 규격의 하수층에서 적중률이 가장 낮은 순 1명(동률 시 id순)의 그날 예측 방향입니다. 게임·비교용 표시이며 개인 비하 표현 없이 제공합니다.",
+  },
   crowd_conviction_spread: {
     priceTokens: 60,
     instantExample: "예: 그날 게이지 ‘얼마나 확신했는지’ 분포 요약",

@@ -48,6 +48,18 @@ const THEMES: Record<InsightProductSlug, Theme> = {
     grid: "rgba(255,255,255,0.08)",
     soft: "rgba(148,163,184,0.12)",
   },
+  expert_leader_pick: {
+    primary: "rgba(196,181,253,0.95)",
+    secondary: "rgba(167,139,250,0.78)",
+    grid: "rgba(255,255,255,0.08)",
+    soft: "rgba(196,181,253,0.14)",
+  },
+  novice_leader_pick: {
+    primary: "rgba(165,180,252,0.88)",
+    secondary: "rgba(129,140,248,0.72)",
+    grid: "rgba(255,255,255,0.08)",
+    soft: "rgba(165,180,252,0.10)",
+  },
   crowd_conviction_spread: {
     primary: "rgba(251,113,133,0.92)",
     secondary: "rgba(244,114,182,0.7)",
@@ -291,6 +303,16 @@ export default function InsightAnimatedPreview({ slug }: { slug: InsightProductS
           <SvgBackdrop theme={theme} />
           <SvgTitle>제출 시각대 분포</SvgTitle>
           <Bars heights={[0.22, 0.38, 0.68, 0.52, 0.3]} fillForIndex={() => theme.primary} />
+        </>
+      );
+      break;
+    case "expert_leader_pick":
+    case "novice_leader_pick":
+      svgInner = (
+        <>
+          <SvgBackdrop theme={theme} />
+          <SvgTitle>무리 규격 1순위 · 방향</SvgTitle>
+          <Bars heights={[0.78]} fillForIndex={() => theme.primary} />
         </>
       );
       break;

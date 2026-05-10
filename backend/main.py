@@ -645,6 +645,7 @@ _MIN_TOTAL_TIMESTAMPS_WAVE_B = 30
 _MIN_SEGMENT_TIMESTAMPS_VOTE_PROFILE = 15
 _SEGMENT_PRED_COUNT_MIN = 5
 _EXPERT_NOVICE_FRAC = 0.30
+_MIN_SEGMENT_LEADER_PICK = 5  # 고수·하수 1위 픽: 같은 규격 세그먼트 최소 인원
 _TIME_SLICE_BUCKET_LABEL_ID = ["pre_market_kst", "morning_trade_kst", "midday_trade_kst", "late_trade_kst"]
 _TIME_SLICE_BUCKET_LABEL_KO = [
     "[00:00,09:00) KST",
@@ -1100,6 +1101,95 @@ def _wave_b_expert_and_novice_ids(
             if len(novices) >= cut:
                 break
     return experts, set(novices)
+
+
+def _build_leader_pick_payload(
+    supabase: Client, survey_date_str: str, cohort: str
+) -> tuple[dict | None, str | None]:
+    """고수층 또는 하수층 규격 안에서 순위 1명의 그날 코스피 방향(kospi_answer)."""
+    res = (
+        supabase.table("survey_responses")
+        .select("user_id, kospi_answer")
+        .eq("survey_date", survey_date_str)
+        .execute()
+    )
+    rows = res.data or []
+    if not rows:
+        return None, "no_survey_data"
+
+    acc_map, pred_count = _get_accuracy_data(supabase)
+    day_uids = {str(r["user_id"]) for r in rows if r.get("user_id") is not None}
+    experts, novices = _wave_b_expert_and_novice_ids(day_uids, acc_map, pred_count)
+    segment = experts if cohort == "expert" else novices
+
+    if not segment:
+        return None, "segment_empty"
+    if len(segment) < _MIN_SEGMENT_LEADER_PICK:
+        return None, "insufficient_segment_size"
+
+    segment_list = list(segment)
+
+    def acc_of(uid: str) -> float:
+        return float(acc_map.get(uid, 0.5))
+
+    if cohort == "expert":
+        leader = sorted(segment_list, key=lambda u: (-acc_of(u), u))[0]
+        rank_label_ko = "고수층 1위"
+    else:
+        leader = sorted(segment_list, key=lambda u: (acc_of(u), u))[0]
+        rank_label_ko = "하수층 1위"
+
+    pick: bool | None = None
+    for r in rows:
+        if str(r["user_id"]) != leader:
+            continue
+        if r.get("kospi_answer") is None:
+            return None, "no_survey_data"
+        pick = bool(r["kospi_answer"])
+        break
+    if pick is None:
+        return None, "no_survey_data"
+
+    urow = supabase.table("users").select("name").eq("id", leader).limit(1).execute()
+    name = (urow.data[0].get("name") or "").strip() if urow.data else ""
+    masked = (name[0] + "**") if name else "익명"
+
+    pct = round(acc_of(leader) * 100)
+    direction_label_ko = "📈 코스피 상승" if pick else "📉 코스피 하락"
+
+    cohort_title = "고수층" if cohort == "expert" else "하수층"
+    frac_pct = int(round(_EXPERT_NOVICE_FRAC * 100))
+    bullets = [
+        (
+            f"※ {rank_label_ko}: 그날 설문 응답자 중 예측 횟수 ≥ {_SEGMENT_PRED_COUNT_MIN}, "
+            f"무리 규격으로 나뉜 상·하 각 약 {frac_pct}% 층에 들어 간 사람만 대상입니다. "
+            + (
+                "그중 누적 적중률이 가장 높은 사람 한 명(동률 시 사용자 id 순)입니다."
+                if cohort == "expert"
+                else "그중 누적 적중률이 가장 낮은 사람 한 명(동률 시 사용자 id 순)입니다."
+            )
+        ),
+        "층 정의와 동률 처리는 시간대 분포 카드와 같은 규칙입니다.",
+        "닉네임은 초성 형태만 표시합니다.",
+        "투자·매매 의사결정이 아니며 수익을 보장하지 않습니다.",
+    ]
+
+    computed_note = "적중률은 원시 적중 비율(accuracy_records 분모)입니다."
+
+    payload = {
+        "survey_date": survey_date_str,
+        "cohort": cohort,
+        "cohort_label_ko": cohort_title,
+        "rank_label_ko": rank_label_ko,
+        "leader_masked_name": masked,
+        "leader_accuracy_pct": pct,
+        "kospi_answer": pick,
+        "direction_label_ko": direction_label_ko,
+        "segment_n": len(segment),
+        "bullets": bullets,
+        "computed_note": computed_note,
+    }
+    return payload, None
 
 
 def _timed_user_bucket_records(rows: list[dict]) -> list[tuple[str, bool, int]]:
@@ -3290,6 +3380,28 @@ def _unlock_precheck_wave_b_insight(supabase: Client, product_slug: str, survey_
     raise HTTPException(status_code=400, detail="이 거래일은 아직 카드 제공 조건을 만족하지 않습니다.")
 
 
+def _unlock_precheck_leader_pick(supabase: Client, product_slug: str, survey_date_iso: str) -> None:
+    if product_slug == "expert_leader_pick":
+        cohort = "expert"
+    elif product_slug == "novice_leader_pick":
+        cohort = "novice"
+    else:
+        return
+    _, er = _build_leader_pick_payload(supabase, survey_date_iso, cohort)
+    if er is None:
+        return
+    if er == "no_survey_data":
+        raise HTTPException(status_code=400, detail="그날 설문 응답이 없어 구매할 수 없습니다.")
+    if er == "segment_empty":
+        raise HTTPException(status_code=400, detail="고수/하수층을 구분할 표본 자격군이 부족합니다.")
+    if er == "insufficient_segment_size":
+        raise HTTPException(
+            status_code=400,
+            detail=f"동일 규격 세그먼트 응답이 {_MIN_SEGMENT_LEADER_PICK}명 미만이면 구매할 수 없습니다.",
+        )
+    raise HTTPException(status_code=400, detail="이 거래일은 아직 카드 제공 조건을 만족하지 않습니다.")
+
+
 @app.get("/api/insights/time-slice-accuracy")
 async def get_time_slice_accuracy(
     survey_date: str,
@@ -3349,6 +3461,24 @@ async def get_novice_vote_time_profile(
     return _vote_time_profile_insight_response(supabase, str(current_user.id), survey_date.strip(), "novice")
 
 
+@app.get("/api/insights/expert-leader-pick")
+async def get_expert_leader_pick(
+    survey_date: str,
+    current_user=Depends(get_current_user),
+    supabase: Client = Depends(get_supabase),
+):
+    return _leader_pick_insight_response(supabase, str(current_user.id), survey_date.strip(), "expert")
+
+
+@app.get("/api/insights/novice-leader-pick")
+async def get_novice_leader_pick(
+    survey_date: str,
+    current_user=Depends(get_current_user),
+    supabase: Client = Depends(get_supabase),
+):
+    return _leader_pick_insight_response(supabase, str(current_user.id), survey_date.strip(), "novice")
+
+
 def _user_token_balance_safe(supabase: Client, user_id: str) -> int:
     user_row = supabase.table("users").select("tokens").eq("id", user_id).execute()
     return int(user_row.data[0].get("tokens") or 100) if user_row.data else 100
@@ -3380,6 +3510,41 @@ def _vote_time_profile_insight_response(
         return soft(accessible=False, locked=False, reason="insufficient_total_timestamps", description=meta.get("description"), data=None)
     if err_reason == "insufficient_segment_timestamps":
         return soft(accessible=False, locked=False, reason="insufficient_segment_timestamps", description=meta.get("description"), data=None)
+
+    assert payload is not None
+    if not unlocked:
+        return soft(accessible=False, locked=True, description=meta.get("description"), data=None)
+
+    return {**soft(accessible=True, locked=False), "reason": None, "data": payload}
+
+
+def _leader_pick_insight_response(supabase: Client, user_id: str, sd: str, cohort: str) -> dict:
+    if len(sd) != 10 or sd[4] != "-" or sd[7] != "-":
+        raise HTTPException(status_code=400, detail="survey_date 형식은 YYYY-MM-DD 여야 합니다.")
+    slug = "expert_leader_pick" if cohort == "expert" else "novice_leader_pick"
+    meta = INSIGHT_PRODUCTS[slug]
+    price_tokens = int(meta["price_tokens"])
+    balance = _user_token_balance_safe(supabase, user_id)
+    has_entitlement = entitlement_exists(supabase, user_id, slug, sd)
+    wall = paywall_enabled()
+    unlocked = (not wall) or has_entitlement
+
+    payload, err_reason = _build_leader_pick_payload(supabase, sd, cohort)
+    soft = lambda **kw: {
+        **kw,
+        "survey_date": sd,
+        "product_slug": slug,
+        "price_tokens": price_tokens,
+        "balance": balance,
+        "title": meta["title"],
+    }
+
+    if err_reason == "no_survey_data":
+        return soft(accessible=False, locked=wall and not has_entitlement, reason="no_survey_data", data=None)
+    if err_reason == "segment_empty":
+        return soft(accessible=False, locked=False, reason="segment_empty", description=meta.get("description"), data=None)
+    if err_reason == "insufficient_segment_size":
+        return soft(accessible=False, locked=False, reason="insufficient_segment_size", description=meta.get("description"), data=None)
 
     assert payload is not None
     if not unlocked:
@@ -3420,7 +3585,10 @@ async def post_insight_unlock(
         if pre_err == "insufficient_group_sample":
             raise HTTPException(status_code=400, detail=f"그룹 응답이 {_MIN_GROUP_GLOBAL_RESPONSES}명 미만이면 구매할 수 없습니다.")
 
-    _unlock_precheck_wave_b_insight(supabase, body.product_slug, sd)
+    if body.product_slug in ("expert_leader_pick", "novice_leader_pick"):
+        _unlock_precheck_leader_pick(supabase, body.product_slug, sd)
+    else:
+        _unlock_precheck_wave_b_insight(supabase, body.product_slug, sd)
 
     if not paywall_enabled():
         return {"ok": True, "skipped": True, "message": "페이월 비활성"}

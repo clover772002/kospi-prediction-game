@@ -621,6 +621,65 @@ export async function getNoviceVoteTimeProfileInsight(
   return res.json();
 }
 
+export interface LeaderPickInsightResponse {
+  accessible: boolean;
+  locked?: boolean;
+  reason?: string | null;
+  survey_date: string;
+  product_slug?: string;
+  price_tokens?: number;
+  balance?: number;
+  title?: string;
+  description?: string;
+  data: {
+    survey_date: string;
+    cohort: string;
+    cohort_label_ko: string;
+    rank_label_ko: string;
+    leader_masked_name: string;
+    leader_accuracy_pct: number;
+    kospi_answer: boolean;
+    direction_label_ko: string;
+    segment_n: number;
+    bullets: string[];
+    computed_note?: string;
+  } | null;
+}
+
+export async function getExpertLeaderPickInsight(
+  accessToken: string,
+  surveyDate: string,
+): Promise<LeaderPickInsightResponse> {
+  const res = await fetch(
+    `${resolveApiBase()}/api/insights/expert-leader-pick?survey_date=${encodeURIComponent(surveyDate)}`,
+    { ...insightFetchInit, headers: { Authorization: `Bearer ${accessToken}` } },
+  );
+  if (!res.ok) {
+    const raw = await res.json().catch(() => ({}));
+    throw new Error(
+      typeof raw.detail === "string" ? raw.detail : "인사이트를 불러오지 못했습니다.",
+    );
+  }
+  return res.json();
+}
+
+export async function getNoviceLeaderPickInsight(
+  accessToken: string,
+  surveyDate: string,
+): Promise<LeaderPickInsightResponse> {
+  const res = await fetch(
+    `${resolveApiBase()}/api/insights/novice-leader-pick?survey_date=${encodeURIComponent(surveyDate)}`,
+    { ...insightFetchInit, headers: { Authorization: `Bearer ${accessToken}` } },
+  );
+  if (!res.ok) {
+    const raw = await res.json().catch(() => ({}));
+    throw new Error(
+      typeof raw.detail === "string" ? raw.detail : "인사이트를 불러오지 못했습니다.",
+    );
+  }
+  return res.json();
+}
+
 export async function unlockInsightProduct(
   accessToken: string,
   body: { product_slug: string; survey_date: string; idempotency_key: string; group_id?: string },

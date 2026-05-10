@@ -6,6 +6,7 @@ import RollingCrowdInsightCard from "@/components/RollingCrowdInsightCard";
 import GroupVsGlobalInsightCard from "@/components/GroupVsGlobalInsightCard";
 import TimeSliceAccuracyInsightCard from "@/components/TimeSliceAccuracyInsightCard";
 import VoteTimeProfileInsightCard from "@/components/VoteTimeProfileInsightCard";
+import CohortLeaderPickInsightCard from "@/components/CohortLeaderPickInsightCard";
 import CrowdConvictionInsightCard from "@/components/CrowdConvictionInsightCard";
 import GaugeCrowdInsightCard from "@/components/GaugeCrowdInsightCard";
 import type { DashboardData, TodaySurvey, Group } from "@/lib/api";
@@ -104,6 +105,8 @@ export default function DashboardInsightSection({
         onBalanceUpdated={onBalanceUpdated}
       />
       <VoteTimeProfileInsightCard accessToken={accessToken} surveyDate={surveyDate} cohort="novice" onBalanceUpdated={onBalanceUpdated} />
+      <CohortLeaderPickInsightCard accessToken={accessToken} surveyDate={surveyDate} cohort="expert" onBalanceUpdated={onBalanceUpdated} />
+      <CohortLeaderPickInsightCard accessToken={accessToken} surveyDate={surveyDate} cohort="novice" onBalanceUpdated={onBalanceUpdated} />
       <CrowdConvictionInsightCard
         accessToken={accessToken}
         surveyDate={surveyDate}
@@ -143,6 +146,14 @@ export function DashboardInsightSectionSkeleton() {
       </div>
       <div className="rounded-2xl border border-slate-500/25 bg-slate-600/[0.08] px-4 py-4 animate-pulse">
         <div className="h-4 w-52 rounded bg-[#333] mb-2" />
+        <div className="h-36 rounded-lg bg-[#222]" />
+      </div>
+      <div className="rounded-2xl border border-fuchsia-500/25 bg-fuchsia-500/[0.06] px-4 py-4 animate-pulse">
+        <div className="h-4 w-56 rounded bg-[#333] mb-2" />
+        <div className="h-36 rounded-lg bg-[#222]" />
+      </div>
+      <div className="rounded-2xl border border-zinc-500/25 bg-zinc-600/[0.08] px-4 py-4 animate-pulse">
+        <div className="h-4 w-56 rounded bg-[#333] mb-2" />
         <div className="h-36 rounded-lg bg-[#222]" />
       </div>
       <div className="rounded-2xl border border-rose-500/25 bg-rose-500/[0.06] px-4 py-4 animate-pulse">
