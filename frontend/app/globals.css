@@ -94,6 +94,60 @@ body {
 .fade-up-4 { animation: fadeUp 0.45s ease-out 0.35s both; }
 .fade-up-5 { animation: fadeUp 0.45s ease-out 0.45s both; }
 
+/* ── 토큰 인사이트 카드: 예시 한 줄(전환 유도) ─────────── */
+@keyframes insight-example-line-reveal {
+  0% {
+    opacity: 0;
+    transform: translateY(16px) scale(0.97);
+    filter: blur(4px);
+  }
+  55% {
+    opacity: 1;
+    transform: translateY(-3px) scale(1.02);
+    filter: blur(0);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: blur(0);
+  }
+}
+
+@keyframes insight-example-line-glow-loop {
+  0%,
+  100% {
+    opacity: 0.86;
+    color: #9ca3af;
+    text-shadow: 0 0 0 transparent;
+  }
+  35% {
+    opacity: 1;
+    color: #e5e7eb;
+    text-shadow: 0 0 18px rgba(250, 204, 21, 0.22), 0 0 32px rgba(167, 139, 250, 0.12);
+  }
+  70% {
+    opacity: 0.94;
+    color: #d1d5db;
+    text-shadow: 0 0 12px rgba(52, 211, 153, 0.14);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .insight-instant-example-line {
+    animation: insight-example-line-reveal 0.84s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+  .insight-instant-example-line__pulse {
+    animation: insight-example-line-glow-loop 3.6s ease-in-out 0.9s infinite;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .insight-instant-example-line,
+  .insight-instant-example-line__pulse {
+    animation: none !important;
+  }
+}
+
 /* ── 로그인 후 앱 크롬: 앰비언트 + 하단 탭 ─────────────── */
 @keyframes appAmbientDriftA {
   0%, 100% { opacity: 0.72; transform: translate(0, 0) scale(1); }
