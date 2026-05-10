@@ -128,9 +128,10 @@ export default function CrowdConvictionInsightCard({ accessToken, surveyDate, on
           <p className="text-sm font-black text-white mt-0.5">{data.title ?? "무리 확신 분포"}</p>
           <p className="text-[10px] text-gray-600 mt-0.5">{data.survey_date}</p>
         </div>
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex items-start gap-2 shrink-0 pt-0.5">
           <InsightTokenPriceButton
             priceTokens={priceTokens}
+            instantExample={META.instantExample}
             className="border-rose-500/45 bg-rose-500/15 text-rose-100 hover:bg-rose-500/25"
             locked={locked}
             unlocking={unlocking}

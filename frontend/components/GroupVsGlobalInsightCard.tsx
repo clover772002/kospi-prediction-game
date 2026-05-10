@@ -169,9 +169,10 @@ export default function GroupVsGlobalInsightCard({
             <p className="text-sm font-black text-white mt-0.5">{data.title ?? "그룹 vs 전체"}</p>
             <p className="text-[10px] text-gray-600 mt-0.5 tabular-nums">{data.survey_date}</p>
           </div>
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex items-start gap-2 shrink-0 pt-0.5">
             <InsightTokenPriceButton
               priceTokens={priceTokens}
+              instantExample={META.instantExample}
               className="border-emerald-500/45 bg-emerald-500/15 text-emerald-100 hover:bg-emerald-500/25"
               locked={locked}
               unlocking={unlocking}

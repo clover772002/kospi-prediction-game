@@ -162,9 +162,10 @@ export default function VoteTimeProfileInsightCard({ accessToken, surveyDate, co
           <p className="text-sm font-black text-white mt-0.5">{data.title ?? (cohort === "expert" ? "고수 시간" : "하수 시간")}</p>
           <p className="text-[10px] text-gray-600 mt-0.5">{data.survey_date}</p>
         </div>
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex items-start gap-2 shrink-0 pt-0.5">
           <InsightTokenPriceButton
             priceTokens={priceTokens}
+            instantExample={META.instantExample}
             className={priceChipClass}
             locked={locked}
             unlocking={unlocking}

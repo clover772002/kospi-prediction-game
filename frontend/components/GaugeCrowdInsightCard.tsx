@@ -147,9 +147,10 @@ export default function GaugeCrowdInsightCard({ accessToken, surveyDate, onBalan
           <p className="text-sm font-black text-white mt-0.5">{data.title ?? "내 확신도, 같은 편 속 위치"}</p>
           <p className="text-[10px] text-gray-600 mt-0.5">{data.survey_date}</p>
         </div>
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex items-start gap-2 shrink-0 pt-0.5">
           <InsightTokenPriceButton
             priceTokens={priceTokens}
+            instantExample={META.instantExample}
             className="border-teal-500/45 bg-teal-500/15 text-teal-100 hover:bg-teal-500/25"
             locked={paywallLocked}
             unlocking={unlocking}
