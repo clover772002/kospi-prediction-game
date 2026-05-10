@@ -62,7 +62,7 @@ function HistoryRow({ item }: { item: DashboardData["history"][0] }) {
           <span className="text-gray-600">대기중</span>
         )}
         <Link
-          href={`/dashboard?insightsDate=${encodeURIComponent(item.date)}`}
+          href="/dashboard"
           prefetch={false}
           className="text-[10px] font-bold text-violet-300 hover:text-violet-200 whitespace-nowrap underline underline-offset-2"
         >
