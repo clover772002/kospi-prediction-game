@@ -163,6 +163,7 @@ body {
   transform-box: fill-box;
 }
 
+@media (prefers-reduced-motion: no-preference) {
   .insight-preview-mount {
     animation: insight-preview-mount-kf 0.52s ease-out both;
   }
