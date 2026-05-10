@@ -2,12 +2,17 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
+import { useConfirmShopOnInsufficientTokens } from "@/hooks/useConfirmShopOnInsufficientTokens";
+import InsightTokenPriceButton from "@/components/InsightTokenPriceButton";
+import { insightMeta } from "@/lib/insight_card_meta";
 import {
   getTimeSliceAccuracyInsight,
   TimeSliceAccuracyInsightResponse,
   unlockInsightProduct,
   InsightInsufficientTokensError,
 } from "@/lib/api";
+
+const META = insightMeta("time_slice_accuracy");
 
 interface Props {
   accessToken: string;
@@ -17,6 +22,7 @@ interface Props {
 
 /** 파도 B — 시간대별 응답·적중 무드(KST 버킷, responded_at 필요) */
 export default function TimeSliceAccuracyInsightCard({ accessToken, surveyDate, onBalanceUpdated }: Props) {
+  const confirmShopOnInsufficientTokens = useConfirmShopOnInsufficientTokens();
   const [loading, setLoading] = useState(true);
   const [unlocking, setUnlocking] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -55,9 +61,11 @@ export default function TimeSliceAccuracyInsightCard({ accessToken, surveyDate, 
       onBalanceUpdated?.();
     } catch (e: unknown) {
       if (e instanceof InsightInsufficientTokensError) {
-        setErr(
-          `토큰이 부족해요 · 필요 ${e.detail.required ?? "?"}개 / 보유 ${e.detail.balance ?? "?"}개. 상점에서 충전하거나 더 모아 주세요.`,
-        );
+        if (!confirmShopOnInsufficientTokens(e.detail)) {
+          setErr(
+            `토큰이 부족합니다 · 필요 ${e.detail.required ?? "?"}개 / 보유 ${e.detail.balance ?? "?"}개`,
+          );
+        }
       } else {
         setErr(e instanceof Error ? e.message : "잠금 해제 실패");
       }
@@ -118,25 +126,30 @@ export default function TimeSliceAccuracyInsightCard({ accessToken, surveyDate, 
   }
 
   const locked = data.locked === true || !data.accessible;
+  const priceTokens = data.price_tokens ?? META.priceTokens;
 
   return (
     <div className="rounded-2xl border border-amber-500/35 bg-gradient-to-b from-amber-950/[0.35] to-[#141414]/90 px-4 py-4 space-y-3 fade-up-2">
       <div className="flex items-start justify-between gap-2">
-        <div>
+        <div className="min-w-0 flex-1">
           <p className="text-[10px] font-black text-amber-300 uppercase tracking-wide">토큰 인사이트 · 파도 B</p>
           <p className="text-sm font-black text-white mt-0.5">{data.title ?? "시간대별 무드"}</p>
           <p className="text-[10px] text-gray-600 mt-0.5">{data.survey_date}</p>
         </div>
-        {locked ? (
-          <span className="text-xl shrink-0" aria-hidden>
-            🔐
+        <div className="flex items-center gap-2 shrink-0">
+          <InsightTokenPriceButton
+            priceTokens={priceTokens}
+            className="border-amber-500/45 bg-amber-500/15 text-amber-100 hover:bg-amber-500/25"
+            locked={locked}
+            unlocking={unlocking}
+            onActivate={() => void handleUnlock()}
+          />
+          <span className="text-xl" aria-hidden>
+            {locked ? "🔐" : "✨"}
           </span>
-        ) : (
-          <span className="text-xl shrink-0" aria-hidden>
-            ✨
-          </span>
-        )}
+        </div>
       </div>
+      <p className="text-[10px] text-gray-600 leading-relaxed">{META.hint}</p>
 
       {locked ? (
         <div className="space-y-3">
@@ -144,8 +157,6 @@ export default function TimeSliceAccuracyInsightCard({ accessToken, surveyDate, 
             {data.description ?? "그날 투표가 몰린 KST 시간대와, 결과 확정 후에는 버킷별 적중 스냅샷까지 보여 줍니다."}
           </p>
           <div className="flex flex-wrap items-center gap-2 text-[11px]">
-            <span className="text-amber-300 font-black tabular-nums">{data.price_tokens ?? 130} 토큰으로 열람</span>
-            <span className="text-gray-600">·</span>
             <span className="text-gray-500 tabular-nums">보유 {data.balance ?? "–"} 💰</span>
           </div>
           {err ? <p className="text-xs text-orange-400">{err}</p> : null}
@@ -168,6 +179,7 @@ export default function TimeSliceAccuracyInsightCard({ accessToken, surveyDate, 
         </div>
       ) : (
         <>
+          <p className="text-[10px] text-gray-500 tabular-nums">열람 기준 {priceTokens} 토큰 · 보유 {data.balance ?? "–"} 💰</p>
           <p className="text-[10px] text-gray-500">{data.data?.computed_note}</p>
           <p className="text-[10px] text-gray-500">
             결과 확정 여부: {data.data?.kospi_result_known ? "코스피 결과 반영 가능" : "분포만(결과 미확정)"} · 시각 기록 건수{" "}

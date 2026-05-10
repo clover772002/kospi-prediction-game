@@ -76,19 +76,6 @@ export default function DashboardInsightSection({
 
   return (
     <div className="space-y-3">
-      <div className="rounded-xl border border-white/[0.08] bg-[#161616]/90 px-3 py-2.5">
-        <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wide mb-1.5">토큰 인사이트</p>
-        <p className="text-[10px] text-gray-600 leading-relaxed">
-          고수·다수결 차이는 해당 날짜 집계가 있으면 열 수 있습니다. 「최근 7거래일」요약은{" "}
-          <span className="text-gray-500">가장 최근 집계 기준일</span>을 종료 거래일로 잡습니다(주말이면 자동으로 직전 장일 기준으로 맞춤).
-          무리 확신 분포는 같은 날 게이지 응답이 <span className="text-gray-500">20</span>
-          명 이상일 때 열람됩니다. 그룹 vs 전체는 그날 해당 그룹 응답이 <span className="text-gray-500">8</span>
-          명 이상일 때만 가능합니다. 시간대·세그먼트 인사이트(<span className="text-gray-500">responded_at</span>)는 시각 기록된 응답이{" "}
-          <span className="text-gray-500">30</span>건 이상(세그먼트는 <span className="text-gray-500">15</span>
-          명)일 때 안정적인 요약으로 열람됩니다. 내 확신도 vs 무리는 그날 본인이 설문한 경우에만 토큰 열람이 적용됩니다.
-        </p>
-      </div>
-
       <ExpertGapInsightCard
         accessToken={accessToken}
         surveyDate={surveyDate}
@@ -134,10 +121,6 @@ export default function DashboardInsightSection({
 export function DashboardInsightSectionSkeleton() {
   return (
     <div className="space-y-3">
-      <div className="rounded-xl border border-white/[0.08] bg-[#161616]/90 px-3 py-2.5 animate-pulse">
-        <div className="h-3 w-24 rounded bg-[#333] mb-2" />
-        <div className="h-14 rounded bg-[#222]" />
-      </div>
       <div className="rounded-2xl border border-violet-500/25 bg-violet-500/[0.06] px-4 py-4 animate-pulse">
         <div className="h-4 w-48 rounded bg-[#333] mb-2" />
         <div className="h-24 rounded bg-[#222]" />

@@ -2,12 +2,17 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
+import { useConfirmShopOnInsufficientTokens } from "@/hooks/useConfirmShopOnInsufficientTokens";
+import InsightTokenPriceButton from "@/components/InsightTokenPriceButton";
+import { insightMeta } from "@/lib/insight_card_meta";
 import {
   getRollingCrowdInsight,
   RollingCrowdInsightResponse,
   unlockInsightProduct,
   InsightInsufficientTokensError,
 } from "@/lib/api";
+
+const META = insightMeta("rolling_crowd_summary");
 
 interface Props {
   accessToken: string;
@@ -22,6 +27,7 @@ export default function RollingCrowdInsightCard({
   surveyDateAsEndDate,
   onBalanceUpdated,
 }: Props) {
+  const confirmShopOnInsufficientTokens = useConfirmShopOnInsufficientTokens();
   const [loading, setLoading] = useState(true);
   const [unlocking, setUnlocking] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -60,9 +66,11 @@ export default function RollingCrowdInsightCard({
       onBalanceUpdated?.();
     } catch (e: unknown) {
       if (e instanceof InsightInsufficientTokensError) {
-        setErr(
-          `토큰이 부족해요 · 필요 ${e.detail.required ?? "?"}개 / 보유 ${e.detail.balance ?? "?"}개. 상점에서 충전하거나 더 모아 주세요.`,
-        );
+        if (!confirmShopOnInsufficientTokens(e.detail)) {
+          setErr(
+            `토큰이 부족합니다 · 필요 ${e.detail.required ?? "?"}개 / 보유 ${e.detail.balance ?? "?"}개`,
+          );
+        }
       } else {
         setErr(e instanceof Error ? e.message : "잠금 해제 실패");
       }
@@ -104,35 +112,38 @@ export default function RollingCrowdInsightCard({
   }
 
   const locked = data.locked === true || !data.accessible;
+  const priceTokens = data.price_tokens ?? META.priceTokens;
 
   return (
     <div className="rounded-2xl border border-sky-500/35 bg-gradient-to-b from-sky-950/30 to-[#141414]/90 px-4 py-4 space-y-3 fade-up-2 shadow-[0_0_28px_rgba(56,189,248,.08)]">
       <div className="flex items-start justify-between gap-2">
-        <div>
+        <div className="min-w-0 flex-1">
           <p className="text-[10px] font-black text-sky-300 uppercase tracking-wide">토큰 인사이트</p>
           <p className="text-sm font-black text-white mt-0.5">{data.title ?? "7거래일 무리 요약"}</p>
           <p className="text-[10px] text-gray-600 mt-0.5 tabular-nums">종료 {data.survey_date}</p>
         </div>
-        {locked ? (
-          <span className="text-xl shrink-0" aria-hidden>
-            🔐
+        <div className="flex items-center gap-2 shrink-0">
+          <InsightTokenPriceButton
+            priceTokens={priceTokens}
+            className="border-sky-500/45 bg-sky-500/15 text-sky-100 hover:bg-sky-500/25"
+            locked={locked}
+            unlocking={unlocking}
+            onActivate={() => void handleUnlock()}
+          />
+          <span className="text-xl" aria-hidden>
+            {locked ? "🔐" : "✨"}
           </span>
-        ) : (
-          <span className="text-xl shrink-0" aria-hidden>
-            ✨
-          </span>
-        )}
+        </div>
       </div>
+      <p className="text-[10px] text-gray-600 leading-relaxed">{META.hint}</p>
 
       {locked ? (
         <div className="space-y-3">
           <p className="text-xs text-gray-400 leading-relaxed">
             {data.description ??
-              "선택한 날을 끝으로 최근 거래일 7일의 다수결·가중 축을 한 줄로 묶었습니다."}
+              "가장 최근 종료 거래일을 기준으로 최근 7거래일의 다수결·가중 축을 한 줄로 묶었습니다."}
           </p>
           <div className="flex flex-wrap items-center gap-2 text-[11px]">
-            <span className="text-sky-300 font-black tabular-nums">{data.price_tokens ?? 140} 토큰으로 열람</span>
-            <span className="text-gray-600">·</span>
             <span className="text-gray-500 tabular-nums">보유 {data.balance ?? "–"} 💰</span>
           </div>
           {err ? <p className="text-xs text-orange-400">{err}</p> : null}
@@ -155,6 +166,7 @@ export default function RollingCrowdInsightCard({
         </div>
       ) : (
         <>
+          <p className="text-[10px] text-gray-500 tabular-nums">열람 기준 {priceTokens} 토큰 · 보유 {data.balance ?? "–"} 💰</p>
           <p className="text-[10px] text-gray-500">{data.data?.computed_note}</p>
           <div className="overflow-x-auto rounded-lg border border-white/[0.06]">
             <table className="w-full text-[10px] text-left tabular-nums">

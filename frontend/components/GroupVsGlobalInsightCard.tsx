@@ -3,12 +3,17 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import type { Group } from "@/lib/api";
+import { useConfirmShopOnInsufficientTokens } from "@/hooks/useConfirmShopOnInsufficientTokens";
+import InsightTokenPriceButton from "@/components/InsightTokenPriceButton";
+import { insightMeta } from "@/lib/insight_card_meta";
 import {
   getGroupVsGlobalInsight,
   GroupVsGlobalInsightResponse,
   unlockInsightProduct,
   InsightInsufficientTokensError,
 } from "@/lib/api";
+
+const META = insightMeta("group_vs_global_snapshot");
 
 interface Props {
   accessToken: string;
@@ -24,6 +29,7 @@ export default function GroupVsGlobalInsightCard({
   groups,
   onBalanceUpdated,
 }: Props) {
+  const confirmShopOnInsufficientTokens = useConfirmShopOnInsufficientTokens();
   const [groupId, setGroupId] = useState<string>(() => groups[0]?.group_id ?? "");
   const [loading, setLoading] = useState(true);
   const [unlocking, setUnlocking] = useState(false);
@@ -76,9 +82,11 @@ export default function GroupVsGlobalInsightCard({
       onBalanceUpdated?.();
     } catch (e: unknown) {
       if (e instanceof InsightInsufficientTokensError) {
-        setErr(
-          `토큰이 부족해요 · 필요 ${e.detail.required ?? "?"}개 / 보유 ${e.detail.balance ?? "?"}개. 상점에서 충전하거나 더 모아 주세요.`,
-        );
+        if (!confirmShopOnInsufficientTokens(e.detail)) {
+          setErr(
+            `토큰이 부족합니다 · 필요 ${e.detail.required ?? "?"}개 / 보유 ${e.detail.balance ?? "?"}개`,
+          );
+        }
       } else {
         setErr(e instanceof Error ? e.message : "잠금 해제 실패");
       }
@@ -151,6 +159,7 @@ export default function GroupVsGlobalInsightCard({
   }
 
   const locked = data.locked === true || !data.accessible;
+  const priceTokens = data.price_tokens ?? META.priceTokens;
 
   const groupLabel =
     groups.find((g) => g.group_id === groupId)?.name ?? data.data?.group_name ?? "그룹";
@@ -159,21 +168,25 @@ export default function GroupVsGlobalInsightCard({
     <div className="rounded-2xl border border-emerald-500/35 bg-gradient-to-b from-emerald-950/30 to-[#141414]/90 px-4 py-4 space-y-3 fade-up-2 shadow-[0_0_28px_rgba(52,211,153,.07)]">
       <div className="flex flex-col gap-2">
         <div className="flex items-start justify-between gap-2">
-          <div>
+          <div className="min-w-0 flex-1">
             <p className="text-[10px] font-black text-emerald-300 uppercase tracking-wide">토큰 인사이트</p>
             <p className="text-sm font-black text-white mt-0.5">{data.title ?? "그룹 vs 전체"}</p>
             <p className="text-[10px] text-gray-600 mt-0.5 tabular-nums">{data.survey_date}</p>
           </div>
-          {locked ? (
-            <span className="text-xl shrink-0" aria-hidden>
-              🔐
+          <div className="flex items-center gap-2 shrink-0">
+            <InsightTokenPriceButton
+              priceTokens={priceTokens}
+              className="border-emerald-500/45 bg-emerald-500/15 text-emerald-100 hover:bg-emerald-500/25"
+              locked={locked}
+              unlocking={unlocking}
+              onActivate={() => void handleUnlock()}
+            />
+            <span className="text-xl" aria-hidden>
+              {locked ? "🔐" : "✨"}
             </span>
-          ) : (
-            <span className="text-xl shrink-0" aria-hidden>
-              ✨
-            </span>
-          )}
+          </div>
         </div>
+        <p className="text-[10px] text-gray-600 leading-relaxed">{META.hint}</p>
         <label className="text-[11px] text-gray-400 flex flex-col gap-1">
           <span className="text-gray-500">비교할 그룹</span>
           <select
@@ -196,8 +209,6 @@ export default function GroupVsGlobalInsightCard({
             {data.description ?? "내 그룹 무리만 따로 묶어 전체와 같은 축으로 하루치를 비교합니다."}
           </p>
           <div className="flex flex-wrap items-center gap-2 text-[11px]">
-            <span className="text-emerald-300 font-black tabular-nums">{data.price_tokens ?? 110} 토큰으로 열람</span>
-            <span className="text-gray-600">·</span>
             <span className="text-gray-500 tabular-nums">보유 {data.balance ?? "–"} 💰</span>
             <span className="text-gray-600">·</span>
             <span className="text-gray-600 truncate max-w-[10rem]" title={groupLabel}>
@@ -224,6 +235,9 @@ export default function GroupVsGlobalInsightCard({
         </div>
       ) : (
         <>
+          <p className="text-[10px] text-gray-500 tabular-nums">
+            열람 기준 {priceTokens} 토큰 · 보유 {data.balance ?? "–"} 💰 · {groupLabel}
+          </p>
           <p className="text-[10px] text-gray-500">{data.data?.computed_note}</p>
           <div className="grid grid-cols-2 gap-2 text-[10px] tabular-nums border border-white/[0.06] rounded-lg p-2">
             <div className="text-gray-500">그룹 n / 전체 n</div>

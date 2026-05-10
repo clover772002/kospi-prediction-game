@@ -1,7 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, useMemo } from "react";
 import Link from "next/link";
+import { useConfirmShopOnInsufficientTokens } from "@/hooks/useConfirmShopOnInsufficientTokens";
+import InsightTokenPriceButton from "@/components/InsightTokenPriceButton";
+import { insightMeta, type InsightProductSlug } from "@/lib/insight_card_meta";
 import {
   getExpertVoteTimeProfileInsight,
   getNoviceVoteTimeProfileInsight,
@@ -20,12 +23,16 @@ interface Props {
 /** 고수층 또는 하수층 투표 시간 분포(파도 B) */
 
 export default function VoteTimeProfileInsightCard({ accessToken, surveyDate, cohort, onBalanceUpdated }: Props) {
+  const confirmShopOnInsufficientTokens = useConfirmShopOnInsufficientTokens();
+  const slug = cohort === "expert" ? "expert_vote_time_profile" : "novice_vote_time_profile";
+  const META = useMemo(() => insightMeta(slug as InsightProductSlug), [slug]);
+
   const [loading, setLoading] = useState(true);
   const [unlocking, setUnlocking] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [data, setData] = useState<VoteTimeProfileInsightResponse | null>(null);
 
-  const slug = cohort === "expert" ? "expert_vote_time_profile" : "novice_vote_time_profile";
+
   const accent700 = cohort === "expert" ? "bg-indigo-700 hover:bg-indigo-600" : "bg-slate-700 hover:bg-slate-600";
   const accentText = cohort === "expert" ? "text-indigo-300" : "text-slate-300";
   const accentBorder = cohort === "expert" ? "border-indigo-500/35" : "border-slate-500/35";
@@ -66,9 +73,11 @@ export default function VoteTimeProfileInsightCard({ accessToken, surveyDate, co
       onBalanceUpdated?.();
     } catch (e: unknown) {
       if (e instanceof InsightInsufficientTokensError) {
-        setErr(
-          `토큰이 부족해요 · 필요 ${e.detail.required ?? "?"}개 / 보유 ${e.detail.balance ?? "?"}개. 상점에서 충전하거나 더 모아 주세요.`,
-        );
+        if (!confirmShopOnInsufficientTokens(e.detail)) {
+          setErr(
+            `토큰이 부족합니다 · 필요 ${e.detail.required ?? "?"}개 / 보유 ${e.detail.balance ?? "?"}개`,
+          );
+        }
       } else {
         setErr(e instanceof Error ? e.message : "잠금 해제 실패");
       }
@@ -136,6 +145,11 @@ export default function VoteTimeProfileInsightCard({ accessToken, surveyDate, co
   }
 
   const locked = data.locked === true || !data.accessible;
+  const priceTokens = data.price_tokens ?? META.priceTokens;
+  const priceChipClass =
+    cohort === "expert"
+      ? "border-indigo-500/45 bg-indigo-500/15 text-indigo-100 hover:bg-indigo-500/25"
+      : "border-slate-500/45 bg-slate-600/20 text-slate-100 hover:bg-slate-600/35";
 
   return (
     <div
@@ -144,21 +158,25 @@ export default function VoteTimeProfileInsightCard({ accessToken, surveyDate, co
       } to-[#141414]/90 px-4 py-4 space-y-3 fade-up-2`}
     >
       <div className="flex items-start justify-between gap-2">
-        <div>
+        <div className="min-w-0 flex-1">
           <p className={`text-[10px] font-black ${accentText} uppercase tracking-wide`}>토큰 인사이트 · 파도 B</p>
           <p className="text-sm font-black text-white mt-0.5">{data.title ?? (cohort === "expert" ? "고수 시간" : "하수 시간")}</p>
           <p className="text-[10px] text-gray-600 mt-0.5">{data.survey_date}</p>
         </div>
-        {locked ? (
-          <span className="text-xl shrink-0" aria-hidden>
-            🔐
+        <div className="flex items-center gap-2 shrink-0">
+          <InsightTokenPriceButton
+            priceTokens={priceTokens}
+            className={priceChipClass}
+            locked={locked}
+            unlocking={unlocking}
+            onActivate={() => void handleUnlock()}
+          />
+          <span className="text-xl" aria-hidden>
+            {locked ? "🔐" : "✨"}
           </span>
-        ) : (
-          <span className="text-xl shrink-0" aria-hidden>
-            ✨
-          </span>
-        )}
+        </div>
       </div>
+      <p className="text-[10px] text-gray-600 leading-relaxed">{META.hint}</p>
 
       {locked ? (
         <div className="space-y-3">
@@ -166,10 +184,6 @@ export default function VoteTimeProfileInsightCard({ accessToken, surveyDate, co
             {data.description ?? `${cohort === "expert" ? "고수층" : "하수층"} 투표가 몰린 KST 시간대를 전체와 비교한 요약입니다.`}
           </p>
           <div className="flex flex-wrap items-center gap-2 text-[11px]">
-            <span className={`${accentText} font-black tabular-nums`}>
-              {data.price_tokens ?? (cohort === "expert" ? 100 : 90)} 토큰으로 열람
-            </span>
-            <span className="text-gray-600">·</span>
             <span className="text-gray-500 tabular-nums">보유 {data.balance ?? "–"} 💰</span>
           </div>
           {err ? <p className="text-xs text-orange-400">{err}</p> : null}
@@ -192,6 +206,7 @@ export default function VoteTimeProfileInsightCard({ accessToken, surveyDate, co
         </div>
       ) : (
         <>
+          <p className="text-[10px] text-gray-500 tabular-nums">열람 기준 {priceTokens} 토큰 · 보유 {data.balance ?? "–"} 💰</p>
           <p className="text-[10px] text-gray-500">{data.data?.computed_note}</p>
           <p className="text-[10px] text-gray-400 tabular-nums">
             {data.data?.segment_label_ko} 시각기록 {data.data?.segment_with_timestamp_n ?? "–"}명 · 전체 시각기록{" "}

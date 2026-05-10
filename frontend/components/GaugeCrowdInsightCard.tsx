@@ -2,12 +2,17 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
+import { useConfirmShopOnInsufficientTokens } from "@/hooks/useConfirmShopOnInsufficientTokens";
+import InsightTokenPriceButton from "@/components/InsightTokenPriceButton";
+import { insightMeta } from "@/lib/insight_card_meta";
 import {
   getGaugeCrowdInsight,
   unlockInsightProduct,
   GaugeCrowdInsightResponse,
   InsightInsufficientTokensError,
 } from "@/lib/api";
+
+const META = insightMeta("my_gauge_vs_crowd");
 
 interface Props {
   accessToken: string;
@@ -21,6 +26,7 @@ const MIN_SAME_DIRECTION_PEER = 5;
 
 /** 그날 같은 방향 무리 속 내 확신도 위치 (토큰 잠금) */
 export default function GaugeCrowdInsightCard({ accessToken, surveyDate, onBalanceUpdated }: Props) {
+  const confirmShopOnInsufficientTokens = useConfirmShopOnInsufficientTokens();
   const [loading, setLoading] = useState(true);
   const [unlocking, setUnlocking] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -59,9 +65,11 @@ export default function GaugeCrowdInsightCard({ accessToken, surveyDate, onBalan
       onBalanceUpdated?.();
     } catch (e: unknown) {
       if (e instanceof InsightInsufficientTokensError) {
-        setErr(
-          `토큰이 부족해요 · 필요 ${e.detail.required ?? "?"}개 / 보유 ${e.detail.balance ?? "?"}개. 상점에서 충전해 주세요.`,
-        );
+        if (!confirmShopOnInsufficientTokens(e.detail)) {
+          setErr(
+            `토큰이 부족합니다 · 필요 ${e.detail.required ?? "?"}개 / 보유 ${e.detail.balance ?? "?"}개`,
+          );
+        }
       } else {
         setErr(e instanceof Error ? e.message : "잠금 해제 실패");
       }
@@ -132,25 +140,30 @@ export default function GaugeCrowdInsightCard({ accessToken, surveyDate, onBalan
   }
 
   const paywallLocked = data.locked === true;
+  const priceTokens = data.price_tokens ?? META.priceTokens;
 
   return (
     <div className="rounded-2xl border border-teal-500/30 bg-gradient-to-b from-teal-950/25 to-[#141414]/90 px-4 py-4 space-y-3 fade-up-2 shadow-[0_0_28px_rgba(45,212,191,.07)]">
       <div className="flex items-start justify-between gap-2">
-        <div>
+        <div className="min-w-0 flex-1">
           <p className="text-[10px] font-black text-teal-300 uppercase tracking-wide">토큰 인사이트</p>
           <p className="text-sm font-black text-white mt-0.5">{data.title ?? "내 확신도, 같은 편 속 위치"}</p>
           <p className="text-[10px] text-gray-600 mt-0.5">{data.survey_date}</p>
         </div>
-        {paywallLocked ? (
-          <span className="text-xl shrink-0" aria-hidden>
-            🔐
+        <div className="flex items-center gap-2 shrink-0">
+          <InsightTokenPriceButton
+            priceTokens={priceTokens}
+            className="border-teal-500/45 bg-teal-500/15 text-teal-100 hover:bg-teal-500/25"
+            locked={paywallLocked}
+            unlocking={unlocking}
+            onActivate={() => void handleUnlock()}
+          />
+          <span className="text-xl" aria-hidden>
+            {paywallLocked ? "🔐" : "🪞"}
           </span>
-        ) : (
-          <span className="text-xl shrink-0" aria-hidden>
-            🪞
-          </span>
-        )}
+        </div>
       </div>
+      <p className="text-[10px] text-gray-600 leading-relaxed">{META.hint}</p>
 
       {paywallLocked ? (
         <div className="space-y-3">
@@ -159,8 +172,6 @@ export default function GaugeCrowdInsightCard({ accessToken, surveyDate, onBalan
               "같은 방향으로 예측한 참가자들 가운데서 내 확신(게이지) 세기가 어느 쪽인지 보여 줍니다. 매매 조언은 아니에요."}
           </p>
           <div className="flex flex-wrap items-center gap-2 text-[11px]">
-            <span className="text-amber-300 font-black tabular-nums">{data.price_tokens ?? 70} 토큰으로 열람</span>
-            <span className="text-gray-600">·</span>
             <span className="text-gray-500 tabular-nums">보유 {data.balance ?? "–"} 💰</span>
           </div>
           {err ? <p className="text-xs text-orange-400">{err}</p> : null}
@@ -183,6 +194,7 @@ export default function GaugeCrowdInsightCard({ accessToken, surveyDate, onBalan
         </div>
       ) : (
         <>
+          <p className="text-[10px] text-gray-500 tabular-nums">열람 기준 {priceTokens} 토큰 · 보유 {data.balance ?? "–"} 💰</p>
           <p className="text-[10px] text-gray-500">{data.data?.computed_note}</p>
           <div className="flex gap-4 text-[11px] tabular-nums text-gray-400 flex-wrap pt-1">
             <span>
