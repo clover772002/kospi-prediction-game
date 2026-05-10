@@ -10,6 +10,9 @@ import AppAmbientBackground from "@/components/AppAmbientBackground";
 import AppTabNav from "@/components/AppTabNav";
 import { isInsightProductSlug } from "@/lib/insight_card_meta";
 
+/** 당분간 원화(Stripe) 토큰팩 UI 비표시. 다시 켤 때는 true로 변경하고 아래 token pack 섹션·핸들러 복구 */
+const SHOW_STRIPE_TOKEN_PACKS = false;
+
 function ShopInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -166,7 +169,7 @@ function ShopInner() {
               💎 토큰 상점
             </h1>
             <p className="text-xs text-gray-500 mt-1">
-              게임 내 토큰으로 집계 인사이트·소모품을 구매할 수 있어요. 현금 결제는 토큰 팩만 가능합니다.
+              게임 내 토큰으로 집계 인사이트·소모품을 구매할 수 있어요. 당분간 원화 충전 없이 토큰만 사용합니다.
             </p>
           </div>
           <Link
@@ -261,41 +264,43 @@ function ShopInner() {
           </ul>
         </section>
 
-        <section className="space-y-3">
-          <h2 className="text-[11px] font-black text-gray-500 uppercase tracking-widest">토큰 팩 (Stripe 결제)</h2>
-          {!catalog?.stripe_ready ? (
-            <p className="text-xs text-gray-500">
-              결제(Gateway)가 아직 연결되지 않았습니다. 운영 환경에서 Stripe 키와 Price ID를 설정하면 구매 버튼이 활성화돼요.
-            </p>
-          ) : null}
-          <ul className="space-y-3">
-            {(catalog?.token_packs ?? []).map((pack) => {
-              const canBuy = Boolean(catalog?.stripe_ready && pack.stripe_price_configured);
-              return (
-                <li
-                  key={pack.slug}
-                  className="rounded-2xl border border-amber-500/30 bg-gradient-to-b from-amber-950/30 to-[#141414]/90 px-4 py-4 flex flex-col gap-3"
-                >
-                  <div className="flex items-baseline justify-between gap-2">
-                    <p className="text-lg font-black text-white tabular-nums">{pack.tokens} 토큰</p>
-                    <p className="text-sm text-amber-200 font-bold">{pack.price_label ?? ""}</p>
-                  </div>
-                  {!pack.stripe_price_configured ? (
-                    <p className="text-[10px] text-orange-400/90">서버 환경변수에 이 팩용 Stripe Price ID가 없어요.</p>
-                  ) : null}
-                  <button
-                    type="button"
-                    disabled={!canBuy || checkoutSlug !== null}
-                    onClick={() => void handleBuyPack(pack.slug)}
-                    className="w-full py-3.5 rounded-xl bg-amber-500 hover:bg-amber-400 disabled:opacity-45 disabled:cursor-not-allowed text-black text-sm font-black transition-all active:scale-[0.98]"
+        {SHOW_STRIPE_TOKEN_PACKS ? (
+          <section className="space-y-3">
+            <h2 className="text-[11px] font-black text-gray-500 uppercase tracking-widest">토큰 팩 (Stripe 결제)</h2>
+            {!catalog?.stripe_ready ? (
+              <p className="text-xs text-gray-500">
+                결제(Gateway)가 아직 연결되지 않았습니다. 운영 환경에서 Stripe 키와 Price ID를 설정하면 구매 버튼이 활성화돼요.
+              </p>
+            ) : null}
+            <ul className="space-y-3">
+              {(catalog?.token_packs ?? []).map((pack) => {
+                const canBuy = Boolean(catalog?.stripe_ready && pack.stripe_price_configured);
+                return (
+                  <li
+                    key={pack.slug}
+                    className="rounded-2xl border border-amber-500/30 bg-gradient-to-b from-amber-950/30 to-[#141414]/90 px-4 py-4 flex flex-col gap-3"
                   >
-                    {checkoutSlug === pack.slug ? "이동 중…" : "Stripe로 결제하기"}
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
-        </section>
+                    <div className="flex items-baseline justify-between gap-2">
+                      <p className="text-lg font-black text-white tabular-nums">{pack.tokens} 토큰</p>
+                      <p className="text-sm text-amber-200 font-bold">{pack.price_label ?? ""}</p>
+                    </div>
+                    {!pack.stripe_price_configured ? (
+                      <p className="text-[10px] text-orange-400/90">서버 환경변수에 이 팩용 Stripe Price ID가 없어요.</p>
+                    ) : null}
+                    <button
+                      type="button"
+                      disabled={!canBuy || checkoutSlug !== null}
+                      onClick={() => void handleBuyPack(pack.slug)}
+                      className="w-full py-3.5 rounded-xl bg-amber-500 hover:bg-amber-400 disabled:opacity-45 disabled:cursor-not-allowed text-black text-sm font-black transition-all active:scale-[0.98]"
+                    >
+                      {checkoutSlug === pack.slug ? "이동 중…" : "Stripe로 결제하기"}
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          </section>
+        ) : null}
 
         <section className="rounded-2xl border border-white/[0.06] bg-[#111]/80 px-4 py-3 text-[10px] text-gray-500 leading-relaxed space-y-2">
           <p>
