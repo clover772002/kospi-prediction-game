@@ -5,7 +5,7 @@ import type { InsightProductSlug } from "@/lib/insight_card_meta";
 import InsightAnimatedPreview from "@/components/InsightAnimatedPreview";
 
 /**
- * 대시보드 토큰 인사이트 카드: 텍스트·토큰은 좌측(토큰 줄은 제목 아래), 차트 미리보기는 우측 전열.
+ * 대시보드 토큰 인사이트 카드: 좌측은 제목·배지·날짜와 토큰 행을 세로 중앙 묶음으로, 우측은 차트 미리보기.
  */
 export default function InsightCardHeroGrid({
   slug,
@@ -19,9 +19,7 @@ export default function InsightCardHeroGrid({
 }) {
   return (
     <div className="grid grid-cols-[minmax(0,1fr)_minmax(132px,44%)] gap-2.5 sm:gap-3 items-stretch min-h-[204px] sm:min-h-[220px]">
-      <div
-        className={`min-w-0 flex flex-col gap-2.5 ${tokenRow != null ? "justify-between" : "justify-start"}`}
-      >
+      <div className="min-w-0 flex min-h-0 flex-col justify-center gap-2.5 py-0.5">
         <div className="min-w-0">{headline}</div>
         {tokenRow != null ? <div className="flex flex-wrap items-center gap-1.5">{tokenRow}</div> : null}
       </div>
