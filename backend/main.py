@@ -228,6 +228,7 @@ async def job_15_35():
         kospi_up  = bool(result["isUp"])
         kospi_pct = float(result["changePct"])
         logger.info(f"Vercel 통해 KOSPI 결과 저장 완료: {'▲' if kospi_up else '▼'}{kospi_pct}%")
+        ensure_kospi_tokens_settled_for_date(sb, today_str)
 
     except Exception as e:
         logger.error(f"KOSPI 결과 fetch 오류: {e}")
@@ -1608,6 +1609,182 @@ async def _live_kospi_is_up_and_pct() -> tuple[bool | None, float | None]:
     return None, None
 
 
+def settle_kospi_survey_day(
+    supabase: Client,
+    survey_date_str: str,
+    is_up: bool,
+    change_pct: float | None,
+    *,
+    update_daily_survey_row: bool = True,
+) -> dict:
+    """KOSPI 종가 확정 후 accuracy·유저 토큰·스트릭·survey_responses 배당 저장.
+    Vercel/온디맨드가 accuracy만 넣었을 때 호출하면 토큰이 보강됨."""
+    pct_out = round(float(change_pct), 2) if change_pct is not None else None
+
+    responses = (
+        supabase.table("survey_responses")
+        .select("user_id, kospi_answer, gauge_position, tokens_bet, tokens_before, tokens_won")
+        .eq("survey_date", survey_date_str)
+        .execute()
+    )
+    rows = responses.data or []
+
+    if (
+        not update_daily_survey_row
+        and rows
+        and all(r.get("tokens_won") is not None for r in rows)
+    ):
+        return {
+            "ok": True,
+            "date": survey_date_str,
+            "participants": len(rows),
+            "game_overs": 0,
+            "tokens_settled": False,
+            "changePct": pct_out,
+            "isUp": is_up,
+        }
+
+    if update_daily_survey_row:
+        try:
+            supabase.table("daily_surveys").update({
+                "kospi_result": is_up,
+                "kospi_change_pct": pct_out,
+                "is_closed": True,
+            }).eq("survey_date", survey_date_str).execute()
+        except Exception as e:
+            logger.error(f"daily_surveys 결과 반영 실패 ({survey_date_str}): {e}")
+            raise
+
+    survey_info = supabase.table("daily_surveys").select("kospi_yes_pct").eq("survey_date", survey_date_str).execute()
+    kospi_yes_pct = survey_info.data[0].get("kospi_yes_pct") if survey_info.data else 50
+    if kospi_yes_pct is None:
+        total_n = len(rows)
+        yes_cnt = sum(1 for r in rows if r.get("kospi_answer"))
+        kospi_yes_pct = round(yes_cnt / total_n * 100) if total_n > 0 else 50
+
+    crowd_up = max(5, kospi_yes_pct)
+    crowd_dn = max(5, 100 - kospi_yes_pct)
+
+    all_group_members = supabase.table("group_members").select("user_id").execute()
+    group_user_ids = {m["user_id"] for m in all_group_members.data}
+
+    game_overs = 0
+    did_token_row = False
+    for r in rows:
+        uid = r["user_id"]
+
+        gp = r.get("gauge_position")
+        if gp is None:
+            gp = 50 if r.get("kospi_answer") else -50
+        else:
+            gp = int(gp)
+        is_up_bet = gp > 0
+        prediction_correct = bool(r.get("kospi_answer")) == is_up
+        correct_game = is_up_bet == is_up
+
+        supabase.table("accuracy_records").upsert(
+            {"user_id": uid, "survey_date": survey_date_str, "kospi_correct": prediction_correct},
+            on_conflict="user_id,survey_date",
+        ).execute()
+
+        if r.get("tokens_won") is not None:
+            continue
+
+        did_token_row = True
+
+        u_row = supabase.table("users").select(
+            "tokens, current_streak, game_over_count, streak_shield_charges",
+        ).eq("id", uid).execute()
+        if not u_row.data:
+            continue
+        u = u_row.data[0]
+        tokens = u.get("tokens") or 100
+        streak = u.get("current_streak") or 0
+        game_over_count = u.get("game_over_count") or 0
+        shield_charges = int(u.get("streak_shield_charges") or 0)
+
+        payout_mult = round(crowd_dn / crowd_up, 3) if is_up_bet else round(crowd_up / crowd_dn, 3)
+        streak_mult = 2.0 if streak >= 5 else (1.5 if streak >= 3 else 1.0)
+
+        tokens_bet = r.get("tokens_bet") or max(1, round(abs(gp) / 100 * tokens))
+        participation_bonus = 10 if uid in group_user_ids else 5
+
+        new_shields = shield_charges
+        if correct_game:
+            won = int(tokens_bet * payout_mult * streak_mult)
+            new_tokens = tokens + won + participation_bonus
+            new_streak = streak + 1
+        else:
+            won = -tokens_bet
+            new_tokens = tokens - tokens_bet + participation_bonus
+            if shield_charges > 0:
+                new_shields = shield_charges - 1
+                new_streak = streak
+            else:
+                new_shields = shield_charges
+                new_streak = 0
+
+        game_over = new_tokens <= 0
+        if game_over:
+            new_tokens = 100
+            game_over_count += 1
+            game_overs += 1
+
+        supabase.table("users").update({
+            "tokens": new_tokens,
+            "current_streak": new_streak,
+            "game_over_count": game_over_count,
+            "streak_shield_charges": new_shields,
+        }).eq("id", uid).execute()
+
+        supabase.table("survey_responses").update({
+            "payout_multiplier": payout_mult,
+            "tokens_won": won,
+        }).eq("user_id", uid).eq("survey_date", survey_date_str).execute()
+
+    if update_daily_survey_row or did_token_row:
+        _acc_cache["map"] = {}
+        _acc_cache["count"] = {}
+        _acc_cache["ts"] = 0.0
+
+    return {
+        "ok": True,
+        "date": survey_date_str,
+        "changePct": pct_out,
+        "isUp": is_up,
+        "participants": len(rows),
+        "game_overs": game_overs,
+        "tokens_settled": did_token_row,
+    }
+
+
+def ensure_kospi_tokens_settled_for_date(supabase: Client, survey_date_str: str) -> None:
+    """DB에 종가 결과만 있고 토큰 정산이 빠진 날 보강 (Vercel·온디맨드 분기 등)."""
+    try:
+        ds = (
+            supabase.table("daily_surveys")
+            .select("kospi_result, kospi_change_pct")
+            .eq("survey_date", survey_date_str)
+            .maybe_single()
+            .execute()
+        )
+    except Exception as e:
+        logger.warning(f"daily_surveys 조회 오류 ({survey_date_str}): {e}")
+        return
+
+    if not ds.data or ds.data.get("kospi_result") is None:
+        return
+
+    is_up = bool(ds.data["kospi_result"])
+    raw_pct = ds.data.get("kospi_change_pct")
+    pct = float(raw_pct) if raw_pct is not None else None
+
+    settle_kospi_survey_day(
+        supabase, survey_date_str, is_up, pct,
+        update_daily_survey_row=False,
+    )
+
+
 async def _persist_kospi_survey_close_if_needed(supabase: Client, survey_date_str: str) -> bool:
     """오늘 날짜만, 장마감(15:35 KST 이후)·DB 미기록 시 Vercel/스케줄 실패 분기까지 실시간으로 보강.
 
@@ -1638,40 +1815,17 @@ async def _persist_kospi_survey_close_if_needed(supabase: Client, survey_date_st
         logger.info(f"KOSPI 실시간 방향 확인 불가 → DB 미기록 survey_date={survey_date_str}")
         return False
 
-    pct = round(float(raw_pct), 2) if raw_pct is not None else None
+    pct_val = round(float(raw_pct), 2) if raw_pct is not None else None
     try:
-        supabase.table("daily_surveys").update({
-            "kospi_result": is_up,
-            "kospi_change_pct": pct,
-            "is_closed": True,
-        }).eq("survey_date", survey_date_str).execute()
+        settle_kospi_survey_day(
+            supabase, survey_date_str, is_up, pct_val,
+            update_daily_survey_row=True,
+        )
     except Exception as e:
-        logger.error(f"daily_surveys KOSPI 반영 실패: {e}")
+        logger.error(f"KOSPI 보강·토큰 정산 실패: {e}")
         return False
 
-    try:
-        resp = (
-            supabase.table("survey_responses")
-            .select("user_id, kospi_answer")
-            .eq("survey_date", survey_date_str)
-            .execute()
-        )
-        for r in resp.data or []:
-            supabase.table("accuracy_records").upsert(
-                {
-                    "user_id": r["user_id"],
-                    "survey_date": survey_date_str,
-                    "kospi_correct": bool(r.get("kospi_answer")) == is_up,
-                },
-                on_conflict="user_id,survey_date",
-            ).execute()
-    except Exception as e:
-        logger.warning(f"accuracy_records 보강 실패 ({survey_date_str}): {e}")
-
-    _acc_cache["map"] = {}
-    _acc_cache["count"] = {}
-    _acc_cache["ts"] = 0.0
-    logger.info(f"KOSPI 결과 DB 보강(온디맨드): {survey_date_str} {'▲' if is_up else '▼'} {pct}%")
+    logger.info(f"KOSPI 결과 DB 보강(온디맨드): {survey_date_str} {'▲' if is_up else '▼'} {pct_val}%")
     return True
 
 
@@ -1769,111 +1923,14 @@ async def admin_set_kospi_result(
     Body: { date, changePct, isUp }
     """
     date       = payload.get("date") or today_kst()
-    change_pct = float(payload.get("changePct", 0))
+    raw_pct    = payload.get("changePct")
+    change_pct = float(raw_pct) if raw_pct is not None else None
     is_up      = bool(payload.get("isUp", True))
 
-    supabase.table("daily_surveys").update({
-        "kospi_result":     is_up,
-        "kospi_change_pct": change_pct,
-        "is_closed":        True,
-    }).eq("survey_date", date).execute()
-
-    responses = supabase.table("survey_responses") \
-        .select("user_id, kospi_answer, gauge_position, tokens_bet, tokens_before") \
-        .eq("survey_date", date).execute()
-
-    # 집단 투표 비율 조회 (동적 배당 계산용)
-    survey_info = supabase.table("daily_surveys").select("kospi_yes_pct").eq("survey_date", date).execute()
-    kospi_yes_pct = survey_info.data[0].get("kospi_yes_pct") if survey_info.data else 50
-    if kospi_yes_pct is None:
-        # 직접 집계
-        total = len(responses.data)
-        yes_cnt = sum(1 for r in responses.data if r.get("kospi_answer"))
-        kospi_yes_pct = round(yes_cnt / total * 100) if total > 0 else 50
-
-    crowd_up = max(5, kospi_yes_pct)
-    crowd_dn = max(5, 100 - kospi_yes_pct)
-
-    # 그룹 소속 여부 조회 (참여 보상 차등)
-    all_group_members = supabase.table("group_members").select("user_id").execute()
-    group_user_ids = {m["user_id"] for m in all_group_members.data}
-
-    game_overs = 0
-    for r in responses.data:
-        uid = r["user_id"]
-        gp = r.get("gauge_position")
-        if gp is None:
-            gp = 50 if r.get("kospi_answer") else -50
-        else:
-            gp = int(gp)
-        is_up_bet = gp > 0
-        prediction_correct = bool(r.get("kospi_answer")) == is_up
-        correct = is_up_bet == is_up
-
-        # 정확도 기록 (표시·통계는 코스피 선택과 종가 방향 일치 여부)
-        supabase.table("accuracy_records").upsert(
-            {"user_id": uid, "survey_date": date,
-             "kospi_correct": prediction_correct},
-            on_conflict="user_id,survey_date",
-        ).execute()
-
-        # 유저 토큰 + 스트릭 조회
-        u_row = supabase.table("users").select("tokens, current_streak, game_over_count, streak_shield_charges").eq("id", uid).execute()
-        if not u_row.data:
-            continue
-        u = u_row.data[0]
-        tokens = u.get("tokens") or 100
-        streak = u.get("current_streak") or 0
-        game_over_count = u.get("game_over_count") or 0
-        shield_charges = int(u.get("streak_shield_charges") or 0)
-
-        # 배당배율 계산
-        payout_mult = round(crowd_dn / crowd_up, 3) if is_up_bet else round(crowd_up / crowd_dn, 3)
-
-        # 스트릭 배율
-        streak_mult = 2.0 if streak >= 5 else (1.5 if streak >= 3 else 1.0)
-
-        # 배팅액 (저장된 값 우선, 없으면 재계산)
-        tokens_bet = r.get("tokens_bet") or max(1, round(abs(gp) / 100 * tokens))
-
-        # 참여 보상 (+5 단독, +10 그룹)
-        participation_bonus = 10 if uid in group_user_ids else 5
-
-        new_shields = shield_charges
-        if correct:
-            won = int(tokens_bet * payout_mult * streak_mult)
-            new_tokens = tokens + won + participation_bonus
-            new_streak = streak + 1
-        else:
-            won = -tokens_bet
-            new_tokens = tokens - tokens_bet + participation_bonus
-            if shield_charges > 0:
-                new_shields = shield_charges - 1
-                new_streak = streak
-            else:
-                new_shields = shield_charges
-                new_streak = 0
-
-        game_over = new_tokens <= 0
-        if game_over:
-            new_tokens = 100
-            game_over_count += 1
-            game_overs += 1
-
-        supabase.table("users").update({
-            "tokens": new_tokens,
-            "current_streak": new_streak,
-            "game_over_count": game_over_count,
-            "streak_shield_charges": new_shields,
-        }).eq("id", uid).execute()
-
-        supabase.table("survey_responses").update({
-            "payout_multiplier": payout_mult,
-            "tokens_won": won,
-        }).eq("user_id", uid).eq("survey_date", date).execute()
-
-    return {"ok": True, "date": date, "changePct": change_pct, "isUp": is_up,
-            "participants": len(responses.data), "game_overs": game_overs}
+    return settle_kospi_survey_day(
+        supabase, date, is_up, change_pct,
+        update_daily_survey_row=True,
+    )
 
 
 @app.get("/api/public/backtest")
@@ -1990,6 +2047,8 @@ async def get_today(supabase: Client = Depends(get_supabase)):
         if refreshed:
             survey_res = supabase.table("daily_surveys").select("*").eq("survey_date", today_str).execute()
             survey = survey_res.data[0]
+
+    ensure_kospi_tokens_settled_for_date(supabase, today_str)
 
     responses = (
         supabase.table("survey_responses")
@@ -2946,6 +3005,7 @@ async def get_dashboard(
     user_id = str(current_user.id)
 
     await _persist_kospi_survey_close_if_needed(supabase, today_kst())
+    ensure_kospi_tokens_settled_for_date(supabase, today_kst())
 
     # 유저 토큰 + 스트릭 조회
     user_row = supabase.table("users").select("tokens, current_streak").eq("id", user_id).execute()
