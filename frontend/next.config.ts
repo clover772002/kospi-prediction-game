@@ -1,19 +1,11 @@
 import type { NextConfig } from "next";
+import { backendOriginFromEnv } from "./lib/backend-origin";
 
-/** 리라이트·서버 측 보정용 백엔드 origin (로컬 예전 이름 NEXT_PUBLIC_API_URL 호환) */
-function pickBackendOrigin(): string {
-  return (
-    (process.env.NEXT_PUBLIC_BACKEND_URL || process.env.NEXT_PUBLIC_API_URL || "")
-      .trim()
-      .replace(/\/$/, "")
-  );
-}
-
-const backend = pickBackendOrigin();
+/** 환경변수 없으면 Railway 기본값 — 브라우저는 api.ts에서 /api-proxy 동일 출처로 호출 */
+const backend = backendOriginFromEnv();
 
 const nextConfig: NextConfig = {
   async rewrites() {
-    if (!backend) return [];
     return [{ source: "/api-proxy/:path*", destination: `${backend}/:path*` }];
   },
 };

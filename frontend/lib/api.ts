@@ -1,25 +1,15 @@
-const RAILWAY_URL = "https://kospi-prediction-game-production.up.railway.app";
+import { backendOriginFromEnv } from "./backend-origin";
 
 /**
- * 백엔드 URL 반환.
- * 환경변수가 설정되어 있으면 우선 사용, 없으면 Railway URL 직접 사용.
+ * 백엔드 요청 베이스 URL.
+ * 브라우저에서는 항상 `/api-proxy`(Next 리라이트)로 동일 출처 호출해 CORS·차단 회피.
+ * 서버(SSR 등)에서는 실제 origin 절대 URL.
  */
 export function resolveApiBase(): string {
-  let envUrl = (
-    process.env.NEXT_PUBLIC_BACKEND_URL ||
-    process.env.NEXT_PUBLIC_API_URL ||
-    ""
-  )
-    .trim()
-    .replace(/\/$/, "");
-  if (!envUrl) {
-    return RAILWAY_URL;
+  if (typeof window !== "undefined") {
+    return "/api-proxy";
   }
-  // 스킴이 없으면 로컬은 http, 그 외는 https (예전 코드는 localhost를 무시하고 Railway만 써서 Failed to fetch 유발)
-  if (!/^https?:\/\//i.test(envUrl)) {
-    envUrl = envUrl.includes("localhost") ? `http://${envUrl}` : `https://${envUrl}`;
-  }
-  return envUrl;
+  return backendOriginFromEnv();
 }
 
 /** 아이템 GET이 캐시돼 예전 UI·옛 reason이 남지 않도록 */
