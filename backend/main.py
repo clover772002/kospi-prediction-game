@@ -31,6 +31,7 @@ from fastapi import FastAPI, HTTPException, Depends, Request
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
+import httpx
 from supabase import create_client, Client
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
@@ -1571,6 +1572,109 @@ async def get_kospi_chart():
     return {"data": data}
 
 
+async def _live_kospi_is_up_and_pct() -> tuple[bool | None, float | None]:
+    """네이버 기본 → 야후 순. 전일 종가 대비 등락 방향(get_kospi_price와 동일 소스).
+    장 마감 후(또는 유동성 종가 확정 후) 호출해야 함."""
+    try:
+        url = "https://m.stock.naver.com/api/index/KOSPI/basic"
+        headers = {"User-Agent": "Mozilla/5.0 (compatible; KospiBot/1.0)"}
+        async with httpx.AsyncClient(timeout=8.0) as client:
+            r = await client.get(url, headers=headers)
+            r.raise_for_status()
+            d = r.json()
+        ratio_str = (d.get("fluctuationsRatio") or "").replace(",", "")
+        code = d.get("compareToPreviousPrice", {}).get("code", "")
+        naver_pct = float(ratio_str) if ratio_str else None
+        if code == "2":
+            return True, naver_pct
+        if code == "5":
+            return False, naver_pct
+    except Exception as e:
+        logger.warning(f"네이버 KOSPI 결과 조회 실패: {e}")
+    try:
+        url = "https://query1.finance.yahoo.com/v8/finance/chart/%5EKS11?interval=1d&range=2d"
+        headers = {"User-Agent": "Mozilla/5.0 (compatible; KospiBot/1.0)", "Accept": "application/json"}
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            resp = await client.get(url, headers=headers)
+            resp.raise_for_status()
+            meta = resp.json()["chart"]["result"][0]["meta"]
+        price = float(meta.get("regularMarketPrice") or 0)
+        prev_close = float(meta.get("chartPreviousClose") or meta.get("previousClose") or 0)
+        if prev_close:
+            change_pct = round((price / prev_close - 1) * 100, 2)
+            return price > prev_close, change_pct
+    except Exception as e:
+        logger.warning(f"Yahoo KOSPI 결과 조회 실패: {e}")
+    return None, None
+
+
+async def _persist_kospi_survey_close_if_needed(supabase: Client, survey_date_str: str) -> bool:
+    """오늘 날짜만, 장마감(15:35 KST 이후)·DB 미기록 시 Vercel/스케줄 실패 분기까지 실시간으로 보강.
+
+    과거 거래일은 여기서 다루지 않음 — 실시간 API는 오늘만 의미 있음."""
+    if survey_date_str != today_kst():
+        return False
+    now_kst = datetime.now(KST)
+    if now_kst.hour * 60 + now_kst.minute < 15 * 60 + 35:
+        return False
+
+    try:
+        ds = (
+            supabase.table("daily_surveys")
+            .select("kospi_result")
+            .eq("survey_date", survey_date_str)
+            .maybe_single()
+            .execute()
+        )
+    except Exception as e:
+        logger.warning(f"daily_surveys 조회 실패 ({survey_date_str}): {e}")
+        return False
+
+    if not ds.data or ds.data.get("kospi_result") is not None:
+        return False
+
+    is_up, raw_pct = await _live_kospi_is_up_and_pct()
+    if is_up is None:
+        logger.info(f"KOSPI 실시간 방향 확인 불가 → DB 미기록 survey_date={survey_date_str}")
+        return False
+
+    pct = round(float(raw_pct), 2) if raw_pct is not None else None
+    try:
+        supabase.table("daily_surveys").update({
+            "kospi_result": is_up,
+            "kospi_change_pct": pct,
+            "is_closed": True,
+        }).eq("survey_date", survey_date_str).execute()
+    except Exception as e:
+        logger.error(f"daily_surveys KOSPI 반영 실패: {e}")
+        return False
+
+    try:
+        resp = (
+            supabase.table("survey_responses")
+            .select("user_id, kospi_answer")
+            .eq("survey_date", survey_date_str)
+            .execute()
+        )
+        for r in resp.data or []:
+            supabase.table("accuracy_records").upsert(
+                {
+                    "user_id": r["user_id"],
+                    "survey_date": survey_date_str,
+                    "kospi_correct": bool(r.get("kospi_answer")) == is_up,
+                },
+                on_conflict="user_id,survey_date",
+            ).execute()
+    except Exception as e:
+        logger.warning(f"accuracy_records 보강 실패 ({survey_date_str}): {e}")
+
+    _acc_cache["map"] = {}
+    _acc_cache["count"] = {}
+    _acc_cache["ts"] = 0.0
+    logger.info(f"KOSPI 결과 DB 보강(온디맨드): {survey_date_str} {'▲' if is_up else '▼'} {pct}%")
+    return True
+
+
 @app.get("/api/public/kospi-price")
 async def get_kospi_price(supabase: Client = Depends(get_supabase)):
     """오늘 KOSPI 종가/OHLC — Naver basic API (Vercel에서 호출 가능)"""
@@ -1881,6 +1985,12 @@ async def get_today(supabase: Client = Depends(get_supabase)):
             return {"status": "no_survey", "survey_date": today_str}
 
     survey = survey_res.data[0]
+    if survey.get("kospi_result") is None:
+        refreshed = await _persist_kospi_survey_close_if_needed(supabase, today_str)
+        if refreshed:
+            survey_res = supabase.table("daily_surveys").select("*").eq("survey_date", today_str).execute()
+            survey = survey_res.data[0]
+
     responses = (
         supabase.table("survey_responses")
         .select("user_id, kospi_answer")
@@ -2834,6 +2944,8 @@ async def get_dashboard(
 ):
     """내 예측 이력 + 정확도 + 상위 퍼센트"""
     user_id = str(current_user.id)
+
+    await _persist_kospi_survey_close_if_needed(supabase, today_kst())
 
     # 유저 토큰 + 스트릭 조회
     user_row = supabase.table("users").select("tokens, current_streak").eq("id", user_id).execute()
