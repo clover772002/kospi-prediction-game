@@ -196,6 +196,7 @@ async def job_15_35():
     # 정확도가 새로 계산되므로 캐시 무효화
     _acc_cache["map"] = {}
     _acc_cache["count"] = {}
+    _acc_cache["scores"] = {}
     _acc_cache["ts"] = 0.0
 
     sb = _supabase_direct()
@@ -556,7 +557,7 @@ def _calc_weighted_pct(responses_with_users: list, accuracy_map: dict, pred_coun
     return round((kospi_score / kospi_w + 1) / 2 * 100) if kospi_w > 0 else None
 
 
-_acc_cache: dict = {"map": {}, "count": {}, "ts": 0.0}
+_acc_cache: dict = {"map": {}, "count": {}, "scores": {}, "ts": 0.0}
 _ACC_CACHE_TTL = 300  # 5분 캐시
 
 _settle_rlock_registry_guard = threading.Lock()
@@ -571,28 +572,29 @@ def _settle_rlock_for(survey_date_str: str) -> threading.RLock:
         return _settle_rlocks_by_date[survey_date_str]
 
 
-def _get_accuracy_data(supabase: Client) -> tuple[dict, dict]:
-    """(acc_map, pred_count) 반환 — 5분 TTL 인메모리 캐시 적용"""
+def _get_accuracy_data(supabase: Client) -> tuple[dict, dict, dict]:
+    """(acc_map, pred_count, user_scores) 반환 — user_scores[uid]={correct,total} — 5분 TTL 캐시."""
     now = time.time()
     if now - _acc_cache["ts"] < _ACC_CACHE_TTL and _acc_cache["map"]:
-        return _acc_cache["map"], _acc_cache["count"]
+        return _acc_cache["map"], _acc_cache["count"], _acc_cache["scores"]
 
     all_acc = supabase.table("accuracy_records").select("user_id, kospi_correct").execute()
     user_scores: dict = {}
-    for r in all_acc.data:
+    for r in all_acc.data or []:
         uid = r["user_id"]
         if uid not in user_scores:
             user_scores[uid] = {"correct": 0, "total": 0}
         user_scores[uid]["correct"] += 1 if r.get("kospi_correct") else 0
         user_scores[uid]["total"] += 1
 
-    acc_map   = {uid: s["correct"] / s["total"] for uid, s in user_scores.items() if s["total"] > 0}
+    acc_map = {uid: s["correct"] / s["total"] for uid, s in user_scores.items() if s["total"] > 0}
     pred_count = {uid: s["total"] for uid, s in user_scores.items()}
 
-    _acc_cache["map"]   = acc_map
+    _acc_cache["map"] = acc_map
     _acc_cache["count"] = pred_count
-    _acc_cache["ts"]    = now
-    return acc_map, pred_count
+    _acc_cache["scores"] = user_scores
+    _acc_cache["ts"] = now
+    return acc_map, pred_count, user_scores
 
 
 def _build_daily_expert_gap_payload(supabase: Client, survey_date_str: str) -> dict | None:
@@ -611,7 +613,7 @@ def _build_daily_expert_gap_payload(supabase: Client, survey_date_str: str) -> d
         return None
     yes = sum(1 for r in rows if r.get("kospi_answer"))
     simple_pct = round(yes / total * 100)
-    acc_map, pred_count = _get_accuracy_data(supabase)
+    acc_map, pred_count, _ = _get_accuracy_data(supabase)
     w = _calc_weighted_pct(rows, acc_map, pred_count)
     if w is None:
         w = simple_pct
@@ -830,7 +832,7 @@ def _build_rolling_crowd_summary_payload(supabase: Client, end_date_str: str) ->
     except ValueError:
         return (None, "no_survey_data")
 
-    acc_map, pred_count = _get_accuracy_data(supabase)
+    acc_map, pred_count, _ = _get_accuracy_data(supabase)
     series: list[dict] = []
     any_responses = False
     ok_cells = 0
@@ -993,7 +995,7 @@ _MIN_TOP_EXPERT_WINDOW_TIMESTAMPS = 8
 
 def _global_top_expert_uid(supabase: Client) -> tuple[str | None, str | None]:
     """예측 횟수 규격 통과자 중 누적 적중률 1순위(동률 시 id순). 없으면 segment_empty."""
-    acc_map, pred_count = _get_accuracy_data(supabase)
+    acc_map, pred_count, _ = _get_accuracy_data(supabase)
     eligible = [
         str(uid)
         for uid in pred_count
@@ -1023,7 +1025,7 @@ def _build_leader_pick_payload(
     if not rows:
         return None, "no_survey_data"
 
-    acc_map, pred_count = _get_accuracy_data(supabase)
+    acc_map, pred_count, _ = _get_accuracy_data(supabase)
     day_uids = {str(r["user_id"]) for r in rows if r.get("user_id") is not None}
     experts, novices = _wave_b_expert_and_novice_ids(day_uids, acc_map, pred_count)
     segment = experts if cohort == "expert" else novices
@@ -1168,7 +1170,7 @@ def _build_time_slice_accuracy_payload(
     for b in timed_buckets:
         counts[b] += 1
 
-    acc_map, _ = _get_accuracy_data(supabase)
+    acc_map, _, _ = _get_accuracy_data(supabase)
     pct_leader = round(float(acc_map.get(leader, 0.5)) * 100)
     urow = supabase.table("users").select("name").eq("id", leader).limit(1).execute()
     name = (urow.data[0].get("name") or "").strip() if urow.data else ""
@@ -1283,7 +1285,7 @@ def _build_vote_time_profile_payload(
 
 def _build_user_accuracy_map(supabase: Client) -> dict:
     """하위호환용 래퍼 — acc_map만 반환"""
-    acc_map, _ = _get_accuracy_data(supabase)
+    acc_map, _, _ = _get_accuracy_data(supabase)
     return acc_map
 
 
@@ -1309,7 +1311,7 @@ async def get_public_history(supabase: Client = Depends(get_supabase)):
 
     # acc_map, pred_count는 루프 밖에서 한 번만 조회
     try:
-        acc_map, hist_pred_count = _get_accuracy_data(supabase)
+        acc_map, hist_pred_count, _ = _get_accuracy_data(supabase)
     except Exception:
         acc_map, hist_pred_count = {}, {}
 
@@ -1328,7 +1330,7 @@ async def get_public_history(supabase: Client = Depends(get_supabase)):
 
     # 날짜별로 응답 분류
     resp_by_date: dict = {}
-    for r in all_resp.data:
+    for r in all_resp.data or []:
         resp_by_date.setdefault(r["survey_date"], []).append(r)
 
     # survey_summaries fallback 조회 (실응답 없는 날 역사 데이터용)
@@ -1686,6 +1688,7 @@ def _settle_kospi_survey_day_inner(
     if update_daily_survey_row or did_token_row:
         _acc_cache["map"] = {}
         _acc_cache["count"] = {}
+        _acc_cache["scores"] = {}
         _acc_cache["ts"] = 0.0
 
     return {
@@ -1921,10 +1924,10 @@ async def get_backtest(supabase: Client = Depends(get_supabase)):
             .execute()
         )
         resp_by_date: dict = {}
-        for r in all_resp.data:
+        for r in all_resp.data or []:
             resp_by_date.setdefault(r["survey_date"], []).append(r)
 
-        acc_map, bt_pred_count = _get_accuracy_data(supabase)
+        acc_map, bt_pred_count, _ = _get_accuracy_data(supabase)
 
         # 날짜별 예측 방향 + 실제 수익률 계산
         daily_results = []
@@ -2062,7 +2065,7 @@ async def get_today(supabase: Client = Depends(get_supabase)):
         base["kospi_yes_pct"] = round(display_yes / display_total * 100)
 
         # 가중예측치 계산 (캐시된 정확도 맵 사용, 실제 데이터 기반)
-        acc_map, pred_count = _get_accuracy_data(supabase)
+        acc_map, pred_count, _ = _get_accuracy_data(supabase)
         raw_weighted = _calc_weighted_pct(responses.data, acc_map, pred_count)
         if raw_weighted is not None and total < _PAD_THRESHOLD:
             # 가중치도 패딩 방향으로 자연스럽게 보정
@@ -2969,111 +2972,115 @@ async def get_dashboard(
     """내 예측 이력 + 정확도 + 상위 퍼센트"""
     user_id = str(current_user.id)
 
-    await _persist_kospi_survey_close_if_needed(supabase, today_kst())
-    ensure_kospi_tokens_settled_for_date(supabase, today_kst())
+    try:
+        await _persist_kospi_survey_close_if_needed(supabase, today_kst())
+        ensure_kospi_tokens_settled_for_date(supabase, today_kst())
 
-    # 유저 토큰 + 스트릭 조회
-    user_row = supabase.table("users").select("tokens, current_streak").eq("id", user_id).execute()
-    user_tokens = user_row.data[0].get("tokens", 100) if user_row.data else 100
-    user_streak = user_row.data[0].get("current_streak", 0) if user_row.data else 0
+        # 유저 토큰 + 스트릭 조회
+        user_row = supabase.table("users").select("tokens, current_streak").eq("id", user_id).execute()
+        user_tokens = user_row.data[0].get("tokens", 100) if user_row.data else 100
+        user_streak = user_row.data[0].get("current_streak", 0) if user_row.data else 0
 
-    my_responses = (
-        supabase.table("survey_responses")
-        .select("survey_date, kospi_answer, gauge_position, tokens_bet, tokens_won, payout_multiplier")
-        .eq("user_id", user_id)
-        .order("survey_date", desc=True)
-        .limit(30)
-        .execute()
-    )
-
-    my_accuracy_res = (
-        supabase.table("accuracy_records")
-        .select("survey_date, kospi_correct")
-        .eq("user_id", user_id)
-        .execute()
-    )
-
-    accuracy_map = {_survey_date_key(r["survey_date"]): r for r in my_accuracy_res.data}
-
-    unique_dates_raw = list({resp["survey_date"] for resp in my_responses.data})
-    kospi_result_by_date: dict = {}
-    if unique_dates_raw:
-        ds_bulk = (
-            supabase.table("daily_surveys")
-            .select("survey_date, kospi_result")
-            .in_("survey_date", unique_dates_raw)
+        my_responses = (
+            supabase.table("survey_responses")
+            .select("survey_date, kospi_answer, gauge_position, tokens_bet, tokens_won, payout_multiplier")
+            .eq("user_id", user_id)
+            .order("survey_date", desc=True)
+            .limit(30)
             .execute()
         )
-        for row in ds_bulk.data or []:
-            kospi_result_by_date[_survey_date_key(row["survey_date"])] = row.get("kospi_result")
 
-    history = []
-    for resp in my_responses.data:
-        d_key = _survey_date_key(resp["survey_date"])
-        acc = accuracy_map.get(d_key, {})
-        kospi_correct = acc.get("kospi_correct")
-        kr = kospi_result_by_date.get(d_key)
-        if kospi_correct is None and (kr is True or kr is False):
-            kospi_correct = bool(resp["kospi_answer"]) == bool(kr)
+        my_accuracy_res = (
+            supabase.table("accuracy_records")
+            .select("survey_date, kospi_correct")
+            .eq("user_id", user_id)
+            .execute()
+        )
 
-        history.append({
-            "date": d_key or resp["survey_date"],
-            "kospi_answer": resp["kospi_answer"],
-            "kospi_correct": kospi_correct,
-            "kospi_market_result": kr if (kr is True or kr is False) else None,
-            "gauge_position": resp.get("gauge_position"),
-            "tokens_bet": resp.get("tokens_bet"),
-            "tokens_won": resp.get("tokens_won"),
-            "payout_multiplier": resp.get("payout_multiplier"),
-        })
+        accuracy_map = {_survey_date_key(r["survey_date"]): r for r in (my_accuracy_res.data or [])}
+        responses_rows = my_responses.data or []
 
-    total_with_result = sum(1 for h in history if h["kospi_correct"] is not None)
+        unique_dates_raw = list({resp["survey_date"] for resp in responses_rows})
+        kospi_result_by_date: dict = {}
+        if unique_dates_raw:
+            ds_bulk = (
+                supabase.table("daily_surveys")
+                .select("survey_date, kospi_result")
+                .in_("survey_date", unique_dates_raw)
+                .execute()
+            )
+            for row in ds_bulk.data or []:
+                kospi_result_by_date[_survey_date_key(row["survey_date"])] = row.get("kospi_result")
 
-    if total_with_result == 0:
+        history = []
+        for resp in responses_rows:
+            d_key = _survey_date_key(resp["survey_date"])
+            acc = accuracy_map.get(d_key, {})
+            kospi_correct = acc.get("kospi_correct")
+            kr = kospi_result_by_date.get(d_key)
+            if kospi_correct is None and (kr is True or kr is False):
+                kospi_correct = bool(resp["kospi_answer"]) == bool(kr)
+
+            history.append({
+                "date": d_key or resp["survey_date"],
+                "kospi_answer": resp["kospi_answer"],
+                "kospi_correct": kospi_correct,
+                "kospi_market_result": kr if (kr is True or kr is False) else None,
+                "gauge_position": resp.get("gauge_position"),
+                "tokens_bet": resp.get("tokens_bet"),
+                "tokens_won": resp.get("tokens_won"),
+                "payout_multiplier": resp.get("payout_multiplier"),
+            })
+
+        total_with_result = sum(1 for h in history if h["kospi_correct"] is not None)
+
+        if total_with_result == 0:
+            return {
+                "accuracy": {"kospi": None, "overall": None},
+                "percentile": None,
+                "contribution": None,
+                "history": history,
+                "total_predictions": len(responses_rows),
+                "tokens": user_tokens,
+                "current_streak": user_streak,
+            }
+
+        kospi_correct_cnt = sum(1 for h in history if h["kospi_correct"])
+        kospi_acc = round(kospi_correct_cnt / total_with_result * 100)
+
+        # 상위 퍼센트 계산 — accuracy_records 전량 재조회 없이 캐시 집계 재사용 (타임아웃·500 방지)
+        _, _, user_scores = _get_accuracy_data(supabase)
+
+        my_rate = kospi_correct_cnt / total_with_result
+        users_with_lower = sum(
+            1 for uid, s in user_scores.items()
+            if s["total"] > 0 and s["correct"] / s["total"] < my_rate
+        )
+        total_users = len(user_scores)
+        top_pct = round((1 - users_with_lower / total_users) * 100) if total_users > 1 else 100
+
+        all_rates = [s["correct"] / s["total"] for s in user_scores.values() if s["total"] > 0]
+        avg_rate = sum(all_rates) / len(all_rates) if all_rates else 0.5
+        contribution = round(my_rate / avg_rate * 100) if avg_rate > 0 else 100
+
         return {
-            "accuracy": {"kospi": None, "overall": None},
-            "percentile": None,
-            "contribution": None,
+            "accuracy": {"kospi": kospi_acc, "overall": kospi_acc},
+            "percentile": top_pct,
+            "contribution": contribution,
             "history": history,
-            "total_predictions": len(my_responses.data),
+            "total_predictions": len(responses_rows),
             "tokens": user_tokens,
             "current_streak": user_streak,
         }
 
-    kospi_correct_cnt = sum(1 for h in history if h["kospi_correct"])
-    kospi_acc = round(kospi_correct_cnt / total_with_result * 100)
-
-    # 상위 퍼센트 계산
-    all_acc = supabase.table("accuracy_records").select("user_id, kospi_correct").execute()
-    user_scores: dict = {}
-    for r in all_acc.data:
-        uid = r["user_id"]
-        if uid not in user_scores:
-            user_scores[uid] = {"correct": 0, "total": 0}
-        user_scores[uid]["correct"] += 1 if r.get("kospi_correct") else 0
-        user_scores[uid]["total"] += 1
-
-    my_rate = kospi_correct_cnt / total_with_result
-    users_with_lower = sum(
-        1 for uid, s in user_scores.items()
-        if s["total"] > 0 and s["correct"] / s["total"] < my_rate
-    )
-    total_users = len(user_scores)
-    top_pct = round((1 - users_with_lower / total_users) * 100) if total_users > 1 else 100
-
-    all_rates = [s["correct"] / s["total"] for s in user_scores.values() if s["total"] > 0]
-    avg_rate = sum(all_rates) / len(all_rates) if all_rates else 0.5
-    contribution = round(my_rate / avg_rate * 100) if avg_rate > 0 else 100
-
-    return {
-        "accuracy": {"kospi": kospi_acc, "overall": kospi_acc},
-        "percentile": top_pct,
-        "contribution": contribution,
-        "history": history,
-        "total_predictions": len(my_responses.data),
-        "tokens": user_tokens,
-        "current_streak": user_streak,
-    }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception("대시보드 조회 실패 user=%s", user_id)
+        raise HTTPException(
+            status_code=500,
+            detail="대시보드를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.",
+        ) from e
 
 
 class InsightUnlockBody(BaseModel):
