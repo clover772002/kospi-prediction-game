@@ -390,18 +390,19 @@ export default function InsightAnimatedPreview({
 
   if (visual === "dashboardHero") {
     return (
-      <div className="insight-preview-mount w-full flex flex-col flex-1 min-h-0 justify-between">
-        <svg
-          role="img"
-          aria-label="이 인사이트에서 보게 되는 차트 형태 미리보기"
-          viewBox={`0 0 ${VB_W} ${VB_H}`}
-          preserveAspectRatio="xMidYMid meet"
-          style={{ aspectRatio }}
-          className="w-full h-auto flex-1 min-h-[116px] max-h-[220px] object-contain px-1 py-0.5"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          {svgInner}
-        </svg>
+      <div className="insight-preview-mount flex h-full min-h-[168px] w-full min-w-0 flex-1 flex-col">
+        <div className="relative min-h-[140px] w-full flex-1 overflow-hidden">
+          <svg
+            role="img"
+            aria-label="이 인사이트에서 보게 되는 차트 형태 미리보기"
+            viewBox={`0 0 ${VB_W} ${VB_H}`}
+            preserveAspectRatio="xMidYMid slice"
+            className="absolute inset-0 size-full max-h-none"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            {svgInner}
+          </svg>
+        </div>
         <details className={detailsCls}>
           <summary className={summaryCls}>
             한 줄 안내<span className="ml-1 font-normal opacity-70 group-open:hidden">열기</span>
