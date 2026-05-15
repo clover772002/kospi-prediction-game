@@ -5,15 +5,21 @@ const RAILWAY_URL = "https://kospi-prediction-game-production.up.railway.app";
  * 환경변수가 설정되어 있으면 우선 사용, 없으면 Railway URL 직접 사용.
  */
 export function resolveApiBase(): string {
-  const envUrl = (
+  let envUrl = (
     process.env.NEXT_PUBLIC_BACKEND_URL ||
     process.env.NEXT_PUBLIC_API_URL ||
     ""
-  ).trim().replace(/\/$/, "");
-  if (envUrl && !envUrl.includes("localhost")) {
-    return envUrl.startsWith("https://") ? envUrl : "https://" + envUrl.replace(/^https?:\/\//, "");
+  )
+    .trim()
+    .replace(/\/$/, "");
+  if (!envUrl) {
+    return RAILWAY_URL;
   }
-  return RAILWAY_URL;
+  // 스킴이 없으면 로컬은 http, 그 외는 https (예전 코드는 localhost를 무시하고 Railway만 써서 Failed to fetch 유발)
+  if (!/^https?:\/\//i.test(envUrl)) {
+    envUrl = envUrl.includes("localhost") ? `http://${envUrl}` : `https://${envUrl}`;
+  }
+  return envUrl;
 }
 
 /** 아이템 GET이 캐시돼 예전 UI·옛 reason이 남지 않도록 */
