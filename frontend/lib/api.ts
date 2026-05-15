@@ -682,9 +682,16 @@ export async function purchaseConsumable(
       idempotency_key: body.idempotency_key,
     }),
   });
+  const raw = await res.json().catch(() => ({}));
+  const d = raw.detail;
+  if (res.status === 402) {
+    const obj = typeof d === "object" && d !== null && !Array.isArray(d) ? (d as Record<string, unknown>) : {};
+    throw new InsightInsufficientTokensError({
+      required: typeof obj.required === "number" ? obj.required : undefined,
+      balance: typeof obj.balance === "number" ? obj.balance : undefined,
+    });
+  }
   if (!res.ok) {
-    const raw = await res.json().catch(() => ({}));
-    const d = raw.detail;
     throw new Error(
       typeof d === "string"
         ? d
@@ -693,7 +700,7 @@ export async function purchaseConsumable(
           : "구매 처리에 실패했습니다.",
     );
   }
-  return res.json() as Promise<Record<string, unknown>>;
+  return raw as Record<string, unknown>;
 }
 
 export async function createStripePackCheckout(accessToken: string, packSlug: string): Promise<{ url: string }> {

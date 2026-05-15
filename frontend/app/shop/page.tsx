@@ -4,11 +4,12 @@ import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
-import { createStripePackCheckout, getShopCatalog, purchaseConsumable, ShopCatalog, ShopConsumableProduct } from "@/lib/api";
+import { createStripePackCheckout, getDashboard, getShopCatalog, ShopCatalog } from "@/lib/api";
 import InsightAnimatedPreview from "@/components/InsightAnimatedPreview";
 import AppAmbientBackground from "@/components/AppAmbientBackground";
 import PageLoadProgress from "@/components/PageLoadProgress";
 import AppTabNav from "@/components/AppTabNav";
+import ConsumableShopCard from "@/components/ConsumableShopCard";
 import { isInsightProductSlug } from "@/lib/insight_card_meta";
 
 /** 당분간 원화(Stripe) 토큰팩 UI 비표시. 다시 켤 때는 true로 변경하고 아래 token pack 섹션·핸들러 복구 */
@@ -20,6 +21,7 @@ function ShopInner() {
   const [token, setToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [catalog, setCatalog] = useState<ShopCatalog | null>(null);
+  const [walletTokens, setWalletTokens] = useState<number | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [checkoutSlug, setCheckoutSlug] = useState<string | null>(null);
   const [flash, setFlash] = useState<string | null>(null);
@@ -41,8 +43,14 @@ function ShopInner() {
     const load = async (accessToken: string) => {
       setErr(null);
       try {
-        const c = await getShopCatalog(accessToken);
-        if (mounted) setCatalog(c);
+        const [c, dash] = await Promise.all([
+          getShopCatalog(accessToken),
+          getDashboard(accessToken),
+        ]);
+        if (mounted) {
+          setCatalog(c);
+          setWalletTokens(typeof dash.tokens === "number" ? dash.tokens : null);
+        }
       } catch (e: unknown) {
         if (mounted) setErr(e instanceof Error ? e.message : String(e));
       }
@@ -89,49 +97,13 @@ function ShopInner() {
 
   const [purchaseBusy, setPurchaseBusy] = useState<string | null>(null);
 
-  const handleBuyConsumable = async (c: ShopConsumableProduct) => {
+  const refreshWalletTokens = async () => {
     if (!token) return;
-    setPurchaseBusy(c.slug);
-    setErr(null);
     try {
-      const needsDate = Boolean(c.requires_survey_date ?? (typeof c.rakeback_pct === "number"));
-      const needsGauge = Boolean(c.requires_gauge_payload);
-      let survey_date: string | undefined;
-      let gauge_position: number | undefined;
-
-      if (needsDate) {
-        const def = "";
-        const inp = typeof window !== "undefined" ? window.prompt("거래일을 YYYY-MM-DD 로 입력하세요.", def) : null;
-        survey_date = inp?.trim();
-        if (!survey_date || survey_date.length !== 10) {
-          setErr("거래일 형식이 필요합니다.");
-          return;
-        }
-      }
-      if (needsGauge) {
-        const inp = typeof window !== "undefined" ? window.prompt("게이지 값 -100~100 (0 제외, 음수=하락)", "40") : null;
-        const n = inp != null ? Number(inp) : NaN;
-        if (!Number.isFinite(n) || n === 0 || n < -100 || n > 100) {
-          setErr("유효한 게이지 값이 필요합니다.");
-          return;
-        }
-        gauge_position = n;
-      }
-
-      const out = await purchaseConsumable(token, {
-        consumable_slug: c.slug,
-        survey_date: survey_date ?? null,
-        gauge_position: gauge_position ?? null,
-        idempotency_key: typeof crypto !== "undefined" ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`,
-      });
-      const bal = out.balance_after ?? out.balance ?? out.charges;
-      setFlash(
-        bal != null ? `구매 완료. 잔액/상태: ${String(bal)}` : "구매 처리가 완료됐습니다.",
-      );
-    } catch (e: unknown) {
-      setErr(e instanceof Error ? e.message : "구매하지 못했습니다.");
-    } finally {
-      setPurchaseBusy(null);
+      const dash = await getDashboard(token);
+      setWalletTokens(typeof dash.tokens === "number" ? dash.tokens : null);
+    } catch {
+      /* 무시 — 기존 표시값 유지 */
     }
   };
 
@@ -234,26 +206,23 @@ function ShopInner() {
             거래일 입력이 필요한 소모품만 날짜를 묻습니다. 「재투표」「게이지만 조정」「방향만 반전」은 모두 오늘의 설문(당일 픽) 한정이라 날짜를 받지 않습니다. 레이크백처럼 과거 정산 거래일이 필요한 품목만 YYYY-MM-DD를 입력하세요.
           </p>
           <ul className="space-y-2">
-            {(catalog?.consumable_products ?? []).map((c) => (
-              <li
-                key={c.slug}
-                className="rounded-2xl border border-cyan-500/25 bg-cyan-950/[0.12] px-4 py-3 text-sm space-y-2"
-              >
-                <p className="font-bold text-white">{c.title}</p>
-                {c.description ? <p className="text-[11px] text-gray-500 mt-1 leading-relaxed">{c.description}</p> : null}
-                <div className="flex items-center justify-between gap-2 flex-wrap">
-                  <p className="text-xs text-amber-300 font-black tabular-nums">{c.price_tokens} 토큰</p>
-                  <button
-                    type="button"
-                    disabled={purchaseBusy !== null}
-                    onClick={() => void handleBuyConsumable(c)}
-                    className="text-[11px] font-black rounded-lg bg-cyan-600/80 hover:bg-cyan-500 px-3 py-1.5 disabled:opacity-45"
-                  >
-                    {purchaseBusy === c.slug ? "처리 중…" : "구매"}
-                  </button>
-                </div>
-              </li>
-            ))}
+            {(catalog?.consumable_products ?? []).map((c) =>
+              token ? (
+                <ConsumableShopCard
+                  key={c.slug}
+                  product={c}
+                  accessToken={token}
+                  walletTokens={walletTokens}
+                  siblingBusy={purchaseBusy !== null && purchaseBusy !== c.slug}
+                  isPurchasing={purchaseBusy === c.slug}
+                  onPurchaseStart={() => setPurchaseBusy(c.slug)}
+                  onPurchaseEnd={() => setPurchaseBusy(null)}
+                  onBalanceRefresh={refreshWalletTokens}
+                  setFlash={setFlash}
+                  setErr={setErr}
+                />
+              ) : null,
+            )}
           </ul>
         </section>
 
