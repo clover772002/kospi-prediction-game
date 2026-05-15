@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""설문 응답 저장: 1인 1거래일 1건 + 재투표 grant·예약 적용."""
+"""설문 응답 저장: 1인 1거래일 1건 + 재투표 grant 등."""
 
 from __future__ import annotations
 
@@ -105,7 +105,8 @@ def persist_survey_answer(
         grant = fetch_pending_grant(supabase, user_id, target_date)
         if not grant or grant["grant_kind"] != "redo_full":
             raise SurveySubmissionLocked(
-                "이 거래일에는 이미 응답했습니다. 수정하려면 상점에서 「재투표 1회」를 구매한 뒤 다시 시도해 주세요."
+                "이 거래일에는 이미 응답했습니다. 오늘의 설문(당일 픽)이라면 상점 「재투표 1회」「게이지만 조정」「방향만 반전」 중 "
+                "구매한 권한으로 다시 제출·수정할 수 있습니다(모두 날짜 지정 없이 당일 설문 한정)."
             )
         supabase.table("survey_responses").update(payload).eq("user_id", user_id).eq(
             "survey_date", target_date

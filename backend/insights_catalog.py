@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-단일 재화 플랜: 게임과 동일 users.tokens 로 인사이트 열람 차감.
+단일 재화 플랜: 게임과 동일 users.tokens 로 아이템(집계 열람) 차감.
 """
 
 INSIGHT_PRODUCTS = {

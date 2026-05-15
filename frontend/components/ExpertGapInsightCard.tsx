@@ -23,7 +23,7 @@ interface Props {
   onBalanceUpdated?: () => void;
 }
 
-/** 대시보드용: 해당 거래일 고수·다수결 차이 인사이트 (토큰 잠금) */
+/** 대시보드용: 해당 거래일 고수·다수결 차이 아이템 (토큰 잠금) */
 export default function ExpertGapInsightCard({ accessToken, surveyDate, onBalanceUpdated }: Props) {
   const confirmShopOnInsufficientTokens = useConfirmShopOnInsufficientTokens();
   const d = useInsightDashLayout();
@@ -96,7 +96,7 @@ export default function ExpertGapInsightCard({ accessToken, surveyDate, onBalanc
   if (err && !data) {
     return (
       <div className="rounded-2xl border border-red-500/30 bg-red-500/[0.07] px-4 py-3 text-sm text-red-300 fade-up-2">
-        인사이트 카드 로드 실패: {err}
+        아이템 카드 로드 실패: {err}
         <button type="button" onClick={() => void load()} className="block mt-2 text-xs underline">
           다시 시도
         </button>
@@ -137,7 +137,7 @@ export default function ExpertGapInsightCard({ accessToken, surveyDate, onBalanc
         slug="daily_expert_gap"
         headline={
           <>
-            <p className={`${d.badge} font-black text-violet-300 uppercase tracking-wide`}>토큰 인사이트</p>
+            <p className={`${d.badge} font-black text-violet-300 uppercase tracking-wide`}>아이템</p>
             <p className={`${d.titleClass} text-white mt-0.5`}>{data.title ?? "고수·다수결 차이"}</p>
             <p className={`${d.subDate} text-gray-600 mt-0.5`}>{data.survey_date}</p>
           </>

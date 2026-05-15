@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""토큰 ledger / 인사이트 열람 차감 (Supabase 서비스 롤 전용)."""
+"""토큰 ledger / 아이템(집계 열람) 차감 (Supabase 서비스 롤 전용)."""
 from __future__ import annotations
 
 import logging
@@ -39,7 +39,7 @@ def entitlement_exists(supabase: Client, user_id: str, product_slug: str, scope_
         )
         return bool(r.data)
     except Exception as e:
-        # 테이블 미생성 등: GET 인사이트는 잠금 상태로 두고 카드 로드 실패(503)를 피함.
+        # 테이블 미생성 등: GET 아이템 열람은 잠금 상태로 두고 카드 로드 실패(503)를 피함.
         logger.warning(
             "insight_entitlements 조회 실패 — 테이블이 없으면 Supabase SQL에 schema_shop_insights.sql 실행: %s",
             e,

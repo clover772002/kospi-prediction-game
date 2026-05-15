@@ -162,7 +162,7 @@ function ShopInner() {
               💎 토큰 상점
             </h1>
             <p className="text-xs text-gray-500 mt-1">
-              게임 내 토큰으로 집계 인사이트·소모품을 구매할 수 있어요. 당분간 원화 충전 없이 토큰만 사용합니다.
+              게임 내 토큰으로 집계 아이템·소모품을 구매할 수 있어요. 당분간 원화 충전 없이 토큰만 사용합니다.
             </p>
           </div>
           <Link
@@ -184,7 +184,7 @@ function ShopInner() {
 
         {catalog && !catalog.paywall_enabled ? (
           <p className="text-xs text-gray-500 rounded-xl border border-white/[0.08] bg-white/[0.03] px-3 py-2">
-            현재 인사이트 페이월이 꺼져 있어 대시보드에서 추가 토큰 없이 미리 볼 수 있어요. 정책이 켜지면 아래 요금이 적용됩니다.
+            현재 아이템 잠금(페이월)이 꺼져 있어 대시보드에서 추가 토큰 없이 미리 볼 수 있어요. 정책이 켜지면 아래 요금이 적용됩니다.
           </p>
         ) : null}
 
@@ -195,7 +195,7 @@ function ShopInner() {
         ) : null}
 
         <section className="space-y-3">
-          <h2 className="text-[11px] font-black text-gray-500 uppercase tracking-widest">토큰으로 열 수 있는 것</h2>
+          <h2 className="text-[11px] font-black text-gray-500 uppercase tracking-widest">토큰으로 여는 아이템</h2>
           <ul className="space-y-2">
             {(catalog?.insight_products ?? []).map((p) => (
               <li
@@ -231,7 +231,7 @@ function ShopInner() {
         <section className="space-y-3">
           <h2 className="text-[11px] font-black text-gray-500 uppercase tracking-widest">소모품 (설문·토큰 규칙)</h2>
           <p className="text-[10px] text-gray-500 leading-relaxed">
-            거래일이 필요한 상품은 버튼 후 날짜를 입력합니다. 재투표·게이지만 조정 등은 설문이 마감되기 전에 사용하세요.
+            거래일 입력이 필요한 소모품만 날짜를 묻습니다. 「재투표」「게이지만 조정」「방향만 반전」은 모두 오늘의 설문(당일 픽) 한정이라 날짜를 받지 않습니다. 레이크백처럼 과거 정산 거래일이 필요한 품목만 YYYY-MM-DD를 입력하세요.
           </p>
           <ul className="space-y-2">
             {(catalog?.consumable_products ?? []).map((c) => (
@@ -297,7 +297,7 @@ function ShopInner() {
 
         <section className="rounded-2xl border border-white/[0.06] bg-[#111]/80 px-4 py-3 text-[10px] text-gray-500 leading-relaxed space-y-2">
           <p>
-            토큰은 서비스 내 재화이며 현금으로 환전·환급되지 않습니다. 집계·인사이트는 참고용 정보이며 투자·재산 관리 조언이 아닙니다.
+            토큰은 서비스 내 재화이며 현금으로 환전·환급되지 않습니다. 집계·아이템(열람형 콘텐츠)은 참고용 정보이며 투자·재산 관리 조언이 아닙니다.
           </p>
           <p>
             환불·청약철회 등 유료 이용 관련 세부사항은{" "}

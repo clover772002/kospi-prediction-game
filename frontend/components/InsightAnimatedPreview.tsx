@@ -277,7 +277,7 @@ export default function InsightAnimatedPreview({
         <div className="relative min-h-[34px] w-full min-w-0 flex-1">
           <svg
             role="img"
-            aria-label="이 인사이트에서 보게 되는 차트 형태 미리보기"
+            aria-label="이 아이템에서 보게 되는 차트 형태 미리보기"
             viewBox={`0 0 ${VB_W} ${VB_H}`}
             preserveAspectRatio="xMinYMid meet"
             width="100%"
@@ -304,7 +304,7 @@ export default function InsightAnimatedPreview({
       <div className="insight-preview-mount w-full flex items-center justify-center max-h-[40px] overflow-hidden opacity-90">
         <svg
           role="img"
-          aria-label="이 인사이트에서 보게 되는 차트 형태 미리보기"
+          aria-label="이 아이템에서 보게 되는 차트 형태 미리보기"
           viewBox={`0 0 ${VB_W} ${VB_H}`}
           preserveAspectRatio="xMidYMid meet"
           style={{ aspectRatio }}
@@ -321,7 +321,7 @@ export default function InsightAnimatedPreview({
     <div className="insight-preview-mount w-full">
       <svg
         role="img"
-        aria-label="이 인사이트에서 보게 되는 차트 형태 미리보기"
+        aria-label="이 아이템에서 보게 되는 차트 형태 미리보기"
         viewBox={`0 0 ${VB_W} ${VB_H}`}
         preserveAspectRatio="xMidYMid meet"
         style={{ aspectRatio }}

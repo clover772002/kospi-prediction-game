@@ -1,23 +1,19 @@
 # -*- coding: utf-8 -*-
-"""소모품 구매 처리(설문 수정 권환·예약·연승·레이크백)."""
+"""소모품 구매 처리(설문 수정 권한·연승·레이크백)."""
 
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timezone
 from typing import Any
 
 from supabase import Client
 
 from consumables_catalog import CONSUMABLE_PRODUCTS
+from krx_calendar import today_date_kst
 from survey_writes import has_pending_grant
 from token_wallet import grant_tokens_with_ledger, ledger_exists_by_idempotency, spend_tokens_idempotent
 
 logger = logging.getLogger(__name__)
-
-
-def _utc_now_iso() -> str:
-    return datetime.now(timezone.utc).isoformat()
 
 
 SLUG_TO_GRANT_KIND = {
@@ -25,6 +21,8 @@ SLUG_TO_GRANT_KIND = {
     "gauge_adjust_keep_direction_once": "gauge_only",
     "direction_flip_keep_magnitude_once": "flip_direction",
 }
+
+_TODAY_BOUND_EDIT_SLUGS = frozenset(SLUG_TO_GRANT_KIND.keys())
 
 
 def purchase_consumable(
@@ -44,23 +42,18 @@ def purchase_consumable(
     cost = int(meta["price_tokens"])
     nd = meta.get("requires_survey_date", False)
 
-    if nd and (not survey_date or not survey_date.strip()):
+    if slug in _TODAY_BOUND_EDIT_SLUGS:
+        sd = today_date_kst().isoformat()
+    elif nd and (not survey_date or not survey_date.strip()):
         return {"ok": False, "error": "survey_date_required", "message": "거래일(survey_date)이 필요합니다."}
-
-    sd = survey_date.strip() if survey_date else ""
+    else:
+        sd = survey_date.strip() if survey_date else ""
 
     try:
         if slug.startswith("rakeback_"):
             return _purchase_rakeback(supabase, user_id, slug, sd, cost, idempotency_key=idempotency_key)
         if slug == "streak_protect_next_miss":
             return _purchase_streak_shield(supabase, user_id, slug, cost, idempotency_key=idempotency_key)
-        if slug == "survey_vote_presubmit_once":
-            gp = gauge_position
-            if gp is None or not (-100 <= int(gp) <= 100) or int(gp) == 0:
-                return {"ok": False, "error": "gauge_required", "message": "유효한 gauge_position 이 필요합니다."}
-            return _purchase_presubmit(
-                supabase, user_id, sd, cost, idempotency_key=idempotency_key, gauge_position=int(gp)
-            )
         if slug not in SLUG_TO_GRANT_KIND:
             return {"ok": False, "error": "invalid_internal", "message": "미구현 상품입니다."}
 
@@ -135,88 +128,6 @@ def _purchase_edit_grant(
         return {"ok": False, "error": "grant_insert_failed", "message": str(e)}
 
     return {"ok": True, "balance": spend.get("balance"), "spent": cost, "survey_date": survey_date, "grant_kind": grant_kind}
-
-
-def _purchase_presubmit(
-    supabase: Client,
-    user_id: str,
-    survey_date: str,
-    cost: int,
-    *,
-    idempotency_key: str,
-    gauge_position: int,
-) -> dict[str, Any]:
-    slug = "survey_vote_presubmit_once"
-    debit_key = f"{idempotency_key}:buy:{slug}:{survey_date}"
-
-    ds = supabase.table("daily_surveys").select("is_closed").eq("survey_date", survey_date).execute()
-    if not ds.data:
-        return {"ok": False, "error": "bad_date", "message": "해당 날짜의 설문이 없습니다."}
-    if ds.data[0]["is_closed"]:
-        return {"ok": False, "error": "closed", "message": "설문이 이미 마감된 거래일입니다."}
-
-    ans = (
-        supabase.table("survey_responses")
-        .select("user_id")
-        .eq("user_id", user_id)
-        .eq("survey_date", survey_date)
-        .limit(1)
-        .execute()
-    )
-    if ans.data:
-        return {"ok": False, "error": "already_answered", "message": "이미 응답한 거래일에는 예약을 걸 수 없습니다."}
-
-    spend = spend_tokens_idempotent(
-        supabase,
-        user_id,
-        amount=cost,
-        reason="consumable_purchase",
-        ref_type="consumable",
-        ref_id=f"{slug}:{survey_date}",
-        idempotency_key=debit_key,
-    )
-    if not spend.get("ok"):
-        return {
-            "ok": False,
-            "error": spend.get("error"),
-            "required": spend.get("required"),
-            "balance": spend.get("balance"),
-        }
-
-    try:
-        supabase.table("survey_vote_presubmit").update({"canceled_at": _utc_now_iso()}).eq(
-            "user_id", user_id
-        ).eq("survey_date", survey_date).is_("applied_at", "null").is_("canceled_at", "null").execute()
-        supabase.table("survey_vote_presubmit").insert(
-            {
-                "user_id": user_id,
-                "survey_date": survey_date,
-                "gauge_position": gauge_position,
-            }
-        ).execute()
-    except Exception as e:
-        logger.error(f"presubmit 실패 유저 환급 user={user_id}: {e}")
-        try:
-            grant_tokens_with_ledger(
-                supabase,
-                user_id,
-                delta=cost,
-                reason="consumable_refund_presubmit_fail",
-                ref_type="consumable",
-                ref_id=slug,
-                idempotency_key=debit_key + ":refund",
-            )
-        except Exception as e2:
-            logger.exception(f"consumable 환급 실패 {e2}")
-        return {"ok": False, "error": "presubmit_failed", "message": str(e)}
-
-    return {
-        "ok": True,
-        "balance": spend.get("balance"),
-        "spent": cost,
-        "survey_date": survey_date,
-        "gauge_position": gauge_position,
-    }
 
 
 def _purchase_streak_shield(

@@ -56,7 +56,7 @@ export function insightMeta(slug: InsightProductSlug) {
   return INSIGHT_CARD_META[slug];
 }
 
-/** 카탈로그 문자열 등이 알려진 인사이트 상품 슬러그인지(차트 미리보기 부착용). */
+/** 카탈로그 문자열 등이 알려진 아이템 상품 슬러그인지(차트 미리보기 부착용). */
 export function isInsightProductSlug(slug: string): slug is InsightProductSlug {
   return slug in INSIGHT_CARD_META;
 }

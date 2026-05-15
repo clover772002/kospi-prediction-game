@@ -2235,17 +2235,6 @@ class ConsumablePurchaseBody(BaseModel):
     idempotency_key: str
 
 
-@app.post("/api/survey/sync-presubmit")
-async def survey_sync_presubmit(
-    current_user=Depends(get_current_user),
-    supabase: Client = Depends(get_supabase),
-):
-    """예약 건 적용 스케줄·설문 오픈과 맞물리게 클라에서 호출."""
-    uid = str(current_user.id)
-    applied = apply_pending_presubmits(supabase, uid)
-    return {"ok": True, "applied_survey_dates": applied}
-
-
 @app.post("/api/survey/adjust-gauge")
 async def survey_adjust_gauge(
     body: SurveyGaugeAdjustBody,
@@ -2255,6 +2244,11 @@ async def survey_adjust_gauge(
     sd = body.survey_date.strip()
     if len(sd) != 10:
         raise HTTPException(status_code=400, detail="survey_date 형식 오류")
+    if sd != today_kst():
+        raise HTTPException(
+            status_code=400,
+            detail="게이지만 조정은 오늘의 설문(당일 거래일)에만 적용됩니다.",
+        )
     srv = supabase.table("daily_surveys").select("is_closed").eq("survey_date", sd).execute()
     if not srv.data:
         raise HTTPException(status_code=400, detail="해당 설문 없음")
@@ -2279,6 +2273,11 @@ async def survey_flip_direction(
     sd = body.survey_date.strip()
     if len(sd) != 10:
         raise HTTPException(status_code=400, detail="survey_date 형식 오류")
+    if sd != today_kst():
+        raise HTTPException(
+            status_code=400,
+            detail="방향 반전은 오늘의 설문(당일 거래일)에만 적용됩니다.",
+        )
     srv = supabase.table("daily_surveys").select("is_closed").eq("survey_date", sd).execute()
     if not srv.data:
         raise HTTPException(status_code=400, detail="해당 설문 없음")

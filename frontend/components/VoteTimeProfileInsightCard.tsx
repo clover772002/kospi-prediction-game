@@ -109,7 +109,7 @@ export default function VoteTimeProfileInsightCard({ accessToken, surveyDate, co
   if (err && !data) {
     return (
       <div className="rounded-2xl border border-red-500/30 bg-red-500/[0.07] px-4 py-3 text-sm text-red-300 fade-up-2">
-        인사이트 카드 로드 실패: {err}
+        아이템 카드 로드 실패: {err}
         <button type="button" onClick={() => void load()} className="block mt-2 text-xs underline">
           다시 시도
         </button>
@@ -184,7 +184,7 @@ export default function VoteTimeProfileInsightCard({ accessToken, surveyDate, co
         slug={slug as InsightProductSlug}
         headline={
           <>
-            <p className={`${ix.badge} font-black ${accentText} uppercase tracking-wide`}>토큰 인사이트</p>
+            <p className={`${ix.badge} font-black ${accentText} uppercase tracking-wide`}>아이템</p>
             <p className={`${ix.titleClass} text-white mt-0.5`}>{data.title ?? (cohort === "expert" ? "정답자 투표 시간" : "오답자 투표 시간")}</p>
             <p className={`${ix.subDate} text-gray-600 mt-0.5`}>{data.survey_date}</p>
           </>

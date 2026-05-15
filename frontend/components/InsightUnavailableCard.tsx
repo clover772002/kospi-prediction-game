@@ -63,7 +63,7 @@ export default function InsightUnavailableCard({
         headline={
           <>
             <p className={`iu-badge ${badge} font-black uppercase tracking-wide`}>
-              토큰 인사이트{badgeExtra ? ` ${badgeExtra}` : ""}
+              아이템{badgeExtra ? ` ${badgeExtra}` : ""}
             </p>
             <p className={`${titleClass} text-white mt-0.5`}>{title}</p>
             <p className={`${subDate} text-gray-600 mt-0.5 tabular-nums`}>

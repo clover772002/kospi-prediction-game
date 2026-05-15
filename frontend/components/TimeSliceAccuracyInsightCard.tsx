@@ -94,7 +94,7 @@ export default function TimeSliceAccuracyInsightCard({ accessToken, surveyDate, 
   if (err && !data) {
     return (
       <div className="rounded-2xl border border-red-500/30 bg-red-500/[0.07] px-4 py-3 text-sm text-red-300 fade-up-2">
-        인사이트 카드 로드 실패: {err}
+        아이템 카드 로드 실패: {err}
         <button type="button" onClick={() => void load()} className="block mt-2 text-xs underline">
           다시 시도
         </button>
@@ -145,7 +145,7 @@ export default function TimeSliceAccuracyInsightCard({ accessToken, surveyDate, 
         slug="time_slice_accuracy"
         headline={
           <>
-            <p className={`${d.badge} font-black text-amber-300 uppercase tracking-wide`}>토큰 인사이트</p>
+            <p className={`${d.badge} font-black text-amber-300 uppercase tracking-wide`}>아이템</p>
             <p className={`${d.titleClass} text-white mt-0.5`}>{data.title ?? "최고 고수 최근 7일 응답 시간"}</p>
             <p className={`${d.subDate} text-gray-600 mt-0.5`}>{data.survey_date}</p>
           </>

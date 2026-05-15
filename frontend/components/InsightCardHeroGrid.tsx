@@ -5,7 +5,7 @@ import type { InsightProductSlug } from "@/lib/insight_card_meta";
 import InsightAnimatedPreview from "@/components/InsightAnimatedPreview";
 
 /**
- * 대시보드 토큰 인사이트 카드: 좌측 제목·토큰은 세로 중앙 묶음, 우측은 낮은 hero 차트(높이 압축). 인라인 블록 min-height는 이전 대비 약 1/3 수준.
+ * 대시보드 아이템(집계 열람) 카드: 좌측 제목·토큰은 세로 중앙 묶음, 우측은 낮은 hero 차트(높이 압축). 인라인 블록 min-height는 이전 대비 약 1/3 수준.
  */
 export default function InsightCardHeroGrid({
   slug,

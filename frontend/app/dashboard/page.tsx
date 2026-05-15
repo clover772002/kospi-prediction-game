@@ -1401,7 +1401,7 @@ export default function DashboardPage() {
           );
         })()}
 
-        {/* ── 토큰 인사이트 · 잠금 해제 후 깊게 보기 ── */}
+        {/* ── 아이템 섹션 · 잠금 해제 후 열람 ── */}
         {token && (
           <Suspense fallback={<DashboardInsightSectionSkeleton />}>
             <DashboardInsightSection

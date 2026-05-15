@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""설문 규칙 변경용 소모품(토큰 결제 후 grant·환급·예약 등)."""
+"""설문 규칙 변경용 소모품(토큰 결제 후 grant·환급 등)."""
 
 CONSUMABLE_PRODUCTS = {
     "vote_redo_once": {
@@ -7,39 +7,31 @@ CONSUMABLE_PRODUCTS = {
         "category": "item",
         "price_tokens": 50,
         "description": (
-            "해당 거래일 설문에 이미 응답한 뒤, 답을 한 번 더 바꿀 수 있는 권한입니다. "
+            "오늘의 설문(당일 거래일 픽)에 이미 응답한 뒤, 답을 한 번 더 바꿀 수 있는 권한입니다. "
+            "다른 날짜를 지정할 수 없으며 구매 시 자동으로 오늘 설문에만 붙습니다. "
             "구매 후 설문 화면에서 다시 제출하면 소비됩니다. 매매·투자 조언이 아닙니다."
         ),
-        "requires_survey_date": True,
+        "requires_survey_date": False,
     },
     "gauge_adjust_keep_direction_once": {
         "title": "게이지만 1회 조정 (방향 유지)",
         "category": "item",
         "price_tokens": 30,
         "description": (
-            "이미 제출한 답변의 방향(상승·하락)은 그대로 두고, 확신 슬라이더(게이지) 값만 한 번 수정합니다."
+            "오늘의 설문(당일 거래일 픽)에 이미 응답한 뒤, 방향은 유지하고 확신 슬라이더(게이지)만 한 번 수정합니다. "
+            "날짜를 지정할 수 없으며 구매 시 당일 설문에만 붙습니다."
         ),
-        "requires_survey_date": True,
+        "requires_survey_date": False,
     },
     "direction_flip_keep_magnitude_once": {
         "title": "방향만 반전 (확신 강도 유지)",
         "category": "item",
         "price_tokens": 30,
         "description": (
-            "확신 강도(절대값)는 유지하고 상승·하락만 한 번 바꿉니다. 게이지 부호만 반전됩니다."
+            "오늘의 설문(당일 픽)에 이미 제출한 답에 한해, 확신 강도(절댓값)는 두고 상승·하락만 한 번 바꿉니다. "
+            "날짜 지정 불가이며 자동으로 당일 설문에만 적용됩니다."
         ),
-        "requires_survey_date": True,
-    },
-    "survey_vote_presubmit_once": {
-        "title": "예약 답변 1건",
-        "category": "item",
-        "price_tokens": 40,
-        "description": (
-            "지정한 거래일 설문에, 나중에 앱 접속 없이 적용되는 답변을 하나 예약합니다. "
-            "(해당 일 설문이 열려 있고 아직 미응답일 때 서버가 반영. 설문 페이지를 열면 자동 시도합니다.)"
-        ),
-        "requires_survey_date": True,
-        "requires_gauge_payload": True,
+        "requires_survey_date": False,
     },
     "streak_protect_next_miss": {
         "title": "연승 카운트 보호",

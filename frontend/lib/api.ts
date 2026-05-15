@@ -16,7 +16,7 @@ export function resolveApiBase(): string {
   return RAILWAY_URL;
 }
 
-/** 인사이트 GET이 캐시돼 예전 UI·옛 reason이 남지 않도록 */
+/** 아이템 GET이 캐시돼 예전 UI·옛 reason이 남지 않도록 */
 const insightFetchInit: RequestInit = { cache: "no-store" };
 
 async function authFetch<T>(path: string, token: string, options: RequestInit = {}): Promise<T> {
@@ -282,7 +282,7 @@ export async function requestRematch(
   return authFetch(`/api/challenges/${challenge_id}/rematch`, token, { method: "POST" });
 }
 
-// ─── 상점 · 인사이트 (토큰/결제 플랜) ────────────────────────
+// ─── 상점 · 아이템 (토큰/결제 플랜) ────────────────────────
 
 export interface ExpertGapInsightResponse {
   accessible: boolean;
@@ -328,7 +328,7 @@ export async function getExpertGapInsight(accessToken: string, surveyDate: strin
     const detail =
       typeof raw.detail === "string"
         ? raw.detail
-        : "인사이트를 불러오지 못했습니다.";
+        : "아이템을 불러오지 못했습니다.";
     throw new Error(detail);
   }
   return res.json();
@@ -389,7 +389,7 @@ export async function getCrowdConvictionInsight(
     const detail =
       typeof raw.detail === "string"
         ? raw.detail
-        : "인사이트를 불러오지 못했습니다.";
+        : "아이템을 불러오지 못했습니다.";
     throw new Error(detail);
   }
   return res.json();
@@ -431,7 +431,7 @@ export async function getRollingCrowdInsight(
   if (!res.ok) {
     const raw = await res.json().catch(() => ({}));
     throw new Error(
-      typeof raw.detail === "string" ? raw.detail : "인사이트를 불러오지 못했습니다.",
+      typeof raw.detail === "string" ? raw.detail : "아이템을 불러오지 못했습니다.",
     );
   }
   return res.json();
@@ -479,7 +479,7 @@ export async function getTimeSliceAccuracyInsight(
   if (!res.ok) {
     const raw = await res.json().catch(() => ({}));
     throw new Error(
-      typeof raw.detail === "string" ? raw.detail : "인사이트를 불러오지 못했습니다.",
+      typeof raw.detail === "string" ? raw.detail : "아이템을 불러오지 못했습니다.",
     );
   }
   return res.json();
@@ -525,7 +525,7 @@ export async function getExpertVoteTimeProfileInsight(
   if (!res.ok) {
     const raw = await res.json().catch(() => ({}));
     throw new Error(
-      typeof raw.detail === "string" ? raw.detail : "인사이트를 불러오지 못했습니다.",
+      typeof raw.detail === "string" ? raw.detail : "아이템을 불러오지 못했습니다.",
     );
   }
   return res.json();
@@ -542,7 +542,7 @@ export async function getNoviceVoteTimeProfileInsight(
   if (!res.ok) {
     const raw = await res.json().catch(() => ({}));
     throw new Error(
-      typeof raw.detail === "string" ? raw.detail : "인사이트를 불러오지 못했습니다.",
+      typeof raw.detail === "string" ? raw.detail : "아이템을 불러오지 못했습니다.",
     );
   }
   return res.json();
@@ -586,7 +586,7 @@ export async function getExpertLeaderPickInsight(
   if (!res.ok) {
     const raw = await res.json().catch(() => ({}));
     throw new Error(
-      typeof raw.detail === "string" ? raw.detail : "인사이트를 불러오지 못했습니다.",
+      typeof raw.detail === "string" ? raw.detail : "아이템을 불러오지 못했습니다.",
     );
   }
   return res.json();
@@ -603,7 +603,7 @@ export async function getNoviceLeaderPickInsight(
   if (!res.ok) {
     const raw = await res.json().catch(() => ({}));
     throw new Error(
-      typeof raw.detail === "string" ? raw.detail : "인사이트를 불러오지 못했습니다.",
+      typeof raw.detail === "string" ? raw.detail : "아이템을 불러오지 못했습니다.",
     );
   }
   return res.json();

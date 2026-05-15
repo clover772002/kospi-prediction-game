@@ -297,14 +297,6 @@ function SurveyPageInner() {
         setToken(session.access_token);
         loadToday();
         void (async () => {
-          try {
-            await fetch(`/api/survey/sync-presubmit`, {
-              method: "POST",
-              headers: { Authorization: `Bearer ${session.access_token}` },
-            });
-          } catch {
-            /* noop */
-          }
           await checkMyResponse(session.access_token);
           fetch(`${resolveApiBase()}/api/dashboard`, {
             headers: { Authorization: `Bearer ${session.access_token}` },
@@ -509,7 +501,7 @@ function SurveyPageInner() {
                 </div>
                 <div className="rounded-xl border border-amber-500/25 bg-black/20 px-3 py-2 space-y-2 text-center">
                   <p className="text-[11px] text-gray-400 leading-relaxed">
-                    이 거래일 응답은 1회 확정 후 바로 수정할 수 없어요. 상점의 재투표·게이지·방향 아이템을 확인해 주세요.
+                    이 거래일 응답은 1회 확정 후 바로 수정할 수 없어요. 「재투표」「게이지 조정」「방향 반전」아이템은 모두 오늘의 장 설문(당일 픽)에만 해당합니다. 미리 참여 중인 다른 거래일 픽은 이 아이템으로 수정할 수 없습니다.
                   </p>
                   <Link href="/shop" className="text-[11px] font-bold text-amber-400 hover:text-amber-200 underline underline-offset-2">
                     상점 이동
@@ -596,7 +588,7 @@ function SurveyPageInner() {
               />
               <div className="rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 space-y-2">
                 <p className="text-[11px] text-gray-400 leading-relaxed">
-                  같은 거래일에는 첫 전송 후 바로 수정할 수 없습니다. 상점에서 「재투표 1회」를 구매한 뒤 다시 제출하거나, 「게이지만 조정」「방향만 반전」 아이템을 활용할 수 있습니다.
+                  같은 거래일에는 첫 전송 후 바로 수정할 수 없습니다. 「재투표 1회」「게이지만 조정」「방향만 반전」은 모두 당일 오늘 설문에만 적용되며(날짜 지정 불가) 상점 구매 시 자동으로 오늘 픽에만 붙습니다.
                 </p>
                 <Link
                   href="/shop"
@@ -850,7 +842,7 @@ function SurveyPageInner() {
                     </div>
                     <div className="rounded-xl border border-amber-500/25 bg-black/20 px-3 py-2 space-y-2 text-center">
                       <p className="text-[11px] text-gray-400 leading-relaxed">
-                        이 거래일 응답은 1회 확정 후 바로 수정할 수 없어요. 상점의 재투표·게이지·방향 아이템을 확인해 주세요.
+                        이 거래일 응답은 1회 확정 후 바로 수정할 수 없어요. 「재투표」「게이지 조정」「방향 반전」아이템은 모두 오늘의 장 설문(당일 픽)에만 해당합니다. 미리 참여 중인 다른 거래일 픽은 이 아이템으로 수정할 수 없습니다.
                       </p>
                       <Link href="/shop" className="text-[11px] font-bold text-amber-400 hover:text-amber-200 underline underline-offset-2">
                         상점 이동
