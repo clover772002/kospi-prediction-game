@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import { getToday, resolveApiBase, TodaySurvey } from "@/lib/api";
+import { formatApiErrorMessage } from "@/lib/format-api-error";
 import FlipClock from "@/components/FlipClock";
 import KospiChart from "@/components/KospiChart";
 import GaugeBar from "@/components/GaugeBar";
@@ -337,14 +338,8 @@ function SurveyPageInner() {
         body: JSON.stringify({ kospi_answer: kospiAnswer, gauge_position: gaugePosition }),
       });
       if (!res.ok) {
-        const raw = await res.json().catch(() => ({}));
-        const detail =
-          typeof raw.detail === "string"
-            ? raw.detail
-            : Array.isArray(raw.detail) && raw.detail[0]?.msg
-              ? String(raw.detail[0].msg)
-              : "오류가 발생했습니다.";
-        throw new Error(detail);
+        const text = await res.text();
+        throw new Error(formatApiErrorMessage(res.status, text));
       }
       setSubmitted(true);
       setAlreadyAnswered(true);
@@ -372,8 +367,8 @@ function SurveyPageInner() {
         body: JSON.stringify({ kospi_answer: nextKospiAnswer, gauge_position: nextGaugePosition, survey_date: nextSurvey.survey_date }),
       });
       if (!res.ok) {
-        const raw = await res.json().catch(() => ({}));
-        throw new Error(typeof raw.detail === "string" ? raw.detail : "오류가 발생했습니다.");
+        const text = await res.text();
+        throw new Error(formatApiErrorMessage(res.status, text));
       }
       setNextSubmitted(true);
       setNextAlreadyAnswered(true);

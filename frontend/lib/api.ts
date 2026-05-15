@@ -1,4 +1,5 @@
 import { backendOriginFromEnv } from "./backend-origin";
+import { formatApiErrorMessage } from "./format-api-error";
 
 /**
  * 백엔드 요청 베이스 URL.
@@ -24,17 +25,24 @@ async function authFetch<T>(path: string, token: string, options: RequestInit = 
       ...(options.headers || {}),
     },
   });
+  const text = await res.text();
   if (!res.ok) {
-    const raw = await res.json().catch(() => ({}));
-    const detail =
-      typeof raw.detail === "string"
-        ? raw.detail
-        : Array.isArray(raw.detail) && raw.detail[0]?.msg
-          ? String(raw.detail[0].msg)
-          : "오류가 발생했습니다.";
-    throw new Error(detail);
+    throw new Error(formatApiErrorMessage(res.status, text));
   }
-  return res.json();
+  try {
+    return text ? (JSON.parse(text) as T) : ({} as T);
+  } catch {
+    throw new Error("서버 응답 형식 오류(JSON 아님)");
+  }
+}
+
+function jsonFromOkResponse(res: Response, text: string, parseFailMsg: string): unknown {
+  if (!res.ok) throw new Error(formatApiErrorMessage(res.status, text));
+  try {
+    return JSON.parse(text);
+  } catch {
+    throw new Error(parseFailMsg);
+  }
 }
 
 // ─── 타입 ────────────────────────────────────────────────────
@@ -160,8 +168,13 @@ export async function getMe(token: string): Promise<UserProfile> {
 
 export async function getToday(): Promise<TodaySurvey> {
   const res = await fetch(`${resolveApiBase()}/api/today`);
-  if (!res.ok) throw new Error("오늘 데이터 조회 실패");
-  return res.json();
+  const text = await res.text();
+  if (!res.ok) throw new Error(formatApiErrorMessage(res.status, text));
+  try {
+    return JSON.parse(text) as TodaySurvey;
+  } catch {
+    throw new Error("오늘 데이터 응답 형식 오류");
+  }
 }
 
 export async function getDashboard(token: string): Promise<DashboardData> {
@@ -174,9 +187,14 @@ export async function unlinkTelegram(token: string): Promise<void> {
 
 export async function getVapidPublicKey(): Promise<string> {
   const res = await fetch(`${resolveApiBase()}/api/vapid-public-key`);
-  if (!res.ok) throw new Error("VAPID 키 조회 실패");
-  const data = await res.json();
-  return data.public_key;
+  const text = await res.text();
+  if (!res.ok) throw new Error(formatApiErrorMessage(res.status, text));
+  try {
+    const data = JSON.parse(text) as { public_key?: string };
+    return data.public_key ?? "";
+  } catch {
+    throw new Error("VAPID 키 응답 형식 오류");
+  }
 }
 
 export async function savePushSubscription(token: string, subscription: PushSubscriptionJSON): Promise<void> {
@@ -319,15 +337,8 @@ export async function getExpertGapInsight(accessToken: string, surveyDate: strin
       headers: { Authorization: `Bearer ${accessToken}` },
     },
   );
-  if (!res.ok) {
-    const raw = await res.json().catch(() => ({}));
-    const detail =
-      typeof raw.detail === "string"
-        ? raw.detail
-        : "아이템을 불러오지 못했습니다.";
-    throw new Error(detail);
-  }
-  return res.json();
+  const text = await res.text();
+  return jsonFromOkResponse(res, text, "아이템 응답 형식 오류") as ExpertGapInsightResponse;
 }
 
 export interface CrowdConvictionInsightResponse {
@@ -380,15 +391,8 @@ export async function getCrowdConvictionInsight(
     `${resolveApiBase()}/api/insights/crowd-conviction-spread?survey_date=${encodeURIComponent(surveyDate)}`,
     { headers: { Authorization: `Bearer ${accessToken}` } },
   );
-  if (!res.ok) {
-    const raw = await res.json().catch(() => ({}));
-    const detail =
-      typeof raw.detail === "string"
-        ? raw.detail
-        : "아이템을 불러오지 못했습니다.";
-    throw new Error(detail);
-  }
-  return res.json();
+  const text = await res.text();
+  return jsonFromOkResponse(res, text, "아이템 응답 형식 오류") as CrowdConvictionInsightResponse;
 }
 
 export interface RollingCrowdInsightResponse {
@@ -424,13 +428,8 @@ export async function getRollingCrowdInsight(
     `${resolveApiBase()}/api/insights/rolling-crowd-summary?survey_date=${encodeURIComponent(surveyDateAsEndDate)}`,
     { ...insightFetchInit, headers: { Authorization: `Bearer ${accessToken}` } },
   );
-  if (!res.ok) {
-    const raw = await res.json().catch(() => ({}));
-    throw new Error(
-      typeof raw.detail === "string" ? raw.detail : "아이템을 불러오지 못했습니다.",
-    );
-  }
-  return res.json();
+  const text = await res.text();
+  return jsonFromOkResponse(res, text, "아이템 응답 형식 오류") as RollingCrowdInsightResponse;
 }
 
 export interface TimeSliceAccuracyInsightResponse {
@@ -472,13 +471,8 @@ export async function getTimeSliceAccuracyInsight(
     `${resolveApiBase()}/api/insights/time-slice-accuracy?survey_date=${encodeURIComponent(surveyDate)}`,
     { ...insightFetchInit, headers: { Authorization: `Bearer ${accessToken}` } },
   );
-  if (!res.ok) {
-    const raw = await res.json().catch(() => ({}));
-    throw new Error(
-      typeof raw.detail === "string" ? raw.detail : "아이템을 불러오지 못했습니다.",
-    );
-  }
-  return res.json();
+  const text = await res.text();
+  return jsonFromOkResponse(res, text, "아이템 응답 형식 오류") as TimeSliceAccuracyInsightResponse;
 }
 
 export interface VoteTimeProfileInsightResponse {
@@ -518,13 +512,8 @@ export async function getExpertVoteTimeProfileInsight(
     `${resolveApiBase()}/api/insights/expert-vote-time-profile?survey_date=${encodeURIComponent(surveyDate)}`,
     { ...insightFetchInit, headers: { Authorization: `Bearer ${accessToken}` } },
   );
-  if (!res.ok) {
-    const raw = await res.json().catch(() => ({}));
-    throw new Error(
-      typeof raw.detail === "string" ? raw.detail : "아이템을 불러오지 못했습니다.",
-    );
-  }
-  return res.json();
+  const text = await res.text();
+  return jsonFromOkResponse(res, text, "아이템 응답 형식 오류") as VoteTimeProfileInsightResponse;
 }
 
 export async function getNoviceVoteTimeProfileInsight(
@@ -535,13 +524,8 @@ export async function getNoviceVoteTimeProfileInsight(
     `${resolveApiBase()}/api/insights/novice-vote-time-profile?survey_date=${encodeURIComponent(surveyDate)}`,
     { ...insightFetchInit, headers: { Authorization: `Bearer ${accessToken}` } },
   );
-  if (!res.ok) {
-    const raw = await res.json().catch(() => ({}));
-    throw new Error(
-      typeof raw.detail === "string" ? raw.detail : "아이템을 불러오지 못했습니다.",
-    );
-  }
-  return res.json();
+  const text = await res.text();
+  return jsonFromOkResponse(res, text, "아이템 응답 형식 오류") as VoteTimeProfileInsightResponse;
 }
 
 export interface LeaderPickInsightResponse {
@@ -579,13 +563,8 @@ export async function getExpertLeaderPickInsight(
     `${resolveApiBase()}/api/insights/expert-leader-pick?survey_date=${encodeURIComponent(surveyDate)}`,
     { ...insightFetchInit, headers: { Authorization: `Bearer ${accessToken}` } },
   );
-  if (!res.ok) {
-    const raw = await res.json().catch(() => ({}));
-    throw new Error(
-      typeof raw.detail === "string" ? raw.detail : "아이템을 불러오지 못했습니다.",
-    );
-  }
-  return res.json();
+  const text = await res.text();
+  return jsonFromOkResponse(res, text, "아이템 응답 형식 오류") as LeaderPickInsightResponse;
 }
 
 export async function getNoviceLeaderPickInsight(
@@ -596,13 +575,8 @@ export async function getNoviceLeaderPickInsight(
     `${resolveApiBase()}/api/insights/novice-leader-pick?survey_date=${encodeURIComponent(surveyDate)}`,
     { ...insightFetchInit, headers: { Authorization: `Bearer ${accessToken}` } },
   );
-  if (!res.ok) {
-    const raw = await res.json().catch(() => ({}));
-    throw new Error(
-      typeof raw.detail === "string" ? raw.detail : "아이템을 불러오지 못했습니다.",
-    );
-  }
-  return res.json();
+  const text = await res.text();
+  return jsonFromOkResponse(res, text, "아이템 응답 형식 오류") as LeaderPickInsightResponse;
 }
 
 export async function unlockInsightProduct(
@@ -617,9 +591,15 @@ export async function unlockInsightProduct(
     },
     body: JSON.stringify(body),
   });
+  const text = await res.text();
+  let parsed: Record<string, unknown> = {};
+  try {
+    parsed = text ? (JSON.parse(text) as Record<string, unknown>) : {};
+  } catch {
+    parsed = {};
+  }
+  const d = parsed.detail;
   if (res.status === 402) {
-    const raw = await res.json().catch(() => ({}));
-    const d = raw.detail;
     throw new InsightInsufficientTokensError(
       typeof d === "object" && d !== null && !Array.isArray(d)
         ? (d as { error?: string; required?: number; balance?: number })
@@ -627,10 +607,9 @@ export async function unlockInsightProduct(
     );
   }
   if (!res.ok) {
-    const raw = await res.json().catch(() => ({}));
-    throw new Error(typeof raw.detail === "string" ? raw.detail : "잠금 해제에 실패했습니다.");
+    throw new Error(formatApiErrorMessage(res.status, text));
   }
-  return res.json();
+  return parsed as { ok: boolean; balance?: number; spent?: number; already_unlocked?: boolean };
 }
 
 export interface ShopConsumableProduct {
@@ -678,8 +657,14 @@ export async function purchaseConsumable(
       idempotency_key: body.idempotency_key,
     }),
   });
-  const raw = await res.json().catch(() => ({}));
-  const d = raw.detail;
+  const text = await res.text();
+  let parsed: Record<string, unknown> = {};
+  try {
+    parsed = text ? (JSON.parse(text) as Record<string, unknown>) : {};
+  } catch {
+    parsed = {};
+  }
+  const d = parsed.detail;
   if (res.status === 402) {
     const obj = typeof d === "object" && d !== null && !Array.isArray(d) ? (d as Record<string, unknown>) : {};
     throw new InsightInsufficientTokensError({
@@ -688,15 +673,9 @@ export async function purchaseConsumable(
     });
   }
   if (!res.ok) {
-    throw new Error(
-      typeof d === "string"
-        ? d
-        : typeof d === "object" && d !== null && "message" in d
-          ? String((d as { message?: unknown }).message)
-          : "구매 처리에 실패했습니다.",
-    );
+    throw new Error(formatApiErrorMessage(res.status, text));
   }
-  return raw as Record<string, unknown>;
+  return parsed;
 }
 
 export async function createStripePackCheckout(accessToken: string, packSlug: string): Promise<{ url: string }> {
