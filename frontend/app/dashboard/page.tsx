@@ -10,6 +10,34 @@ import AppAmbientBackground from "@/components/AppAmbientBackground";
 import AppTabNav from "@/components/AppTabNav";
 import DashboardInsightSection, { DashboardInsightSectionSkeleton } from "@/components/DashboardInsightSection";
 
+type DashboardHist = DashboardData["history"][number];
+
+/** daily_surveys.kospi_result가 비어 있어도 accuracy_records가 있으면 맞춤/틀림 표시 */
+function userPickVerdictFromTodayAndHistory(
+  today: TodaySurvey | null | undefined,
+  entry: DashboardHist | undefined,
+): boolean | null {
+  if (!entry) return null;
+  const kr = today?.kospi_result;
+  if (typeof kr === "boolean") return entry.kospi_answer === kr;
+  const hc = entry.kospi_correct;
+  if (typeof hc === "boolean") return hc;
+  return null;
+}
+
+/** 집단용: 일간 행 또는 내 이력으로 실제 등락 방향 복구(기록 불일치 대비) */
+function resolvedMarketDirection(
+  today: TodaySurvey | null | undefined,
+  entry: DashboardHist | undefined,
+): boolean | null {
+  const kr = today?.kospi_result;
+  if (typeof kr === "boolean") return kr;
+  if (!entry) return null;
+  const hc = entry.kospi_correct;
+  if (typeof hc !== "boolean") return null;
+  return hc ? entry.kospi_answer : !entry.kospi_answer;
+}
+
 // 연속 적중 스트릭 계산
 function calcStreak(history: DashboardData["history"]): number {
   const withResult = [...history].filter((h) => h.kospi_correct !== null);
@@ -376,9 +404,9 @@ export default function DashboardPage() {
 
   // 오늘 결과 공유용 데이터
   const todayEntry = dash?.history?.find((h) => h.date === today?.survey_date);
-  const isCorrectToday = todayEntry && today?.kospi_result != null
-    ? todayEntry.kospi_answer === today.kospi_result
-    : null;
+  const isCorrectToday =
+    todayEntry !== undefined ? userPickVerdictFromTodayAndHistory(today, todayEntry) : null;
+  const resolvedMarketFromMe = resolvedMarketDirection(today, todayEntry);
 
   const handleCloseResultCard = () => {
     if (today?.survey_date) {
@@ -389,10 +417,15 @@ export default function DashboardPage() {
 
   const handleShareResult = () => {
     const streakText = streak > 1 ? ` 🔥${streak}연속 적중!` : "";
-    const resultText = isCorrectToday ? "✅ 오늘 맞췄어요!" : "❌ 오늘 틀렸어요";
-    const kospiText = today?.kospi_result
-      ? `코스피 📈 상승 ${today?.kospi_change_pct != null ? `+${today.kospi_change_pct.toFixed(2)}%` : ""}`
-      : `코스피 📉 하락 ${today?.kospi_change_pct != null ? `${today.kospi_change_pct.toFixed(2)}%` : ""}`;
+    const verdict = userPickVerdictFromTodayAndHistory(today, todayEntry ?? undefined);
+    const resultText = verdict === null ? "" : verdict ? "✅ 오늘 맞췄어요!" : "❌ 오늘 틀렸어요";
+    const dir = resolvedMarketDirection(today, todayEntry ?? undefined);
+    const kospiText =
+      typeof dir === "boolean"
+        ? dir
+          ? `코스피 📈 상승 ${today?.kospi_change_pct != null ? `+${today.kospi_change_pct.toFixed(2)}%` : ""}`
+          : `코스피 📉 하락 ${today?.kospi_change_pct != null ? `${today.kospi_change_pct.toFixed(2)}%` : ""}`
+        : "코스피 결과 처리 중…";
     const accuracyText = dash?.accuracy?.kospi != null ? ` (내 적중률 ${dash.accuracy.kospi}%)` : "";
     const shareText = `${resultText}${streakText}\n${kospiText}${accuracyText}\n\n코스피 예측에 참여해봐요 👉`;
     const shareUrl = typeof window !== "undefined" ? window.location.origin : "";
@@ -438,30 +471,72 @@ export default function DashboardPage() {
 
             <div className="px-5 pb-5 space-y-3">
               {/* KOSPI 결과 */}
-              <div className={`rounded-2xl px-5 py-4 flex items-center justify-between ${today.kospi_result ? "bg-green-500/10 border border-green-500/25" : "bg-red-500/10 border border-red-500/25"}`}>
+              <div
+                className={`rounded-2xl px-5 py-4 flex items-center justify-between border ${
+                  resolvedMarketFromMe === null
+                    ? "bg-gray-500/10 border-gray-500/25"
+                    : resolvedMarketFromMe
+                      ? "bg-green-500/10 border-green-500/25"
+                      : "bg-red-500/10 border-red-500/25"
+                }`}
+              >
                 <div>
                   <p className="text-[11px] text-gray-500 mb-1">KOSPI 오늘 결과</p>
-                  <p className={`text-3xl font-black tracking-tight ${today.kospi_result ? "text-green-400" : "text-red-400"}`}>
-                    {today.kospi_result ? "상승" : "하락"}&nbsp;
-                    {today.kospi_change_pct != null
+                  <p
+                    className={`text-3xl font-black tracking-tight ${
+                      resolvedMarketFromMe === null
+                        ? "text-gray-400"
+                        : resolvedMarketFromMe
+                          ? "text-green-400"
+                          : "text-red-400"
+                    }`}
+                  >
+                    {resolvedMarketFromMe === null
+                      ? "확인 중"
+                      : resolvedMarketFromMe
+                        ? "상승"
+                        : "하락"}
+                    &nbsp;
+                    {today.kospi_change_pct != null && resolvedMarketFromMe !== null
                       ? `${today.kospi_change_pct >= 0 ? "+" : ""}${today.kospi_change_pct.toFixed(2)}%`
                       : ""}
                   </p>
                 </div>
-                <span className={`text-4xl font-black ${today.kospi_result ? "text-green-400" : "text-red-400"}`}>
-                  {today.kospi_result ? "▲" : "▼"}
+                <span
+                  className={`text-4xl font-black ${
+                    resolvedMarketFromMe === null
+                      ? "text-gray-500"
+                      : resolvedMarketFromMe
+                        ? "text-green-400"
+                        : "text-red-400"
+                  }`}
+                >
+                  {resolvedMarketFromMe === null ? "—" : resolvedMarketFromMe ? "▲" : "▼"}
                 </span>
               </div>
 
               {/* 내 예측 */}
-              <div className={`rounded-2xl px-4 py-3 flex items-center gap-4 ${isCorrectToday ? "bg-green-500/8 border border-green-500/20" : "bg-red-500/8 border border-red-500/20"}`}>
-                <div className={`w-10 h-10 rounded-full flex items-center justify-center font-black text-lg flex-shrink-0 text-white ${isCorrectToday ? "bg-green-500" : "bg-red-500"}`}>
-                  {isCorrectToday ? "O" : "X"}
+              <div
+                className={`rounded-2xl px-4 py-3 flex items-center gap-4 border ${
+                  isCorrectToday === null
+                    ? "bg-[#1A1A1A]/80 border-gray-600/30"
+                    : isCorrectToday
+                      ? "bg-green-500/8 border border-green-500/20"
+                      : "bg-red-500/8 border border-red-500/20"
+                }`}
+              >
+                <div
+                  className={`w-10 h-10 rounded-full flex items-center justify-center font-black text-lg flex-shrink-0 text-white ${
+                    isCorrectToday === null ? "bg-gray-600" : isCorrectToday ? "bg-green-500" : "bg-red-500"
+                  }`}
+                >
+                  {isCorrectToday === null ? "?" : isCorrectToday ? "O" : "X"}
                 </div>
                 <div>
                   <p className="text-[11px] text-gray-500">내 예측</p>
                   <p className="text-base font-black text-white">
-                    {todayEntry?.kospi_answer ? "상승" : "하락"} 예측 · {isCorrectToday ? "정답!" : "오답"}
+                    {todayEntry?.kospi_answer ? "상승" : "하락"} 예측 ·{" "}
+                    {isCorrectToday === null ? "판정 대기" : isCorrectToday ? "정답!" : "오답"}
                   </p>
                 </div>
               </div>
@@ -486,13 +561,16 @@ export default function DashboardPage() {
               <div className="pt-1 space-y-2">
                 {(() => {
                   const shareUrl = typeof window !== "undefined" ? window.location.origin : "https://kospi.vercel.app";
-                  const direction = today.kospi_result ? "상승" : "하락";
+                  const direction =
+                    typeof resolvedMarketFromMe === "boolean" ? (resolvedMarketFromMe ? "상승" : "하락") : "판정중";
                   const pctText = today.kospi_change_pct != null
                     ? ` ${today.kospi_change_pct >= 0 ? "+" : ""}${today.kospi_change_pct.toFixed(2)}%`
                     : "";
                   const streakText = streak > 1 ? ` | ${streak}일 연속 참여` : "";
                   const accuracyText = dash?.accuracy?.kospi != null ? ` | 적중률 ${dash.accuracy.kospi}%` : "";
-                  const shareText = `코스피 ${direction}${pctText} ${isCorrectToday ? "✅ 맞췄어요!" : "❌ 틀렸어요"}${streakText}${accuracyText}\n\n코스피 예측에 참여해봐요 👉`;
+                  const verdictLine =
+                    isCorrectToday === null ? "" : `${isCorrectToday ? " ✅ 맞췄어요!" : " ❌ 틀렸어요"}`;
+                  const shareText = `코스피 ${direction}${pctText}${verdictLine}${streakText}${accuracyText}\n\n코스피 예측에 참여해봐요 👉`;
                   return (
                     <ShareSheet
                       url={shareUrl}
@@ -671,6 +749,8 @@ export default function DashboardPage() {
 
           {(status === "open" || status === "closed" || status === "result") && !isWeekendKST && today && (() => {
             const myEntry = dash?.history?.find((h) => h.date === today.survey_date);
+            const myPickVerdict = userPickVerdictFromTodayAndHistory(today, myEntry);
+            const effectiveMarketDir = resolvedMarketDirection(today, myEntry);
             return (
               <>
               <div className="grid grid-cols-4 gap-1.5">
@@ -713,9 +793,11 @@ export default function DashboardPage() {
                         {myEntry.kospi_answer ? "📈상승" : "📉하락"}
                       </p>
                       <p className="text-[10px]">
-                        {today.kospi_result !== null
-                          ? myEntry.kospi_answer === today.kospi_result ? "✅맞음" : "❌틀림"
-                          : "대기중"}
+                        {myPickVerdict === null
+                          ? "대기중"
+                          : myPickVerdict
+                            ? "✅맞음"
+                            : "❌틀림"}
                       </p>
                     </>
                   ) : (
@@ -726,13 +808,15 @@ export default function DashboardPage() {
                 {/* 실적 */}
                 <div className="bg-[#111] border border-[#2A2A2A] rounded-xl py-3 px-1 flex flex-col items-center gap-1 text-center">
                   <p className="text-[10px] text-gray-500 leading-tight">실적</p>
-                  {today.kospi_result !== null && today.kospi_change_pct !== null ? (
+                  {effectiveMarketDir !== null ? (
                     <>
-                      <p className={`text-xs font-black ${today.kospi_result ? "text-green-400" : "text-red-400"}`}>
-                        {today.kospi_result ? "📈상승" : "📉하락"}
+                      <p className={`text-xs font-black ${effectiveMarketDir ? "text-green-400" : "text-red-400"}`}>
+                        {effectiveMarketDir ? "📈상승" : "📉하락"}
                       </p>
-                      <p className={`text-[10px] ${today.kospi_change_pct >= 0 ? "text-green-400/70" : "text-red-400/70"}`}>
-                        {today.kospi_change_pct >= 0 ? "+" : ""}{today.kospi_change_pct.toFixed(2)}%
+                      <p
+                        className={`text-[10px] ${today.kospi_change_pct == null ? "text-gray-500" : today.kospi_change_pct >= 0 ? "text-green-400/70" : "text-red-400/70"}`}
+                      >
+                        {today.kospi_change_pct == null ? "변동율 확인중" : `${today.kospi_change_pct >= 0 ? "+" : ""}${today.kospi_change_pct.toFixed(2)}%`}
                       </p>
                     </>
                   ) : (
@@ -1049,9 +1133,9 @@ export default function DashboardPage() {
                 <div className="divide-y divide-[#222]">
                   {sorted.slice(0, 5).map((p, i) => {
                     const isMe = i === myIdx;
-                    const result = today.kospi_result !== null
-                      ? (p.kospi_answer === today.kospi_result ? "✅" : "❌")
-                      : null;
+                    const mk = resolvedMarketDirection(today, todayEntry ?? undefined);
+                    const result =
+                      typeof mk === "boolean" ? (p.kospi_answer === mk ? "✅" : "❌") : null;
                     const alreadyChallenged = challenges
                       ? [...challenges.sent, ...challenges.received].some(
                           (c) => c.opponent_id === p.user_id
