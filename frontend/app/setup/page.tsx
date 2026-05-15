@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { getMe, unlinkTelegram, getVapidPublicKey, savePushSubscription, deletePushSubscription, savePushPreferences, createGroup, joinGroup, getMyGroups, leaveGroup, UserProfile, Group, PushPreferences } from "@/lib/api";
 import AppAmbientBackground from "@/components/AppAmbientBackground";
+import PageLoadProgress from "@/components/PageLoadProgress";
 import AppTabNav from "@/components/AppTabNav";
 
 const BOT_USERNAME = process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME || "Profitchat123bot";
@@ -195,14 +196,7 @@ export default function SetupPage() {
   };
 
   if (loading) {
-    return (
-      <main className="relative max-w-md mx-auto min-h-screen flex items-center justify-center">
-        <AppAmbientBackground />
-        <div className="relative z-10">
-        <div className="w-8 h-8 border-2 border-blue-500/30 border-t-blue-500 rounded-full animate-spin" />
-        </div>
-      </main>
-    );
+    return <PageLoadProgress label="설정 불러오는 중…" accent="blue" />;
   }
 
   return (

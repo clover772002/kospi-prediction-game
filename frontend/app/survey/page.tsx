@@ -10,6 +10,7 @@ import KospiChart from "@/components/KospiChart";
 import GaugeBar from "@/components/GaugeBar";
 import SurveyConfidencePlayground from "@/components/SurveyConfidencePlayground";
 import AppAmbientBackground from "@/components/AppAmbientBackground";
+import PageLoadProgress from "@/components/PageLoadProgress";
 import AppTabNav from "@/components/AppTabNav";
 
 interface KospiPrice {
@@ -393,14 +394,7 @@ function SurveyPageInner() {
   };
 
   if (loading) {
-    return (
-      <main className="relative flex min-h-screen w-full items-center justify-center">
-        <AppAmbientBackground />
-        <div className="relative z-10 flex flex-col items-center gap-2">
-          <div className="w-8 h-8 border-2 border-white/20 border-t-white rounded-full animate-spin" />
-        </div>
-      </main>
-    );
+    return <PageLoadProgress label="설문 불러오는 중…" accent="violet" />;
   }
 
   const status = today?.status ?? "no_survey";

@@ -7,6 +7,7 @@ import { supabase } from "@/lib/supabase";
 import { createStripePackCheckout, getShopCatalog, purchaseConsumable, ShopCatalog, ShopConsumableProduct } from "@/lib/api";
 import InsightAnimatedPreview from "@/components/InsightAnimatedPreview";
 import AppAmbientBackground from "@/components/AppAmbientBackground";
+import PageLoadProgress from "@/components/PageLoadProgress";
 import AppTabNav from "@/components/AppTabNav";
 import { isInsightProductSlug } from "@/lib/insight_card_meta";
 
@@ -148,15 +149,7 @@ function ShopInner() {
   };
 
   if (loading) {
-    return (
-      <main className="relative max-w-md mx-auto min-h-screen flex items-center justify-center">
-        <AppAmbientBackground />
-        <div className="relative z-10 flex flex-col items-center gap-4">
-          <div className="w-8 h-8 border-2 border-amber-500/30 border-t-amber-500 rounded-full animate-spin" />
-          <p className="text-xs text-gray-500">상점 불러오는 중…</p>
-        </div>
-      </main>
-    );
+    return <PageLoadProgress label="상점 불러오는 중…" accent="amber" />;
   }
 
   return (

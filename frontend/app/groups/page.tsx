@@ -10,6 +10,7 @@ import {
 import ShareSheet from "@/components/ShareSheet";
 import AppAmbientBackground from "@/components/AppAmbientBackground";
 import AppTabNav from "@/components/AppTabNav";
+import PageLoadProgress from "@/components/PageLoadProgress";
 
 export default function GroupsPage() {
   const router = useRouter();
@@ -114,14 +115,7 @@ export default function GroupsPage() {
 
   const medals = ["🥇", "🥈", "🥉"];
 
-  if (loading) return (
-    <main className="relative max-w-md mx-auto min-h-screen flex items-center justify-center">
-      <AppAmbientBackground />
-      <div className="relative z-10">
-      <div className="w-8 h-8 border-2 border-green-500/30 border-t-green-500 rounded-full animate-spin" />
-      </div>
-    </main>
-  );
+  if (loading) return <PageLoadProgress label="그룹 불러오는 중…" accent="green" />;
 
   return (
     <main className="relative max-w-md mx-auto min-h-screen pb-28 px-5 text-white">

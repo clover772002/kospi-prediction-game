@@ -9,6 +9,7 @@ import ShareSheet from "@/components/ShareSheet";
 import AppAmbientBackground from "@/components/AppAmbientBackground";
 import AppTabNav from "@/components/AppTabNav";
 import DashboardInsightSection, { DashboardInsightSectionSkeleton } from "@/components/DashboardInsightSection";
+import PageLoadProgress from "@/components/PageLoadProgress";
 
 type DashboardHist = DashboardData["history"][number];
 
@@ -334,16 +335,7 @@ export default function DashboardPage() {
   };
 
   if (loading) {
-    return (
-      <main className="relative max-w-md mx-auto min-h-screen flex items-center justify-center">
-        <AppAmbientBackground />
-        <div className="relative z-10 text-center space-y-3">
-          <div className="w-10 h-10 border-2 border-blue-500/30 border-t-blue-500 rounded-full animate-spin mx-auto" />
-          <p className="text-sm text-gray-400">데이터 불러오는 중...</p>
-          <p className="text-xs text-gray-600">10초 내로 자동 해결됩니다</p>
-        </div>
-      </main>
-    );
+    return <PageLoadProgress label="대시보드 불러오는 중…" accent="blue" />;
   }
 
   if (error) {
