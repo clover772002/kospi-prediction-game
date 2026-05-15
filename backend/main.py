@@ -1,6 +1,7 @@
 ﻿# -*- coding: utf-8 -*-
 import os
 import asyncio
+import threading
 import time
 import logging
 import math
@@ -557,6 +558,17 @@ def _calc_weighted_pct(responses_with_users: list, accuracy_map: dict, pred_coun
 
 _acc_cache: dict = {"map": {}, "count": {}, "ts": 0.0}
 _ACC_CACHE_TTL = 300  # 5분 캐시
+
+_settle_rlock_registry_guard = threading.Lock()
+_settle_rlocks_by_date: dict[str, threading.RLock] = {}
+
+
+def _settle_rlock_for(survey_date_str: str) -> threading.RLock:
+    """동일 설문일 정산은 한 번에 한 스레드만 (대시보드·잡 중복 호출 시 이중 지급 방지)."""
+    with _settle_rlock_registry_guard:
+        if survey_date_str not in _settle_rlocks_by_date:
+            _settle_rlocks_by_date[survey_date_str] = threading.RLock()
+        return _settle_rlocks_by_date[survey_date_str]
 
 
 def _get_accuracy_data(supabase: Client) -> tuple[dict, dict]:
@@ -1619,6 +1631,23 @@ def settle_kospi_survey_day(
 ) -> dict:
     """KOSPI 종가 확정 후 accuracy·유저 토큰·스트릭·survey_responses 배당 저장.
     Vercel/온디맨드가 accuracy만 넣었을 때 호출하면 토큰이 보강됨."""
+    with _settle_rlock_for(survey_date_str):
+        return _settle_kospi_survey_day_inner(
+            supabase, survey_date_str, is_up, change_pct,
+            update_daily_survey_row=update_daily_survey_row,
+        )
+
+
+def _settle_kospi_survey_day_inner(
+    supabase: Client,
+    survey_date_str: str,
+    is_up: bool,
+    change_pct: float | None,
+    *,
+    update_daily_survey_row: bool = True,
+) -> dict:
+    """KOSPI 종가 확정 후 accuracy·유저 토큰·스트릭·survey_responses 배당 저장.
+    Vercel/온디맨드가 accuracy만 넣었을 때 호출하면 토큰이 보강됨."""
     pct_out = round(float(change_pct), 2) if change_pct is not None else None
 
     responses = (
@@ -1666,7 +1695,7 @@ def settle_kospi_survey_day(
     crowd_dn = max(5, 100 - kospi_yes_pct)
 
     all_group_members = supabase.table("group_members").select("user_id").execute()
-    group_user_ids = {m["user_id"] for m in all_group_members.data}
+    group_user_ids = {m["user_id"] for m in (all_group_members.data or [])}
 
     game_overs = 0
     did_token_row = False
@@ -1740,7 +1769,7 @@ def settle_kospi_survey_day(
         supabase.table("survey_responses").update({
             "payout_multiplier": payout_mult,
             "tokens_won": won,
-        }).eq("user_id", uid).eq("survey_date", survey_date_str).execute()
+        }).eq("user_id", uid).eq("survey_date", survey_date_str).is_("tokens_won", "null").execute()
 
     if update_daily_survey_row or did_token_row:
         _acc_cache["map"] = {}
@@ -1775,14 +1804,34 @@ def ensure_kospi_tokens_settled_for_date(supabase: Client, survey_date_str: str)
     if not ds.data or ds.data.get("kospi_result") is None:
         return
 
+    # 정산 필요한 응답이 없으면 즉시 반환 — 매 요청마다 전 참가자 순회하면 타임아웃→Failed to fetch
+    try:
+        pending = (
+            supabase.table("survey_responses")
+            .select("user_id")
+            .eq("survey_date", survey_date_str)
+            .is_("tokens_won", "null")
+            .limit(1)
+            .execute()
+        )
+    except Exception as e:
+        logger.warning(f"survey_responses 정산 필요 여부 조회 실패: {e}")
+        return
+
+    if not pending.data:
+        return
+
     is_up = bool(ds.data["kospi_result"])
     raw_pct = ds.data.get("kospi_change_pct")
     pct = float(raw_pct) if raw_pct is not None else None
 
-    settle_kospi_survey_day(
-        supabase, survey_date_str, is_up, pct,
-        update_daily_survey_row=False,
-    )
+    try:
+        settle_kospi_survey_day(
+            supabase, survey_date_str, is_up, pct,
+            update_daily_survey_row=False,
+        )
+    except Exception as e:
+        logger.error(f"토큰 정산 보강 실패 ({survey_date_str}): {e}")
 
 
 async def _persist_kospi_survey_close_if_needed(supabase: Client, survey_date_str: str) -> bool:
@@ -2048,7 +2097,7 @@ async def get_today(supabase: Client = Depends(get_supabase)):
             survey_res = supabase.table("daily_surveys").select("*").eq("survey_date", today_str).execute()
             survey = survey_res.data[0]
 
-    ensure_kospi_tokens_settled_for_date(supabase, today_str)
+    # 토큰 정산은 /api/dashboard·job_15_35에서만 보강 (여기서까지 하면 대시보드와 병렬 호출 시 중복·타임아웃)
 
     responses = (
         supabase.table("survey_responses")

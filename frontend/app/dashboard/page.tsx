@@ -164,7 +164,8 @@ export default function DashboardPage() {
         const [profile, todayData, dashData, chResult, grpResult] = await Promise.all([
           withTimeout(getMe(accessToken)),
           withTimeout(getToday()),
-          withTimeout(getDashboard(accessToken)),
+          // 대시보드는 정산 보강 등으로 응답이 길어질 수 있어 상한만 길게 잡음
+          withTimeout(getDashboard(accessToken), 60000),
           withTimeout(getMyChallenges(accessToken)).catch(() => ({ sent: [] as Challenge[], received: [] as Challenge[] })),
           withTimeout(getMyGroups(accessToken)).catch(() => [] as Group[]),
         ]);
