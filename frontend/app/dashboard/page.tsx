@@ -3,7 +3,6 @@
 import { Suspense, useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
-import Link from "next/link";
 import { getMe, getToday, getDashboard, createChallenge, getMyChallenges, reactToChallenge, requestRematch, acceptChallenge, declineChallenge, getMyGroups, getGroupLeaderboard, UserProfile, TodaySurvey, DashboardData, Challenge, Group, GroupLeaderboard } from "@/lib/api";
 import ShareSheet from "@/components/ShareSheet";
 import AppAmbientBackground from "@/components/AppAmbientBackground";
@@ -113,13 +112,6 @@ function HistoryRow({ item }: { item: DashboardData["history"][0] }) {
         ) : (
           <span className="text-gray-600">대기중</span>
         )}
-        <Link
-          href="/dashboard"
-          prefetch={false}
-          className="text-[10px] font-bold text-violet-300 hover:text-violet-200 whitespace-nowrap underline underline-offset-2"
-        >
-          토큰 인사이트
-        </Link>
       </div>
     </div>
   );
@@ -566,7 +558,7 @@ export default function DashboardPage() {
                   </p>
                 </div>
                 <div className={`rounded-2xl px-4 py-3 ${streak > 1 ? "bg-orange-500/10 border border-orange-500/25" : "bg-[#1A1A1A] border border-[#2A2A2A]"}`}>
-                  <p className="text-[10px] text-gray-600 mb-1">연속 참여</p>
+                  <p className="text-[10px] text-gray-600 mb-1">연속 적중</p>
                   <p className={`text-2xl font-black ${streak > 1 ? "text-orange-400" : "text-white"}`}>
                     {streak > 1 ? `${streak}일` : "—"}
                   </p>
@@ -582,7 +574,7 @@ export default function DashboardPage() {
                   const pctText = today.kospi_change_pct != null
                     ? ` ${today.kospi_change_pct >= 0 ? "+" : ""}${today.kospi_change_pct.toFixed(2)}%`
                     : "";
-                  const streakText = streak > 1 ? ` | ${streak}일 연속 참여` : "";
+                  const streakText = streak > 1 ? ` | ${streak}일 연속 적중` : "";
                   const accuracyText = dash?.accuracy?.kospi != null ? ` | 적중률 ${dash.accuracy.kospi}%` : "";
                   const verdictLine =
                     isCorrectToday === null ? "" : `${isCorrectToday ? " ✅ 맞췄어요!" : " ❌ 틀렸어요"}`;
@@ -841,22 +833,46 @@ export default function DashboardPage() {
                 </div>
               </div>
 
-              {/* 📊 감성 줄다리기 바 */}
-              {today.kospi_yes_pct !== null && (
-                <div className="mt-3 space-y-1.5">
-                  <div className="flex justify-between text-[10px] font-bold">
-                    <span className="text-green-400">📈 {today.kospi_yes_pct}%</span>
-                    <span className="text-gray-500 text-[9px]">집단 예측</span>
-                    <span className="text-red-400">{100 - today.kospi_yes_pct}% 📉</span>
+              {/* 📊 집단 예측 VS (상승 vs 하락) */}
+              {today.kospi_yes_pct !== null && (() => {
+                const up = today.kospi_yes_pct;
+                const dn = Math.max(0, Math.min(100, 100 - up));
+                return (
+                  <div className="mt-4 space-y-2">
+                    <p className="text-center text-[11px] font-bold text-gray-400 tracking-wide">집단 예측</p>
+                    <div className="flex items-stretch gap-2 min-h-[100px]">
+                      <div
+                        className={`flex-1 flex flex-col items-center justify-center rounded-2xl border-2 px-2 py-3 ${
+                          up >= dn
+                            ? "border-green-500/50 bg-gradient-to-b from-green-500/15 to-green-900/10"
+                            : "border-green-600/25 bg-green-950/20"
+                        }`}
+                      >
+                        <span className="text-2xl mb-1">📈</span>
+                        <span className="text-[10px] font-black text-green-400/90 uppercase tracking-tighter">상승</span>
+                        <span className="text-2xl font-black text-green-400 tabular-nums leading-tight">{up}<span className="text-sm">%</span></span>
+                      </div>
+                      <div className="flex flex-col items-center justify-center px-1 shrink-0">
+                        <span className="text-lg font-black text-white/90 italic tracking-widest drop-shadow-[0_0_8px_rgba(255,255,255,0.15)]">
+                          VS
+                        </span>
+                        <span className="text-[9px] text-gray-600 mt-0.5 whitespace-nowrap">대결</span>
+                      </div>
+                      <div
+                        className={`flex-1 flex flex-col items-center justify-center rounded-2xl border-2 px-2 py-3 ${
+                          dn > up
+                            ? "border-red-500/50 bg-gradient-to-b from-red-500/15 to-red-900/10"
+                            : "border-red-600/25 bg-red-950/20"
+                        }`}
+                      >
+                        <span className="text-2xl mb-1">📉</span>
+                        <span className="text-[10px] font-black text-red-400/90 uppercase tracking-tighter">하락</span>
+                        <span className="text-2xl font-black text-red-400 tabular-nums leading-tight">{dn}<span className="text-sm">%</span></span>
+                      </div>
+                    </div>
                   </div>
-                  <div className="h-2.5 rounded-full overflow-hidden flex bg-red-500/30">
-                    <div
-                      className="h-full bg-gradient-to-r from-green-500 to-green-400 rounded-l-full transition-all duration-1000 ease-out"
-                      style={{ width: `${today.kospi_yes_pct}%` }}
-                    />
-                  </div>
-                </div>
-              )}
+                );
+              })()}
               </>
             );
           })()}
@@ -920,20 +936,22 @@ export default function DashboardPage() {
                     </p>
                   </div>
                   <div className={`rounded-xl px-4 py-3 border ${
-                    (dash.current_streak ?? 0) >= 5
+                    streak >= 5
                       ? "bg-yellow-500/10 border-yellow-500/30"
-                      : (dash.current_streak ?? 0) >= 3
+                      : streak >= 3
                         ? "bg-orange-500/10 border-orange-500/30"
                         : "bg-[#1A1A1A] border-[#2A2A2A]"
                   }`}>
                     <p className="text-[10px] text-gray-500 mb-1">연속 적중</p>
                     <p className={`text-xl font-black tabular-nums ${
-                      (dash.current_streak ?? 0) >= 5 ? "text-yellow-400" :
-                      (dash.current_streak ?? 0) >= 3 ? "text-orange-400" : "text-white"
+                      streak >= 5 ? "text-yellow-400" :
+                      streak >= 3 ? "text-orange-400" : "text-white"
                     }`}>
-                      {(dash.current_streak ?? 0) >= 5 ? "🏆" : (dash.current_streak ?? 0) >= 3 ? "🔥" : ""}
-                      {" "}{dash.current_streak ?? 0}일
-                      {(dash.current_streak ?? 0) >= 5 ? " ×2.0" : (dash.current_streak ?? 0) >= 3 ? " ×1.5" : ""}
+                      {streak >= 5 ? "🏆 " : streak >= 3 ? "🔥 " : ""}
+                      {streak}일
+                    </p>
+                    <p className="text-[9px] text-gray-600 mt-1 leading-snug">
+                      예측 이력 기준 (배팅 배율과 별개)
                     </p>
                   </div>
                 </div>
