@@ -77,15 +77,15 @@ export default function TimeSliceAccuracyInsightCard({ accessToken, surveyDate, 
   if (loading) {
     return (
       <div className={`${d.cardRound} border border-amber-500/25 bg-amber-500/[0.06] ${d.cardPad} fade-up-2 animate-pulse`}>
-        <div className="grid grid-cols-[minmax(0,1fr)_minmax(100px,40%)] gap-2 items-stretch min-h-[120px]">
-          <div className="flex flex-col justify-between gap-2">
-            <div className="space-y-1.5">
-              <div className={`${d.c ? "h-2 w-40" : "h-3 w-48"} rounded bg-[#333]`} />
-              <div className={`${d.c ? "h-4 w-full max-w-[11rem]" : "h-5 w-full max-w-[15rem]"} rounded bg-[#2a2a2a]`} />
+        <div className="grid grid-cols-[minmax(0,1fr)_minmax(100px,40%)] gap-2 items-stretch min-h-[46px]">
+          <div className="flex flex-col justify-center gap-2">
+            <div className="space-y-1">
+              <div className={`${d.c ? "h-1.5 w-24" : "h-2 w-28"} rounded bg-[#333]`} />
+              <div className={`${d.c ? "h-3 w-full max-w-[8rem]" : "h-3.5 w-full max-w-[11rem]"} rounded bg-[#2a2a2a]`} />
             </div>
-            <div className={`${d.c ? "h-6 w-24" : "h-8 w-32"} rounded bg-[#333]`} />
+            <div className={`${d.c ? "h-5 w-20" : "h-6 w-28"} rounded bg-[#333]`} />
           </div>
-          <div className="rounded-xl border border-white/10 bg-[#1a1a1a]/80 min-h-[100px]" />
+          <div className="rounded-xl border border-white/10 bg-[#1a1a1a]/80 min-h-[36px]" />
         </div>
       </div>
     );

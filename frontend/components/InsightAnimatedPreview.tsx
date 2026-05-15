@@ -377,30 +377,30 @@ export default function InsightAnimatedPreview({
 
   const detailsCls =
     visual === "dashboardHero"
-      ? "group mt-0 border-t border-white/[0.06] pt-1 px-1 shrink-0"
+      ? "group mt-0 border-t border-white/[0.06] pt-0.5 pb-0.5 px-1 shrink-0"
       : "group mt-1 border-t border-white/[0.05] pt-1.5";
   const summaryCls =
     visual === "dashboardHero"
-      ? "cursor-pointer list-none text-[8px] font-bold text-gray-500 hover:text-gray-400 [&::-webkit-details-marker]:hidden"
+      ? "cursor-pointer list-none text-[7px] font-bold leading-tight text-gray-500 hover:text-gray-400 [&::-webkit-details-marker]:hidden"
       : "cursor-pointer list-none text-[10px] font-bold text-gray-600 hover:text-gray-400 [&::-webkit-details-marker]:hidden";
   const captionCls =
     visual === "dashboardHero"
-      ? "mt-1 text-[8px] leading-snug text-gray-600 pr-0.5"
+      ? "mt-0.5 text-[7px] leading-snug text-gray-600 pr-0.5"
       : "mt-2 text-[10px] leading-relaxed text-gray-600 pr-1";
 
   if (visual === "dashboardHero") {
     /** meet + 안쪽 여백: slice처럼 꽉 채우면 둥근 테두리(overflow-hidden)와 맞물려 가장자리가 잘려 보임 */
     return (
-      <div className="insight-preview-mount flex h-full min-h-[168px] w-full min-w-0 flex-1 flex-col">
-        <div className="relative min-h-[128px] w-full min-w-0 flex-1">
+      <div className="insight-preview-mount flex h-full min-h-[54px] w-full min-w-0 flex-1 flex-col">
+        <div className="relative min-h-[34px] w-full min-w-0 flex-1">
           <svg
             role="img"
             aria-label="이 인사이트에서 보게 되는 차트 형태 미리보기"
             viewBox={`0 0 ${VB_W} ${VB_H}`}
-            preserveAspectRatio="xMidYMid meet"
+            preserveAspectRatio="xMinYMid meet"
             width="100%"
             height="100%"
-            className="absolute inset-x-3 top-2.5 bottom-1.5 box-border overflow-visible block"
+            className="absolute left-2 right-3.5 top-1 bottom-1 box-border overflow-visible block"
             xmlns="http://www.w3.org/2000/svg"
           >
             {svgInner}
