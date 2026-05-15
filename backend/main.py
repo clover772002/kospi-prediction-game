@@ -2097,7 +2097,12 @@ async def get_today(supabase: Client = Depends(get_supabase)):
             survey_res = supabase.table("daily_surveys").select("*").eq("survey_date", today_str).execute()
             survey = survey_res.data[0]
 
-    # 토큰 정산은 /api/dashboard·job_15_35에서만 보강 (여기서까지 하면 대시보드와 병렬 호출 시 중복·타임아웃)
+    # 종가 반영 후·미정산 참가자 보강: 설문 페이지만 보는 사용자도 토큰이 반영되도록
+    # (pending 없으면 쿼리만 빠르게 끝남 — 이전에 제거했던 병목은 settle 전부 매번 호출이었음)
+    try:
+        ensure_kospi_tokens_settled_for_date(supabase, today_str)
+    except Exception as e:
+        logger.warning(f"get_today 토큰 정산 보강 스킵: {e}")
 
     responses = (
         supabase.table("survey_responses")
