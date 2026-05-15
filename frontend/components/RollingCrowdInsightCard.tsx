@@ -24,7 +24,7 @@ interface Props {
   onBalanceUpdated?: () => void;
 }
 
-/** 최근 7거래일 다수결·가중 시계열 (토큰 잠금) */
+/** 최근 7거래일 무리 규격 고수층 적중률 시계열 (토큰 잠금) */
 export default function RollingCrowdInsightCard({
   accessToken,
   surveyDateAsEndDate,
@@ -114,12 +114,12 @@ export default function RollingCrowdInsightCard({
       <InsightUnavailableCard
         variant="sky"
         slug="rolling_crowd_summary"
-        title={data.title ?? "7거래일 무리 요약"}
+        title={data.title ?? "고수의 7일간 적중률"}
         surveyDate={data.survey_date}
         surveyDatePrefix="종료 "
       >
         <p className="text-xs text-gray-400 leading-relaxed">
-          이 종료 거래일 근처 7거래일 구간에 표시할 설문 집계가 아직 없어요.
+          이 종료 거래일을 끝으로 잡히는 최근 7거래일 구간에 무리 규격 고수층 적중 집계를 채울 데이터가 부족하거나 해당 구간 설문 이력이 없어요.
         </p>
       </InsightUnavailableCard>
     );
@@ -139,7 +139,7 @@ export default function RollingCrowdInsightCard({
         headline={
           <>
             <p className={`${d.badge} font-black text-sky-300 uppercase tracking-wide`}>토큰 인사이트</p>
-            <p className={`${d.titleClass} text-white mt-0.5`}>{data.title ?? "7거래일 무리 요약"}</p>
+            <p className={`${d.titleClass} text-white mt-0.5`}>{data.title ?? "고수의 7일간 적중률"}</p>
             <p className={`${d.subDate} text-gray-600 mt-0.5 tabular-nums`}>종료 {data.survey_date}</p>
           </>
         }
@@ -163,7 +163,7 @@ export default function RollingCrowdInsightCard({
         {locked ? (
           <p className="text-gray-500">
             {data.description ??
-              "가장 최근 종료 거래일을 기준으로 최근 7거래일의 다수결·가중 축을 한 줄로 묶었습니다."}
+              "종료 거래일 기준 최근 거래일 7일 동안 무리 규격 고수층의 일별 코스피 적중률입니다."}
           </p>
         ) : null}
       </InsightDetailDisclosure>
@@ -176,23 +176,19 @@ export default function RollingCrowdInsightCard({
               <thead className="text-gray-500 border-b border-white/[0.06]">
                 <tr>
                   <th className={`${d.thPad} pl-2 pr-1 font-bold`}>거래일</th>
-                  <th className={`${d.thPad} px-1 font-bold`}>n</th>
-                  <th className={`${d.thPad} px-1 font-bold`}>다수결</th>
-                  <th className={`${d.thPad} px-1 font-bold`}>가중</th>
-                  <th className={`${d.thPad} pr-2 font-bold`}>차이</th>
+                  <th className={`${d.thPad} px-1 font-bold`}>고수 n</th>
+                  <th className={`${d.thPad} px-1 font-bold`}>결과</th>
+                  <th className={`${d.thPad} pr-2 font-bold`}>적중률</th>
                 </tr>
               </thead>
               <tbody className="text-gray-300">
                 {(data.data?.series ?? []).map((row, i) => (
                   <tr key={row.survey_date + i} className="border-b border-white/[0.04] last:border-0">
                     <td className={`${d.tdPad} pl-2 pr-1 text-gray-400`}>{row.survey_date.slice(5)}</td>
-                    <td className={`${d.tdPad} px-1`}>{row.n}</td>
-                    <td className={`${d.tdPad} px-1`}>{row.sample_ok && row.simple_pct != null ? `${row.simple_pct}%` : "—"}</td>
-                    <td className={`${d.tdPad} px-1`}>
-                      {row.sample_ok && row.weighted_pct != null ? `${row.weighted_pct}%` : "부족"}
-                    </td>
+                    <td className={`${d.tdPad} px-1`}>{row.expert_n}</td>
+                    <td className={`${d.tdPad} px-1`}>{row.result_known ? "확정" : "대기"}</td>
                     <td className={`${d.tdPad} pr-2`}>
-                      {row.sample_ok && row.gap_points != null ? `${row.gap_points > 0 ? "+" : ""}${row.gap_points}` : "—"}
+                      {row.sample_ok && row.hit_rate_pct != null ? `${row.hit_rate_pct}%` : "—"}
                     </td>
                   </tr>
                 ))}

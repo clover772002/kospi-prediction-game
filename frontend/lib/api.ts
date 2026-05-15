@@ -334,47 +334,6 @@ export async function getExpertGapInsight(accessToken: string, surveyDate: strin
   return res.json();
 }
 
-export interface GaugeCrowdInsightResponse {
-  accessible: boolean;
-  locked?: boolean;
-  reason?: string | null;
-  survey_date: string;
-  product_slug?: string;
-  price_tokens?: number;
-  balance?: number;
-  title?: string;
-  description?: string;
-  data: {
-    survey_date: string;
-    my_gauge: number;
-    direction_label: string;
-    cohort_size: number;
-    opposite_side_count: number;
-    total_with_gauge: number;
-    median_abs_in_cohort: number;
-    strength_vs_cohort_pct: number;
-    conviction_band: string;
-    bullets: string[];
-    computed_note?: string;
-  } | null;
-}
-
-export async function getGaugeCrowdInsight(accessToken: string, surveyDate: string): Promise<GaugeCrowdInsightResponse> {
-  const res = await fetch(
-    `${resolveApiBase()}/api/insights/my-gauge-vs-crowd?survey_date=${encodeURIComponent(surveyDate)}`,
-    { ...insightFetchInit, headers: { Authorization: `Bearer ${accessToken}` } },
-  );
-  if (!res.ok) {
-    const raw = await res.json().catch(() => ({}));
-    const detail =
-      typeof raw.detail === "string"
-        ? raw.detail
-        : "인사이트를 불러오지 못했습니다.";
-    throw new Error(detail);
-  }
-  return res.json();
-}
-
 export interface CrowdConvictionInsightResponse {
   accessible: boolean;
   locked?: boolean;
@@ -387,17 +346,31 @@ export interface CrowdConvictionInsightResponse {
   description?: string;
   data: {
     survey_date: string;
-    n: number;
-    bull_side_count: number;
-    bear_side_count: number;
-    mean: number;
-    stdev: number;
-    q1: number;
-    median: number;
-    q3: number;
-    min: number;
-    max: number;
-    mean_abs: number;
+    total_n: number;
+    rise_choice_count: number;
+    fall_choice_count: number;
+    rise_choice_stats: {
+      n: number;
+      mean: number;
+      stdev: number;
+      q1: number;
+      median: number;
+      q3: number;
+      min: number;
+      max: number;
+      mean_abs: number;
+    } | null;
+    fall_choice_stats: {
+      n: number;
+      mean: number;
+      stdev: number;
+      q1: number;
+      median: number;
+      q3: number;
+      min: number;
+      max: number;
+      mean_abs: number;
+    } | null;
     bullets: string[];
     computed_note?: string;
   } | null;
@@ -438,10 +411,9 @@ export interface RollingCrowdInsightResponse {
     series: Array<{
       survey_date: string;
       sample_ok: boolean;
-      n: number;
-      simple_pct: number | null;
-      weighted_pct: number | null;
-      gap_points: number | null;
+      expert_n: number;
+      hit_rate_pct: number | null;
+      result_known: boolean;
     }>;
     bullets: string[];
     computed_note?: string;
@@ -465,57 +437,6 @@ export async function getRollingCrowdInsight(
   return res.json();
 }
 
-export interface GroupVsGlobalInsightResponse {
-  accessible: boolean;
-  locked?: boolean;
-  reason?: string | null;
-  survey_date: string;
-  group_id?: string;
-  product_slug?: string;
-  price_tokens?: number;
-  balance?: number;
-  title?: string;
-  description?: string;
-  data: {
-    survey_date: string;
-    group_id: string;
-    group_name: string;
-    group: {
-      n: number;
-      simple_pct: number;
-      weighted_pct: number;
-      gap_points: number;
-    };
-    global: {
-      n: number;
-      simple_pct: number;
-      weighted_pct: number;
-      gap_points: number;
-    };
-    bullets: string[];
-    computed_note?: string;
-  } | null;
-}
-
-export async function getGroupVsGlobalInsight(
-  accessToken: string,
-  surveyDate: string,
-  groupId: string,
-): Promise<GroupVsGlobalInsightResponse> {
-  const q = `survey_date=${encodeURIComponent(surveyDate)}&group_id=${encodeURIComponent(groupId)}`;
-  const res = await fetch(`${resolveApiBase()}/api/insights/group-vs-global-snapshot?${q}`, {
-    ...insightFetchInit,
-    headers: { Authorization: `Bearer ${accessToken}` },
-  });
-  if (!res.ok) {
-    const raw = await res.json().catch(() => ({}));
-    throw new Error(
-      typeof raw.detail === "string" ? raw.detail : "인사이트를 불러오지 못했습니다.",
-    );
-  }
-  return res.json();
-}
-
 export interface TimeSliceAccuracyInsightResponse {
   accessible: boolean;
   locked?: boolean;
@@ -528,6 +449,10 @@ export interface TimeSliceAccuracyInsightResponse {
   description?: string;
   data: {
     survey_date: string;
+    end_date?: string;
+    window_trading_days?: number;
+    leader_masked_name?: string;
+    leader_accuracy_pct?: number;
     total_with_timestamp: number;
     kospi_result_known: boolean;
     buckets: Array<{
@@ -642,6 +567,8 @@ export interface LeaderPickInsightResponse {
     leader_accuracy_pct: number;
     kospi_answer: boolean;
     direction_label_ko: string;
+    leader_gauge_position: number | null;
+    conviction_label_ko: string;
     segment_n: number;
     bullets: string[];
     computed_note?: string;

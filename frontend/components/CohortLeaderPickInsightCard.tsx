@@ -23,7 +23,7 @@ interface Props {
   onBalanceUpdated?: () => void;
 }
 
-/** 고수층·하수층 규격 안 그날 1순위 한 명의 코스피 방향 픽(파도 B) */
+/** 무리 규격 고수·하수 중 그날 1순위 픽: 방향 + 확신도 */
 
 export default function CohortLeaderPickInsightCard({
   accessToken,
@@ -141,14 +141,13 @@ export default function CohortLeaderPickInsightCard({
   if (data.reason === "no_survey_data" || data.reason === "segment_empty" || data.reason === "insufficient_segment_size") {
     const body = softReason();
     const v = cohort === "expert" ? "violet" : "slate";
-    const defaultTitle = cohort === "expert" ? "고수 1위 픽" : "하수 1위 픽";
+    const defaultTitle = cohort === "expert" ? "오늘의 고수 픽" : "오늘의 하수 픽";
     return (
       <InsightUnavailableCard
         variant={v}
         slug={slug as InsightProductSlug}
         title={data.title ?? defaultTitle}
         surveyDate={data.survey_date}
-        badgeExtra="· 파도 B"
       >
         {body ? <p className="text-xs text-gray-400 leading-relaxed">{body}</p> : null}
       </InsightUnavailableCard>
@@ -178,9 +177,9 @@ export default function CohortLeaderPickInsightCard({
         slug={slug as InsightProductSlug}
         headline={
           <>
-            <p className={`${ix.badge} font-black ${accentText} uppercase tracking-wide`}>토큰 인사이트 · 파도 B</p>
+            <p className={`${ix.badge} font-black ${accentText} uppercase tracking-wide`}>토큰 인사이트</p>
             <p className={`${ix.titleClass} text-white mt-0.5`}>
-              {data.title ?? (cohort === "expert" ? "오늘의 고수 1위 픽" : "오늘의 하수 1위 픽")}
+              {data.title ?? (cohort === "expert" ? "오늘의 고수 픽" : "오늘의 하수 픽")}
             </p>
             <p className={`${ix.subDate} text-gray-600 mt-0.5`}>{data.survey_date}</p>
           </>
@@ -204,7 +203,8 @@ export default function CohortLeaderPickInsightCard({
         <p>{META.hint}</p>
         {locked ? (
           <p className="text-gray-500">
-            {data.description ?? `${cohort === "expert" ? "고수층" : "하수층"} 규격에서 그날 한 명의 방향 선택만 초성 형태와 함께 보여 줍니다.`}
+            {data.description ??
+              `${cohort === "expert" ? "그날 무리 규격 고수층" : "그날 무리 규격 하수층"}에서 한 명을 골라 방향과 확신도(게이지)를 초성 형태로 보여 줍니다.`}
           </p>
         ) : null}
       </InsightDetailDisclosure>
@@ -226,6 +226,7 @@ export default function CohortLeaderPickInsightCard({
               <span className="tabular-nums">{pick.leader_accuracy_pct}%</span>
             </p>
             <p className={`${ix.c ? "text-[11px]" : "text-base"} font-black text-white tracking-tight`}>{pick.direction_label_ko}</p>
+            <p className={`${ix.c ? "text-[10px]" : "text-sm"} text-gray-300 mt-0.5`}>{pick.conviction_label_ko}</p>
           </div>
           <ul className={`${ix.list} text-gray-300 pt-1`}>
             {(pick.bullets ?? []).map((line) => (

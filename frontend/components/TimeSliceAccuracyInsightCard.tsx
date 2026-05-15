@@ -23,7 +23,7 @@ interface Props {
   onBalanceUpdated?: () => void;
 }
 
-/** 파도 B — 시간대별 응답·적중 무드(KST 버킷, responded_at 필요) */
+/** 전역 최고 고수 1명의 최근 7거래일 제출 시각 버킷 분포 (responded_at 필요) */
 export default function TimeSliceAccuracyInsightCard({ accessToken, surveyDate, onBalanceUpdated }: Props) {
   const confirmShopOnInsufficientTokens = useConfirmShopOnInsufficientTokens();
   const d = useInsightDashLayout();
@@ -111,9 +111,11 @@ export default function TimeSliceAccuracyInsightCard({ accessToken, surveyDate, 
       case "no_survey_data":
         return "이 거래일에는 아직 설문 응답이 없습니다.";
       case "no_timestamp_data":
-        return "응답은 있지만 제출 시각이 기록된 건이 없습니다.";
+        return "최고 고수 후보가 해당 구간에 제출 시각이 기록된 응답을 남기지 않았습니다.";
       case "insufficient_total_timestamps":
-        return "시각이 기록된 응답이 아직 적어 카드를 통계적으로 열 수 없습니다(플랜: 최소 30건 전후).";
+        return "최고 고수 한 명이 최근 7거래일 구간에 남긴 시각 기록 응답이 최소 기준에 못 미칩니다.";
+      case "segment_empty":
+        return "예측 횟수 규격을 만족하는 고수 후보 무리가 없거나, 최고 적중자를 고를 수 없습니다.";
       default:
         return null;
     }
@@ -123,17 +125,12 @@ export default function TimeSliceAccuracyInsightCard({ accessToken, surveyDate, 
     data.reason === "time_field_unavailable" ||
     data.reason === "no_survey_data" ||
     data.reason === "no_timestamp_data" ||
-    data.reason === "insufficient_total_timestamps"
+    data.reason === "insufficient_total_timestamps" ||
+    data.reason === "segment_empty"
   ) {
     const body = reasonExplain();
     return (
-      <InsightUnavailableCard
-        variant="amber"
-        slug="time_slice_accuracy"
-        title={data.title ?? "시간대별 무드"}
-        surveyDate={data.survey_date}
-        badgeExtra="· 파도 B"
-      >
+      <InsightUnavailableCard variant="amber" slug="time_slice_accuracy" title={data.title ?? "최고 고수 응답 시간"} surveyDate={data.survey_date}>
         {body ? <p className="text-xs text-gray-400 leading-relaxed">{body}</p> : null}
       </InsightUnavailableCard>
     );
@@ -148,8 +145,8 @@ export default function TimeSliceAccuracyInsightCard({ accessToken, surveyDate, 
         slug="time_slice_accuracy"
         headline={
           <>
-            <p className={`${d.badge} font-black text-amber-300 uppercase tracking-wide`}>토큰 인사이트 · 파도 B</p>
-            <p className={`${d.titleClass} text-white mt-0.5`}>{data.title ?? "시간대별 무드"}</p>
+            <p className={`${d.badge} font-black text-amber-300 uppercase tracking-wide`}>토큰 인사이트</p>
+            <p className={`${d.titleClass} text-white mt-0.5`}>{data.title ?? "최고 고수 최근 7일 응답 시간"}</p>
             <p className={`${d.subDate} text-gray-600 mt-0.5`}>{data.survey_date}</p>
           </>
         }
@@ -170,28 +167,34 @@ export default function TimeSliceAccuracyInsightCard({ accessToken, surveyDate, 
       />
       <InsightDetailDisclosure accentSummaryClass="text-amber-400/85 hover:text-amber-300">
         <p>{META.hint}</p>
-        {locked ? (
-          <p className="text-gray-500">
-            {data.description ?? "그날 투표가 몰린 KST 시간대와, 결과 확정 후에는 버킷별 적중 스냅샷까지 보여 줍니다."}
-          </p>
-        ) : null}
+        {locked ? <p className="text-gray-500">{data.description ?? "전역 최고 고수 한 명의 최근 7거래일 제출 시각 분포입니다."}</p> : null}
       </InsightDetailDisclosure>
 
       {!locked ? (
         <>
           <p className={`${d.computed} text-gray-500`}>{data.data?.computed_note}</p>
-          <p className={`${d.computed} text-gray-500`}>
-            결과 확정 여부: {data.data?.kospi_result_known ? "코스피 결과 반영 가능" : "분포만(결과 미확정)"} · 시각 기록 건수{" "}
-            {data.data?.total_with_timestamp ?? "–"}
-          </p>
+          {data.data?.leader_masked_name != null ? (
+            <p className={`${d.computed} text-gray-400 tabular-nums`}>
+              대상: <span className="text-gray-300 font-bold">{data.data.leader_masked_name}</span>
+              {data.data.leader_accuracy_pct != null ? (
+                <>
+                  {" "}
+                  · 누적 적중률 약 <span className="text-gray-300">{data.data.leader_accuracy_pct}%</span>
+                </>
+              ) : null}
+              {" "}
+              · 시각 기록 합산 {data.data?.total_with_timestamp ?? "–"}건
+            </p>
+          ) : (
+            <p className={`${d.computed} text-gray-400 tabular-nums`}>시각 기록 합산 {data.data?.total_with_timestamp ?? "–"}건</p>
+          )}
           <div className="overflow-x-auto rounded-lg border border-white/[0.06]">
             <table className={`w-full text-left tabular-nums ${d.tableWrap}`}>
               <thead className="text-gray-500 border-b border-white/[0.06]">
                 <tr>
                   <th className={`${d.thPad} pl-2 pr-1 font-bold`}>버킷(KST)</th>
                   <th className={`${d.thPad} px-1 font-bold`}>n</th>
-                  <th className={`${d.thPad} px-1 font-bold`}>분포%</th>
-                  <th className={`${d.thPad} pr-2 font-bold`}>적중%</th>
+                  <th className={`${d.thPad} pr-2 font-bold`}>분포%</th>
                 </tr>
               </thead>
               <tbody className="text-gray-300">
@@ -199,12 +202,7 @@ export default function TimeSliceAccuracyInsightCard({ accessToken, surveyDate, 
                   <tr key={row.bucket_id} className="border-b border-white/[0.04] last:border-0">
                     <td className={`${d.tdPad} pl-2 pr-1 text-gray-400`}>{row.label_ko}</td>
                     <td className={`${d.tdPad} px-1`}>{row.n}</td>
-                    <td className={`${d.tdPad} px-1`}>{row.sample_ok ? `${row.pct_of_timed_day}%` : "—"}</td>
-                    <td className={`${d.tdPad} pr-2`}>
-                      {data.data?.kospi_result_known && row.sample_ok && row.correct_pct_snapshot != null
-                        ? `${row.correct_pct_snapshot}%`
-                        : "—"}
-                    </td>
+                    <td className={`${d.tdPad} pr-2`}>{row.sample_ok ? `${row.pct_of_timed_day}%` : "—"}</td>
                   </tr>
                 ))}
               </tbody>

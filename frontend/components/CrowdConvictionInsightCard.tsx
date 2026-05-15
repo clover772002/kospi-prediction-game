@@ -23,7 +23,7 @@ interface Props {
   onBalanceUpdated?: () => void;
 }
 
-/** 대시보드용: 무리 확신(게이지) 분포 요약 (토큰 잠금, 최소 표본 n≥20) */
+/** 상승·하락 선택 무리별 확신도(게이지) 분포 (토큰 잠금) */
 export default function CrowdConvictionInsightCard({ accessToken, surveyDate, onBalanceUpdated }: Props) {
   const confirmShopOnInsufficientTokens = useConfirmShopOnInsufficientTokens();
   const ix = useInsightDashLayout();
@@ -109,7 +109,7 @@ export default function CrowdConvictionInsightCard({ accessToken, surveyDate, on
       <InsightUnavailableCard
         variant="rose"
         slug="crowd_conviction_spread"
-        title={data.title ?? "무리 확신 분포"}
+        title={data.title ?? "확신도 분포"}
         surveyDate={data.survey_date}
       >
         <p className="text-xs text-gray-400 leading-relaxed">
@@ -127,7 +127,7 @@ export default function CrowdConvictionInsightCard({ accessToken, surveyDate, on
       <InsightUnavailableCard
         variant="rose"
         slug="crowd_conviction_spread"
-        title={data.title ?? "무리 확신 분포"}
+        title={data.title ?? "확신도 분포"}
         surveyDate={data.survey_date}
       >
         <p className="text-xs text-gray-400 leading-relaxed">
@@ -153,7 +153,7 @@ export default function CrowdConvictionInsightCard({ accessToken, surveyDate, on
         headline={
           <>
             <p className={`${ix.badge} font-black text-rose-300 uppercase tracking-wide`}>토큰 인사이트</p>
-            <p className={`${ix.titleClass} text-white mt-0.5`}>{data.title ?? "무리 확신 분포"}</p>
+            <p className={`${ix.titleClass} text-white mt-0.5`}>{data.title ?? "확신도 분포"}</p>
             <p className={`${ix.subDate} text-gray-600 mt-0.5`}>{data.survey_date}</p>
           </>
         }
@@ -176,8 +176,7 @@ export default function CrowdConvictionInsightCard({ accessToken, surveyDate, on
         <p>{META.hint}</p>
         {locked ? (
           <p className="text-gray-500">
-            {data.description ??
-              "그날 참가자들의 게이지 분포를 한 장으로 요약합니다. 개인별 원시값은 포함하지 않습니다."}
+            {data.description ?? "상승을 택한 무리와 하락을 택한 무리로 나누어 확신도(게이지) 분포만 요약합니다."}
           </p>
         ) : null}
       </InsightDetailDisclosure>
@@ -185,7 +184,47 @@ export default function CrowdConvictionInsightCard({ accessToken, surveyDate, on
       {!locked ? (
         <>
           <p className={`${ix.computed} text-gray-500`}>{data.data?.computed_note}</p>
-          <ul className={`${ix.list} text-gray-300`}>
+          <p className={`${ix.computed} text-gray-500 tabular-nums`}>
+            방향·게이지 동시 기준 {data.data?.total_n ?? "–"}명 · 상승 선택 {data.data?.rise_choice_count ?? "–"} · 하락 선택{" "}
+            {data.data?.fall_choice_count ?? "–"}
+          </p>
+          <div className={`grid gap-2 ${ix.c ? "grid-cols-1" : "sm:grid-cols-2"}`}>
+            <div className="rounded-lg border border-white/[0.07] bg-black/20 px-2 py-1.5 space-y-0.5">
+              <p className={`${ix.c ? "text-[9px]" : "text-[10px]"} font-bold text-rose-200/90`}>상승 선택 무리</p>
+              {data.data?.rise_choice_stats ? (
+                <div className={`tabular-nums text-gray-400 ${ix.c ? "text-[9px] space-y-0.5" : "text-[10px] space-y-0.5"}`}>
+                  <p>
+                    n {data.data.rise_choice_stats.n} · 평균 {data.data.rise_choice_stats.mean} · |평균|{" "}
+                    {data.data.rise_choice_stats.mean_abs}
+                  </p>
+                  <p>
+                    Q1~Q3 {data.data.rise_choice_stats.q1} / {data.data.rise_choice_stats.median} /{" "}
+                    {data.data.rise_choice_stats.q3} · σ {data.data.rise_choice_stats.stdev}
+                  </p>
+                </div>
+              ) : (
+                <p className="text-[10px] text-gray-500">해당 표본 없음</p>
+              )}
+            </div>
+            <div className="rounded-lg border border-white/[0.07] bg-black/20 px-2 py-1.5 space-y-0.5">
+              <p className={`${ix.c ? "text-[9px]" : "text-[10px]"} font-bold text-rose-200/90`}>하락 선택 무리</p>
+              {data.data?.fall_choice_stats ? (
+                <div className={`tabular-nums text-gray-400 ${ix.c ? "text-[9px] space-y-0.5" : "text-[10px] space-y-0.5"}`}>
+                  <p>
+                    n {data.data.fall_choice_stats.n} · 평균 {data.data.fall_choice_stats.mean} · |평균|{" "}
+                    {data.data.fall_choice_stats.mean_abs}
+                  </p>
+                  <p>
+                    Q1~Q3 {data.data.fall_choice_stats.q1} / {data.data.fall_choice_stats.median} /{" "}
+                    {data.data.fall_choice_stats.q3} · σ {data.data.fall_choice_stats.stdev}
+                  </p>
+                </div>
+              ) : (
+                <p className="text-[10px] text-gray-500">해당 표본 없음</p>
+              )}
+            </div>
+          </div>
+          <ul className={`${ix.list} text-gray-300 pt-1`}>
             {(data.data?.bullets ?? []).map((line) => (
               <li key={line.slice(0, 48)} className="flex gap-2">
                 <span className="text-rose-400 font-bold shrink-0">·</span>
@@ -193,14 +232,6 @@ export default function CrowdConvictionInsightCard({ accessToken, surveyDate, on
               </li>
             ))}
           </ul>
-          <div className={`flex flex-wrap tabular-nums text-gray-500 pt-1 border-t border-white/[0.06] ${ix.c ? "gap-1.5 text-[9px]" : "gap-3 text-[10px]"}`}>
-            <span>n {data.data?.n ?? "–"}</span>
-            <span>평균 {data.data?.mean ?? "–"}</span>
-            <span>σ {data.data?.stdev ?? "–"}</span>
-            <span>
-              Q1~Q3 {data.data?.q1 ?? "–"} / {data.data?.median ?? "–"} / {data.data?.q3 ?? "–"}
-            </span>
-          </div>
         </>
       ) : null}
     </div>

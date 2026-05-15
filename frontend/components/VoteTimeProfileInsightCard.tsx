@@ -23,7 +23,7 @@ interface Props {
   onBalanceUpdated?: () => void;
 }
 
-/** 고수층 또는 하수층 투표 시간 분포(파도 B) */
+/** 정답자 또는 오답자 투표 시간 분포(responded_at, 결과 확정 후) */
 
 export default function VoteTimeProfileInsightCard({ accessToken, surveyDate, cohort, onBalanceUpdated }: Props) {
   const confirmShopOnInsufficientTokens = useConfirmShopOnInsufficientTokens();
@@ -126,11 +126,15 @@ export default function VoteTimeProfileInsightCard({ accessToken, surveyDate, co
       case "no_survey_data":
         return "이 거래일에는 설문 응답이 없습니다.";
       case "segment_empty":
-        return "고수/하수층을 나눌 만한 자격 응답자가 아직 부족합니다.";
+        return cohort === "expert"
+          ? "그날 맞힌 사람 중 제출 시각이 기록된 표본이 부족합니다."
+          : "그날 틀린 사람 중 제출 시각이 기록된 표본이 부족합니다.";
       case "insufficient_total_timestamps":
-        return "시각이 기록된 전체 응답이 최소 기준(30건)에 못 미칩니다.";
+        return "그날 제출 시각이 기록된 설문 응답이 최소 기준(전체)에 못 미칩니다.";
       case "insufficient_segment_timestamps":
-        return "세그먼트(고수/하수) 쪽 시각 기록 응답이 최소 기준(15건)에 못 미칩니다.";
+        return "해당 집단(정답·오답)의 시각 기록 응답이 세그먼트 최소 인원에 못 미칩니다.";
+      case "no_kospi_result":
+        return "코스피 결과가 확정된 뒤에만 집계합니다. 아직 결과가 없거나 확정 전이에요.";
       default:
         return null;
     }
@@ -139,20 +143,20 @@ export default function VoteTimeProfileInsightCard({ accessToken, surveyDate, co
   if (
     data.reason === "time_field_unavailable" ||
     data.reason === "no_survey_data" ||
+    data.reason === "no_kospi_result" ||
     data.reason === "segment_empty" ||
     data.reason === "insufficient_total_timestamps" ||
     data.reason === "insufficient_segment_timestamps"
   ) {
     const body = softReason();
     const v = cohort === "expert" ? "indigo" : "slate";
-    const defaultTitle = cohort === "expert" ? "고수 시간" : "하수 시간";
+    const defaultTitle = cohort === "expert" ? "오늘 정답자 시간" : "오늘 오답자 시간";
     return (
       <InsightUnavailableCard
         variant={v}
         slug={slug as InsightProductSlug}
         title={data.title ?? defaultTitle}
         surveyDate={data.survey_date}
-        badgeExtra="· 파도 B"
       >
         {body ? <p className="text-xs text-gray-400 leading-relaxed">{body}</p> : null}
       </InsightUnavailableCard>
@@ -180,8 +184,8 @@ export default function VoteTimeProfileInsightCard({ accessToken, surveyDate, co
         slug={slug as InsightProductSlug}
         headline={
           <>
-            <p className={`${ix.badge} font-black ${accentText} uppercase tracking-wide`}>토큰 인사이트 · 파도 B</p>
-            <p className={`${ix.titleClass} text-white mt-0.5`}>{data.title ?? (cohort === "expert" ? "고수 시간" : "하수 시간")}</p>
+            <p className={`${ix.badge} font-black ${accentText} uppercase tracking-wide`}>토큰 인사이트</p>
+            <p className={`${ix.titleClass} text-white mt-0.5`}>{data.title ?? (cohort === "expert" ? "정답자 투표 시간" : "오답자 투표 시간")}</p>
             <p className={`${ix.subDate} text-gray-600 mt-0.5`}>{data.survey_date}</p>
           </>
         }
@@ -204,8 +208,7 @@ export default function VoteTimeProfileInsightCard({ accessToken, surveyDate, co
         <p>{META.hint}</p>
         {locked ? (
           <p className="text-gray-500">
-            {data.description ??
-              `${cohort === "expert" ? "고수층" : "하수층"} 투표가 몰린 KST 시간대를 전체와 비교한 요약입니다.`}
+            {data.description ?? `${cohort === "expert" ? "정답자" : "오답자"} 집단의 제출 시각 버킷 비율입니다.`}
           </p>
         ) : null}
       </InsightDetailDisclosure>
@@ -214,24 +217,23 @@ export default function VoteTimeProfileInsightCard({ accessToken, surveyDate, co
         <>
           <p className={`${ix.computed} text-gray-500`}>{data.data?.computed_note}</p>
           <p className={`${ix.computed} text-gray-400 tabular-nums`}>
-            {data.data?.segment_label_ko} 시각기록 {data.data?.segment_with_timestamp_n ?? "–"}명 · 전체 시각기록{" "}
-            {data.data?.global_with_timestamp_n ?? "–"}명
+            {data.data?.segment_label_ko} · 시각 기록 {data.data?.segment_with_timestamp_n ?? "–"}명
           </p>
           <div className="overflow-x-auto rounded-lg border border-white/[0.06]">
             <table className={`w-full text-left tabular-nums ${ix.tableWrap}`}>
               <thead className="text-gray-500 border-b border-white/[0.06]">
                 <tr>
                   <th className={`${ix.thPad} pl-2 pr-1 font-bold`}>버킷</th>
-                  <th className={`${ix.thPad} px-1 font-bold`}>세그%</th>
-                  <th className={`${ix.thPad} pr-2 font-bold`}>전체%</th>
+                  <th className={`${ix.thPad} px-1 font-bold`}>n</th>
+                  <th className={`${ix.thPad} pr-2 font-bold`}>비율</th>
                 </tr>
               </thead>
               <tbody className="text-gray-300">
                 {(data.data?.buckets ?? []).map((row) => (
                   <tr key={row.bucket_id} className="border-b border-white/[0.04] last:border-0">
                     <td className={`${ix.tdPad} pl-2 pr-1 text-gray-400`}>{row.label_ko}</td>
-                    <td className={`${ix.tdPad} px-1`}>{row.segment_share_pct}%</td>
-                    <td className={`${ix.tdPad} pr-2`}>{row.global_share_pct}%</td>
+                    <td className={`${ix.tdPad} px-1`}>{row.segment_n}</td>
+                    <td className={`${ix.tdPad} pr-2`}>{row.segment_share_pct}%</td>
                   </tr>
                 ))}
               </tbody>

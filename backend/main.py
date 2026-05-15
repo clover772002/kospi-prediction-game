@@ -649,11 +649,9 @@ def _build_daily_expert_gap_payload(supabase: Client, survey_date_str: str) -> d
     }
 
 
-_MIN_GAUGE_COHORT = 5  # 같은 방향 무리 최소 인원
 _MIN_CROWD_CONVICTION_SAMPLE = 20  # crowd_conviction_spread: 플랜 표본 하한
 _ROLLING_CROWD_WINDOW_TRADING_DAYS = 7
 _MIN_ROLLING_DAY_RESPONSES = 5
-_MIN_GROUP_GLOBAL_RESPONSES = 8
 _MIN_TIME_SLICE_BUCKET_N = 8
 _MIN_TOTAL_TIMESTAMPS_WAVE_B = 30
 _MIN_SEGMENT_TIMESTAMPS_VOTE_PROFILE = 15
@@ -685,95 +683,42 @@ def _coerce_gauge_from_row(row: dict) -> int | None:
     return None
 
 
-def _build_my_gauge_vs_crowd_payload(supabase: Client, survey_date_str: str, user_id: str) -> tuple[dict | None, str | None]:
-    """
-    같은 방향 참가자 ‘무리’ 안에서 내 게이지 절댓값(확신 세기)의 상대적 위치.
-    반환: (payload 또는 None, reason 또는 None).
-    reason: not_participated | no_survey_data | cohort_too_small | None
-    """
-    mine = (
-        supabase.table("survey_responses")
-        .select("gauge_position, kospi_answer")
-        .eq("survey_date", survey_date_str)
-        .eq("user_id", user_id)
-        .execute()
-    )
-    if not mine.data:
-        return (None, "not_participated")
-    g_user = _coerce_gauge_from_row(mine.data[0])
-    if g_user is None:
-        return (None, "not_participated")
-
-    res = (
-        supabase.table("survey_responses")
-        .select("user_id, gauge_position, kospi_answer")
-        .eq("survey_date", survey_date_str)
-        .execute()
-    )
-    rows = res.data or []
-    gauges: list[int] = []
-    for r in rows:
-        g = _coerce_gauge_from_row(r)
-        if g is not None:
-            gauges.append(g)
-    if len(gauges) < 3:
-        return (None, "no_survey_data")
-
-    my_side = 1 if g_user > 0 else -1
-    cohort = [g for g in gauges if (1 if g > 0 else -1) == my_side]
-    if len(cohort) < _MIN_GAUGE_COHORT:
-        return (None, "cohort_too_small")
-
-    abs_mine = abs(g_user)
-    n = len(cohort)
-    weaker = sum(1 for g in cohort if abs(g) < abs_mine)
-    equal = sum(1 for g in cohort if abs(g) == abs_mine)
-    strength_pct = int(round(100.0 * (weaker + 0.5 * equal) / n))
-    sorted_abs = sorted(abs(g) for g in cohort)
-    mid = sorted_abs[len(sorted_abs) // 2]
-
-    if strength_pct >= 67:
-        band = "강함"
-    elif strength_pct <= 33:
-        band = "약함"
-    else:
-        band = "중간"
-
-    dir_label = "상승" if my_side == 1 else "하락"
-    opposite_side = len(gauges) - n
-
-    bullets = [
-        f"그날 「{dir_label}」 예측에 동의한 참가자는 무리 안에서 {n}명입니다 (전체 유효 응답 {len(gauges)}명, 반대편 {opposite_side}명).",
-        f"내 확신도 게이지는 {'+' if g_user > 0 else ''}{g_user} (절댓값 {abs_mine}).",
-        f"같은 편 무리 안 확신 세기 비교 시, 나보다 약한 비율이 약 {strength_pct}% 쪽입니다 (같은 강도는 절반만 반영).",
-        f"무리 안 확신도 절댓값의 중앙값은 {mid}입니다.",
-        "참고: 등락률이 아니라 그날 응답 분포 속 상대 비교예요.",
-        "투자·매매 의사결정이 아니며 수익을 보장하지 않습니다.",
-    ]
-
-    return (
-        {
-            "survey_date": survey_date_str,
-            "my_gauge": g_user,
-            "direction_label": dir_label,
-            "cohort_size": n,
-            "opposite_side_count": opposite_side,
-            "total_with_gauge": len(gauges),
-            "median_abs_in_cohort": mid,
-            "strength_vs_cohort_pct": strength_pct,
-            "conviction_band": band,
-            "bullets": bullets,
-            "computed_note": "같은 방향(상승/하락) 참가자만 한 무리로 묶었습니다. 게이지가 없던 옛 응답은 방향만으로 ±50으로 둡니다.",
-        },
-        None,
-    )
+def _gauge_distribution_block(vals: list[int]) -> dict:
+    """방향 한쪽 무리의 게이지 통계(빈 리스트는 호출하지 않음)."""
+    n = len(vals)
+    mean_v = statistics.mean(vals)
+    stdev_v = statistics.stdev(vals) if n > 1 else 0.0
+    try:
+        qs = statistics.quantiles(vals, n=4, method="inclusive")
+        q1, median_v, q3 = qs[0], qs[1], qs[2]
+    except statistics.StatisticsError:
+        sg = sorted(vals)
+        median_v = statistics.median(sg)
+        mid = len(sg) // 2
+        low = sg[:mid] if len(sg) % 2 else sg[:mid]
+        high = sg[mid + 1 :] if len(sg) % 2 else sg[mid:]
+        q1 = statistics.median(low) if low else median_v
+        q3 = statistics.median(high) if high else median_v
+    abs_vals = [abs(x) for x in vals]
+    mean_abs = statistics.mean(abs_vals)
+    return {
+        "n": n,
+        "mean": round(mean_v, 2),
+        "stdev": round(stdev_v, 2),
+        "q1": round(float(q1), 2),
+        "median": round(float(median_v), 2),
+        "q3": round(float(q3), 2),
+        "min": min(vals),
+        "max": max(vals),
+        "mean_abs": round(mean_abs, 2),
+    }
 
 
 def _build_crowd_conviction_spread_payload(
     supabase: Client, survey_date_str: str
 ) -> tuple[dict | None, str | None]:
     """
-    그날 무리의 gauge_position 분포 요약(익명 집계).
+    그날 상승 선택·하락 선택 무리별 gauge_position 분포 요약(익명 집계).
     반환: (payload, reason) — no_survey_data | insufficient_sample | None
     """
     res = (
@@ -783,66 +728,54 @@ def _build_crowd_conviction_spread_payload(
         .execute()
     )
     rows = res.data or []
-    gauges: list[int] = []
+    rise_vals: list[int] = []
+    fall_vals: list[int] = []
     for r in rows:
+        ka = r.get("kospi_answer")
         g = _coerce_gauge_from_row(r)
-        if g is not None:
-            gauges.append(g)
-    n = len(gauges)
-    if n == 0:
+        if g is None or ka is None:
+            continue
+        if bool(ka):
+            rise_vals.append(g)
+        else:
+            fall_vals.append(g)
+
+    total = len(rise_vals) + len(fall_vals)
+    if total == 0:
         return (None, "no_survey_data")
-    if n < _MIN_CROWD_CONVICTION_SAMPLE:
+    if total < _MIN_CROWD_CONVICTION_SAMPLE:
         return (None, "insufficient_sample")
 
-    mean_v = statistics.mean(gauges)
-    stdev_v = statistics.stdev(gauges) if n > 1 else 0.0
-    try:
-        qs = statistics.quantiles(gauges, n=4, method="inclusive")
-        q1, median_v, q3 = qs[0], qs[1], qs[2]
-    except statistics.StatisticsError:
-        sg = sorted(gauges)
-        median_v = statistics.median(sg)
-        mid = len(sg) // 2
-        low = sg[:mid] if len(sg) % 2 else sg[:mid]
-        high = sg[mid + 1 :] if len(sg) % 2 else sg[mid:]
-        q1 = statistics.median(low) if low else median_v
-        q3 = statistics.median(high) if high else median_v
-
-    abs_vals = [abs(x) for x in gauges]
-    mean_abs = statistics.mean(abs_vals)
-
-    bulls = sum(1 for x in gauges if x > 0)
-    bears = sum(1 for x in gauges if x < 0)
+    rise_block = _gauge_distribution_block(rise_vals) if rise_vals else None
+    fall_block = _gauge_distribution_block(fall_vals) if fall_vals else None
 
     bullets = [
-        f"유효 게이지 응답 {n}명 기준 분포입니다. (상승 편 {bulls}명 · 하락 편 {bears}명)",
-        f"게이지 평균은 약 {mean_v:+.1f} (상승 쪽이 +, 하락 쪽이 −에 가깝습니다).",
-        f"확신 세기(절댓값) 평균은 약 {mean_abs:.1f}입니다.",
-        f"1사분위(Q1) {q1:+.0f} · 중앙값 {median_v:+.0f} · 3사분위(Q3) {q3:+.0f}.",
-        f"표준편차(표본)는 약 {stdev_v:.1f} — 분산이 클수록 그날 무리의 확신이 한쪽으로 덜 몰렸을 수 있습니다.",
-        "등락 예측이 아니라 그날 참가자들의 ‘얼마나 빡세게 찍었는지’ 분위만 보는 카드예요.",
-        "투자·매매 의사결정이 아니며 수익을 보장하지 않습니다.",
+        f"방향까지 기록된 게이지 응답 {total}명(상승 선택 {len(rise_vals)}명 · 하락 선택 {len(fall_vals)}명)입니다.",
+        "각 축은 ‘그날 그 방향을 택한 사람들’의 확신도(게이지)만 모아 통계를 냅니다.",
     ]
+    if rise_block:
+        bullets.append(
+            f"상승 선택층: n {rise_block['n']}, 평균 {rise_block['mean']:+.1f}, "
+            f"확신 세기 평균(절댓값) {rise_block['mean_abs']:.1f}.",
+        )
+    if fall_block:
+        bullets.append(
+            f"하락 선택층: n {fall_block['n']}, 평균 {fall_block['mean']:+.1f}, "
+            f"확신 세기 평균(절댓값) {fall_block['mean_abs']:.1f}.",
+        )
+    bullets.append("투자·매매 의사결정이 아니며 수익을 보장하지 않습니다.")
 
-    return (
-        {
-            "survey_date": survey_date_str,
-            "n": n,
-            "bull_side_count": bulls,
-            "bear_side_count": bears,
-            "mean": round(mean_v, 2),
-            "stdev": round(stdev_v, 2),
-            "q1": round(float(q1), 2),
-            "median": round(float(median_v), 2),
-            "q3": round(float(q3), 2),
-            "min": min(gauges),
-            "max": max(gauges),
-            "mean_abs": round(mean_abs, 2),
-            "bullets": bullets,
-            "computed_note": "옛 응답에 게이지가 없으면 방향만으로 ±50으로 둔 값이 섞일 수 있습니다.",
-        },
-        None,
-    )
+    payload = {
+        "survey_date": survey_date_str,
+        "total_n": total,
+        "rise_choice_count": len(rise_vals),
+        "fall_choice_count": len(fall_vals),
+        "rise_choice_stats": rise_block,
+        "fall_choice_stats": fall_block,
+        "bullets": bullets,
+        "computed_note": "옛 응답에 게이지가 없으면 방향만으로 ±50으로 둔 값이 섞일 수 있습니다.",
+    }
+    return (payload, None)
 
 
 def _daily_simple_weighted_pct(
@@ -886,7 +819,7 @@ def _percentages_from_vote_rows(
 
 def _build_rolling_crowd_summary_payload(supabase: Client, end_date_str: str) -> tuple[dict | None, str | None]:
     """
-    종료 거래일 기준 직전 포함 7거래일 — 일자별 다수결·가중(플랜 표본 미만이면 해당 일만 표본 부족).
+    종료 거래일 기준 직전 포함 7거래일 — 일자별 무리 규격 고수층의 코스피 방향 적중률(%).
     """
     try:
         end_d = datetime.strptime(end_date_str, "%Y-%m-%d").date()
@@ -900,26 +833,37 @@ def _build_rolling_crowd_summary_payload(supabase: Client, end_date_str: str) ->
     acc_map, pred_count = _get_accuracy_data(supabase)
     series: list[dict] = []
     any_responses = False
-    ok_days = 0
+    ok_cells = 0
     for cal in dates:
         ds = cal.isoformat()
-        sp, wp, total = _daily_simple_weighted_pct(supabase, ds, acc_map, pred_count)
-        sample_ok = total >= _MIN_ROLLING_DAY_RESPONSES
-        if total > 0:
+        res = (
+            supabase.table("survey_responses")
+            .select("user_id, kospi_answer")
+            .eq("survey_date", ds)
+            .execute()
+        )
+        rows = res.data or []
+        kr, _has_row = _kospi_result_for_survey_day(supabase, ds)
+        if len(rows) > 0:
             any_responses = True
-        if sample_ok:
-            ok_days += 1
-        gap = None
-        if sample_ok and sp is not None and wp is not None:
-            gap = wp - sp
+        day_uids = {str(r["user_id"]) for r in rows if r.get("user_id") is not None}
+        experts, _nov = _wave_b_expert_and_novice_ids(day_uids, acc_map, pred_count)
+        expert_rows = [r for r in rows if str(r.get("user_id")) in experts]
+        en = len(expert_rows)
+        result_known = kr is not None
+        sample_ok = en >= _MIN_ROLLING_DAY_RESPONSES and result_known
+        hit_pct: int | None = None
+        if sample_ok and kr is not None and en > 0:
+            correct = sum(1 for r in expert_rows if bool(r.get("kospi_answer")) == bool(kr))
+            hit_pct = int(round(100 * correct / en))
+            ok_cells += 1
         series.append(
             {
                 "survey_date": ds,
                 "sample_ok": sample_ok,
-                "n": total,
-                "simple_pct": sp if sample_ok else None,
-                "weighted_pct": wp if sample_ok else None,
-                "gap_points": gap,
+                "expert_n": en,
+                "hit_rate_pct": hit_pct if sample_ok else None,
+                "result_known": result_known,
             }
         )
 
@@ -929,10 +873,10 @@ def _build_rolling_crowd_summary_payload(supabase: Client, end_date_str: str) ->
     first_s = series[0]["survey_date"]
     last_s = series[-1]["survey_date"]
     bullets = [
-        f"종료 거래일 {end_date_str} 기준, 직전 포함 {_ROLLING_CROWD_WINDOW_TRADING_DAYS}거래일({first_s} ~ {last_s}) 흐름입니다.",
-        "각 날짜는 해당일 설문 응답만으로 다수결·가중예측 축을 같은 방식으로 계산했습니다.",
-        f"표본이 {_MIN_ROLLING_DAY_RESPONSES}명 미만인 거래일은 ‘표본 부족’으로 숫자를 숨깁니다.",
-        f"숫자가 있는 날은 {ok_days}거래일입니다. 한날만 보는 카드와 묶어 과대·과소 해석을 줄이는 용도예요.",
+        f"종료 거래일 {end_date_str} 기준, 직전 포함 {_ROLLING_CROWD_WINDOW_TRADING_DAYS}거래일({first_s} ~ {last_s})입니다.",
+        "각 날짜는 그날 응답자 가운데 무리 규격 ‘고수층’에 들어간 사람만 모아, 코스피 결과가 확정된 날의 적중 비율(%)을 셉니다.",
+        f"고수층 인원이 {_MIN_ROLLING_DAY_RESPONSES}명 미만이거나 아직 결과가 없는 날은 수치를 숨깁니다.",
+        f"적중률을 채운 칸은 {ok_cells}개입니다.",
         "투자·매매 의사결정이 아니며 수익을 보장하지 않습니다.",
     ]
 
@@ -942,84 +886,11 @@ def _build_rolling_crowd_summary_payload(supabase: Client, end_date_str: str) ->
             "window_trading_days": _ROLLING_CROWD_WINDOW_TRADING_DAYS,
             "series": series,
             "bullets": bullets,
-            "computed_note": "가중예측은 누적 적중(`accuracy_records`) 베이스이며, 종료일이 주말이면 직전 거래일까지 당겨 맞춥니다.",
+            "computed_note": "고수층 정의와 동률 처리는 무리 시간대 카드와 같은 무리 규격입니다.",
         },
         None,
     )
 
-
-def _build_group_vs_global_snapshot_payload(
-    supabase: Client, survey_date_str: str, group_id: str, requesting_user_id: str
-) -> tuple[dict | None, str | None]:
-    """그룹 멤버만. 그룹 응답 n 미만이면 insufficient_group_sample."""
-    mem = (
-        supabase.table("group_members")
-        .select("id")
-        .eq("group_id", group_id)
-        .eq("user_id", requesting_user_id)
-        .limit(1)
-        .execute()
-    )
-    if not mem.data:
-        return (None, "not_group_member")
-
-    ginfo = supabase.table("groups").select("name").eq("id", group_id).execute()
-    gname = ginfo.data[0]["name"] if ginfo.data else "그룹"
-
-    mrows = supabase.table("group_members").select("user_id").eq("group_id", group_id).execute()
-    member_ids = {m["user_id"] for m in (mrows.data or [])}
-
-    res = (
-        supabase.table("survey_responses")
-        .select("user_id, kospi_answer")
-        .eq("survey_date", survey_date_str)
-        .execute()
-    )
-    all_rows = res.data or []
-    if len(all_rows) == 0:
-        return (None, "no_survey_data")
-
-    grp_rows = [r for r in all_rows if r.get("user_id") in member_ids]
-    gn = len(grp_rows)
-    if gn < _MIN_GROUP_GLOBAL_RESPONSES:
-        return (None, "insufficient_group_sample")
-
-    acc_map, pred_count = _get_accuracy_data(supabase)
-    g_simple, g_weighted = _percentages_from_vote_rows(grp_rows, acc_map, pred_count)
-    gl_simple, gl_weighted = _percentages_from_vote_rows(all_rows, acc_map, pred_count)
-    assert g_simple is not None and g_weighted is not None
-    assert gl_simple is not None and gl_weighted is not None
-
-    bullets = [
-        f"「{gname}」 그룹이 그날 설문에 응답한 인원은 {gn}명 (전체 무리 {len(all_rows)}명)입니다.",
-        f"그룹: 다수결 약 {g_simple}% 형태, 가중예측 축 약 {g_weighted}% (차이 {g_weighted - g_simple:+d}pt).",
-        f"전체: 다수결 약 {gl_simple}% · 가중 약 {gl_weighted}% (차이 {gl_weighted - gl_simple:+d}pt).",
-        "좁은 무리와 넓은 무리의 그날 ‘기울기’ 차이만 비교합니다. 개인 이름·원시 응답은 없습니다.",
-        "투자·매매 의사결정이 아니며 수익을 보장하지 않습니다.",
-    ]
-
-    return (
-        {
-            "survey_date": survey_date_str,
-            "group_id": group_id,
-            "group_name": gname,
-            "group": {
-                "n": gn,
-                "simple_pct": g_simple,
-                "weighted_pct": g_weighted,
-                "gap_points": g_weighted - g_simple,
-            },
-            "global": {
-                "n": len(all_rows),
-                "simple_pct": gl_simple,
-                "weighted_pct": gl_weighted,
-                "gap_points": gl_weighted - gl_simple,
-            },
-            "bullets": bullets,
-            "computed_note": "그룹·전체 모두 같은 날 같은 가중예측 정의입니다.",
-        },
-        None,
-    )
 
 
 def _wave_b_fetch_survey_with_responded_at(
@@ -1117,13 +988,34 @@ def _wave_b_expert_and_novice_ids(
     return experts, set(novices)
 
 
+_MIN_TOP_EXPERT_WINDOW_TIMESTAMPS = 8
+
+
+def _global_top_expert_uid(supabase: Client) -> tuple[str | None, str | None]:
+    """예측 횟수 규격 통과자 중 누적 적중률 1순위(동률 시 id순). 없으면 segment_empty."""
+    acc_map, pred_count = _get_accuracy_data(supabase)
+    eligible = [
+        str(uid)
+        for uid in pred_count
+        if int(pred_count.get(uid, 0) or 0) >= _SEGMENT_PRED_COUNT_MIN
+    ]
+    if not eligible:
+        return None, "segment_empty"
+
+    def acc_of(u: str) -> float:
+        return float(acc_map.get(u, 0.5))
+
+    leader = sorted(eligible, key=lambda u: (-acc_of(u), u))[0]
+    return leader, None
+
+
 def _build_leader_pick_payload(
     supabase: Client, survey_date_str: str, cohort: str
 ) -> tuple[dict | None, str | None]:
     """고수층 또는 하수층 규격 안에서 순위 1명의 그날 코스피 방향(kospi_answer)."""
     res = (
         supabase.table("survey_responses")
-        .select("user_id, kospi_answer")
+        .select("user_id, kospi_answer, gauge_position")
         .eq("survey_date", survey_date_str)
         .execute()
     )
@@ -1148,22 +1040,27 @@ def _build_leader_pick_payload(
 
     if cohort == "expert":
         leader = sorted(segment_list, key=lambda u: (-acc_of(u), u))[0]
-        rank_label_ko = "고수층 1위"
+        rank_label_ko = "오늘 고수 픽 대상"
     else:
         leader = sorted(segment_list, key=lambda u: (acc_of(u), u))[0]
-        rank_label_ko = "하수층 1위"
+        rank_label_ko = "오늘 하수 픽 대상"
 
     pick: bool | None = None
+    gauge_v: int | None = None
     for r in rows:
         if str(r["user_id"]) != leader:
             continue
         if r.get("kospi_answer") is None:
             return None, "no_survey_data"
         pick = bool(r["kospi_answer"])
+        gauge_v = _coerce_gauge_from_row(r)
         break
     if pick is None:
         return None, "no_survey_data"
 
+    conviction_label_ko = (
+        f"확신도(게이지) {gauge_v:+d}" if gauge_v is not None else "확신 게이지 미기록(방향만 반영)"
+    )
     urow = supabase.table("users").select("name").eq("id", leader).limit(1).execute()
     name = (urow.data[0].get("name") or "").strip() if urow.data else ""
     masked = (name[0] + "**") if name else "익명"
@@ -1183,7 +1080,8 @@ def _build_leader_pick_payload(
                 else "그중 누적 적중률이 가장 낮은 사람 한 명(동률 시 사용자 id 순)입니다."
             )
         ),
-        "층 정의와 동률 처리는 시간대 분포 카드와 같은 규칙입니다.",
+        "그날 방향과 게이지를 함께 보여 주는 요약입니다.",
+        "무리 규격(고수층·하수층 정의)과 동률 처리는 다른 무리 카드와 같습니다.",
         "닉네임은 초성 형태만 표시합니다.",
         "투자·매매 의사결정이 아니며 수익을 보장하지 않습니다.",
     ]
@@ -1199,6 +1097,8 @@ def _build_leader_pick_payload(
         "leader_accuracy_pct": pct,
         "kospi_answer": pick,
         "direction_label_ko": direction_label_ko,
+        "leader_gauge_position": gauge_v,
+        "conviction_label_ko": conviction_label_ko,
         "segment_n": len(segment),
         "bullets": bullets,
         "computed_note": computed_note,
@@ -1224,37 +1124,60 @@ def _timed_user_bucket_records(rows: list[dict]) -> list[tuple[str, bool, int]]:
 def _build_time_slice_accuracy_payload(
     supabase: Client, survey_date_str: str
 ) -> tuple[dict | None, str | None]:
-    rows, err = _wave_b_fetch_survey_with_responded_at(supabase, survey_date_str)
-    if err == "time_field_unavailable":
-        return None, "time_field_unavailable"
-    if not rows:
+    """전체 무리에서 적중 1순위 1명이, 종료 거래일까지 직전 7거래일 구간에서 남긴 제출 시각 버킷 분포."""
+    leader, tier_err = _global_top_expert_uid(supabase)
+    if tier_err:
+        return None, tier_err
+    try:
+        end_d = datetime.strptime(survey_date_str, "%Y-%m-%d").date()
+    except ValueError:
         return None, "no_survey_data"
+    try:
+        dates = last_n_trading_days_inclusive_through(end_d, _ROLLING_CROWD_WINDOW_TRADING_DAYS)
+    except ValueError:
+        return None, "no_survey_data"
+    date_strs = [c.isoformat() for c in dates]
 
-    kr, _has_daily = _kospi_result_for_survey_day(supabase, survey_date_str)
-    results_known = kr is not None
+    try:
+        res = (
+            supabase.table("survey_responses")
+            .select("survey_date, responded_at")
+            .eq("user_id", leader)
+            .in_("survey_date", date_strs)
+            .execute()
+        )
+    except Exception as e:
+        logger.warning("time_slice top expert responded_at 조회 실패: %s", e)
+        return None, "time_field_unavailable"
 
-    timed = _timed_user_bucket_records(rows)
-    total_ts = len(timed)
+    rows = res.data or []
+    timed_buckets: list[int] = []
+    for r in rows:
+        dt_k = _parse_responded_at_kst(r.get("responded_at"))
+        if dt_k is None:
+            continue
+        timed_buckets.append(_bucket_index_from_kst_local(dt_k))
+
+    total_ts = len(timed_buckets)
     if total_ts == 0:
         return None, "no_timestamp_data"
-    if total_ts < _MIN_TOTAL_TIMESTAMPS_WAVE_B:
+    if total_ts < _MIN_TOP_EXPERT_WINDOW_TIMESTAMPS:
         return None, "insufficient_total_timestamps"
 
     counts = [0, 0, 0, 0]
-    correct_counts = [0, 0, 0, 0]
-    for uid, voted_up, bix in timed:
-        counts[bix] += 1
-        if results_known and kr is not None:
-            if voted_up == kr:
-                correct_counts[bix] += 1
+    for b in timed_buckets:
+        counts[b] += 1
+
+    acc_map, _ = _get_accuracy_data(supabase)
+    pct_leader = round(float(acc_map.get(leader, 0.5)) * 100)
+    urow = supabase.table("users").select("name").eq("id", leader).limit(1).execute()
+    name = (urow.data[0].get("name") or "").strip() if urow.data else ""
+    masked = (name[0] + "**") if name else "익명"
 
     bucket_rows = []
     for i in range(4):
         n_i = counts[i]
-        ok = n_i >= _MIN_TIME_SLICE_BUCKET_N
-        acc_pct = None
-        if results_known and ok and kr is not None and n_i > 0:
-            acc_pct = int(round(100 * correct_counts[i] / n_i))
+        ok = n_i >= 2
         bucket_rows.append(
             {
                 "bucket_id": _TIME_SLICE_BUCKET_LABEL_ID[i],
@@ -1262,30 +1185,29 @@ def _build_time_slice_accuracy_payload(
                 "n": n_i,
                 "sample_ok": ok,
                 "pct_of_timed_day": round(100 * n_i / total_ts),
-                "correct_pct_snapshot": acc_pct if (results_known and ok) else None,
+                "correct_pct_snapshot": None,
             }
         )
 
     bullets = [
-        f"그날 제출 시각이 기록된 응답만 {total_ts}건으로 시간대 무드를 봅니다.",
-        (
-            "해당 거래일 코스피 결과가 확정되어 버킷별 적중 비율을 표시했습니다."
-            if results_known
-            else "아직 결과가 확정되지 않아 버킷별 분포비율만 보여 줍니다. 적중률은 결과 확정 후에 붙습니다."
-        ),
-        f"버킷별 최소 표본 미달({_MIN_TIME_SLICE_BUCKET_N}명 미만) 구간은 감춘 수치예요.",
-        "시각 미기록 응답은 교육·게임 카드에서는 제외됩니다.",
+        f"전체 무리에서 예측 횟수 규격을 통과한 사람 중 누적 적중률 1순위(동률 시 id순) 한 명을 골랐습니다.",
+        f"그 참가자의 최근 {_ROLLING_CROWD_WINDOW_TRADING_DAYS}거래일({date_strs[0]} ~ {date_strs[-1]}) 구간에서 제출 시각이 기록된 응답 {total_ts}건을 버킷에 담았습니다.",
+        "이름은 초성만 표시합니다.",
         "투자·매매 의사결정이 아니며 수익을 보장하지 않습니다.",
     ]
 
     return (
         {
             "survey_date": survey_date_str,
+            "end_date": survey_date_str,
+            "window_trading_days": _ROLLING_CROWD_WINDOW_TRADING_DAYS,
+            "leader_masked_name": masked,
+            "leader_accuracy_pct": pct_leader,
             "total_with_timestamp": total_ts,
-            "kospi_result_known": results_known,
+            "kospi_result_known": False,
             "buckets": bucket_rows,
             "bullets": bullets,
-            "computed_note": "버킷은 KST 현지 시각으로만 나눕니다. 코스피 결과는 daily_surveys.kospi_result 기준입니다.",
+            "computed_note": "해당 기간에 응답하지 않은 거래일은 자동으로 제외됩니다.",
         },
         None,
     )
@@ -1294,63 +1216,53 @@ def _build_time_slice_accuracy_payload(
 def _build_vote_time_profile_payload(
     supabase: Client, survey_date_str: str, cohort: str
 ) -> tuple[dict | None, str | None]:
-    """cohort: expert | novice"""
+    """cohort expert=정답자, novice=오답자 (그날 kospi_result 확정 후)."""
     rows, err = _wave_b_fetch_survey_with_responded_at(supabase, survey_date_str)
     if err == "time_field_unavailable":
         return None, "time_field_unavailable"
     if not rows:
         return None, "no_survey_data"
 
-    acc_map, pred_count = _get_accuracy_data(supabase)
-    day_uids = {str(r["user_id"]) for r in rows if r.get("user_id")}
-    experts, novices = _wave_b_expert_and_novice_ids(day_uids, acc_map, pred_count)
-    segment_ids = experts if cohort == "expert" else novices
-    cohort_title = "고수층" if cohort == "expert" else "하수층"
-    label_hint = (
-        "(누적 적중·예측횟수 규격으로 정함)"
-        if cohort == "expert"
-        else "(고수 규격의 대칭 하위 규격)"
-    )
+    kr, has_row = _kospi_result_for_survey_day(supabase, survey_date_str)
+    if not has_row or kr is None:
+        return None, "no_kospi_result"
 
-    if not segment_ids:
-        return None, "segment_empty"
+    wants_correct = cohort == "expert"
+    cohort_title = "정답자" if wants_correct else "오답자"
 
     timed = _timed_user_bucket_records(rows)
-    total_seg = sum(1 for uid, _, _ in timed if uid in segment_ids)
+    filtered = [(uid, ka, b) for uid, ka, b in timed if (ka == kr) == wants_correct]
+    total_seg = len(filtered)
     total_gl = len(timed)
-
     if total_gl < _MIN_TOTAL_TIMESTAMPS_WAVE_B:
         return None, "insufficient_total_timestamps"
+    if total_seg == 0:
+        return None, "segment_empty"
     if total_seg < _MIN_SEGMENT_TIMESTAMPS_VOTE_PROFILE:
         return None, "insufficient_segment_timestamps"
 
     seg_counts = [0, 0, 0, 0]
-    gl_counts = [0, 0, 0, 0]
-    for uid, _ka, bix in timed:
-        gl_counts[bix] += 1
-        if uid in segment_ids:
-            seg_counts[bix] += 1
+    for _uid, _ka, bix in filtered:
+        seg_counts[bix] += 1
 
     bucket_summ = []
     for i in range(4):
-        g = gl_counts[i]
         s_i = seg_counts[i]
         bucket_summ.append(
             {
                 "bucket_id": _TIME_SLICE_BUCKET_LABEL_ID[i],
                 "label_ko": _TIME_SLICE_BUCKET_LABEL_KO[i],
                 "segment_n": s_i,
-                "global_n": g,
+                "global_n": s_i,
                 "segment_share_pct": round(100 * s_i / total_seg) if total_seg else 0,
-                "global_share_pct": round(100 * g / total_gl) if total_gl else 0,
+                "global_share_pct": round(100 * s_i / total_seg) if total_seg else 0,
             }
         )
 
     bullets = [
-        f"※ {cohort_title} {label_hint}: 그날 응답 중 pred_count ≥ {_SEGMENT_PRED_COUNT_MIN} 인 유저만 자격에 넣고, 적중률 기준 상·하위 각 약 30%를 골랐습니다.",
-        f"시각이 기록된 응답만 집계해 {cohort_title} {total_seg}건·전체 {total_gl}건을 비교합니다.",
-        "버킷은 time_slice 카드와 동일한 KST 경계입니다.",
-        "개인 이름·타임라인 노출 없이 집계만 제공합니다.",
+        f"※ 그날 코스피 결과가 확정된 뒤에만 집계합니다. {cohort_title}만 모았습니다(제출 시각 기록된 응답만).",
+        f"시각 기록 응답 {total_seg}건의 시간대 비율입니다.",
+        "버킷 경계는 다른 시간대 카드와 동일한 KST 구간입니다.",
         "투자·매매 의사결정이 아니며 수익을 보장하지 않습니다.",
     ]
 
@@ -1363,7 +1275,7 @@ def _build_vote_time_profile_payload(
             "global_with_timestamp_n": total_gl,
             "buckets": bucket_summ,
             "bullets": bullets,
-            "computed_note": "동률 순위 타이브레이크는 user_id 문자열 오름차순입니다.",
+            "computed_note": "정답·오답은 그날 survey_date의 kospi_result와 kospi_answer 비교입니다.",
         },
         None,
     )
@@ -3247,104 +3159,6 @@ async def get_daily_expert_gap(
     }
 
 
-@app.get("/api/insights/my-gauge-vs-crowd")
-async def get_my_gauge_vs_crowd(
-    survey_date: str,
-    current_user=Depends(get_current_user),
-    supabase: Client = Depends(get_supabase),
-):
-    """
-    같은 방향(상승/하락) 참가자 무리 속에서 내 확신도(게이지) 상대 위치.
-    미참여·표본 부족 시 차감 대상 정보 없음(해당 이유 문자열 반환).
-    """
-    user_id = str(current_user.id)
-    sd = survey_date.strip()
-    if len(sd) != 10 or sd[4] != "-" or sd[7] != "-":
-        raise HTTPException(status_code=400, detail="survey_date 형식은 YYYY-MM-DD 여야 합니다.")
-
-    slug = "my_gauge_vs_crowd"
-    meta = INSIGHT_PRODUCTS.get(slug)
-    if not meta:
-        raise HTTPException(status_code=500, detail="상품 설정 오류")
-    price_tokens = int(meta["price_tokens"])
-
-    user_row = supabase.table("users").select("tokens").eq("id", user_id).execute()
-    balance = int(user_row.data[0].get("tokens") or 100) if user_row.data else 100
-
-    has_entitlement = entitlement_exists(supabase, user_id, slug, sd)
-    wall = paywall_enabled()
-
-    payload, rreason = _build_my_gauge_vs_crowd_payload(supabase, sd, user_id)
-
-    if rreason == "not_participated":
-        return {
-            "accessible": False,
-            "locked": False,
-            "reason": "not_participated",
-            "survey_date": sd,
-            "product_slug": slug,
-            "price_tokens": price_tokens,
-            "balance": balance,
-            "title": meta["title"],
-            "description": meta.get("description"),
-            "data": None,
-        }
-
-    if rreason == "no_survey_data":
-        return {
-            "accessible": False,
-            "locked": False,
-            "reason": "no_survey_data",
-            "survey_date": sd,
-            "product_slug": slug,
-            "price_tokens": price_tokens,
-            "balance": balance,
-            "title": meta["title"],
-            "data": None,
-        }
-
-    if rreason == "cohort_too_small":
-        return {
-            "accessible": False,
-            "locked": False,
-            "reason": "cohort_too_small",
-            "survey_date": sd,
-            "product_slug": slug,
-            "price_tokens": price_tokens,
-            "balance": balance,
-            "title": meta["title"],
-            "description": meta.get("description"),
-            "data": None,
-        }
-
-    assert payload is not None
-
-    if wall and not has_entitlement:
-        return {
-            "accessible": False,
-            "locked": True,
-            "reason": None,
-            "survey_date": sd,
-            "product_slug": slug,
-            "price_tokens": price_tokens,
-            "balance": balance,
-            "title": meta["title"],
-            "description": meta.get("description"),
-            "data": None,
-        }
-
-    return {
-        "accessible": True,
-        "locked": False,
-        "survey_date": sd,
-        "product_slug": slug,
-        "price_tokens": price_tokens,
-        "balance": balance,
-        "title": meta["title"],
-        "reason": None,
-        "data": payload,
-    }
-
 
 @app.get("/api/insights/crowd-conviction-spread")
 async def get_crowd_conviction_spread(
@@ -3500,112 +3314,6 @@ async def get_rolling_crowd_summary(
     }
 
 
-@app.get("/api/insights/group-vs-global-snapshot")
-async def get_group_vs_global_snapshot(
-    survey_date: str,
-    group_id: str,
-    current_user=Depends(get_current_user),
-    supabase: Client = Depends(get_supabase),
-):
-    """내 그룹 vs 전체. scope_key는 `survey_date:group_id`"""
-    user_id = str(current_user.id)
-    sd = survey_date.strip()
-    gid = group_id.strip()
-    if len(sd) != 10 or sd[4] != "-" or sd[7] != "-":
-        raise HTTPException(status_code=400, detail="survey_date 형식은 YYYY-MM-DD 여야 합니다.")
-    if len(gid) < 30:
-        raise HTTPException(status_code=400, detail="group_id가 올바르지 않습니다.")
-
-    slug = "group_vs_global_snapshot"
-    if slug not in INSIGHT_PRODUCTS:
-        raise HTTPException(status_code=500, detail="상품 설정 오류")
-    meta = INSIGHT_PRODUCTS[slug]
-    price_tokens = int(meta["price_tokens"])
-
-    scope_key = f"{sd}:{gid}"
-    user_row = supabase.table("users").select("tokens").eq("id", user_id).execute()
-    balance = int(user_row.data[0].get("tokens") or 100) if user_row.data else 100
-
-    has_entitlement = entitlement_exists(supabase, user_id, slug, scope_key)
-    wall = paywall_enabled()
-    unlocked = (not wall) or has_entitlement
-
-    payload, err_reason = _build_group_vs_global_snapshot_payload(supabase, sd, gid, user_id)
-
-    if err_reason == "not_group_member":
-        return {
-            "accessible": False,
-            "locked": False,
-            "reason": "not_group_member",
-            "survey_date": sd,
-            "group_id": gid,
-            "product_slug": slug,
-            "price_tokens": price_tokens,
-            "balance": balance,
-            "title": meta["title"],
-            "description": meta.get("description"),
-            "data": None,
-        }
-
-    if err_reason == "no_survey_data":
-        return {
-            "accessible": False,
-            "locked": wall and not has_entitlement,
-            "reason": "no_survey_data",
-            "survey_date": sd,
-            "group_id": gid,
-            "product_slug": slug,
-            "price_tokens": price_tokens,
-            "balance": balance,
-            "title": meta["title"],
-            "data": None,
-        }
-
-    if err_reason == "insufficient_group_sample":
-        return {
-            "accessible": False,
-            "locked": False,
-            "reason": "insufficient_group_sample",
-            "survey_date": sd,
-            "group_id": gid,
-            "product_slug": slug,
-            "price_tokens": price_tokens,
-            "balance": balance,
-            "title": meta["title"],
-            "description": meta.get("description"),
-            "data": None,
-        }
-
-    assert payload is not None
-
-    if not unlocked:
-        return {
-            "accessible": False,
-            "locked": True,
-            "survey_date": sd,
-            "group_id": gid,
-            "product_slug": slug,
-            "price_tokens": price_tokens,
-            "balance": balance,
-            "title": meta["title"],
-            "description": meta.get("description"),
-            "data": None,
-        }
-
-    return {
-        "accessible": True,
-        "locked": False,
-        "survey_date": sd,
-        "group_id": gid,
-        "product_slug": slug,
-        "price_tokens": price_tokens,
-        "balance": balance,
-        "title": meta["title"],
-        "reason": None,
-        "data": payload,
-    }
-
-
 def _unlock_precheck_wave_b_insight(supabase: Client, product_slug: str, survey_date_iso: str) -> None:
     """데이터 불충족 시 400으로 잠금 해제 차단."""
     if product_slug == "time_slice_accuracy":
@@ -3622,15 +3330,21 @@ def _unlock_precheck_wave_b_insight(supabase: Client, product_slug: str, survey_
         raise HTTPException(status_code=400, detail="responded_at 시각 필드를 조회할 수 없습니다. 마이그레이션 확인을 해 주세요.")
     if er == "no_survey_data":
         raise HTTPException(status_code=400, detail="그날 설문 응답이 없어 구매할 수 없습니다.")
+    if er == "no_kospi_result":
+        raise HTTPException(status_code=400, detail="코스피 결과가 확정된 뒤에만 구매할 수 있습니다.")
     if er == "no_timestamp_data":
         raise HTTPException(status_code=400, detail="해당 거래일에 제출 시각이 기록된 응답이 없습니다.")
     if er == "insufficient_total_timestamps":
         raise HTTPException(
             status_code=400,
-            detail=f"시각이 기록된 응답이 {_MIN_TOTAL_TIMESTAMPS_WAVE_B}건 미만이면 구매할 수 없습니다.",
+            detail=(
+                f"시각 기록이 최소 기준에 못 미칩니다(최고 고수 카드는 최근 구간 합산 {_MIN_TOP_EXPERT_WINDOW_TIMESTAMPS}건 이상, 그 외 무리 시간 카드는 {_MIN_TOTAL_TIMESTAMPS_WAVE_B}건 이상)."
+            ),
         )
     if er == "segment_empty":
-        raise HTTPException(status_code=400, detail="고수/하수층을 구분할 표본 자격군이 부족합니다.")
+        if product_slug == "time_slice_accuracy":
+            raise HTTPException(status_code=400, detail="최고 고수 후보 무리 규격을 만족하는 표본이 없습니다.")
+        raise HTTPException(status_code=400, detail="정답·오답 인원 또는 세그먼트 조건을 만족하지 않습니다.")
     if er == "insufficient_segment_timestamps":
         raise HTTPException(
             status_code=400,
@@ -3686,10 +3400,14 @@ async def get_time_slice_accuracy(
         return soft(accessible=False, locked=False, reason="time_field_unavailable", description=meta.get("description"), data=None)
     if err_reason == "no_survey_data":
         return soft(accessible=False, locked=wall and not has_entitlement, reason="no_survey_data", data=None)
+    if err_reason == "no_kospi_result":
+        return soft(accessible=False, locked=False, reason="no_kospi_result", description=meta.get("description"), data=None)
     if err_reason == "no_timestamp_data":
         return soft(accessible=False, locked=False, reason="no_timestamp_data", description=meta.get("description"), data=None)
     if err_reason == "insufficient_total_timestamps":
         return soft(accessible=False, locked=False, reason="insufficient_total_timestamps", description=meta.get("description"), data=None)
+    if err_reason == "segment_empty":
+        return soft(accessible=False, locked=False, reason="segment_empty", description=meta.get("description"), data=None)
 
     assert payload is not None
     if not unlocked:
@@ -3763,6 +3481,8 @@ def _vote_time_profile_insight_response(
         return soft(accessible=False, locked=False, reason="time_field_unavailable", description=meta.get("description"), data=None)
     if err_reason == "no_survey_data":
         return soft(accessible=False, locked=wall and not has_entitlement, reason="no_survey_data", data=None)
+    if err_reason == "no_kospi_result":
+        return soft(accessible=False, locked=False, reason="no_kospi_result", description=meta.get("description"), data=None)
     if err_reason == "segment_empty":
         return soft(accessible=False, locked=False, reason="segment_empty", description=meta.get("description"), data=None)
     if err_reason == "insufficient_total_timestamps":
@@ -3831,18 +3551,6 @@ async def post_insight_unlock(
     cost = int(meta["price_tokens"])
 
     scope_key = sd
-    if body.product_slug == "group_vs_global_snapshot":
-        gid = (body.group_id or "").strip()
-        if len(gid) < 30:
-            raise HTTPException(status_code=400, detail="group_vs_global_snapshot는 유효한 group_id가 필요합니다.")
-        scope_key = f"{sd}:{gid}"
-        _, pre_err = _build_group_vs_global_snapshot_payload(supabase, sd, gid, user_id)
-        if pre_err == "not_group_member":
-            raise HTTPException(status_code=403, detail="해당 그룹 멤버만 잠금 해제할 수 있습니다.")
-        if pre_err == "no_survey_data":
-            raise HTTPException(status_code=400, detail="그날 설문 응답이 없어 구매할 수 없습니다.")
-        if pre_err == "insufficient_group_sample":
-            raise HTTPException(status_code=400, detail=f"그룹 응답이 {_MIN_GROUP_GLOBAL_RESPONSES}명 미만이면 구매할 수 없습니다.")
 
     if body.product_slug in ("expert_leader_pick", "novice_leader_pick"):
         _unlock_precheck_leader_pick(supabase, body.product_slug, sd)

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
+import type { ReactNode } from "react";
 import type { InsightProductSlug } from "@/lib/insight_card_meta";
 import { INSIGHT_CARD_META } from "@/lib/insight_card_meta";
 import { useInsightDashboardCompact } from "@/contexts/InsightDashboardCompactContext";
@@ -24,12 +24,6 @@ const THEMES: Record<InsightProductSlug, Theme> = {
     secondary: "rgba(14,165,233,0.75)",
     grid: "rgba(255,255,255,0.08)",
     soft: "rgba(56,189,248,0.14)",
-  },
-  group_vs_global_snapshot: {
-    primary: "rgba(52,211,153,0.9)",
-    secondary: "rgba(16,185,129,0.65)",
-    grid: "rgba(255,255,255,0.08)",
-    soft: "rgba(52,211,153,0.15)",
   },
   time_slice_accuracy: {
     primary: "rgba(251,191,36,0.92)",
@@ -67,12 +61,6 @@ const THEMES: Record<InsightProductSlug, Theme> = {
     grid: "rgba(255,255,255,0.08)",
     soft: "rgba(251,113,133,0.12)",
   },
-  my_gauge_vs_crowd: {
-    primary: "rgba(45,212,191,0.95)",
-    secondary: "rgba(20,184,166,0.75)",
-    grid: "rgba(255,255,255,0.08)",
-    soft: "rgba(45,212,191,0.16)",
-  },
 };
 
 /** 가로폭 활용 · 세로도 충분히 확보(~2.2:1) — 카드 폭만큼 키우면 높이도 같이 따라감(aspect-ratio) */
@@ -90,18 +78,6 @@ const PANEL_H = VB_H - PANEL_Y - 18;
 const BASELINE_Y = PANEL_Y + PANEL_H - 10;
 /** 막대 최대 높이(픽셀, viewBox 단위) */
 const BAR_MAX = BASELINE_Y - PANEL_Y - 44;
-
-function usePrefersReducedMotion(): boolean {
-  const [v, setV] = useState(false);
-  useEffect(() => {
-    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
-    setV(mq.matches);
-    const on = () => setV(mq.matches);
-    mq.addEventListener("change", on);
-    return () => mq.removeEventListener("change", on);
-  }, []);
-  return v;
-}
 
 function Bars({ heights, fillForIndex }: { heights: number[]; fillForIndex: (i: number) => string }) {
   const n = heights.length;
@@ -195,47 +171,6 @@ function SvgTitle({ children }: { children: string }) {
   );
 }
 
-function GaugeKnob({
-  cx1,
-  cx2,
-  cy,
-  r,
-  fill,
-  stroke,
-  reduceMotion,
-}: {
-  cx1: number;
-  cx2: number;
-  cy: number;
-  r: number;
-  fill: string;
-  stroke: string;
-  reduceMotion: boolean;
-}) {
-  if (reduceMotion) {
-    const mid = (cx1 + cx2) / 2;
-    return (
-      <g transform={`translate(${mid},${cy})`}>
-        <circle r={r} fill={fill} stroke={stroke} strokeWidth="2.25" />
-      </g>
-    );
-  }
-  const values = `${cx1},${cy}; ${cx2},${cy}; ${cx1},${cy}`;
-  return (
-    <g>
-      <animateTransform
-        attributeName="transform"
-        type="translate"
-        dur="2.9s"
-        repeatCount="indefinite"
-        values={values}
-        keyTimes="0;0.5;1"
-      />
-      <circle cx={0} cy={0} r={r} fill={fill} stroke={stroke} strokeWidth="2.25" />
-    </g>
-  );
-}
-
 export default function InsightAnimatedPreview({
   slug,
   visual = "default",
@@ -249,14 +184,6 @@ export default function InsightAnimatedPreview({
   const dashCompact = useInsightDashboardCompact();
   const pinchTiny = dashCompact && visual === "default";
   const { dLine, approxLen } = buildSparkLine();
-  const reduceMotion = usePrefersReducedMotion();
-
-  const gxTrack = Math.round(VB_W * 0.14);
-  const gwTrack = Math.round(VB_W * 0.72);
-  const gxKnobLeft = gxTrack + Math.round(gwTrack * 0.12);
-  const gxKnobRight = gxTrack + Math.round(gwTrack * 0.88);
-  const gyTrack = Math.round(BASELINE_Y - 54);
-  const gyLine = gyTrack + 14;
 
   let svgInner: ReactNode;
   switch (slug) {
@@ -273,7 +200,7 @@ export default function InsightAnimatedPreview({
       svgInner = (
         <>
           <SvgBackdrop theme={theme} />
-          <SvgTitle>최근 7거래일 흐름</SvgTitle>
+          <SvgTitle>고수층 7일 적중률</SvgTitle>
           <path
             d={dLine}
             fill="none"
@@ -288,20 +215,11 @@ export default function InsightAnimatedPreview({
         </>
       );
       break;
-    case "group_vs_global_snapshot":
-      svgInner = (
-        <>
-          <SvgBackdrop theme={theme} />
-          <DualBarLegend labels={["내 그룹", "전체"]} />
-          <Bars heights={[0.55, 0.44]} fillForIndex={(i) => (i === 0 ? theme.primary : theme.secondary)} />
-        </>
-      );
-      break;
     case "time_slice_accuracy":
       svgInner = (
         <>
           <SvgBackdrop theme={theme} />
-          <SvgTitle>시간 버킷 비중</SvgTitle>
+          <SvgTitle>최고 고수 응답 시간</SvgTitle>
           <Bars heights={[0.28, 0.42, 0.72, 0.5, 0.36]} fillForIndex={(i) => (i % 2 === 0 ? theme.primary : theme.secondary)} />
         </>
       );
@@ -311,7 +229,7 @@ export default function InsightAnimatedPreview({
       svgInner = (
         <>
           <SvgBackdrop theme={theme} />
-          <SvgTitle>제출 시각대 분포</SvgTitle>
+          <SvgTitle>{slug === "expert_vote_time_profile" ? "정답층 시간" : "오답층 시간"}</SvgTitle>
           <Bars heights={[0.22, 0.38, 0.68, 0.52, 0.3]} fillForIndex={() => theme.primary} />
         </>
       );
@@ -321,7 +239,7 @@ export default function InsightAnimatedPreview({
       svgInner = (
         <>
           <SvgBackdrop theme={theme} />
-          <SvgTitle>무리 규격 1순위 · 방향</SvgTitle>
+          <SvgTitle>{slug === "expert_leader_pick" ? "고수 픽 + 확신도" : "하수 픽 + 확신도"}</SvgTitle>
           <Bars heights={[0.78]} fillForIndex={() => theme.primary} />
         </>
       );
@@ -330,44 +248,8 @@ export default function InsightAnimatedPreview({
       svgInner = (
         <>
           <SvgBackdrop theme={theme} />
-          <SvgTitle>확신 분포 요약</SvgTitle>
-          <Bars heights={[0.26, 0.46, 0.78, 0.74, 0.48, 0.38, 0.24]} fillForIndex={() => theme.primary} />
-        </>
-      );
-      break;
-    case "my_gauge_vs_crowd":
-      svgInner = (
-        <>
-          <SvgBackdrop theme={theme} />
-          <SvgTitle>같은 편 속 내 위치</SvgTitle>
-          <rect x={gxTrack} y={gyTrack} width={gwTrack} height="26" rx="11" fill="rgba(0,0,0,0.42)" stroke={theme.grid} />
-          <rect
-            x={gxTrack + Math.round(gwTrack * 0.2)}
-            y={gyTrack + 6}
-            width={Math.round(gwTrack * 0.42)}
-            height="14"
-            rx="6"
-            fill={theme.soft}
-          />
-          <line
-            x1={gxTrack}
-            y1={gyLine}
-            x2={gxTrack + gwTrack}
-            y2={gyLine}
-            stroke={theme.secondary}
-            strokeWidth="1.75"
-            opacity={0.55}
-            strokeLinecap="round"
-          />
-          <GaugeKnob
-            cx1={gxKnobLeft}
-            cx2={gxKnobRight}
-            cy={gyLine}
-            r={12.5}
-            fill={theme.primary}
-            stroke="rgba(255,255,255,0.9)"
-            reduceMotion={reduceMotion}
-          />
+          <DualBarLegend labels={["상승 택함", "하락 택함"]} />
+          <Bars heights={[0.58, 0.46]} fillForIndex={(i) => (i === 0 ? theme.primary : theme.secondary)} />
         </>
       );
       break;

@@ -3,14 +3,12 @@
 import { useMemo, useEffect, useState } from "react";
 import ExpertGapInsightCard from "@/components/ExpertGapInsightCard";
 import RollingCrowdInsightCard from "@/components/RollingCrowdInsightCard";
-import GroupVsGlobalInsightCard from "@/components/GroupVsGlobalInsightCard";
 import TimeSliceAccuracyInsightCard from "@/components/TimeSliceAccuracyInsightCard";
 import VoteTimeProfileInsightCard from "@/components/VoteTimeProfileInsightCard";
 import CohortLeaderPickInsightCard from "@/components/CohortLeaderPickInsightCard";
 import CrowdConvictionInsightCard from "@/components/CrowdConvictionInsightCard";
-import GaugeCrowdInsightCard from "@/components/GaugeCrowdInsightCard";
 import { InsightDashboardCompactProvider } from "@/contexts/InsightDashboardCompactContext";
-import type { DashboardData, TodaySurvey, Group } from "@/lib/api";
+import type { DashboardData, TodaySurvey } from "@/lib/api";
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -22,13 +20,11 @@ export default function DashboardInsightSection({
   accessToken,
   today,
   dash,
-  groups = [],
   onBalanceUpdated,
 }: {
   accessToken: string;
   today: TodaySurvey | null;
   dash: DashboardData | null;
-  groups?: Group[];
   onBalanceUpdated?: () => void;
 }) {
   const [recentResultDates, setRecentResultDates] = useState<string[]>([]);
@@ -85,12 +81,6 @@ export default function DashboardInsightSection({
           surveyDateAsEndDate={surveyDate}
           onBalanceUpdated={onBalanceUpdated}
         />
-        <GroupVsGlobalInsightCard
-          accessToken={accessToken}
-          surveyDate={surveyDate}
-          groups={groups ?? []}
-          onBalanceUpdated={onBalanceUpdated}
-        />
         <TimeSliceAccuracyInsightCard
           accessToken={accessToken}
           surveyDate={surveyDate}
@@ -106,7 +96,6 @@ export default function DashboardInsightSection({
         <CohortLeaderPickInsightCard accessToken={accessToken} surveyDate={surveyDate} cohort="expert" onBalanceUpdated={onBalanceUpdated} />
         <CohortLeaderPickInsightCard accessToken={accessToken} surveyDate={surveyDate} cohort="novice" onBalanceUpdated={onBalanceUpdated} />
         <CrowdConvictionInsightCard accessToken={accessToken} surveyDate={surveyDate} onBalanceUpdated={onBalanceUpdated} />
-        <GaugeCrowdInsightCard accessToken={accessToken} surveyDate={surveyDate} onBalanceUpdated={onBalanceUpdated} />
       </div>
     </InsightDashboardCompactProvider>
   );
@@ -123,14 +112,12 @@ export function DashboardInsightSectionSkeleton() {
     <div className="space-y-1">
       {slot("border-violet-500/25", "bg-violet-500/[0.06]")}
       {slot("border-sky-500/25", "bg-sky-500/[0.06]")}
-      {slot("border-emerald-500/25", "bg-emerald-500/[0.06]")}
       {slot("border-amber-500/25", "bg-amber-500/[0.06]")}
       {slot("border-indigo-500/25", "bg-indigo-500/[0.06]")}
       {slot("border-slate-500/25", "bg-slate-600/[0.08]")}
       {slot("border-fuchsia-500/25", "bg-fuchsia-500/[0.06]")}
       {slot("border-zinc-500/25", "bg-zinc-600/[0.08]")}
       {slot("border-rose-500/25", "bg-rose-500/[0.06]")}
-      {slot("border-teal-500/25", "bg-teal-500/[0.06]")}
     </div>
   );
 }
