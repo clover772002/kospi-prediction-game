@@ -389,15 +389,18 @@ export default function InsightAnimatedPreview({
       : "mt-2 text-[10px] leading-relaxed text-gray-600 pr-1";
 
   if (visual === "dashboardHero") {
+    /** meet + 안쪽 여백: slice처럼 꽉 채우면 둥근 테두리(overflow-hidden)와 맞물려 가장자리가 잘려 보임 */
     return (
       <div className="insight-preview-mount flex h-full min-h-[168px] w-full min-w-0 flex-1 flex-col">
-        <div className="relative min-h-[140px] w-full flex-1 overflow-hidden">
+        <div className="relative min-h-[128px] w-full min-w-0 flex-1">
           <svg
             role="img"
             aria-label="이 인사이트에서 보게 되는 차트 형태 미리보기"
             viewBox={`0 0 ${VB_W} ${VB_H}`}
-            preserveAspectRatio="xMidYMid slice"
-            className="absolute inset-0 size-full max-h-none"
+            preserveAspectRatio="xMidYMid meet"
+            width="100%"
+            height="100%"
+            className="absolute inset-x-3 top-2.5 bottom-1.5 box-border overflow-visible block"
             xmlns="http://www.w3.org/2000/svg"
           >
             {svgInner}
