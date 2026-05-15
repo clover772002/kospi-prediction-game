@@ -1697,14 +1697,19 @@ async def admin_set_kospi_result(
     game_overs = 0
     for r in responses.data:
         uid = r["user_id"]
-        gauge = r.get("gauge_position") or 50
-        is_up_bet = gauge > 0
-        correct = (is_up_bet == is_up)
+        gp = r.get("gauge_position")
+        if gp is None:
+            gp = 50 if r.get("kospi_answer") else -50
+        else:
+            gp = int(gp)
+        is_up_bet = gp > 0
+        prediction_correct = bool(r.get("kospi_answer")) == is_up
+        correct = is_up_bet == is_up
 
-        # 정확도 기록
+        # 정확도 기록 (표시·통계는 코스피 선택과 종가 방향 일치 여부)
         supabase.table("accuracy_records").upsert(
             {"user_id": uid, "survey_date": date,
-             "kospi_correct": correct},
+             "kospi_correct": prediction_correct},
             on_conflict="user_id,survey_date",
         ).execute()
 
@@ -1725,7 +1730,7 @@ async def admin_set_kospi_result(
         streak_mult = 2.0 if streak >= 5 else (1.5 if streak >= 3 else 1.0)
 
         # 배팅액 (저장된 값 우선, 없으면 재계산)
-        tokens_bet = r.get("tokens_bet") or max(1, round(abs(gauge) / 100 * tokens))
+        tokens_bet = r.get("tokens_bet") or max(1, round(abs(gp) / 100 * tokens))
 
         # 참여 보상 (+5 단독, +10 그룹)
         participation_bonus = 10 if uid in group_user_ids else 5
@@ -2843,14 +2848,32 @@ async def get_dashboard(
 
     accuracy_map = {r["survey_date"]: r for r in my_accuracy_res.data}
 
+    unique_dates = list({r["survey_date"] for r in my_responses.data})
+    kospi_result_by_date: dict = {}
+    if unique_dates:
+        ds_bulk = (
+            supabase.table("daily_surveys")
+            .select("survey_date, kospi_result")
+            .in_("survey_date", unique_dates)
+            .execute()
+        )
+        for row in ds_bulk.data or []:
+            kospi_result_by_date[row["survey_date"]] = row.get("kospi_result")
+
     history = []
     for resp in my_responses.data:
         d = resp["survey_date"]
         acc = accuracy_map.get(d, {})
+        kospi_correct = acc.get("kospi_correct")
+        if kospi_correct is None:
+            kr = kospi_result_by_date.get(d)
+            if isinstance(kr, bool):
+                kospi_correct = bool(resp["kospi_answer"]) == kr
+
         history.append({
             "date": d,
             "kospi_answer": resp["kospi_answer"],
-            "kospi_correct": acc.get("kospi_correct"),
+            "kospi_correct": kospi_correct,
             "gauge_position": resp.get("gauge_position"),
             "tokens_bet": resp.get("tokens_bet"),
             "tokens_won": resp.get("tokens_won"),

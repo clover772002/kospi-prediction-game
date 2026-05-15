@@ -4,12 +4,18 @@ import { createClient } from "@supabase/supabase-js";
 // Vercel에서 실행 → Yahoo Finance 접근 가능 (Railway IP 제한 없음)
 // Railway job_15_35가 이 엔드포인트를 호출해 KOSPI 결과를 Supabase에 저장
 
+/** 한국 시간대 달력 기준 YYYY-MM-DD (toLocaleString 파싱 버그 방지) */
 function todayKST(offsetDays = 0): string {
-  const d = new Date(
-    new Date().toLocaleString("en-US", { timeZone: "Asia/Seoul" })
-  );
-  d.setDate(d.getDate() + offsetDays);
-  return d.toISOString().split("T")[0];
+  const d = new Date();
+  if (offsetDays !== 0) {
+    d.setTime(d.getTime() + offsetDays * 86400000);
+  }
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Seoul",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(d);
 }
 
 export async function POST(req: NextRequest) {
