@@ -236,10 +236,18 @@ function GaugeKnob({
   );
 }
 
-export default function InsightAnimatedPreview({ slug }: { slug: InsightProductSlug }) {
+export default function InsightAnimatedPreview({
+  slug,
+  visual = "default",
+}: {
+  slug: InsightProductSlug;
+  /** 대시보드 카드 우측: 작은 compact 미리보기 무시하고 크게 표시 */
+  visual?: "default" | "dashboardHero";
+}) {
   const caption = INSIGHT_CARD_META[slug].instantExample;
   const theme = THEMES[slug];
   const dashCompact = useInsightDashboardCompact();
+  const pinchTiny = dashCompact && visual === "default";
   const { dLine, approxLen } = buildSparkLine();
   const reduceMotion = usePrefersReducedMotion();
 
@@ -367,7 +375,45 @@ export default function InsightAnimatedPreview({ slug }: { slug: InsightProductS
 
   const aspectRatio = `${VB_W} / ${VB_H}`;
 
-  if (dashCompact) {
+  const detailsCls =
+    visual === "dashboardHero"
+      ? "group mt-0 border-t border-white/[0.06] pt-1 px-1 shrink-0"
+      : "group mt-1 border-t border-white/[0.05] pt-1.5";
+  const summaryCls =
+    visual === "dashboardHero"
+      ? "cursor-pointer list-none text-[8px] font-bold text-gray-500 hover:text-gray-400 [&::-webkit-details-marker]:hidden"
+      : "cursor-pointer list-none text-[10px] font-bold text-gray-600 hover:text-gray-400 [&::-webkit-details-marker]:hidden";
+  const captionCls =
+    visual === "dashboardHero"
+      ? "mt-1 text-[8px] leading-snug text-gray-600 pr-0.5"
+      : "mt-2 text-[10px] leading-relaxed text-gray-600 pr-1";
+
+  if (visual === "dashboardHero") {
+    return (
+      <div className="insight-preview-mount w-full flex flex-col flex-1 min-h-0 justify-between">
+        <svg
+          role="img"
+          aria-label="이 인사이트에서 보게 되는 차트 형태 미리보기"
+          viewBox={`0 0 ${VB_W} ${VB_H}`}
+          preserveAspectRatio="xMidYMid meet"
+          style={{ aspectRatio }}
+          className="w-full h-auto flex-1 min-h-[116px] max-h-[220px] object-contain px-1 py-0.5"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          {svgInner}
+        </svg>
+        <details className={detailsCls}>
+          <summary className={summaryCls}>
+            한 줄 안내<span className="ml-1 font-normal opacity-70 group-open:hidden">열기</span>
+            <span className="ml-1 font-normal opacity-70 hidden group-open:inline">접기</span>
+          </summary>
+          <p className={captionCls}>{caption}</p>
+        </details>
+      </div>
+    );
+  }
+
+  if (pinchTiny) {
     return (
       <div className="insight-preview-mount w-full flex items-center justify-center max-h-[40px] overflow-hidden opacity-90">
         <svg
@@ -398,12 +444,12 @@ export default function InsightAnimatedPreview({ slug }: { slug: InsightProductS
       >
         {svgInner}
       </svg>
-      <details className="group mt-1 border-t border-white/[0.05] pt-1.5">
-        <summary className="cursor-pointer list-none text-[10px] font-bold text-gray-600 hover:text-gray-400 [&::-webkit-details-marker]:hidden">
+      <details className={detailsCls}>
+        <summary className={summaryCls}>
           한 줄 안내<span className="text-gray-600 ml-1 font-normal opacity-65 group-open:hidden">열기</span>
           <span className="text-gray-600 ml-1 font-normal opacity-65 hidden group-open:inline">접기</span>
         </summary>
-        <p className="mt-2 text-[10px] leading-relaxed text-gray-600 pr-1">{caption}</p>
+        <p className={captionCls}>{caption}</p>
       </details>
     </div>
   );

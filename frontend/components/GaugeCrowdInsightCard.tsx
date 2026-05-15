@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useConfirmShopOnInsufficientTokens } from "@/hooks/useConfirmShopOnInsufficientTokens";
-import InsightAnimatedPreview from "@/components/InsightAnimatedPreview";
+import InsightCardHeroGrid from "@/components/InsightCardHeroGrid";
 import InsightUnavailableCard from "@/components/InsightUnavailableCard";
 import InsightTokenPriceButton from "@/components/InsightTokenPriceButton";
 import InsightDetailDisclosure from "@/components/InsightDetailDisclosure";
@@ -82,8 +82,16 @@ export default function GaugeCrowdInsightCard({ accessToken, surveyDate, onBalan
   if (loading) {
     return (
       <div className={`${ix.cardRound} border border-teal-500/25 bg-teal-500/[0.06] ${ix.cardPad} fade-up-2 animate-pulse`}>
-        <div className={`${ix.c ? "h-2 w-40 mb-1" : "h-4 w-48 mb-2"} rounded bg-[#333]`} />
-        <div className={`${ix.c ? "h-6" : "h-16"} rounded bg-[#222]`} />
+        <div className="grid grid-cols-[minmax(0,1fr)_minmax(100px,40%)] gap-2 items-stretch min-h-[120px]">
+          <div className="flex flex-col justify-between gap-2">
+            <div className="space-y-1.5">
+              <div className={`${ix.c ? "h-2 w-36" : "h-3 w-44"} rounded bg-[#333]`} />
+              <div className={`${ix.c ? "h-4 w-full max-w-[10rem]" : "h-5 w-full max-w-[14rem]"} rounded bg-[#2a2a2a]`} />
+            </div>
+            <div className={`${ix.c ? "h-6 w-24" : "h-8 w-32"} rounded bg-[#333]`} />
+          </div>
+          <div className="rounded-xl border border-white/10 bg-[#1a1a1a]/80 min-h-[100px]" />
+        </div>
       </div>
     );
   }
@@ -158,26 +166,30 @@ export default function GaugeCrowdInsightCard({ accessToken, surveyDate, onBalan
         ix.c ? "" : "shadow-[0_0_28px_rgba(45,212,191,.07)]"
       }`}
     >
-      <div className={`flex items-start justify-between ${ix.rowGap}`}>
-        <div className="min-w-0 flex-1">
-          <p className={`${ix.badge} font-black text-teal-300 uppercase tracking-wide`}>토큰 인사이트</p>
-          <p className={`${ix.titleClass} text-white mt-0.5`}>{data.title ?? "내 확신도, 같은 편 속 위치"}</p>
-          <p className={`${ix.subDate} text-gray-600 mt-0.5`}>{data.survey_date}</p>
-        </div>
-        <div className={`flex items-center ${ix.rowGap} shrink-0`}>
-          <InsightTokenPriceButton
-            priceTokens={priceTokens}
-            className="border-teal-500/45 bg-teal-500/15 text-teal-100 hover:bg-teal-500/25"
-            locked={paywallLocked}
-            unlocking={unlocking}
-            onActivate={() => void handleUnlock()}
-          />
-          <span className={ix.icon} aria-hidden>
-            {paywallLocked ? "🔐" : "🪞"}
-          </span>
-        </div>
-      </div>
-      <InsightAnimatedPreview slug="my_gauge_vs_crowd" />
+      <InsightCardHeroGrid
+        slug="my_gauge_vs_crowd"
+        headline={
+          <>
+            <p className={`${ix.badge} font-black text-teal-300 uppercase tracking-wide`}>토큰 인사이트</p>
+            <p className={`${ix.titleClass} text-white mt-0.5`}>{data.title ?? "내 확신도, 같은 편 속 위치"}</p>
+            <p className={`${ix.subDate} text-gray-600 mt-0.5`}>{data.survey_date}</p>
+          </>
+        }
+        tokenRow={
+          <>
+            <InsightTokenPriceButton
+              priceTokens={priceTokens}
+              className="border-teal-500/45 bg-teal-500/15 text-teal-100 hover:bg-teal-500/25"
+              locked={paywallLocked}
+              unlocking={unlocking}
+              onActivate={() => void handleUnlock()}
+            />
+            <span className={ix.icon} aria-hidden>
+              {paywallLocked ? "🔐" : "🪞"}
+            </span>
+          </>
+        }
+      />
       <InsightDetailDisclosure accentSummaryClass="text-teal-400/85 hover:text-teal-300">
         <p>{META.hint}</p>
         {paywallLocked ? (

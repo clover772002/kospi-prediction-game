@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useConfirmShopOnInsufficientTokens } from "@/hooks/useConfirmShopOnInsufficientTokens";
-import InsightAnimatedPreview from "@/components/InsightAnimatedPreview";
+import InsightCardHeroGrid from "@/components/InsightCardHeroGrid";
 import InsightUnavailableCard from "@/components/InsightUnavailableCard";
 import InsightTokenPriceButton from "@/components/InsightTokenPriceButton";
 import InsightDetailDisclosure from "@/components/InsightDetailDisclosure";
@@ -82,8 +82,16 @@ export default function RollingCrowdInsightCard({
   if (loading) {
     return (
       <div className={`${d.cardRound} border border-sky-500/25 bg-sky-500/[0.06] ${d.cardPad} fade-up-2 animate-pulse`}>
-        <div className={`${d.c ? "h-2 w-40 mb-1" : "h-4 w-52 mb-2"} rounded bg-[#333]`} />
-        <div className={`${d.c ? "h-7" : "h-20"} rounded bg-[#222]`} />
+        <div className="grid grid-cols-[minmax(0,1fr)_minmax(100px,40%)] gap-2 items-stretch min-h-[120px]">
+          <div className="flex flex-col justify-between gap-2">
+            <div className="space-y-1.5">
+              <div className={`${d.c ? "h-2 w-32" : "h-3 w-40"} rounded bg-[#333]`} />
+              <div className={`${d.c ? "h-4 w-full max-w-[11rem]" : "h-5 w-full max-w-[15rem]"} rounded bg-[#2a2a2a]`} />
+            </div>
+            <div className={`${d.c ? "h-6 w-24" : "h-8 w-32"} rounded bg-[#333]`} />
+          </div>
+          <div className="rounded-xl border border-white/10 bg-[#1a1a1a]/80 min-h-[100px]" />
+        </div>
       </div>
     );
   }
@@ -126,26 +134,30 @@ export default function RollingCrowdInsightCard({
         d.c ? "" : "shadow-[0_0_28px_rgba(56,189,248,.08)]"
       }`}
     >
-      <div className={`flex items-start justify-between ${d.rowGap}`}>
-        <div className="min-w-0 flex-1">
-          <p className={`${d.badge} font-black text-sky-300 uppercase tracking-wide`}>토큰 인사이트</p>
-          <p className={`${d.titleClass} text-white mt-0.5`}>{data.title ?? "7거래일 무리 요약"}</p>
-          <p className={`${d.subDate} text-gray-600 mt-0.5 tabular-nums`}>종료 {data.survey_date}</p>
-        </div>
-        <div className={`flex items-center ${d.rowGap} shrink-0`}>
-          <InsightTokenPriceButton
-            priceTokens={priceTokens}
-            className="border-sky-500/45 bg-sky-500/15 text-sky-100 hover:bg-sky-500/25"
-            locked={locked}
-            unlocking={unlocking}
-            onActivate={() => void handleUnlock()}
-          />
-          <span className={d.icon} aria-hidden>
-            {locked ? "🔐" : "✨"}
-          </span>
-        </div>
-      </div>
-      <InsightAnimatedPreview slug="rolling_crowd_summary" />
+      <InsightCardHeroGrid
+        slug="rolling_crowd_summary"
+        headline={
+          <>
+            <p className={`${d.badge} font-black text-sky-300 uppercase tracking-wide`}>토큰 인사이트</p>
+            <p className={`${d.titleClass} text-white mt-0.5`}>{data.title ?? "7거래일 무리 요약"}</p>
+            <p className={`${d.subDate} text-gray-600 mt-0.5 tabular-nums`}>종료 {data.survey_date}</p>
+          </>
+        }
+        tokenRow={
+          <>
+            <InsightTokenPriceButton
+              priceTokens={priceTokens}
+              className="border-sky-500/45 bg-sky-500/15 text-sky-100 hover:bg-sky-500/25"
+              locked={locked}
+              unlocking={unlocking}
+              onActivate={() => void handleUnlock()}
+            />
+            <span className={d.icon} aria-hidden>
+              {locked ? "🔐" : "✨"}
+            </span>
+          </>
+        }
+      />
       <InsightDetailDisclosure accentSummaryClass="text-sky-400/85 hover:text-sky-300">
         <p>{META.hint}</p>
         {locked ? (

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState, useMemo } from "react";
 import { useConfirmShopOnInsufficientTokens } from "@/hooks/useConfirmShopOnInsufficientTokens";
-import InsightAnimatedPreview from "@/components/InsightAnimatedPreview";
+import InsightCardHeroGrid from "@/components/InsightCardHeroGrid";
 import InsightUnavailableCard from "@/components/InsightUnavailableCard";
 import InsightTokenPriceButton from "@/components/InsightTokenPriceButton";
 import InsightDetailDisclosure from "@/components/InsightDetailDisclosure";
@@ -98,8 +98,16 @@ export default function CohortLeaderPickInsightCard({
             : "border-slate-500/25 bg-slate-500/[0.06]"
         }`}
       >
-        <div className={`${ix.c ? "h-2 w-44 mb-1" : "h-4 w-56 mb-2"} rounded bg-[#333]`} />
-        <div className={`${ix.c ? "h-7" : "h-20"} rounded bg-[#222]`} />
+        <div className="grid grid-cols-[minmax(0,1fr)_minmax(100px,40%)] gap-2 items-stretch min-h-[120px]">
+          <div className="flex flex-col justify-between gap-2">
+            <div className="space-y-1.5">
+              <div className={`${ix.c ? "h-2 w-40" : "h-3 w-48"} rounded bg-[#333]`} />
+              <div className={`${ix.c ? "h-4 w-full max-w-[10rem]" : "h-5 w-full max-w-[14rem]"} rounded bg-[#2a2a2a]`} />
+            </div>
+            <div className={`${ix.c ? "h-6 w-24" : "h-8 w-32"} rounded bg-[#333]`} />
+          </div>
+          <div className="rounded-xl border border-white/10 bg-[#1a1a1a]/80 min-h-[100px]" />
+        </div>
       </div>
     );
   }
@@ -166,26 +174,32 @@ export default function CohortLeaderPickInsightCard({
         cohort === "expert" ? "from-violet-950/35" : "from-slate-900/40"
       } to-[#141414]/90 ${ix.cardPad} ${ix.cardGap} fade-up-2`}
     >
-      <div className={`flex items-start justify-between ${ix.rowGap}`}>
-        <div className="min-w-0 flex-1">
-          <p className={`${ix.badge} font-black ${accentText} uppercase tracking-wide`}>토큰 인사이트 · 파도 B</p>
-          <p className={`${ix.titleClass} text-white mt-0.5`}>{data.title ?? (cohort === "expert" ? "오늘의 고수 1위 픽" : "오늘의 하수 1위 픽")}</p>
-          <p className={`${ix.subDate} text-gray-600 mt-0.5`}>{data.survey_date}</p>
-        </div>
-        <div className={`flex items-center ${ix.rowGap} shrink-0`}>
-          <InsightTokenPriceButton
-            priceTokens={priceTokens}
-            className={priceChipClass}
-            locked={locked}
-            unlocking={unlocking}
-            onActivate={() => void handleUnlock()}
-          />
-          <span className={ix.icon} aria-hidden>
-            {locked ? "🔐" : "✨"}
-          </span>
-        </div>
-      </div>
-      <InsightAnimatedPreview slug={slug as InsightProductSlug} />
+      <InsightCardHeroGrid
+        slug={slug as InsightProductSlug}
+        headline={
+          <>
+            <p className={`${ix.badge} font-black ${accentText} uppercase tracking-wide`}>토큰 인사이트 · 파도 B</p>
+            <p className={`${ix.titleClass} text-white mt-0.5`}>
+              {data.title ?? (cohort === "expert" ? "오늘의 고수 1위 픽" : "오늘의 하수 1위 픽")}
+            </p>
+            <p className={`${ix.subDate} text-gray-600 mt-0.5`}>{data.survey_date}</p>
+          </>
+        }
+        tokenRow={
+          <>
+            <InsightTokenPriceButton
+              priceTokens={priceTokens}
+              className={priceChipClass}
+              locked={locked}
+              unlocking={unlocking}
+              onActivate={() => void handleUnlock()}
+            />
+            <span className={ix.icon} aria-hidden>
+              {locked ? "🔐" : "✨"}
+            </span>
+          </>
+        }
+      />
       <InsightDetailDisclosure accentSummaryClass={disclosureAccent}>
         <p>{META.hint}</p>
         {locked ? (

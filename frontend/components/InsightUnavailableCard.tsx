@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import InsightAnimatedPreview from "@/components/InsightAnimatedPreview";
+import InsightCardHeroGrid from "@/components/InsightCardHeroGrid";
 import InsightDetailDisclosure from "@/components/InsightDetailDisclosure";
 import { insightMeta, type InsightProductSlug } from "@/lib/insight_card_meta";
 import { useInsightDashLayout } from "@/hooks/useInsightDashLayout";
@@ -58,17 +58,21 @@ export default function InsightUnavailableCard({
         }`}
         aria-hidden
       />
-      <div className="min-w-0">
-        <p className={`iu-badge ${badge} font-black uppercase tracking-wide`}>
-          토큰 인사이트{badgeExtra ? ` ${badgeExtra}` : ""}
-        </p>
-        <p className={`${titleClass} text-white mt-0.5`}>{title}</p>
-        <p className={`${subDate} text-gray-600 mt-0.5 tabular-nums`}>
-          {surveyDatePrefix}
-          {surveyDate}
-        </p>
-      </div>
-      <InsightAnimatedPreview slug={slug} />
+      <InsightCardHeroGrid
+        slug={slug}
+        headline={
+          <>
+            <p className={`iu-badge ${badge} font-black uppercase tracking-wide`}>
+              토큰 인사이트{badgeExtra ? ` ${badgeExtra}` : ""}
+            </p>
+            <p className={`${titleClass} text-white mt-0.5`}>{title}</p>
+            <p className={`${subDate} text-gray-600 mt-0.5 tabular-nums`}>
+              {surveyDatePrefix}
+              {surveyDate}
+            </p>
+          </>
+        }
+      />
       <div
         className={`iu-panel rounded-xl border border-solid ${c ? "px-2 py-1.5 space-y-0.5" : "px-3 py-2.5 space-y-1.5"}`}
       >
