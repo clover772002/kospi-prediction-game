@@ -12,17 +12,37 @@ import DashboardInsightSection, { DashboardInsightSectionSkeleton } from "@/comp
 
 type DashboardHist = DashboardData["history"][number];
 
+function coerceBool(v: unknown): boolean | null {
+  if (typeof v === "boolean") return v;
+  if (v === "true" || v === 1 || v === "1") return true;
+  if (v === "false" || v === 0 || v === "0") return false;
+  return null;
+}
+
+function sameSurveyDate(a: string | undefined, b: string | undefined): boolean {
+  if (!a || !b) return false;
+  return a.trim().slice(0, 10) === b.trim().slice(0, 10);
+}
+
+/** accuracy·시장결과·오늘 카드 중 하나라도 있으면 적중 여부 */
+function effectiveKospiCorrect(entry: DashboardHist | undefined): boolean | null {
+  if (!entry) return null;
+  const hc = entry.kospi_correct;
+  if (typeof hc === "boolean") return hc;
+  const mk = coerceBool(entry.kospi_market_result);
+  if (mk !== null) return entry.kospi_answer === mk;
+  return null;
+}
+
 /** daily_surveys.kospi_result가 비어 있어도 accuracy_records가 있으면 맞춤/틀림 표시 */
 function userPickVerdictFromTodayAndHistory(
   today: TodaySurvey | null | undefined,
   entry: DashboardHist | undefined,
 ): boolean | null {
   if (!entry) return null;
-  const kr = today?.kospi_result;
-  if (typeof kr === "boolean") return entry.kospi_answer === kr;
-  const hc = entry.kospi_correct;
-  if (typeof hc === "boolean") return hc;
-  return null;
+  const kr = coerceBool(today?.kospi_result);
+  if (kr !== null) return entry.kospi_answer === kr;
+  return effectiveKospiCorrect(entry);
 }
 
 /** 집단용: 일간 행 또는 내 이력으로 실제 등락 방향 복구(기록 불일치 대비) */
@@ -30,8 +50,10 @@ function resolvedMarketDirection(
   today: TodaySurvey | null | undefined,
   entry: DashboardHist | undefined,
 ): boolean | null {
-  const kr = today?.kospi_result;
-  if (typeof kr === "boolean") return kr;
+  const kr = coerceBool(today?.kospi_result);
+  if (kr !== null) return kr;
+  const mk = coerceBool(entry?.kospi_market_result);
+  if (mk !== null) return mk;
   if (!entry) return null;
   const hc = entry.kospi_correct;
   if (typeof hc !== "boolean") return null;
@@ -40,17 +62,18 @@ function resolvedMarketDirection(
 
 // 연속 적중 스트릭 계산
 function calcStreak(history: DashboardData["history"]): number {
-  const withResult = [...history].filter((h) => h.kospi_correct !== null);
+  const withResult = [...history].filter((h) => effectiveKospiCorrect(h) !== null);
   let count = 0;
   for (const item of withResult) {
-    if (item.kospi_correct === true) count++;
+    if (effectiveKospiCorrect(item) === true) count++;
     else break;
   }
   return count;
 }
 
 function HistoryRow({ item }: { item: DashboardData["history"][0] }) {
-  const hasResult = item.kospi_correct !== null;
+  const verdict = effectiveKospiCorrect(item);
+  const hasResult = verdict !== null;
   const gauge = item.gauge_position;
   const isUpBet = gauge !== null && gauge !== undefined ? gauge > 0 : item.kospi_answer;
   const tokensWon = item.tokens_won;
@@ -59,7 +82,7 @@ function HistoryRow({ item }: { item: DashboardData["history"][0] }) {
   return (
     <div className={`flex flex-wrap items-center gap-x-2 gap-y-1 rounded-xl px-3 py-3 border ${
       hasResult
-        ? item.kospi_correct
+        ? verdict
           ? "bg-green-500/5 border-green-500/20"
           : "bg-red-500/5 border-red-500/20"
         : "bg-[#1A1A1A] border-[#2A2A2A]"
@@ -79,7 +102,7 @@ function HistoryRow({ item }: { item: DashboardData["history"][0] }) {
       <div className="flex-shrink-0 text-xs text-right flex items-center gap-2 ml-auto">
         {hasResult ? (
           <div className="flex items-center gap-1.5">
-            <span>{item.kospi_correct ? "✅" : "❌"}</span>
+            <span>{verdict ? "✅" : "❌"}</span>
             {tokensWon !== null && tokensWon !== undefined && (
               <span className={`font-bold tabular-nums ${tokensWon >= 0 ? "text-green-400" : "text-red-400"}`}>
                 {tokensWon >= 0 ? "+" : ""}{tokensWon}T
@@ -403,7 +426,7 @@ export default function DashboardPage() {
   const streak = dash?.history ? calcStreak(dash.history) : 0;
 
   // 오늘 결과 공유용 데이터
-  const todayEntry = dash?.history?.find((h) => h.date === today?.survey_date);
+  const todayEntry = dash?.history?.find((h) => sameSurveyDate(h.date, today?.survey_date));
   const isCorrectToday =
     todayEntry !== undefined ? userPickVerdictFromTodayAndHistory(today, todayEntry) : null;
   const resolvedMarketFromMe = resolvedMarketDirection(today, todayEntry);
@@ -748,7 +771,7 @@ export default function DashboardPage() {
           })()}
 
           {(status === "open" || status === "closed" || status === "result") && !isWeekendKST && today && (() => {
-            const myEntry = dash?.history?.find((h) => h.date === today.survey_date);
+            const myEntry = dash?.history?.find((h) => sameSurveyDate(h.date, today.survey_date));
             const myPickVerdict = userPickVerdictFromTodayAndHistory(today, myEntry);
             const effectiveMarketDir = resolvedMarketDirection(today, myEntry);
             return (
@@ -1024,7 +1047,7 @@ export default function DashboardPage() {
 
         {/* ── 전국대결 순위 ────────────────────────────────── */}
         {today?.participants && today.participants.length > 0 && (() => {
-          const myEntry = dash?.history?.find((h) => h.date === today.survey_date);
+          const myEntry = dash?.history?.find((h) => sameSurveyDate(h.date, today.survey_date));
           const myAcc   = dash?.accuracy?.kospi;
 
           // 적중률 내림차순 정렬 (null은 맨 뒤)

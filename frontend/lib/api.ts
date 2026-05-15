@@ -135,6 +135,8 @@ export interface HistoryItem {
   date: string;
   kospi_answer: boolean;
   kospi_correct: boolean | null;
+  /** 해당일 daily_surveys 종가 방향(있으면 클라이언트에서 확정 표시에 사용) */
+  kospi_market_result?: boolean | null;
   gauge_position?: number | null;
   tokens_bet?: number | null;
   tokens_won?: number | null;

@@ -2817,6 +2817,16 @@ async def request_rematch(
 
 # ─────────────────────────────────────────────────────────────────────────────
 
+def _survey_date_key(d) -> str:
+    """Supabase DATE가 str / date 객체로 올 때 조회 키 통일."""
+    if d is None:
+        return ""
+    if hasattr(d, "isoformat"):
+        return str(d.isoformat())[:10]
+    s = str(d).strip()
+    return s[:10] if len(s) >= 10 else s
+
+
 @app.get("/api/dashboard")
 async def get_dashboard(
     current_user=Depends(get_current_user),
@@ -2846,34 +2856,34 @@ async def get_dashboard(
         .execute()
     )
 
-    accuracy_map = {r["survey_date"]: r for r in my_accuracy_res.data}
+    accuracy_map = {_survey_date_key(r["survey_date"]): r for r in my_accuracy_res.data}
 
-    unique_dates = list({r["survey_date"] for r in my_responses.data})
+    unique_dates_raw = list({resp["survey_date"] for resp in my_responses.data})
     kospi_result_by_date: dict = {}
-    if unique_dates:
+    if unique_dates_raw:
         ds_bulk = (
             supabase.table("daily_surveys")
             .select("survey_date, kospi_result")
-            .in_("survey_date", unique_dates)
+            .in_("survey_date", unique_dates_raw)
             .execute()
         )
         for row in ds_bulk.data or []:
-            kospi_result_by_date[row["survey_date"]] = row.get("kospi_result")
+            kospi_result_by_date[_survey_date_key(row["survey_date"])] = row.get("kospi_result")
 
     history = []
     for resp in my_responses.data:
-        d = resp["survey_date"]
-        acc = accuracy_map.get(d, {})
+        d_key = _survey_date_key(resp["survey_date"])
+        acc = accuracy_map.get(d_key, {})
         kospi_correct = acc.get("kospi_correct")
-        if kospi_correct is None:
-            kr = kospi_result_by_date.get(d)
-            if isinstance(kr, bool):
-                kospi_correct = bool(resp["kospi_answer"]) == kr
+        kr = kospi_result_by_date.get(d_key)
+        if kospi_correct is None and (kr is True or kr is False):
+            kospi_correct = bool(resp["kospi_answer"]) == bool(kr)
 
         history.append({
-            "date": d,
+            "date": d_key or resp["survey_date"],
             "kospi_answer": resp["kospi_answer"],
             "kospi_correct": kospi_correct,
+            "kospi_market_result": kr if (kr is True or kr is False) else None,
             "gauge_position": resp.get("gauge_position"),
             "tokens_bet": resp.get("tokens_bet"),
             "tokens_won": resp.get("tokens_won"),
