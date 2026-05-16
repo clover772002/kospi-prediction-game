@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import SurveyConfidencePlayground from "@/components/SurveyConfidencePlayground";
-import DuelConceptPlayground from "@/components/DuelConceptPlayground";
+import ExpertMessageConceptPlayground from "@/components/ExpertMessageConceptPlayground";
 import ExpertPickRevealPlayground from "@/components/ExpertPickRevealPlayground";
 
 const FEATURES = [
@@ -48,11 +48,11 @@ const FEATURES = [
   },
   {
     icon: "🎫",
-    title: "토큰으로 고수 선택픽 열람",
-    desc: "모은 토큰으로 강화 예측·고수 진영 방향을 해제해 비교합니다",
+    title: "토큰으로 고수 선택픽·질문",
+    desc: "모은 토큰으로 고수 진영을 열람하고, 고수에게 보내는 글 한 통마다 같은 재화가 쓰여요",
     detail: {
       summary:
-        "설문과 적중으로 쌓은 토큰을 쓰면 오늘의 고수 선택 방향·강화 집계 일부가 펼쳐져요. 단순 다수결과 다른 지점을 보는 데 쓰이고, 실제 차감량·표시 시간은 서비스 정책에 따라 달라질 수 있어요.",
+        "설문과 적중으로 모은 토큰으로 오늘의 고수 선택·강화 집계를 펼치고, 앞으로는 고수에게 짧게 질문을 보낼 때도 토큰이 사용돼요. 고수가 읽거나 답하는 쪽에서는 토큰을 쓰지 않는 구조를 목표로 해요. 실제 차감·제한은 서비스 정책에 따라 달라질 수 있어요.",
       steps: null,
       mockup: (() => {
         const Bar = ({ yes, no }: { yes: number; no: number }) => (
@@ -253,20 +253,20 @@ export default function LoginPage() {
       <div className="text-center mb-10">
         <div className="text-6xl mb-4">📊</div>
         <h1 className="text-2xl font-black text-white mb-1">오늘 코스피, 함께 맞춰요</h1>
-        <p className="text-amber-200/90 text-xs font-bold mb-3 tracking-wide">코스피 예측으로 토큰 · 대결하면 더 받기</p>
+        <p className="text-amber-200/90 text-xs font-bold mb-3 tracking-wide">예측으로 토큰을 모아 · 고수와 연결되는 재화예요</p>
         <p className="text-gray-400 text-sm leading-relaxed">
-          방향을 맞히면 재화가 쌓이고, 같은 적중이라도 대결 레이어를 타면 더 커지는 구조예요. 모은 토큰으로 고수 선택픽도 열 수 있어요.
+          방향을 맞히면 토큰이 쌓이고, 같은 토큰으로 고수 선택픽을 열람하거나 고수에게 질문 한 통을 보낼 수 있게 만드는 흐름이에요. 고수에게 메시지를 쓸 때만 토큰이 나가고, 고수는 답장할 때 토큰을 쓰지 않습니다(컨셉).
         </p>
       </div>
 
-      {/* ── 큰 틀: 예측·토큰 → 고수픽 → 대결 ───────────────── */}
+      {/* ── 큰 틀: 예측·토큰 → 고수픽 → 고수 메시지 ───────────────── */}
       <div className="w-full mb-2 min-w-0">
         <div className="h-px w-full bg-gradient-to-r from-transparent via-amber-500/30 to-transparent mb-6" aria-hidden />
         <p className="text-[10px] text-gray-600 font-black tracking-[0.18em] mb-3 uppercase">어떻게 즐기나요</p>
         <div className="flex flex-wrap justify-center gap-2 mb-4 text-[10px] text-gray-400">
           <span className="rounded-full border border-amber-500/25 bg-amber-500/[0.07] px-2.5 py-1 font-bold text-amber-100/95">① 예측·토큰</span>
           <span className="rounded-full border border-yellow-500/20 bg-yellow-500/[0.06] px-2.5 py-1 font-bold text-yellow-100/85">② 고수픽</span>
-          <span className="rounded-full border border-violet-500/25 bg-violet-500/[0.08] px-2.5 py-1 font-bold text-violet-200/90">③ 대결 보너스</span>
+          <span className="rounded-full border border-sky-500/25 bg-sky-500/[0.08] px-2.5 py-1 font-bold text-sky-200/90">③ 고수 메시지</span>
         </div>
       </div>
 
@@ -290,12 +290,12 @@ export default function LoginPage() {
         </section>
 
         <section className="min-w-0">
-          <p className="text-[11px] text-violet-300 font-black tracking-[0.12em] mb-2">③ 대결 → 토큰 한 층 더</p>
-          <h2 className="text-base font-black text-white mb-1">대결까지 가면 토큰이 더 받는 흐름이에요</h2>
+          <p className="text-[11px] text-sky-300/95 font-black tracking-[0.12em] mb-2">③ 토큰 → 고수와 메시지</p>
+          <h2 className="text-base font-black text-white mb-1">질문 한 통 보낼 때마다 토큰 · 고수는 무료로 답해요</h2>
           <p className="text-[11px] text-gray-600 mb-3 leading-relaxed">
-            순위·VS·연승·그룹 독촉까지 한 덱으로 보여 줄 뿐, 전부 반복 재생 장면입니다
+            아래는 실제 채팅이 아니라 규칙을 한눈에 보여 주는 반복 데모예요. 보내는 쪽만 부담하고, 고수는 토큰 없이 소통하는 그림을 담았어요.
           </p>
-          <DuelConceptPlayground />
+          <ExpertMessageConceptPlayground />
         </section>
       </div>
 
@@ -399,7 +399,7 @@ export default function LoginPage() {
           {[
             {
               q: "완전 무료인가요?",
-              a: "시작하고 설문 참여 같은 기본 흐름은 무료로 시작해요. 시뮬레이션 토큰을 쓰며 고수 선택픽을 여는 장치가 들어 있고, 유료 과금 계획이 생기면 사전 공지합니다.",
+              a: "시작하고 설문 참여 같은 기본 흐름은 무료로 시작해요. 토큰은 적중 등으로 쌓이고, 고수 선택픽 열람이나 (도입 시) 고수에게 질문을 보낼 때 소비될 수 있어요. 유료 과금 계획이 생기면 사전 공지합니다.",
             },
             {
               q: "매일 해야 하나요? 빠지면 불이익이 있나요?",
@@ -418,12 +418,16 @@ export default function LoginPage() {
               a: "참여자가 많고 누적 데이터가 쌓일수록 신뢰도가 올라갑니다. 잘 맞추는 사람의 의견은 더 크게, 항상 틀리는 사람의 의견은 반대 방향으로 반영되기 때문에 단순 다수결보다 정교해요.",
             },
             {
+              q: "고수랑 어떻게 소통하나요?",
+              a: "로그인 화면에 적어 둔 것처럼, 내가 고수에게 텍스트를 보낼 때마다 토큰이 차감되는 방향을 생각하고 있어요. 고수(또는 상위 레이어만 허용된 계정)는 답장·열람에 토큰을 쓰지 않는 구조가 목표입니다. 실제 기능·차감액은 출시 직전에 다시 안내할 수 있어요.",
+            },
+            {
               q: "예측 결과가 조작될 수 있나요?",
               a: "장 마감 후 코스피 등락은 외부 금융 데이터(yfinance)에서 자동으로 가져옵니다. 운영자가 임의로 결과를 수정할 수 없는 구조예요.",
             },
             {
               q: "개인정보가 수집되나요?",
-              a: "소셜 로그인 시 이름·이메일이 저장됩니다. 채팅 내용·연락처·위치는 수집하지 않아요. 자세한 내용은 하단 개인정보처리방침을 확인해 주세요.",
+              a: "소셜 로그인 시 이름·이메일이 저장됩니다. 메시지·채팅 기능이 붙으면 그때 수집되는 항목과 보관 기간을 따로 안내할 예정이에요. 현재는 채팅 내용·연락처·위치를 수집하지 않아요. 자세한 내용은 하단 개인정보처리방침을 확인해 주세요.",
             },
             {
               q: "알림은 어떻게 받나요?",

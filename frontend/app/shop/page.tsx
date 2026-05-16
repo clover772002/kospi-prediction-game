@@ -15,7 +15,7 @@ import InsightProductUnlockList from "@/components/InsightProductUnlockList";
 import InsightCardsStack, { InsightsInView, InsightCardsStackSkeleton } from "@/components/InsightCardsStack";
 import { InsightDashboardCompactProvider } from "@/contexts/InsightDashboardCompactContext";
 import { useInsightSurveyDatePicker } from "@/hooks/useInsightSurveyDatePicker";
-import { INSIGHT_PRODUCTS_PREVIEW_ONLY } from "@/lib/insight_items_config";
+import { INSIGHT_PRODUCTS_PREVIEW_ONLY, SHOP_CONSUMABLES_PREVIEW_ONLY } from "@/lib/insight_items_config";
 
 /** 당분간 원화(Stripe) 토큰팩 UI 비표시. 다시 켤 때는 true로 변경하고 아래 token pack 섹션·핸들러 복구 */
 const SHOW_STRIPE_TOKEN_PACKS = false;
@@ -168,7 +168,9 @@ function ShopInner() {
               💎 토큰 상점
             </h1>
             <p className="text-xs text-gray-500 mt-1">
-              게임 내 토큰으로 집계 아이템·소모품을 구매할 수 있어요. 당분간 원화 충전 없이 토큰만 사용합니다.
+              게임 내 토큰으로 집계 아이템
+              {!SHOP_CONSUMABLES_PREVIEW_ONLY ? "·소모품" : ""}을 구매할 수 있어요. 당분간 원화 충전 없이 토큰만 사용합니다.
+              {SHOP_CONSUMABLES_PREVIEW_ONLY ? " 소모품 구매만 당분간 닫아 두었어요." : ""}
             </p>
           </div>
           <Link
@@ -300,28 +302,86 @@ function ShopInner() {
 
         <section className="space-y-3">
           <h2 className="text-[11px] font-black text-gray-500 uppercase tracking-widest">소모품 (설문·토큰 규칙)</h2>
-          <p className="text-[10px] text-gray-500 leading-relaxed">
-            거래일 입력이 필요한 소모품만 날짜를 묻습니다. 「재투표」「게이지만 조정」「방향만 반전」은 모두 오늘의 설문(당일 픽) 한정이라 날짜를 받지 않습니다. 레이크백처럼 과거 정산 거래일이 필요한 품목만 YYYY-MM-DD를 입력하세요.
-          </p>
-          <ul className="space-y-2">
-            {(catalog?.consumable_products ?? []).map((c) =>
-              token ? (
-                <ConsumableShopCard
-                  key={c.slug}
-                  product={c}
-                  accessToken={token}
-                  walletTokens={walletTokens}
-                  siblingBusy={purchaseBusy !== null && purchaseBusy !== c.slug}
-                  isPurchasing={purchaseBusy === c.slug}
-                  onPurchaseStart={() => setPurchaseBusy(c.slug)}
-                  onPurchaseEnd={() => setPurchaseBusy(null)}
-                  onBalanceRefresh={refreshWalletTokens}
-                  setFlash={setFlash}
-                  setErr={setErr}
-                />
-              ) : null,
-            )}
-          </ul>
+          {SHOP_CONSUMABLES_PREVIEW_ONLY ? (
+            <>
+              <p className="text-[10px] text-gray-500 leading-relaxed">
+                당분간 <strong className="text-gray-300">소모품 구매는 잠시 닫아 두었어요</strong>. 아래는 카탈로그 형태만 블러로 보이며, 버튼·결제 처리는 할 수 없습니다. 다시 열리면 같은 화면에서 구매 가능해질 거예요.
+              </p>
+              <div className="relative rounded-2xl border border-white/[0.08] bg-[#0a0a0a]/90 overflow-hidden min-h-[7rem]">
+                <div
+                  className="pointer-events-none select-none blur-[7px] opacity-[0.45] saturate-75 scale-[0.99]"
+                  aria-hidden="true"
+                >
+                  <ul className="space-y-2 p-1">
+                    {(catalog?.consumable_products ?? []).length === 0 ? (
+                      <li className="rounded-2xl border border-cyan-500/25 bg-cyan-950/[0.12] px-4 py-8 text-center text-gray-600 text-xs">
+                        카탈로그 목록 로딩·빈 목록 표시 예시
+                      </li>
+                    ) : (
+                      (catalog?.consumable_products ?? []).map((c) => (
+                        <li
+                          key={c.slug}
+                          className="rounded-2xl border border-cyan-500/25 bg-cyan-950/[0.12] px-4 py-3 text-sm space-y-2"
+                        >
+                          <p className="font-bold text-white">{c.title}</p>
+                          <p className="text-[11px] text-gray-500 mt-1 leading-relaxed">
+                            {(c.description ?? "").slice(0, 140)}
+                            {(c.description?.length ?? 0) > 140 ? "…" : ""}
+                          </p>
+                          <div className="flex items-center justify-between gap-2 flex-wrap">
+                            <p className="text-xs text-amber-300 font-black tabular-nums">
+                              {(Number(c.price_tokens) || 0).toLocaleString()} 토큰
+                            </p>
+                            <span className="text-[11px] font-black rounded-lg bg-cyan-600/80 px-3 py-1.5 text-white/70">
+                              구매
+                            </span>
+                          </div>
+                        </li>
+                      ))
+                    )}
+                  </ul>
+                </div>
+                <div
+                  className="absolute inset-0 flex flex-col items-center justify-center gap-2 px-6 bg-[#090909]/82 backdrop-blur-[2px] text-center pointer-events-none"
+                  role="status"
+                  aria-live="polite"
+                >
+                  <span className="text-3xl grayscale opacity-95" aria-hidden>
+                    🔒
+                  </span>
+                  <p className="text-sm font-black text-gray-100">소모품 구매 준비 중</p>
+                  <p className="text-[10px] text-gray-500 leading-relaxed max-w-[260px]">
+                    정책·운영 준비가 끝나면 이 패널이 열리고 같은 목록에서 토큰으로 구매할 수 있어요.
+                  </p>
+                </div>
+              </div>
+            </>
+          ) : (
+            <>
+              <p className="text-[10px] text-gray-500 leading-relaxed">
+                거래일 입력이 필요한 소모품만 날짜를 묻습니다. 「재투표」「게이지만 조정」「방향만 반전」은 모두 오늘의 설문(당일 픽) 한정이라 날짜를 받지 않습니다. 레이크백처럼 과거 정산 거래일이 필요한 품목만 YYYY-MM-DD를 입력하세요.
+              </p>
+              <ul className="space-y-2">
+                {(catalog?.consumable_products ?? []).map((c) =>
+                  token ? (
+                    <ConsumableShopCard
+                      key={c.slug}
+                      product={c}
+                      accessToken={token}
+                      walletTokens={walletTokens}
+                      siblingBusy={purchaseBusy !== null && purchaseBusy !== c.slug}
+                      isPurchasing={purchaseBusy === c.slug}
+                      onPurchaseStart={() => setPurchaseBusy(c.slug)}
+                      onPurchaseEnd={() => setPurchaseBusy(null)}
+                      onBalanceRefresh={refreshWalletTokens}
+                      setFlash={setFlash}
+                      setErr={setErr}
+                    />
+                  ) : null,
+                )}
+              </ul>
+            </>
+          )}
         </section>
 
         {SHOW_STRIPE_TOKEN_PACKS ? (
