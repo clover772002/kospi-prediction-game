@@ -101,7 +101,7 @@ function HistoryRow({ item }: { item: DashboardData["history"][0] }) {
 
   return (
     <tr
-      className={`border-b border-[#2A2A2A] last:border-0 ${
+      className={`border-b border-[#2A2A2A] last:border-0 leading-tight ${
         hasResult
           ? verdict
             ? "bg-green-500/[0.04]"
@@ -109,20 +109,20 @@ function HistoryRow({ item }: { item: DashboardData["history"][0] }) {
           : ""
       }`}
     >
-      <td className="py-2.5 pr-2 align-middle text-gray-500 tabular-nums whitespace-nowrap">{item.date.slice(5)}</td>
-      <td className={`py-2.5 pr-2 align-middle font-bold whitespace-nowrap ${directionUp ? "text-red-400" : "text-blue-400"}`}>
+      <td className="py-1 pl-2 pr-0.5 align-middle text-gray-500 tabular-nums whitespace-nowrap text-[10px]">{item.date.slice(5)}</td>
+      <td className={`py-1 px-0.5 align-middle font-bold whitespace-nowrap text-[10px] ${directionUp ? "text-red-400" : "text-blue-400"}`}>
         {directionUp ? "상승" : "하락"}
       </td>
-      <td className="py-2.5 pr-2 align-middle text-right tabular-nums text-gray-200 whitespace-nowrap">
-        {gauge !== null && gauge !== undefined ? `${gauge > 0 ? "+" : ""}${gauge}%` : "—"}
+      <td className="py-1 px-0.5 align-middle text-right tabular-nums text-gray-200 whitespace-nowrap text-[10px]">
+        {gauge !== null && gauge !== undefined ? `${gauge > 0 ? "+" : ""}${gauge}` : "—"}
       </td>
-      <td className="py-2.5 pr-2 align-middle text-right tabular-nums text-gray-200 whitespace-nowrap">
+      <td className="py-1 px-0.5 align-middle text-right tabular-nums text-gray-200 whitespace-nowrap text-[10px]">
         {tokensBet != null && tokensBet !== undefined ? `${tokensBet}` : "—"}
       </td>
-      <td className="py-2.5 pr-2 align-middle text-right tabular-nums text-cyan-300/90 whitespace-nowrap">
+      <td className="py-1 px-0.5 align-middle text-right tabular-nums text-cyan-300/90 whitespace-nowrap text-[10px]">
         {mult != null ? `×${mult.toFixed(2)}` : "—"}
       </td>
-      <td className={`py-2.5 pr-2 align-middle text-right font-bold tabular-nums whitespace-nowrap ${
+      <td className={`py-1 px-0.5 align-middle text-right font-bold tabular-nums whitespace-nowrap text-[10px] ${
         !hasResult
           ? "text-gray-600"
           : tokensWon != null && tokensWon >= 0
@@ -132,7 +132,7 @@ function HistoryRow({ item }: { item: DashboardData["history"][0] }) {
       >
         {winCell}
       </td>
-      <td className={`py-2.5 align-middle whitespace-nowrap font-bold ${
+      <td className={`py-1 pl-0.5 pr-2 align-middle whitespace-nowrap font-bold text-[10px] ${
         !hasResult ? "text-gray-600" : verdict ? "text-green-400/95" : "text-red-400/90"
       }`}
       >
@@ -992,17 +992,17 @@ export default function DashboardPage() {
               {dash.history.length > 0 && (
                 <div className="space-y-2">
                   <p className="text-xs text-gray-500">최근 이력 (화면에는 최대 5거래일)</p>
-                  <div className="overflow-x-auto rounded-xl border border-[#2A2A2A] bg-[#141414]/60">
-                    <table className="w-full min-w-[36rem] text-[11px] border-collapse">
+                  <div className="rounded-xl border border-[#2A2A2A] bg-[#141414]/60 overflow-hidden">
+                    <table className="w-full border-collapse text-[10px]">
                       <thead>
                         <tr className="text-left text-gray-500 border-b border-[#2A2A2A] bg-[#1A1A1A]/90">
-                          <th className="py-2.5 pl-3 pr-2 font-bold whitespace-nowrap">거래일</th>
-                          <th className="py-2.5 pr-2 font-bold whitespace-nowrap">예측방향</th>
-                          <th className="py-2.5 pr-2 font-bold text-right whitespace-nowrap">확신도</th>
-                          <th className="py-2.5 pr-2 font-bold text-right whitespace-nowrap">배팅토큰</th>
-                          <th className="py-2.5 pr-2 font-bold text-right whitespace-nowrap">집단배율</th>
-                          <th className="py-2.5 pr-2 font-bold text-right whitespace-nowrap">획득토큰</th>
-                          <th className="py-2.5 pr-3 font-bold whitespace-nowrap">적중여부</th>
+                          <th className="py-1.5 pl-2 pr-0.5 font-bold text-[9px] leading-tight">거래일</th>
+                          <th title="예측방향" className="py-1.5 px-0.5 font-bold text-[9px] leading-tight">방향</th>
+                          <th title="확신도" className="py-1.5 px-0.5 font-bold text-right text-[9px] leading-tight">확신</th>
+                          <th title="배팅토큰" className="py-1.5 px-0.5 font-bold text-right text-[9px] leading-tight">배팅</th>
+                          <th title="집단배율" className="py-1.5 px-0.5 font-bold text-right text-[9px] leading-tight">배율</th>
+                          <th title="획득토큰" className="py-1.5 px-0.5 font-bold text-right text-[9px] leading-tight">획득</th>
+                          <th title="적중여부" className="py-1.5 pl-0.5 pr-2 font-bold text-[9px] leading-tight">판정</th>
                         </tr>
                       </thead>
                       <tbody>
