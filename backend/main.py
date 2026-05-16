@@ -573,19 +573,34 @@ def _settle_rlock_for(survey_date_str: str) -> threading.RLock:
 
 
 def _get_accuracy_data(supabase: Client) -> tuple[dict, dict, dict]:
-    """(acc_map, pred_count, user_scores) 반환 — user_scores[uid]={correct,total} — 5분 TTL 캐시."""
+    """(acc_map, pred_count, user_scores) 반환 — user_scores[uid]={correct,total} — 5분 TTL 캐시.
+    accuracy_records 가 커도 한 번에 거대 응답이 오지 않도록 range 로 페이지 조회합니다."""
     now = time.time()
     if now - _acc_cache["ts"] < _ACC_CACHE_TTL and _acc_cache["map"]:
         return _acc_cache["map"], _acc_cache["count"], _acc_cache["scores"]
 
-    all_acc = supabase.table("accuracy_records").select("user_id, kospi_correct").execute()
     user_scores: dict = {}
-    for r in all_acc.data or []:
-        uid = r["user_id"]
-        if uid not in user_scores:
-            user_scores[uid] = {"correct": 0, "total": 0}
-        user_scores[uid]["correct"] += 1 if r.get("kospi_correct") else 0
-        user_scores[uid]["total"] += 1
+    batch_size = 1000
+    offset = 0
+    while True:
+        batch = (
+            supabase.table("accuracy_records")
+            .select("user_id, kospi_correct")
+            .range(offset, offset + batch_size - 1)
+            .execute()
+        )
+        rows = batch.data or []
+        if not rows:
+            break
+        for r in rows:
+            uid = r["user_id"]
+            if uid not in user_scores:
+                user_scores[uid] = {"correct": 0, "total": 0}
+            user_scores[uid]["correct"] += 1 if r.get("kospi_correct") else 0
+            user_scores[uid]["total"] += 1
+        if len(rows) < batch_size:
+            break
+        offset += batch_size
 
     acc_map = {uid: s["correct"] / s["total"] for uid, s in user_scores.items() if s["total"] > 0}
     pred_count = {uid: s["total"] for uid, s in user_scores.items()}
@@ -2973,8 +2988,14 @@ async def get_dashboard(
     user_id = str(current_user.id)
 
     try:
-        await _persist_kospi_survey_close_if_needed(supabase, today_kst())
-        ensure_kospi_tokens_settled_for_date(supabase, today_kst())
+        try:
+            await _persist_kospi_survey_close_if_needed(supabase, today_kst())
+        except Exception as ex:
+            logger.warning("대시보드: KOSPI 종가 보강 스킵 — %s", ex)
+        try:
+            ensure_kospi_tokens_settled_for_date(supabase, today_kst())
+        except Exception as ex:
+            logger.warning("대시보드: 토큰 정산 보강 스킵 — %s", ex)
 
         # 유저 토큰 + 스트릭 조회
         user_row = supabase.table("users").select("tokens, current_streak").eq("id", user_id).execute()
@@ -3000,7 +3021,11 @@ async def get_dashboard(
         accuracy_map = {_survey_date_key(r["survey_date"]): r for r in (my_accuracy_res.data or [])}
         responses_rows = my_responses.data or []
 
-        unique_dates_raw = list({resp["survey_date"] for resp in responses_rows})
+        # daily_surveys.in_ 에 넣을 날짜는 문자열 YYYY-MM-DD 로 통일 (date 객체 혼합 방지)
+        unique_dates_raw = list(
+            {_survey_date_key(resp["survey_date"]) for resp in responses_rows if resp.get("survey_date") is not None}
+        )
+        unique_dates_raw = [d for d in unique_dates_raw if len(d) >= 8]
         kospi_result_by_date: dict = {}
         if unique_dates_raw:
             ds_bulk = (
@@ -3048,20 +3073,22 @@ async def get_dashboard(
         kospi_correct_cnt = sum(1 for h in history if h["kospi_correct"])
         kospi_acc = round(kospi_correct_cnt / total_with_result * 100)
 
-        # 상위 퍼센트 계산 — accuracy_records 전량 재조회 없이 캐시 집계 재사용 (타임아웃·500 방지)
-        _, _, user_scores = _get_accuracy_data(supabase)
-
-        my_rate = kospi_correct_cnt / total_with_result
-        users_with_lower = sum(
-            1 for uid, s in user_scores.items()
-            if s["total"] > 0 and s["correct"] / s["total"] < my_rate
-        )
-        total_users = len(user_scores)
-        top_pct = round((1 - users_with_lower / total_users) * 100) if total_users > 1 else 100
-
-        all_rates = [s["correct"] / s["total"] for s in user_scores.values() if s["total"] > 0]
-        avg_rate = sum(all_rates) / len(all_rates) if all_rates else 0.5
-        contribution = round(my_rate / avg_rate * 100) if avg_rate > 0 else 100
+        top_pct = None
+        contribution = None
+        try:
+            _, _, user_scores = _get_accuracy_data(supabase)
+            my_rate = kospi_correct_cnt / total_with_result
+            users_with_lower = sum(
+                1 for uid, s in user_scores.items()
+                if s["total"] > 0 and s["correct"] / s["total"] < my_rate
+            )
+            total_users = len(user_scores)
+            top_pct = round((1 - users_with_lower / total_users) * 100) if total_users > 1 else 100
+            all_rates = [s["correct"] / s["total"] for s in user_scores.values() if s["total"] > 0]
+            avg_rate = sum(all_rates) / len(all_rates) if all_rates else 0.5
+            contribution = round(my_rate / avg_rate * 100) if avg_rate > 0 else 100
+        except Exception as ex:
+            logger.warning("대시보드: 상위 퍼센트·기여도 계산 스킵 — %s", ex)
 
         return {
             "accuracy": {"kospi": kospi_acc, "overall": kospi_acc},
