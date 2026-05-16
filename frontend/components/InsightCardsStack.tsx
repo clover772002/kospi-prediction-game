@@ -7,6 +7,8 @@ import TimeSliceAccuracyInsightCard from "@/components/TimeSliceAccuracyInsightC
 import VoteTimeProfileInsightCard from "@/components/VoteTimeProfileInsightCard";
 import CohortLeaderPickInsightCard from "@/components/CohortLeaderPickInsightCard";
 import CrowdConvictionInsightCard from "@/components/CrowdConvictionInsightCard";
+import InsightPreviewStack from "@/components/InsightPreviewStack";
+import { INSIGHT_PRODUCTS_PREVIEW_ONLY } from "@/lib/insight_items_config";
 
 /** 뷰포트 근처에 올 때만 자식 마운트 → 인사이트 API 동시 요청 완화 */
 export function InsightsInView({
@@ -81,6 +83,10 @@ export default function InsightCardsStack({
   hideUnlockControl?: boolean;
   onBalanceUpdated?: () => void;
 }) {
+  if (INSIGHT_PRODUCTS_PREVIEW_ONLY) {
+    return <InsightPreviewStack surveyDate={surveyDate} />;
+  }
+
   return (
     <div className="space-y-1">
       <StaggerMount index={0}>

@@ -15,6 +15,7 @@ import InsightProductUnlockList from "@/components/InsightProductUnlockList";
 import InsightCardsStack, { InsightsInView, InsightCardsStackSkeleton } from "@/components/InsightCardsStack";
 import { InsightDashboardCompactProvider } from "@/contexts/InsightDashboardCompactContext";
 import { useInsightSurveyDatePicker } from "@/hooks/useInsightSurveyDatePicker";
+import { INSIGHT_PRODUCTS_PREVIEW_ONLY } from "@/lib/insight_items_config";
 
 /** 당분간 원화(Stripe) 토큰팩 UI 비표시. 다시 켤 때는 true로 변경하고 아래 token pack 섹션·핸들러 복구 */
 const SHOW_STRIPE_TOKEN_PACKS = false;
@@ -201,14 +202,25 @@ function ShopInner() {
 
         <section className="space-y-3">
           <h2 className="text-[11px] font-black text-gray-500 uppercase tracking-widest">집계 아이템 (거래일 선택)</h2>
-          <p className="text-[10px] text-gray-500 leading-relaxed">
-            <strong className="text-gray-400">고수보정, 일반통계</strong>는 이름만 두 가지로 보이지만{" "}
-            <strong className="text-gray-300">한 장의 카드(고수 가중 vs 다수결)</strong>예요. 잠금이 켜져 있으면 아래 「토큰으로 잠금 해제」에서 해제한 뒤 같은 내용이{" "}
-            <Link href="/dashboard" className="text-violet-400 hover:text-violet-300 underline underline-offset-2">
-              대시보드
-            </Link>
-            에서도 보입니다.
-          </p>
+          {INSIGHT_PRODUCTS_PREVIEW_ONLY ? (
+            <p className="text-[10px] text-gray-500 leading-relaxed">
+              참여 인원이 더 모일 때까지 <strong className="text-gray-300">집계 차트·유료 열람은 잠시 닫혀 있어요</strong>. 각 아이템이 어떤 정보인지{" "}
+              <strong className="text-gray-400">설명만</strong> 확인할 수 있고, 숫자·차트는 블러 처리됩니다. 공개를 다시 켜면{" "}
+              <Link href="/dashboard" className="text-violet-400 hover:text-violet-300 underline underline-offset-2">
+                대시보드
+              </Link>
+              와 동일한 집계를 볼 수 있게 할 예정이에요.
+            </p>
+          ) : (
+            <p className="text-[10px] text-gray-500 leading-relaxed">
+              <strong className="text-gray-400">고수보정, 일반통계</strong>는 이름만 두 가지로 보이지만{" "}
+              <strong className="text-gray-300">한 장의 카드(고수 가중 vs 다수결)</strong>예요. 잠금이 켜져 있으면 아래 「토큰으로 잠금 해제」에서 해제한 뒤 같은 내용이{" "}
+              <Link href="/dashboard" className="text-violet-400 hover:text-violet-300 underline underline-offset-2">
+                대시보드
+              </Link>
+              에서도 보입니다.
+            </p>
+          )}
           {dateOptions.length === 0 ? (
             <p className="text-xs text-amber-200/80 rounded-xl border border-amber-500/20 bg-amber-500/5 px-3 py-2">
               거래일 목록을 불러오는 중이거나 아직 공개된 설문 이력이 없어요. 잠시 후 다시 열거나 설문에 참여해 보세요.
@@ -237,7 +249,9 @@ function ShopInner() {
             <div id="shop-insight-deck" className="space-y-2 pt-1">
               <h3 className="text-[11px] font-black text-gray-500 uppercase tracking-widest">이 거래일 집계 열람</h3>
               <p className="text-[10px] text-gray-500 leading-relaxed">
-                페이월이 꺼져 있으면 토큰 없이 내용이 보일 수 있어요. 잠금이면 카드가 🔐 상태 → 바로 아래에서 토큰으로 해제하세요.
+                {INSIGHT_PRODUCTS_PREVIEW_ONLY
+                  ? "지금은 미리보기 모드예요. 카드 하단 블러 영역에 실제 집계는 표시되지 않아요."
+                  : "페이월이 꺼져 있으면 토큰 없이 내용이 보일 수 있어요. 잠금이면 카드가 🔐 상태 → 바로 아래에서 토큰으로 해제하세요."}
               </p>
               <InsightDashboardCompactProvider>
                 <InsightsInView eager fallback={<InsightCardsStackSkeleton />}>
@@ -254,26 +268,34 @@ function ShopInner() {
             </div>
           ) : null}
 
-          <div className="border-t border-white/[0.08] pt-4 space-y-2">
-            <h3 className="text-[11px] font-black text-gray-500 uppercase tracking-widest">토큰으로 잠금 해제</h3>
-            {token && (catalog?.insight_products?.length ?? 0) > 0 ? (
-              <InsightProductUnlockList
-                products={catalog!.insight_products}
-                accessToken={token}
-                surveyDate={selectedDate}
-                walletTokens={walletTokens}
-                onBalanceRefresh={refreshWalletTokens}
-                setFlash={setFlash}
-                setErr={setErr}
-                onUnlocked={() => {
-                  setInsightDeckKey((k) => k + 1);
-                  requestAnimationFrame(() => {
-                    document.getElementById("shop-insight-deck")?.scrollIntoView({ behavior: "smooth", block: "start" });
-                  });
-                }}
-              />
-            ) : null}
-          </div>
+          {!INSIGHT_PRODUCTS_PREVIEW_ONLY ? (
+            <div className="border-t border-white/[0.08] pt-4 space-y-2">
+              <h3 className="text-[11px] font-black text-gray-500 uppercase tracking-widest">토큰으로 잠금 해제</h3>
+              {token && (catalog?.insight_products?.length ?? 0) > 0 ? (
+                <InsightProductUnlockList
+                  products={catalog!.insight_products}
+                  accessToken={token}
+                  surveyDate={selectedDate}
+                  walletTokens={walletTokens}
+                  onBalanceRefresh={refreshWalletTokens}
+                  setFlash={setFlash}
+                  setErr={setErr}
+                  onUnlocked={() => {
+                    setInsightDeckKey((k) => k + 1);
+                    requestAnimationFrame(() => {
+                      document.getElementById("shop-insight-deck")?.scrollIntoView({ behavior: "smooth", block: "start" });
+                    });
+                  }}
+                />
+              ) : null}
+            </div>
+          ) : (
+            <div className="border-t border-white/[0.08] pt-4">
+              <p className="text-[10px] text-gray-500 leading-relaxed rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2">
+                토큰으로 잠금 해제는 집계 공개가 재개되면 다시 활성화됩니다.
+              </p>
+            </div>
+          )}
         </section>
 
         <section className="space-y-3">

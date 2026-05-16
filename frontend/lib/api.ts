@@ -591,10 +591,25 @@ export async function getNoviceLeaderPickInsight(
   return jsonFromOkResponse(res, text, "아이템 응답 형식 오류") as LeaderPickInsightResponse;
 }
 
+export async function getInsightEntitlements(
+  accessToken: string,
+  surveyDate: string,
+): Promise<{ survey_date: string; product_slugs: string[] }> {
+  const res = await fetch(
+    `${resolveApiBase()}/api/insights/entitlements?survey_date=${encodeURIComponent(surveyDate)}`,
+    { ...insightFetchInit, headers: { Authorization: `Bearer ${accessToken}` } },
+  );
+  const text = await res.text();
+  return jsonFromOkResponse(res, text, "열람권 응답 형식 오류") as {
+    survey_date: string;
+    product_slugs: string[];
+  };
+}
+
 export async function unlockInsightProduct(
   accessToken: string,
   body: { product_slug: string; survey_date: string; idempotency_key: string; group_id?: string },
-): Promise<{ ok: boolean; balance?: number; spent?: number; already_unlocked?: boolean }> {
+): Promise<{ ok: boolean; balance?: number; spent?: number; already_unlocked?: boolean; skipped?: boolean; message?: string }> {
   const res = await fetch(`${resolveApiBase()}/api/insights/unlock`, {
     method: "POST",
     headers: {
@@ -621,7 +636,14 @@ export async function unlockInsightProduct(
   if (!res.ok) {
     throw new Error(formatApiErrorMessage(res.status, text));
   }
-  return parsed as { ok: boolean; balance?: number; spent?: number; already_unlocked?: boolean };
+  return parsed as {
+    ok: boolean;
+    balance?: number;
+    spent?: number;
+    already_unlocked?: boolean;
+    skipped?: boolean;
+    message?: string;
+  };
 }
 
 export interface ShopConsumableProduct {

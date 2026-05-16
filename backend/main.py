@@ -3639,6 +3639,32 @@ def _leader_pick_insight_response(supabase: Client, user_id: str, sd: str, cohor
     return {**soft(accessible=True, locked=False), "reason": None, "data": payload}
 
 
+@app.get("/api/insights/entitlements")
+async def get_insight_entitlements(
+    survey_date: str,
+    current_user=Depends(get_current_user),
+    supabase: Client = Depends(get_supabase),
+):
+    """선택 거래일에 대해 이미 토큰 잠금 해제한 집계 상품 slug 목록(아이템 탭 버튼 비활성화용)."""
+    user_id = str(current_user.id)
+    sd = survey_date.strip()
+    if len(sd) != 10 or sd[4] != "-" or sd[7] != "-":
+        raise HTTPException(status_code=400, detail="survey_date 형식은 YYYY-MM-DD 여야 합니다.")
+    try:
+        rows = (
+            supabase.table("insight_entitlements")
+            .select("product_slug")
+            .eq("user_id", user_id)
+            .eq("scope_key", sd)
+            .execute()
+        )
+    except Exception as e:
+        logger.warning("insight_entitlements 목록 조회 실패: %s", e)
+        return {"survey_date": sd, "product_slugs": []}
+    slugs = [r["product_slug"] for r in (rows.data or []) if isinstance(r.get("product_slug"), str)]
+    return {"survey_date": sd, "product_slugs": slugs}
+
+
 @app.post("/api/insights/unlock")
 async def post_insight_unlock(
     body: InsightUnlockBody,

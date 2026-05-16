@@ -1,11 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useConfirmShopOnInsufficientTokens } from "@/hooks/useConfirmShopOnInsufficientTokens";
 import InsightAnimatedPreview from "@/components/InsightAnimatedPreview";
 import { isInsightProductSlug } from "@/lib/insight_card_meta";
 import type { ShopCatalog } from "@/lib/api";
-import { unlockInsightProduct, InsightInsufficientTokensError } from "@/lib/api";
+import { getInsightEntitlements, unlockInsightProduct, InsightInsufficientTokensError } from "@/lib/api";
 
 type Product = ShopCatalog["insight_products"][number];
 
@@ -30,6 +30,44 @@ export default function InsightProductUnlockList({
 }) {
   const confirmShopOnInsufficientTokens = useConfirmShopOnInsufficientTokens();
   const [busySlug, setBusySlug] = useState<string | null>(null);
+  /** 현재 선택 거래일에 대해 이미 잠금 해제된 상품 slug */
+  const [unlockedSlugs, setUnlockedSlugs] = useState<Set<string>>(() => new Set());
+
+  /** 거래일·토큰 변경 시: 서버 목록으로만 초기화 (이전 날짜의 로컬 잠금 해제와 섞이지 않음) */
+  const loadUnlockedForDate = useCallback(async () => {
+    if (!accessToken || !surveyDate) {
+      setUnlockedSlugs(new Set());
+      return;
+    }
+    try {
+      const d = await getInsightEntitlements(accessToken, surveyDate);
+      setUnlockedSlugs(new Set(d.product_slugs ?? []));
+    } catch {
+      setUnlockedSlugs(new Set());
+    }
+  }, [accessToken, surveyDate]);
+
+  /**
+   * 잠금 해제 직후: 서버 목록과 현재 상태 병합.
+   * 페이월 OFF로 entitlement가 없을 때는 방금 해제한 slug만 로컬에 있으므로 덮어쓰면 안 됨.
+   */
+  const mergeEntitlementsAfterUnlock = useCallback(async () => {
+    if (!accessToken || !surveyDate) return;
+    try {
+      const d = await getInsightEntitlements(accessToken, surveyDate);
+      setUnlockedSlugs((prev) => {
+        const merged = new Set<string>(d.product_slugs ?? []);
+        for (const s of prev) merged.add(s);
+        return merged;
+      });
+    } catch {
+      // 서버 실패 시 방금 setUnlockedSlugs로 넣은 낙관적 상태 유지
+    }
+  }, [accessToken, surveyDate]);
+
+  useEffect(() => {
+    void loadUnlockedForDate();
+  }, [loadUnlockedForDate]);
 
   const unlockOne = async (p: Product) => {
     if (!surveyDate) return;
@@ -44,9 +82,13 @@ export default function InsightProductUnlockList({
             ? crypto.randomUUID()
             : `shop-unlock-${Date.now()}-${Math.random().toString(36).slice(2)}`,
       });
+      setUnlockedSlugs((prev) => new Set(prev).add(p.slug));
+
       const bal = typeof out.balance === "number" ? out.balance : null;
       const spent = typeof out.spent === "number" ? out.spent : null;
-      if (out.already_unlocked) {
+      if (out.skipped) {
+        setFlash(out.message ?? "페이월이 꺼져 있어 별도 토큰 차감 없이 열람할 수 있어요.");
+      } else if (out.already_unlocked) {
         setFlash("이미 이 거래일에 열람한 기록이 있어요. 대시보드에서 바로 볼 수 있어요.");
       } else if (bal != null && spent != null) {
         setFlash(`잠금 해제했어요. 차감 ${spent.toLocaleString()} 토큰 · 잔액 약 ${bal.toLocaleString()} 토큰`);
@@ -54,6 +96,7 @@ export default function InsightProductUnlockList({
         setFlash("잠금 해제가 반영됐어요. 대시보드에서 확인해 보세요.");
       }
       void onBalanceRefresh();
+      void mergeEntitlementsAfterUnlock();
       onUnlocked?.();
     } catch (e: unknown) {
       if (e instanceof InsightInsufficientTokensError) {
@@ -70,7 +113,8 @@ export default function InsightProductUnlockList({
     <ul className="space-y-2">
       {products.map((p) => {
         const busy = busySlug === p.slug;
-        const disabled = !surveyDate || busy || (busySlug !== null && !busy);
+        const done = unlockedSlugs.has(p.slug);
+        const disabled = !surveyDate || busy || (busySlug !== null && !busy) || done;
         return (
           <li
             key={p.slug}
@@ -87,11 +131,13 @@ export default function InsightProductUnlockList({
               onClick={() => void unlockOne(p)}
               className="w-full py-3 rounded-xl bg-violet-600 hover:bg-violet-500 disabled:bg-[#333] disabled:text-gray-500 text-white text-sm font-black transition-all active:scale-[0.99]"
             >
-              {busy
-                ? "처리 중…"
-                : !surveyDate
-                  ? "먼저 위에서 거래일을 선택해 주세요"
-                  : `${p.price_tokens} 토큰으로 잠금 해제`}
+              {done
+                ? "이 거래일 열람 완료"
+                : busy
+                  ? "처리 중…"
+                  : !surveyDate
+                    ? "먼저 위에서 거래일을 선택해 주세요"
+                    : `${p.price_tokens} 토큰으로 잠금 해제`}
             </button>
             {p.description ? (
               <details className="group border-t border-white/[0.06] pt-2 text-left">

@@ -8,6 +8,7 @@ import ShareSheet from "@/components/ShareSheet";
 import AppAmbientBackground from "@/components/AppAmbientBackground";
 import AppTabNav from "@/components/AppTabNav";
 import DashboardInsightSection, { DashboardInsightSectionSkeleton } from "@/components/DashboardInsightSection";
+import MyResponseDistributionSection from "@/components/MyResponseDistributionSection";
 import StaleRefreshIndicator from "@/components/StaleRefreshIndicator";
 import { clearAllTabSnapshots, peekDashboardSnapshot, saveDashboardSnapshot, saveGroupsSnapshot } from "@/lib/tab-session-cache";
 
@@ -976,6 +977,8 @@ export default function DashboardPage() {
             </div>
           ) : null}
         </div>
+
+        {dash && dash.history.length > 0 ? <MyResponseDistributionSection history={dash.history} /> : null}
 
         {today?.participants && today.participants.length > 0 && (() => {
           const myEntry = dash?.history?.find((h) => sameSurveyDate(h.date, today.survey_date));
