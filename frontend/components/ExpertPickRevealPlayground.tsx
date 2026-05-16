@@ -6,7 +6,7 @@ const PHASE_MS = 580;
 /** 8단계 루프: 잠금 → 안내 → 토큰 표시 → 지불 순간 → 해제 반짝 → 유지 ×2 → 다음 루프 */
 const N_PHASE = 8;
 
-/** 로그인 랜딩: 토큰으로 고수 선택픽 해제 데모 (반복 재생) */
+/** 로그인 랜딩: 토큰으로 고수 선택픽 해제 카드 예시 */
 export default function ExpertPickRevealPlayground() {
   const [phase, setPhase] = useState(0);
   const [burstNonce, setBurstNonce] = useState(0);
@@ -29,9 +29,8 @@ export default function ExpertPickRevealPlayground() {
 
   return (
     <div className="w-full rounded-2xl border border-amber-500/35 bg-gradient-to-b from-[#1a1510]/95 to-[#101010] overflow-hidden expert-pick-card-glow">
-      <div className="flex justify-between gap-2 px-3 py-2 bg-amber-500/10 border-b border-amber-500/20 items-center flex-wrap">
-        <span className="text-[10px] font-black text-amber-200 tracking-wide uppercase">토큰 · 고수 선택픽</span>
-        <span className="text-[10px] text-gray-600">반복 데모 · 터치 없음</span>
+      <div className="flex items-center justify-center px-3 py-2 bg-amber-500/10 border-b border-amber-500/20">
+        <span className="text-[10px] font-black text-amber-200 tracking-wide">토큰 · 고수 선택픽</span>
       </div>
 
       <div className="relative px-3 py-4 min-h-[11.5rem]">
@@ -76,7 +75,7 @@ export default function ExpertPickRevealPlayground() {
                     {pickLive ? "✨" : "🔒"}
                   </span>
                   <span className="text-[10px] font-black text-gray-400">
-                    {pickLive ? "열람 완료 (데모)" : "열람 전 · 토큰 필요"}
+                    {pickLive ? "열람 완료" : "열람 전 · 토큰 필요"}
                   </span>
                 </div>
 

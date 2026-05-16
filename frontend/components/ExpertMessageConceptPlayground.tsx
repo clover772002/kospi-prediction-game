@@ -3,10 +3,9 @@
 import { useEffect, useState } from "react";
 
 const PHASE_MS = 640;
-/** 반복 데모: 소통할 때마다 내 풀에서 일정 토큰이 고수에게 전달되고, 고수 답장은 무료 */
 const N_PHASE = 7;
 
-/** 로그인 랜딩: 고수에게 토큰을 전하는 소통 컨셉 (반복 재생) */
+/** 로그인 랜딩: 토큰 → 고수 소통 시각 예시 */
 export default function ExpertMessageConceptPlayground() {
   const [phase, setPhase] = useState(0);
 
@@ -15,23 +14,20 @@ export default function ExpertMessageConceptPlayground() {
     return () => window.clearInterval(id);
   }, []);
 
-  const busyLine = phase >= 1;
   const showMyBubble = phase >= 1;
   const myBubbleVivid = phase >= 2;
   const showGiftHint = phase === 3;
   const showExpertTyping = phase === 4;
   const showExpertBubble = phase >= 5;
-
   const legendStrong = phase === 6 || phase === 0;
 
   return (
     <div className="w-full rounded-2xl border border-sky-500/35 bg-gradient-to-b from-[#0c1218]/95 to-[#0e0e10] overflow-hidden shadow-[inset_0_1px_0_rgba(56,189,248,0.08)]">
-      <div className="flex justify-between gap-2 px-3 py-2 bg-sky-500/10 border-b border-sky-500/20 items-center flex-wrap">
-        <span className="text-[10px] font-black text-sky-200/95 tracking-wide uppercase">토큰 · 고수에게 전하기</span>
-        <span className="text-[10px] text-gray-600">반복 데모 · 터치 없음</span>
+      <div className="flex items-center justify-center px-3 py-2 bg-sky-500/10 border-b border-sky-500/20">
+        <span className="text-[10px] font-black text-sky-200/95 tracking-wide">토큰 → 고수 소통</span>
       </div>
 
-      <div className="relative px-3 py-3 min-h-[12.5rem]">
+      <div className="relative px-3 py-3 min-h-[11rem]">
         <div
           className={`pointer-events-none absolute inset-0 bg-gradient-to-br from-sky-500/[0.06] via-transparent to-amber-500/[0.04] transition-opacity duration-500 ${
             legendStrong ? "opacity-95" : "opacity-55"
@@ -40,11 +36,7 @@ export default function ExpertMessageConceptPlayground() {
         />
 
         <div className="relative z-[1] flex flex-col gap-2">
-          <p className="text-[10px] text-gray-500 text-center font-bold px-2">
-            {busyLine
-              ? "소통할 때 보내는 글 한 번마다 · 그만큼 토큰이 고수에게 전달돼요"
-              : "설문 적중 등으로 모은 토큰 중 일부를 고수에게 건네며 대화해요"}
-          </p>
+          <p className="text-[11px] text-gray-400 text-center font-bold px-2">고수에게 토큰을 주고 소통해요</p>
 
           {/* 내 메시지 (우측) */}
           <div
@@ -62,14 +54,9 @@ export default function ExpertMessageConceptPlayground() {
             </div>
             {showGiftHint ? (
               <span className="text-[10px] font-black text-amber-300 tabular-nums drop-shadow-[0_0_8px_rgba(251,191,36,.25)] animate-pulse mr-10">
-                이 메시지와 함께 고수에게 +3 💰
+                고수에게 +3 💰
               </span>
-            ) : (
-              myBubbleVivid &&
-              phase >= 4 && (
-                <span className="text-[9px] font-bold text-gray-600 mr-1">소통 1회당 전달 토큰 (예시 숫자)</span>
-              )
-            )}
+            ) : null}
           </div>
 
           {/* 고수 답변 (좌측) */}
@@ -89,7 +76,7 @@ export default function ExpertMessageConceptPlayground() {
               <div className="flex items-center gap-1.5 flex-wrap">
                 <span className="text-[9px] font-black text-yellow-400/95 uppercase tracking-wide">⭐ 고수</span>
                 <span className="text-[9px] font-black rounded-full border border-emerald-500/35 bg-emerald-500/10 px-2 py-0.5 text-emerald-300/95">
-                  답장은 무료 · 선물만 받아요
+                  답장 무료
                 </span>
               </div>
               <div className="rounded-2xl rounded-tl-md border border-white/[0.1] bg-[#151518]/95 px-3 py-2 max-w-[92%]">
@@ -98,20 +85,6 @@ export default function ExpertMessageConceptPlayground() {
                 </p>
               </div>
             </div>
-          </div>
-
-          {/* 하단 규칙 */}
-          <div
-            className={`mt-3 mx-1 rounded-xl border px-3 py-2 transition-all duration-300 ${
-              legendStrong ? "border-sky-500/35 bg-sky-500/[0.08]" : "border-white/[0.06] bg-black/25"
-            }`}
-          >
-            <p className="text-[10px] text-gray-400 leading-relaxed text-center font-bold">
-              <span className="text-sky-200/95">내가 메시지를 보낼 때</span> 정해진 만큼 토큰이{" "}
-              <span className="text-amber-200/95">고수에게 전달</span>되고,{" "}
-              <span className="text-emerald-300/90">고수는 답장할 때 토큰을 내지 않아요.</span>
-            </p>
-            <p className="text-[9px] text-gray-600 text-center mt-1">전달 비율·최소량은 서비스 정책에 따라 달라질 수 있어요.</p>
           </div>
         </div>
       </div>

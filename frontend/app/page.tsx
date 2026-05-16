@@ -48,11 +48,11 @@ const FEATURES = [
   },
   {
     icon: "🎫",
-    title: "토큰으로 고수 선택픽·소통",
-    desc: "모은 토큰으로 고수 진영을 열람하고, 소통할 때마다 일정 토큰을 고수에게 전달해요",
+    title: "토큰으로 고수 선택픽 열람",
+    desc: "모은 토큰으로 고수 진영을 펼치고, 토큰으로 고수와 소통해요",
     detail: {
       summary:
-        "설문과 적중으로 모은 토큰으로 오늘의 고수 선택·강화 집계를 펼치고, 앞으로는 고수와 주고받는 메시지마다 정해진 분량의 토큰이 고수에게 넘어가는 식을 생각하고 있어요. 고수가 답장할 때는 토큰을 쓰지 않는 쪽이 목표예요. 실제 전달 규칙·한도는 서비스 정책에 따라 달라질 수 있어요.",
+        "설문·적중으로 모은 토큰으로 고수 선택·강화 집계를 열고, 같은 재화로 고수에게 토큰을 주며 소통하는 흐름을 생각하고 있어요. 고수는 답장할 때 토큰을 쓰지 않는 쪽이 목표예요. 세부 규칙은 정책에 따라 달라질 수 있어요.",
       steps: null,
       mockup: (() => {
         const Bar = ({ yes, no }: { yes: number; no: number }) => (
@@ -253,20 +253,20 @@ export default function LoginPage() {
       <div className="text-center mb-10">
         <div className="text-6xl mb-4">📊</div>
         <h1 className="text-2xl font-black text-white mb-1">오늘 코스피, 함께 맞춰요</h1>
-        <p className="text-amber-200/90 text-xs font-bold mb-3 tracking-wide">예측으로 토큰을 모아 · 소통할 때 고수에게 건네요</p>
+        <p className="text-amber-200/90 text-xs font-bold mb-3 tracking-wide">예측으로 토큰을 모아 · 고수에게 주고 소통해요</p>
         <p className="text-gray-400 text-sm leading-relaxed">
-          방향을 맞히면 토큰이 쌓이고, 같은 재화로 고수 선택픽을 열람하거나 고수와 소통할 수 있게 만드는 흐름이에요. 소통할 때 보내는 메시지마다 일정 토큰이 <strong className="text-gray-300">고수에게 전달</strong>되는 컨셉이고, 고수는 답장할 때 토큰을 쓰지 않습니다.
+          방향을 맞히면 토큰이 쌓이고, 고수 선택픽을 열람하거나 <strong className="text-gray-300">토큰으로 고수와 소통</strong>할 수 있어요. 고수에게 토큰을 주고 소통하는 그림이에요.
         </p>
       </div>
 
-      {/* ── 큰 틀: 예측·토큰 → 고수픽 → 고수에게 토큰 ───────────────── */}
+      {/* ── 큰 틀: 예측·토큰 → 고수픽 → 토큰 → 고수 소통 ───────────────── */}
       <div className="w-full mb-2 min-w-0">
         <div className="h-px w-full bg-gradient-to-r from-transparent via-amber-500/30 to-transparent mb-6" aria-hidden />
         <p className="text-[10px] text-gray-600 font-black tracking-[0.18em] mb-3 uppercase">어떻게 즐기나요</p>
         <div className="flex flex-wrap justify-center gap-2 mb-4 text-[10px] text-gray-400">
           <span className="rounded-full border border-amber-500/25 bg-amber-500/[0.07] px-2.5 py-1 font-bold text-amber-100/95">① 예측·토큰</span>
           <span className="rounded-full border border-yellow-500/20 bg-yellow-500/[0.06] px-2.5 py-1 font-bold text-yellow-100/85">② 고수픽</span>
-          <span className="rounded-full border border-sky-500/25 bg-sky-500/[0.08] px-2.5 py-1 font-bold text-sky-200/90">③ 고수에게 토큰</span>
+          <span className="rounded-full border border-sky-500/25 bg-sky-500/[0.08] px-2.5 py-1 font-bold text-sky-200/90">③ 토큰 → 고수 소통</span>
         </div>
       </div>
 
@@ -275,7 +275,7 @@ export default function LoginPage() {
           <p className="text-[11px] text-amber-200/95 font-black tracking-[0.12em] mb-2">① 코스피 예측 → 토큰</p>
           <h2 className="text-base font-black text-white mb-1">코스피를 예측하고 토큰을 받아요</h2>
           <p className="text-[11px] text-gray-600 mb-3 leading-relaxed">
-            확신 게이지·집단배율까지 실제 설문과 같은 패턴입니다 · 아래는 반복 재생 데모입니다
+            확신 게이지·집단배율까지 실제 설문과 같은 패턴입니다
           </p>
           <SurveyConfidencePlayground />
         </section>
@@ -284,17 +284,14 @@ export default function LoginPage() {
           <p className="text-[11px] text-yellow-400/95 font-black tracking-[0.12em] mb-2">② 토큰 → 고수 선택픽</p>
           <h2 className="text-base font-black text-white mb-1">토큰으로 고수의 선택을 열람해요</h2>
           <p className="text-[11px] text-gray-600 mb-3 leading-relaxed">
-            차감·해제 순간은 애니메이션으로 강조해 두었어요 · 비용 표시와 픽 내용은 이해용 예시예요
+            참고용 예시 화면이에요
           </p>
           <ExpertPickRevealPlayground />
         </section>
 
         <section className="min-w-0">
-          <p className="text-[11px] text-sky-300/95 font-black tracking-[0.12em] mb-2">③ 소통하면서 고수에게 토큰 전달</p>
-          <h2 className="text-base font-black text-white mb-1">메시지 한 통 보낼 때마다 토큰이 고수에게 가요</h2>
-          <p className="text-[11px] text-gray-600 mb-3 leading-relaxed">
-            아래는 실제 채팅이 아니라 규칙을 한눈에 보여 주는 반복 데모예요. 내 풀에서는 줄어들지만 그만큼 고수에게 쌓이고, 고수는 답장 비용 없이 이어갈 수 있는 그림입니다.
-          </p>
+          <p className="text-[11px] text-sky-300/95 font-black tracking-[0.12em] mb-2">③ 토큰 → 고수 소통</p>
+          <h2 className="text-base font-black text-white mb-4">고수에게 토큰을 주고 소통해요</h2>
           <ExpertMessageConceptPlayground />
         </section>
       </div>
@@ -399,7 +396,7 @@ export default function LoginPage() {
           {[
             {
               q: "완전 무료인가요?",
-              a: "시작하고 설문 참여 같은 기본 흐름은 무료로 시작해요. 토큰은 적중 등으로 쌓이고, 고수 선택픽을 열람하거나 (도입 시) 고수와 소통할 때마다 일부가 고수에게 전달되는 식으로 쓰일 수 있어요. 유료 과금 계획이 생기면 사전 공지합니다.",
+              a: "시작하고 설문 참여 같은 기본 흐름은 무료로 시작해요. 토큰은 적중 등으로 쌓이고, 고수 선택픽이나 고수와의 소통에 쓰일 수 있어요. 유료 과금이 생기면 사전 공지합니다.",
             },
             {
               q: "매일 해야 하나요? 빠지면 불이익이 있나요?",
@@ -419,7 +416,7 @@ export default function LoginPage() {
             },
             {
               q: "고수랑 어떻게 소통하나요?",
-              a: "로그인 화면 데모처럼, 소통할 때 보내는 메시지마다 정해진 분량의 토큰이 고수에게 전달되는 컨셉이에요. 고수는 답장할 때 토큰을 내지 않고, 받은 토큰만 정산·확인할 수 있는 쪽을 목표로 합니다. 실제 전달 규칙과 수치는 출시 직전에 다시 안내할 수 있어요.",
+              a: "토큰으로 고수와 소통하는 흐름을 생각하고 있어요. 고수는 답장할 때 토큰을 쓰지 않는 쪽이 목표예요. 세부는 나중에 안내할 수 있어요.",
             },
             {
               q: "예측 결과가 조작될 수 있나요?",
