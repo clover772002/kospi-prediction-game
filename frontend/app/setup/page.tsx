@@ -1,13 +1,13 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useLayoutEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { getMe, unlinkTelegram, getVapidPublicKey, savePushSubscription, deletePushSubscription, savePushPreferences, createGroup, joinGroup, getMyGroups, leaveGroup, UserProfile, Group, PushPreferences } from "@/lib/api";
 import AppAmbientBackground from "@/components/AppAmbientBackground";
 import PageLoadProgress from "@/components/PageLoadProgress";
 import AppTabNav from "@/components/AppTabNav";
-import { clearAllTabSnapshots } from "@/lib/tab-session-cache";
+import { clearAllTabSnapshots, peekDashboardSnapshot } from "@/lib/tab-session-cache";
 
 const BOT_USERNAME = process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME || "Profitchat123bot";
 
@@ -76,38 +76,77 @@ export default function SetupPage() {
     return () => window.removeEventListener("beforeinstallprompt", onInstallPrompt);
   }, []);
 
+  /** 다른 탭에서 채운 대시보드 스냅샷 → 설정 첫 페인트 즉시 (토큰은 아래 getSession에서) */
+  useLayoutEffect(() => {
+    const snap = peekDashboardSnapshot();
+    const u = snap?.user;
+    if (!u) return;
+    setUser(u);
+    if (u.telegram_chat_id) setLinked(true);
+    if (u.has_push) setPushLinked(true);
+    if (u.push_preferences) {
+      setPrefs({ ...DEFAULT_PREFS, ...u.push_preferences });
+    }
+    setLoading(false);
+  }, []);
+
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+    let mounted = true;
+
+    const applyProfile = (profile: UserProfile) => {
+      setUser(profile);
+      if (profile.telegram_chat_id) setLinked(true);
+      else setLinked(false);
+      if (profile.has_push) setPushLinked(true);
+      else setPushLinked(false);
+      if (profile.push_preferences) {
+        setPrefs({ ...DEFAULT_PREFS, ...profile.push_preferences });
+      }
+    };
+
+    const loadProfile = async (accessToken: string) => {
+      try {
+        const profile = await getMe(accessToken);
+        if (!mounted) return;
+        applyProfile(profile);
+      } catch (e) {
+        console.error(e);
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    };
+
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!mounted) return;
+      if (!session) {
+        router.replace("/");
+        setLoading(false);
+        return;
+      }
+      setToken(session.access_token);
+      void loadProfile(session.access_token);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === "SIGNED_OUT") {
         router.replace("/");
         return;
       }
       if (event === "INITIAL_SESSION" && !session) {
         router.replace("/");
+        setLoading(false);
         return;
       }
-      if (session) {
+      if (event === "SIGNED_IN" && session) {
         setToken(session.access_token);
-        try {
-          const profile = await getMe(session.access_token);
-          setUser(profile);
-          if (profile.telegram_chat_id) {
-            setLinked(true);
-          }
-          if (profile.has_push) {
-            setPushLinked(true);
-          }
-          if (profile.push_preferences) {
-            setPrefs({ ...DEFAULT_PREFS, ...profile.push_preferences });
-          }
-        } catch (e) {
-          console.error(e);
-        } finally {
-          setLoading(false);
-        }
+        void loadProfile(session.access_token);
       }
     });
-    return () => subscription.unsubscribe();
+
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
   }, [router]);
 
   const botLink = user ? `https://t.me/${BOT_USERNAME}?start=${user.id}` : "";
