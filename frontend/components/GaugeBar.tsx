@@ -3,16 +3,31 @@
 import { useCallback, useId, useRef, useState } from "react";
 
 interface GaugeBarProps {
-  value: number;           // -100 ~ +100 (0 제외)
+  value: number; // -100 ~ +100 (0 제외)
   onChange: (v: number) => void;
-  tokens: number;          // 현재 보유 토큰
+  tokens: number; // 현재 보유 토큰
   disabled?: boolean;
   /** false면 안내 숨김 · 생략 시 조작/읽기 전용 각각 맞는 짧은 안내 표시 */
   beginnerTips?: boolean;
+  /** 집단배율 추정(당일 오늘의 상승 응답 비율). 없으면 적중 금액은 문구만 표시 */
+  kospiYesPct?: number | null;
+  /** 서버 적중 계산 시 곱해지는 연승 배수(1 · 1.5 · 2) · 없으면 1로 간주 */
+  streakBetMult?: number | null;
 }
 
 function calcBet(gauge: number, tokens: number) {
   return Math.max(1, Math.round((Math.abs(gauge) / 100) * tokens));
+}
+
+function estimateCrowdMultiplier(gauge: number, yesPct: number | null | undefined): number | null {
+  if (yesPct === null || yesPct === undefined) return null;
+  const y = Number(yesPct);
+  if (!Number.isFinite(y)) return null;
+  const crowdUp = Math.max(5, y);
+  const crowdDn = Math.max(5, 100 - y);
+  return gauge > 0
+    ? Math.round((crowdDn / crowdUp) * 1000) / 1000
+    : Math.round((crowdUp / crowdDn) * 1000) / 1000;
 }
 
 /** 트랙 좌표(왼쪽 0 ~ 오른쪽 1) → -100..100 (0 불가) */
@@ -31,6 +46,8 @@ export default function GaugeBar({
   tokens,
   disabled = false,
   beginnerTips,
+  kospiYesPct,
+  streakBetMult,
 }: GaugeBarProps) {
   const tipsEnabled = beginnerTips !== false;
   const tipsInteractive = tipsEnabled && !disabled;
@@ -42,22 +59,8 @@ export default function GaugeBar({
   const isUp = value > 0;
   const abs = Math.abs(value);
   const bet = calcBet(value, tokens);
-
-  const move = useCallback((delta: number) => {
-    if (disabled) return;
-    let next = value + delta;
-    // 0을 건너뜀
-    if (value < 0 && next >= 0) next = delta > 0 ? 1 : -1;
-    if (value > 0 && next <= 0) next = delta < 0 ? -1 : 1;
-    next = Math.max(-100, Math.min(100, next));
-    if (next === 0) next = delta > 0 ? 1 : -1;
-    onChange(next);
-  }, [value, onChange, disabled]);
-
-  const allIn = useCallback((direction: 1 | -1) => {
-    if (disabled) return;
-    onChange(direction * 100);
-  }, [onChange, disabled]);
+  const crowdMult = estimateCrowdMultiplier(value, kospiYesPct);
+  const streakM = streakBetMult != null && Number.isFinite(streakBetMult) && streakBetMult > 0 ? streakBetMult : 1;
 
   const applyPointerX = useCallback(
     (clientX: number) => {
@@ -104,17 +107,21 @@ export default function GaugeBar({
     }
   }, []);
 
-  // 중앙(50%)에서 바깥으로 채움: +는 오른쪽 반칸, -는 왼쪽 반칸
   const halfSpanPct = (abs / 100) * 50;
   const barTransition = dragging ? "none" : "all 150ms ease-out";
 
-  const dirLabel  = isUp ? "📈 상승" : "📉 하락";
-  const dirColor  = isUp ? "text-red-400" : "text-blue-400";
+  const dirLabel = isUp ? "상승" : "하락";
+  const dirColor = isUp ? "text-red-400" : "text-blue-400";
   const borderCls = isUp ? "border-red-500/40" : "border-blue-500/40";
-  const bgGlow    = isUp ? "bg-red-500/5" : "bg-blue-500/5";
+  const bgGlow = isUp ? "bg-red-500/5" : "bg-blue-500/5";
 
   const helpIdRaw = useId();
   const helpId = helpIdRaw.includes(":") ? helpIdRaw.replace(/:/g, "") : helpIdRaw;
+
+  let hitPreviewTokens: number | null = null;
+  if (crowdMult !== null) {
+    hitPreviewTokens = Math.max(1, Math.round(bet * crowdMult * streakM));
+  }
 
   return (
     <div className={`w-full max-w-full min-w-0 rounded-2xl border ${borderCls} ${bgGlow} px-4 py-5 sm:px-5 space-y-4 box-border`}>
@@ -144,17 +151,16 @@ export default function GaugeBar({
                 <strong className="text-gray-400">얼마나 확신하나요?</strong>에 답하는 값이 ±%로 보일 뿐이에요.{" "}
                 <strong className="text-gray-400">±% 숫자</strong>는 코스피가 내일 몇 % 오를지/내릴지를 적는 게{" "}
                 <strong className="text-gray-400">아닙니다.</strong>
-                같은 말로, 맞았을 때 수익이 몇 %인지와도 무관해요.
               </p>
               <p>
-                대신 「그 방향으로 장이 마감될 거라고 <strong className="text-gray-400">얼마나 확신하는지</strong>」를 나타내요.
-                말하자면 같은 <strong className="text-gray-400">자신감</strong> 크기를 숫자로 옮긴 거라고 보면 돼요.
+                「그 방향으로 장이 마감될 거라고 <strong className="text-gray-400">얼마나 확신하는지</strong>」를 나타내요.
+                가운데에 가까울수록 망설임, 양 끝에 가까울수록 그 방향에 <strong className="text-gray-400">강하게 확신</strong>하는
+                정도예요.
               </p>
               <p>
-                가운데(0)에 가까울수록 망설이는 쪽, 양쪽 끝에 가까울수록 그 방향에 <strong className="text-gray-400">강하게 확신</strong>하는 쪽이에요.
-              </p>
-              <p>
-                <strong className="text-gray-400">배팅 토큰</strong>은 그 확신 크기와 보유 토큰에 따라 거는 금액이에요. 적중하면 배당 규칙에 따라 받고, 빗나가면 거는 만큼 잃게 됩니다.
+                <strong className="text-gray-400">배팅 토큰</strong>은 확신 크기와 보유에 비례해 자동 산출돼요. 적중 시에는{" "}
+                <strong className="text-gray-400">배팅 토큰 × 집단배율</strong>을 기준으로 지급이 정해지며, 연승이 있으면 그 위에 추가
+                배율이 곱해질 수 있어요.
               </p>
             </div>
           </details>
@@ -165,11 +171,12 @@ export default function GaugeBar({
       <div className="flex items-center justify-between">
         <span className={`text-xl font-black ${dirColor}`}>{dirLabel}</span>
         <span className={`text-2xl font-black tabular-nums ${dirColor}`}>
-          {isUp ? "+" : ""}{value}%
+          {isUp ? "+" : ""}
+          {value}%
         </span>
       </div>
 
-      {/* 드래그 가능 게이지: 터치 영역 확대 */}
+      {/* 드래그 게이지 */}
       <div
         className={`select-none rounded-xl py-3 -my-1 ${disabled ? "" : "cursor-grab active:cursor-grabbing"}`}
         style={{ touchAction: "none" }}
@@ -214,7 +221,7 @@ export default function GaugeBar({
           />
         </div>
         {!disabled && (
-          <p className="text-center text-[10px] text-gray-500 mt-2">막대를 눌러 드래그하면 1% 단위로 미세 조정할 수 있어요</p>
+          <p className="text-center text-[10px] text-gray-500 mt-2">막대를 드래그해 조절하면 배팅 토큰도 같이 바뀝니다.</p>
         )}
       </div>
 
@@ -225,71 +232,6 @@ export default function GaugeBar({
         <span>+100%</span>
       </div>
 
-      {/* 조작 버튼 */}
-      <div className="grid grid-cols-2 gap-3">
-        {/* 하락 방향 */}
-        <div className="flex flex-col gap-2">
-          <p className="text-[10px] text-blue-400 font-bold text-center">📉 하락</p>
-          <div className="flex gap-1">
-            <button
-              type="button"
-              onClick={() => allIn(-1)}
-              disabled={disabled}
-              className="flex-1 py-2 rounded-xl bg-[#111] border border-blue-500/30 text-blue-400 text-[10px] font-black hover:bg-blue-500/10 active:scale-95 transition-all disabled:opacity-30"
-            >
-              올인
-            </button>
-            <button
-              type="button"
-              onClick={() => move(-10)}
-              disabled={disabled}
-              className="flex-1 py-2 rounded-xl bg-[#111] border border-blue-500/20 text-blue-300 text-xs font-black hover:bg-blue-500/10 active:scale-95 transition-all disabled:opacity-30"
-            >
-              -10
-            </button>
-            <button
-              type="button"
-              onClick={() => move(-1)}
-              disabled={disabled}
-              className="flex-1 py-2 rounded-xl bg-[#111] border border-blue-500/20 text-blue-300 text-xs font-black hover:bg-blue-500/10 active:scale-95 transition-all disabled:opacity-30"
-            >
-              -1
-            </button>
-          </div>
-        </div>
-
-        {/* 상승 방향 */}
-        <div className="flex flex-col gap-2">
-          <p className="text-[10px] text-red-400 font-bold text-center">📈 상승</p>
-          <div className="flex gap-1">
-            <button
-              type="button"
-              onClick={() => move(1)}
-              disabled={disabled}
-              className="flex-1 py-2 rounded-xl bg-[#111] border border-red-500/20 text-red-300 text-xs font-black hover:bg-red-500/10 active:scale-95 transition-all disabled:opacity-30"
-            >
-              +1
-            </button>
-            <button
-              type="button"
-              onClick={() => move(10)}
-              disabled={disabled}
-              className="flex-1 py-2 rounded-xl bg-[#111] border border-red-500/20 text-red-300 text-xs font-black hover:bg-red-500/10 active:scale-95 transition-all disabled:opacity-30"
-            >
-              +10
-            </button>
-            <button
-              type="button"
-              onClick={() => allIn(1)}
-              disabled={disabled}
-              className="flex-1 py-2 rounded-xl bg-[#111] border border-red-500/30 text-red-400 text-[10px] font-black hover:bg-red-500/10 active:scale-95 transition-all disabled:opacity-30"
-            >
-              올인
-            </button>
-          </div>
-        </div>
-      </div>
-
       {/* 배팅 정보 */}
       <div className="bg-[#111] border border-[#2A2A2A] rounded-xl p-3 space-y-1.5">
         <div className="flex justify-between text-xs">
@@ -297,13 +239,22 @@ export default function GaugeBar({
           <span className="text-white font-bold tabular-nums">💰 {tokens.toLocaleString()}</span>
         </div>
         <div className="flex justify-between text-xs">
-          <span className="text-gray-500">배팅액</span>
-          <span className={`font-black tabular-nums ${dirColor}`}>{bet.toLocaleString()} 토큰</span>
+          <span className="text-gray-500">배팅 토큰</span>
+          <span className={`font-black tabular-nums ${dirColor}`}>{bet.toLocaleString()}</span>
         </div>
         <div className="h-px bg-[#222]" />
-        <div className="flex justify-between text-xs">
-          <span className="text-gray-500">적중 시</span>
-          <span className="text-green-400 font-bold">거는 만큼 × 집단배율 × 토큰 아이템 등</span>
+        <div className="flex justify-between gap-2 text-xs items-start flex-wrap">
+          <span className="text-gray-500 shrink-0">적중 시</span>
+          {crowdMult !== null ? (
+            <span className="text-green-400 font-bold text-right leading-snug">
+              {bet.toLocaleString()} × {crowdMult.toFixed(2)} (집단배율)
+              {streakM > 1 ? ` × ${streakM} (연승)` : ""}
+              {" → "}
+              약 +{hitPreviewTokens?.toLocaleString()} 토큰
+            </span>
+          ) : (
+            <span className="text-green-400 font-bold text-right leading-snug">배팅 토큰 × 집단배율 (종가 후 확정)</span>
+          )}
         </div>
         <div className="flex justify-between text-xs">
           <span className="text-gray-500">실패 시</span>

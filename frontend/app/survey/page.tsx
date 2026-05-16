@@ -59,6 +59,8 @@ function SurveyGaugeWithPreview({
   submitBtnClass,
   submitLabel,
   onSubmit,
+  kospiYesPct,
+  streakBetMult,
 }: {
   phase: GaugeSubmitPhase;
   setPhase: (p: GaugeSubmitPhase) => void;
@@ -70,23 +72,26 @@ function SurveyGaugeWithPreview({
   submitBtnClass: string;
   submitLabel: string;
   onSubmit: () => void | Promise<void>;
+  kospiYesPct?: number | null;
+  streakBetMult?: number | null;
 }) {
   const isPreview = phase === "preview";
   return (
     <div className="space-y-3 w-full min-w-0 box-border">
       {isPreview ? (
         <>
-            <div className="bg-cyan-500/10 border border-cyan-500/30 rounded-xl px-3 py-2 text-center w-full min-w-0">
-              <p className="text-cyan-300 text-xs font-black">미리보기 · 얼마나 확신하나요?</p>
-              <p className="text-[10px] text-gray-600 mt-0.5">아래 줄은 연습판(루프) · 그 아래가 실제 참여 게이지</p>
-            </div>
-            <SurveyConfidencePlayground />
+          <SurveyConfidencePlayground />
+          <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/[0.08] px-3 py-2 text-center">
+            <p className="text-emerald-300 text-xs font-black tracking-tight">실제 설문</p>
+          </div>
           <GaugeBar
             value={gaugeValue}
             onChange={onGaugeChange}
             tokens={userTokens}
             disabled={submitting}
             beginnerTips={false}
+            kospiYesPct={kospiYesPct}
+            streakBetMult={streakBetMult}
           />
           <button
             type="button"
@@ -107,6 +112,9 @@ function SurveyGaugeWithPreview({
             onChange={onGaugeChange}
             tokens={userTokens}
             disabled
+            beginnerTips={false}
+            kospiYesPct={kospiYesPct}
+            streakBetMult={streakBetMult}
           />
           <button
             type="button"
@@ -172,6 +180,9 @@ function SurveyPageInner() {
   /** 상점 소모품 grant 조회용 */
   const [pendingGrantToday, setPendingGrantToday] = useState<string | null>(null);
   const [pendingGrantNext, setPendingGrantNext] = useState<string | null>(null);
+
+  /** 서버 적중 계산 연승 배수와 맞춤 (게이지 예상표시용) */
+  const streakBetMultForGauge = userStreak >= 5 ? 2 : userStreak >= 3 ? 1.5 : 1;
 
   const loadToday = useCallback(async () => {
     setRevalidating(true);
@@ -601,6 +612,8 @@ function SurveyPageInner() {
                     submitBtnClass="bg-amber-500 hover:bg-amber-400 disabled:bg-[#333] disabled:text-gray-500 text-white"
                     submitLabel="재투표 제출하기"
                     onSubmit={handleNextSubmit}
+                    kospiYesPct={null}
+                    streakBetMult={streakBetMultForGauge}
                   />
                   {error ? (
                     <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-3 text-red-400 text-sm text-center">
@@ -621,6 +634,8 @@ function SurveyPageInner() {
                     tokens={userTokens}
                     disabled
                     beginnerTips={false}
+                    kospiYesPct={null}
+                    streakBetMult={streakBetMultForGauge}
                   />
                 </div>
                 <div className="rounded-xl border border-amber-500/25 bg-black/20 px-3 py-2 text-center">
@@ -643,6 +658,8 @@ function SurveyPageInner() {
                   submitBtnClass="bg-amber-500 hover:bg-amber-400 disabled:bg-[#333] disabled:text-gray-500 text-white"
                   submitLabel={`${getSurveyDayLabel(nextSurvey.survey_date).shortLabel} 예측 제출하기`}
                   onSubmit={handleNextSubmit}
+                  kospiYesPct={null}
+                  streakBetMult={streakBetMultForGauge}
                 />
               </>
             )}
@@ -719,6 +736,8 @@ function SurveyPageInner() {
                     submitBtnClass="bg-emerald-600 hover:bg-emerald-500 disabled:bg-[#333] disabled:text-gray-500 text-white"
                     submitLabel="재투표 제출하기"
                     onSubmit={handleSubmit}
+                    kospiYesPct={today?.kospi_yes_pct ?? null}
+                    streakBetMult={streakBetMultForGauge}
                   />
                   {error ? (
                     <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-3 text-red-400 text-sm text-center">
@@ -734,6 +753,8 @@ function SurveyPageInner() {
                     tokens={userTokens}
                     disabled
                     beginnerTips={false}
+                    kospiYesPct={today?.kospi_yes_pct ?? null}
+                    streakBetMult={streakBetMultForGauge}
                   />
               <div className="rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 space-y-2">
                 <p className="text-[11px] text-gray-400 leading-relaxed">
@@ -852,8 +873,10 @@ function SurveyPageInner() {
             </p>
             <p className="text-sm font-bold text-gray-300 mb-1">얼마나 확신하나요?</p>
             <p className="text-[11px] text-gray-500 mb-3 leading-relaxed">
-              카드 속 <strong className="text-gray-400">움직이는 연습</strong>을 보더니 · 맨 아래 막대로 실제 참여합니다.
-              숫자(±%)는 <strong className="text-gray-400">등락률</strong>이 아니라 <strong className="text-gray-400">그 방향에 대한 확신</strong>이에요.
+              위 <strong className="text-gray-400">예시</strong>는 이해용이에요 · 아래 바는{" "}
+              <strong className="text-emerald-300/95">실제 설문</strong>입니다.
+              숫자(±%)는 <strong className="text-gray-400">등락률</strong>이 아니라{" "}
+              <strong className="text-gray-400">그 방향에 대한 확신</strong>이에요.
             </p>
             <SurveyGaugeWithPreview
               phase={todayGaugePhase}
@@ -866,6 +889,8 @@ function SurveyPageInner() {
               submitBtnClass="bg-blue-600 hover:bg-blue-500 disabled:bg-[#333] disabled:text-gray-500 text-white"
               submitLabel="예측 제출하기"
               onSubmit={handleSubmit}
+              kospiYesPct={today?.kospi_yes_pct ?? null}
+              streakBetMult={streakBetMultForGauge}
             />
           </div>
 
@@ -901,6 +926,8 @@ function SurveyPageInner() {
                     submitBtnClass="bg-emerald-600 hover:bg-emerald-500 disabled:bg-[#333] disabled:text-gray-500 text-white"
                     submitLabel="재투표 제출하기"
                     onSubmit={handleSubmit}
+                    kospiYesPct={today?.kospi_yes_pct ?? null}
+                    streakBetMult={streakBetMultForGauge}
                   />
                   {error ? (
                     <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-3 text-red-400 text-sm text-center">
@@ -916,6 +943,8 @@ function SurveyPageInner() {
                     tokens={userTokens}
                     disabled
                     beginnerTips={false}
+                    kospiYesPct={today?.kospi_yes_pct ?? null}
+                    streakBetMult={streakBetMultForGauge}
                   />
                   <p className="text-[10px] text-gray-600">15:35 결과 공개</p>
                 </>
@@ -950,11 +979,15 @@ function SurveyPageInner() {
                   tokens={userTokens}
                   disabled
                   beginnerTips={false}
+                  kospiYesPct={today?.kospi_yes_pct ?? null}
+                  streakBetMult={streakBetMultForGauge}
                 />
                 <div className="mt-0.5">
                   {status === "result" && today?.kospi_result != null ? (
-                    <span className="text-xl">
-                      {(previousAnswer ?? kospiAnswer) === today.kospi_result ? "✅ 적중" : "❌ 빗나감"}
+                    <span className={`text-xl font-bold ${
+                      (previousAnswer ?? kospiAnswer) === today.kospi_result ? "text-green-400" : "text-red-400/95"
+                    }`}>
+                      {(previousAnswer ?? kospiAnswer) === today.kospi_result ? "적중" : "미적중"}
                     </span>
                   ) : (
                     <p className="text-[10px] text-gray-500">15:35 결과 공개</p>
@@ -1017,6 +1050,8 @@ function SurveyPageInner() {
                         submitBtnClass="bg-amber-500 hover:bg-amber-400 disabled:bg-[#333] disabled:text-gray-500 text-white"
                         submitLabel="재투표 제출하기"
                         onSubmit={handleNextSubmit}
+                        kospiYesPct={null}
+                        streakBetMult={streakBetMultForGauge}
                       />
                       {error ? (
                         <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-3 text-red-400 text-sm text-center mt-2">
@@ -1037,6 +1072,8 @@ function SurveyPageInner() {
                         tokens={userTokens}
                         disabled
                         beginnerTips={false}
+                        kospiYesPct={null}
+                        streakBetMult={streakBetMultForGauge}
                       />
                     </div>
                     <div className="rounded-xl border border-amber-500/25 bg-black/20 px-3 py-2 text-center">
@@ -1059,6 +1096,8 @@ function SurveyPageInner() {
                       submitBtnClass="bg-amber-500 hover:bg-amber-400 disabled:bg-[#333] disabled:text-gray-500 text-white"
                       submitLabel={`${getSurveyDayLabel(nextSurvey.survey_date).shortLabel} 예측 제출하기`}
                       onSubmit={handleNextSubmit}
+                      kospiYesPct={null}
+                      streakBetMult={streakBetMultForGauge}
                     />
                     {error && (
                       <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-3 text-red-400 text-sm text-center mt-2">

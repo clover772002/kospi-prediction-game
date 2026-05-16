@@ -82,45 +82,63 @@ function HistoryRow({ item }: { item: DashboardData["history"][0] }) {
   const verdict = effectiveKospiCorrect(item);
   const hasResult = verdict !== null;
   const gauge = item.gauge_position;
-  const isUpBet = gauge !== null && gauge !== undefined ? gauge > 0 : item.kospi_answer;
+  const directionUp = gauge !== null && gauge !== undefined ? gauge > 0 : item.kospi_answer;
   const tokensWon = item.tokens_won;
   const tokensBet = item.tokens_bet;
+  const rawMult = item.payout_multiplier;
+  const mult =
+    rawMult !== null && rawMult !== undefined && Number.isFinite(Number(rawMult))
+      ? Number(rawMult)
+      : null;
+
+  const hitLabel =
+    verdict === true ? "적중" : verdict === false ? "미적중" : "대기중";
+
+  const winCell =
+    !hasResult || tokensWon === null || tokensWon === undefined
+      ? "—"
+      : `${tokensWon >= 0 ? "+" : ""}${tokensWon}`;
 
   return (
-    <div className={`flex flex-wrap items-center gap-x-2 gap-y-1 rounded-xl px-3 py-3 border ${
-      hasResult
-        ? verdict
-          ? "bg-green-500/5 border-green-500/20"
-          : "bg-red-500/5 border-red-500/20"
-        : "bg-[#1A1A1A] border-[#2A2A2A]"
-    }`}>
-      <p className="text-xs text-gray-500 w-16 flex-shrink-0">{item.date.slice(5)}</p>
-
-      <div className="flex-1 min-w-[120px] flex items-center gap-2 text-xs">
-        <span className={isUpBet ? "text-red-400 font-bold" : "text-blue-400 font-bold"}>
-          {isUpBet ? "📈" : "📉"}
-          {gauge !== null && gauge !== undefined ? ` ${gauge > 0 ? "+" : ""}${gauge}%` : ""}
-        </span>
-        {tokensBet != null && (
-          <span className="text-gray-500">{tokensBet}T 배팅</span>
-        )}
-      </div>
-
-      <div className="flex-shrink-0 text-xs text-right flex items-center gap-2 ml-auto">
-        {hasResult ? (
-          <div className="flex items-center gap-1.5">
-            <span>{verdict ? "✅" : "❌"}</span>
-            {tokensWon !== null && tokensWon !== undefined && (
-              <span className={`font-bold tabular-nums ${tokensWon >= 0 ? "text-green-400" : "text-red-400"}`}>
-                {tokensWon >= 0 ? "+" : ""}{tokensWon}T
-              </span>
-            )}
-          </div>
-        ) : (
-          <span className="text-gray-600">대기중</span>
-        )}
-      </div>
-    </div>
+    <tr
+      className={`border-b border-[#2A2A2A] last:border-0 ${
+        hasResult
+          ? verdict
+            ? "bg-green-500/[0.04]"
+            : "bg-red-500/[0.04]"
+          : ""
+      }`}
+    >
+      <td className="py-2.5 pr-2 align-middle text-gray-500 tabular-nums whitespace-nowrap">{item.date.slice(5)}</td>
+      <td className={`py-2.5 pr-2 align-middle font-bold whitespace-nowrap ${directionUp ? "text-red-400" : "text-blue-400"}`}>
+        {directionUp ? "상승" : "하락"}
+      </td>
+      <td className="py-2.5 pr-2 align-middle text-right tabular-nums text-gray-200 whitespace-nowrap">
+        {gauge !== null && gauge !== undefined ? `${gauge > 0 ? "+" : ""}${gauge}%` : "—"}
+      </td>
+      <td className="py-2.5 pr-2 align-middle text-right tabular-nums text-gray-200 whitespace-nowrap">
+        {tokensBet != null && tokensBet !== undefined ? `${tokensBet}` : "—"}
+      </td>
+      <td className="py-2.5 pr-2 align-middle text-right tabular-nums text-cyan-300/90 whitespace-nowrap">
+        {mult != null ? `×${mult.toFixed(2)}` : "—"}
+      </td>
+      <td className={`py-2.5 pr-2 align-middle text-right font-bold tabular-nums whitespace-nowrap ${
+        !hasResult
+          ? "text-gray-600"
+          : tokensWon != null && tokensWon >= 0
+            ? "text-green-400"
+            : "text-red-400"
+      }`}
+      >
+        {winCell}
+      </td>
+      <td className={`py-2.5 align-middle whitespace-nowrap font-bold ${
+        !hasResult ? "text-gray-600" : verdict ? "text-green-400/95" : "text-red-400/90"
+      }`}
+      >
+        {hitLabel}
+      </td>
+    </tr>
   );
 }
 
@@ -972,11 +990,31 @@ export default function DashboardPage() {
 
               {/* 최근 이력 */}
               {dash.history.length > 0 && (
-                <div className="space-y-1.5">
+                <div className="space-y-2">
                   <p className="text-xs text-gray-500">최근 이력 (화면에는 최대 5거래일)</p>
-                  {dash.history.slice(0, 5).map((item) => (
-                    <HistoryRow key={item.date} item={item} />
-                  ))}
+                  <div className="overflow-x-auto rounded-xl border border-[#2A2A2A] bg-[#141414]/60">
+                    <table className="w-full min-w-[36rem] text-[11px] border-collapse">
+                      <thead>
+                        <tr className="text-left text-gray-500 border-b border-[#2A2A2A] bg-[#1A1A1A]/90">
+                          <th className="py-2.5 pl-3 pr-2 font-bold whitespace-nowrap">거래일</th>
+                          <th className="py-2.5 pr-2 font-bold whitespace-nowrap">예측방향</th>
+                          <th className="py-2.5 pr-2 font-bold text-right whitespace-nowrap">확신도</th>
+                          <th className="py-2.5 pr-2 font-bold text-right whitespace-nowrap">배팅토큰</th>
+                          <th className="py-2.5 pr-2 font-bold text-right whitespace-nowrap">집단배율</th>
+                          <th className="py-2.5 pr-2 font-bold text-right whitespace-nowrap">획득토큰</th>
+                          <th className="py-2.5 pr-3 font-bold whitespace-nowrap">적중여부</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {dash.history.slice(0, 5).map((item) => (
+                          <HistoryRow key={item.date} item={item} />
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  <p className="text-[9px] text-gray-600 leading-snug">
+                    획득 토큰은 정산 시점 기준이며, 적중 시 서버 규칙상 연승 배율이 추가로 곱해질 수 있어 배팅×집단배율과 숫자가 다를 수 있어요.
+                  </p>
                 </div>
               )}
             </div>
