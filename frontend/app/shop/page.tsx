@@ -200,13 +200,14 @@ function ShopInner() {
         ) : null}
 
         <section className="space-y-3">
-          <h2 className="text-[11px] font-black text-gray-500 uppercase tracking-widest">토큰으로 여는 아이템</h2>
+          <h2 className="text-[11px] font-black text-gray-500 uppercase tracking-widest">집계 아이템 (거래일 선택)</h2>
           <p className="text-[10px] text-gray-500 leading-relaxed">
-            잠금 해제할 <strong className="text-gray-400">거래일</strong>을 고른 뒤 토큰으로 해제하세요. 같은 거래일의 <strong className="text-gray-400">집계 열람</strong>은 아래에 표시되며,{" "}
+            <strong className="text-gray-400">고수보정, 일반통계</strong>는 이름만 두 가지로 보이지만{" "}
+            <strong className="text-gray-300">한 장의 카드(고수 가중 vs 다수결)</strong>예요. 잠금이 켜져 있으면 아래 「토큰으로 잠금 해제」에서 해제한 뒤 같은 내용이{" "}
             <Link href="/dashboard" className="text-violet-400 hover:text-violet-300 underline underline-offset-2">
               대시보드
             </Link>
-            에서도 동일합니다.
+            에서도 보입니다.
           </p>
           {dateOptions.length === 0 ? (
             <p className="text-xs text-amber-200/80 rounded-xl border border-amber-500/20 bg-amber-500/5 px-3 py-2">
@@ -231,40 +232,49 @@ function ShopInner() {
               </select>
             </div>
           )}
-          {token && (catalog?.insight_products?.length ?? 0) > 0 ? (
-            <InsightProductUnlockList
-              products={catalog!.insight_products}
-              accessToken={token}
-              surveyDate={selectedDate}
-              walletTokens={walletTokens}
-              onBalanceRefresh={refreshWalletTokens}
-              setFlash={setFlash}
-              setErr={setErr}
-              onUnlocked={() => setInsightDeckKey((k) => k + 1)}
-            />
-          ) : null}
-        </section>
 
-        {token && selectedDate ? (
-          <section className="space-y-3">
-            <h2 className="text-[11px] font-black text-gray-500 uppercase tracking-widest">이 거래일 집계 열람</h2>
-            <p className="text-[10px] text-gray-500 leading-relaxed">
-              대시보드와 같은 데이터예요. 위에서 잠금 해제하면 아래에 바로 펼쳐집니다. 페이월이 꺼져 있으면 토큰 없이도 볼 수 있어요.
-            </p>
-            <InsightDashboardCompactProvider>
-              <InsightsInView fallback={<InsightCardsStackSkeleton />}>
-                <div key={`${selectedDate}-${insightDeckKey}`}>
-                  <InsightCardsStack
-                    accessToken={token}
-                    surveyDate={selectedDate}
-                    hideUnlockControl
-                    onBalanceUpdated={refreshWalletTokens}
-                  />
-                </div>
-              </InsightsInView>
-            </InsightDashboardCompactProvider>
-          </section>
-        ) : null}
+          {token && selectedDate ? (
+            <div id="shop-insight-deck" className="space-y-2 pt-1">
+              <h3 className="text-[11px] font-black text-gray-500 uppercase tracking-widest">이 거래일 집계 열람</h3>
+              <p className="text-[10px] text-gray-500 leading-relaxed">
+                페이월이 꺼져 있으면 토큰 없이 내용이 보일 수 있어요. 잠금이면 카드가 🔐 상태 → 바로 아래에서 토큰으로 해제하세요.
+              </p>
+              <InsightDashboardCompactProvider>
+                <InsightsInView eager fallback={<InsightCardsStackSkeleton />}>
+                  <div key={`${selectedDate}-${insightDeckKey}`}>
+                    <InsightCardsStack
+                      accessToken={token}
+                      surveyDate={selectedDate}
+                      hideUnlockControl
+                      onBalanceUpdated={refreshWalletTokens}
+                    />
+                  </div>
+                </InsightsInView>
+              </InsightDashboardCompactProvider>
+            </div>
+          ) : null}
+
+          <div className="border-t border-white/[0.08] pt-4 space-y-2">
+            <h3 className="text-[11px] font-black text-gray-500 uppercase tracking-widest">토큰으로 잠금 해제</h3>
+            {token && (catalog?.insight_products?.length ?? 0) > 0 ? (
+              <InsightProductUnlockList
+                products={catalog!.insight_products}
+                accessToken={token}
+                surveyDate={selectedDate}
+                walletTokens={walletTokens}
+                onBalanceRefresh={refreshWalletTokens}
+                setFlash={setFlash}
+                setErr={setErr}
+                onUnlocked={() => {
+                  setInsightDeckKey((k) => k + 1);
+                  requestAnimationFrame(() => {
+                    document.getElementById("shop-insight-deck")?.scrollIntoView({ behavior: "smooth", block: "start" });
+                  });
+                }}
+              />
+            ) : null}
+          </div>
+        </section>
 
         <section className="space-y-3">
           <h2 className="text-[11px] font-black text-gray-500 uppercase tracking-widest">소모품 (설문·토큰 규칙)</h2>

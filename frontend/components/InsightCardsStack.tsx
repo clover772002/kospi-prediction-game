@@ -12,16 +12,23 @@ import CrowdConvictionInsightCard from "@/components/CrowdConvictionInsightCard"
 export function InsightsInView({
   fallback,
   rootMargin = "280px 0px 320px 0px",
+  /** true면 상점 등에서 스크롤 없이 곧바로 카드 마운트(API 요청) */
+  eager = false,
   children,
 }: {
   fallback: ReactNode;
   rootMargin?: string;
+  eager?: boolean;
   children: ReactNode;
 }) {
   const ref = useRef<HTMLDivElement>(null);
-  const [show, setShow] = useState(false);
+  const [show, setShow] = useState(eager);
 
   useEffect(() => {
+    if (eager) {
+      setShow(true);
+      return;
+    }
     if (show) return;
     const el = ref.current;
     if (!el) return;
@@ -40,7 +47,7 @@ export function InsightsInView({
     );
     io.observe(el);
     return () => io.disconnect();
-  }, [show, rootMargin]);
+  }, [eager, show, rootMargin]);
 
   return <div ref={ref}>{show ? children : fallback}</div>;
 }

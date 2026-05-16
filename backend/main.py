@@ -3416,6 +3416,13 @@ async def get_rolling_crowd_summary(
 
 def _unlock_precheck_wave_b_insight(supabase: Client, product_slug: str, survey_date_iso: str) -> None:
     """데이터 불충족 시 400으로 잠금 해제 차단."""
+    if product_slug == "daily_expert_gap":
+        if _build_daily_expert_gap_payload(supabase, survey_date_iso) is None:
+            raise HTTPException(
+                status_code=400,
+                detail="그날 설문 응답이 없어 이 카드는 열 수 없습니다. 다른 거래일을 선택해 주세요.",
+            )
+        return
     if product_slug == "time_slice_accuracy":
         _, er = _build_time_slice_accuracy_payload(supabase, survey_date_iso)
     elif product_slug == "expert_vote_time_profile":

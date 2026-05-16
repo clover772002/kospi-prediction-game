@@ -7,7 +7,7 @@ INSIGHT_PRODUCTS = {
     "daily_expert_gap": {
         "title": "고수보정, 일반통계",
         "price_tokens": 120,
-        "description": "해당 거래일 집계가 준비되면, 누적 적중을 반영한 가중예측(고수보정 축)과 단순 다수결을 같은 화면에 둔 요약입니다. 개별 응답은 포함하지 않습니다.",
+        "description": "한 장의 카드에서 누적 적중을 반영한 가중예측(고수보정)과 단순 다수결(일반통계)을 함께 봅니다. 해당 거래일에 설문 응답이 있어야 열립니다.",
     },
     "crowd_conviction_spread": {
         "title": "확신도 분포",
