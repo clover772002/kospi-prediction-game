@@ -16,6 +16,7 @@ load_dotenv()
 logger = logging.getLogger(__name__)
 
 from survey_writes import persist_survey_answer, SurveySubmissionLocked, apply_pending_presubmits
+from accuracy_aggregate import get_accuracy_data
 
 pending_answers: dict = {}  # 미사용 (단일 질문 전환 후 즉시 저장)
 
@@ -306,7 +307,7 @@ def _calc_weighted_pct_tg(responses_data: list, accuracy_map: dict) -> int:
     """가중예측치 계산 (코스피 단일)"""
     kospi_score = kospi_w = 0.0
     for r in responses_data:
-        acc = accuracy_map.get(r["user_id"], 0.5)
+        acc = accuracy_map.get(str(r["user_id"]), 0.5)
         weight = (acc - 0.5) * 2
         if weight == 0.0:
             weight = 1.0
@@ -333,15 +334,7 @@ async def announce_results(supabase, date_str: str) -> None:
     kospi_yes = sum(1 for r in responses.data if r["kospi_answer"])
     kospi_pct = round(kospi_yes / total * 100)
 
-    all_acc = supabase.table("accuracy_records").select("user_id, kospi_correct").execute()
-    user_scores: dict = {}
-    for r in all_acc.data:
-        uid = r["user_id"]
-        if uid not in user_scores:
-            user_scores[uid] = {"correct": 0, "total": 0}
-        user_scores[uid]["correct"] += 1 if r.get("kospi_correct") else 0
-        user_scores[uid]["total"] += 1
-    acc_map = {uid: s["correct"] / s["total"] for uid, s in user_scores.items() if s["total"] > 0}
+    acc_map, _, _ = get_accuracy_data(supabase)
     kospi_wpct = _calc_weighted_pct_tg(responses.data, acc_map)
 
     def bar(pct: int) -> str:
@@ -390,14 +383,7 @@ async def send_accuracy_notifications(
     if not accuracy_records.data:
         return
 
-    all_acc = supabase.table("accuracy_records").select("user_id, kospi_correct").execute()
-    user_scores: dict = {}
-    for r in all_acc.data:
-        uid = r["user_id"]
-        if uid not in user_scores:
-            user_scores[uid] = {"correct": 0, "total": 0}
-        user_scores[uid]["correct"] += 1 if r.get("kospi_correct") else 0
-        user_scores[uid]["total"] += 1
+    _, _, user_scores = get_accuracy_data(supabase)
 
     total_users = len(user_scores)
     kospi_sign = "+" if kospi_up else ""
@@ -409,7 +395,7 @@ async def send_accuracy_notifications(
 
         kospi_correct = record["kospi_correct"]
 
-        my_score = user_scores.get(user_id, {"correct": 0, "total": 0})
+        my_score = user_scores.get(str(user_id), {"correct": 0, "total": 0})
         my_rate = my_score["correct"] / my_score["total"] if my_score["total"] > 0 else 0
 
         users_with_lower = sum(
