@@ -45,7 +45,7 @@ from telegram_bot import (
     send_accuracy_notifications,
     notify_challenge_results,
 )
-from webpush_helper import send_web_push_to_all
+from webpush_helper import send_web_push_to_all, send_web_push_to_user
 
 load_dotenv()
 logging.basicConfig(level=logging.INFO)
@@ -71,6 +71,14 @@ from token_wallet import (
     entitlement_exists,
     unlock_insight_with_tokens,
     grant_tokens_with_ledger,
+)
+from expert_chat_service import (
+    accept_participant_tip,
+    build_eligibility_payload,
+    list_messages as list_expert_chat_messages,
+    list_threads_for_user,
+    post_expert_reply,
+    send_participant_message,
 )
 from accuracy_aggregate import clear_accuracy_cache, get_accuracy_data
 
@@ -2660,6 +2668,137 @@ async def post_consumable_purchase(
         if out.get("error") == "insufficient_tokens":
             code = 402
         raise HTTPException(status_code=code, detail=out)
+    return out
+
+
+# ─── 고수 소통 (설문 거래일 기준 리더보드 스냅샷 · 상위 N 수신 가능) ───
+
+
+class ExpertChatMessageBody(BaseModel):
+    body: str
+    survey_date: str | None = None
+    recipient_user_id: str | None = None
+    idempotency_key: str | None = None
+
+
+class ExpertChatReplyBody(BaseModel):
+    thread_id: str
+    body: str
+
+
+class ExpertChatAcceptTipBody(BaseModel):
+    message_id: str
+
+
+@app.get("/api/expert-chat/eligibility")
+async def expert_chat_eligibility(
+    survey_date: str | None = None,
+    current_user=Depends(get_current_user),
+    supabase: Client = Depends(get_supabase),
+):
+    """보내기 가능 여부·설문 거래일(survey_date) 리더보드 스냅샷·기본 수신자(1위) 등."""
+    sd = survey_date.strip() if survey_date and survey_date.strip() else today_kst()
+    if len(sd) != 10:
+        raise HTTPException(status_code=400, detail="survey_date 형식 오류 (YYYY-MM-DD)")
+    user_id = str(current_user.id)
+    return build_eligibility_payload(supabase, survey_date=sd, current_user_id=user_id)
+
+
+@app.post("/api/expert-chat/message")
+async def expert_chat_send_message(
+    body: ExpertChatMessageBody,
+    current_user=Depends(get_current_user),
+    supabase: Client = Depends(get_supabase),
+):
+    """참가자 토큰 차감 + 메시지 저장. 고수에게는 「팁 수락」받았을 때 정산합니다."""
+    user_id = str(current_user.id)
+    sd = (body.survey_date or "").strip() or today_kst()
+    if len(sd) != 10:
+        raise HTTPException(status_code=400, detail="survey_date 형식 오류 (YYYY-MM-DD)")
+    return send_participant_message(
+        supabase,
+        participant_id=user_id,
+        survey_date=sd,
+        body=body.body,
+        recipient_user_id=body.recipient_user_id,
+        idempotency_key=body.idempotency_key,
+    )
+
+
+@app.get("/api/expert-chat/threads")
+async def expert_chat_list_threads(
+    current_user=Depends(get_current_user),
+    supabase: Client = Depends(get_supabase),
+):
+    user_id = str(current_user.id)
+    return {"threads": list_threads_for_user(supabase, user_id)}
+
+
+@app.get("/api/expert-chat/threads/{thread_id}/messages")
+async def expert_chat_thread_messages(
+    thread_id: str,
+    current_user=Depends(get_current_user),
+    supabase: Client = Depends(get_supabase),
+):
+    user_id = str(current_user.id)
+    return {"messages": list_expert_chat_messages(supabase, thread_id, user_id)}
+
+
+@app.post("/api/expert-chat/accept-tip")
+async def expert_chat_accept_tip(
+    body: ExpertChatAcceptTipBody,
+    current_user=Depends(get_current_user),
+    supabase: Client = Depends(get_supabase),
+):
+    """고수만: 참가자 메시지에 붙은 팁을 수락하면 토큰이 전달됩니다."""
+    expert_id = str(current_user.id)
+    mid = (body.message_id or "").strip()
+    if not mid:
+        raise HTTPException(status_code=400, detail="message_id가 필요합니다.")
+    try:
+        return accept_participant_tip(supabase, expert_id=expert_id, message_id=mid)
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception("expert_chat_accept_tip: %s", e)
+        raise HTTPException(status_code=500, detail="팁 수락 처리 중 오류가 났습니다.") from e
+
+
+@app.post("/api/expert-chat/reply")
+async def expert_chat_reply(
+    ep: ExpertChatReplyBody,
+    current_user=Depends(get_current_user),
+    supabase: Client = Depends(get_supabase),
+):
+    """고수 답장(토큰 0). 참가자에게 웹 푸시 가능 시 알림 시도."""
+    expert_id = str(current_user.id)
+    tid = (ep.thread_id or "").strip()
+    if not tid:
+        raise HTTPException(status_code=400, detail="thread_id가 필요합니다.")
+    try:
+        out = post_expert_reply(
+            supabase,
+            expert_id=expert_id,
+            thread_id=tid,
+            body=ep.body,
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception("expert_chat_reply: %s", e)
+        raise HTTPException(status_code=500, detail="답장 처리 중 오류가 났습니다.") from e
+
+    snippet = ep.body.strip()
+    if len(snippet) > 120:
+        snippet = snippet[:120] + "…"
+    send_web_push_to_user(
+        supabase,
+        out["participant_id"],
+        "⭐ 고수 답장이 왔어요",
+        snippet or "메시지를 확인해 보세요.",
+        "/expert-chat",
+        None,
+    )
     return out
 
 

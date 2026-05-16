@@ -6,7 +6,7 @@ import { supabase } from "@/lib/supabase";
 import { runAppTabPrefetch, APP_TAB_BOOT_MESSAGES } from "@/lib/app-tab-prefetch";
 import { isAppTabCacheWarm } from "@/lib/tab-session-cache";
 
-const TAB_PREFIXES = ["/survey", "/dashboard", "/shop", "/groups", "/setup"];
+const TAB_PREFIXES = ["/survey", "/dashboard", "/expert-chat", "/shop", "/groups", "/setup"];
 
 function isAppTabPath(pathname: string | null): boolean {
   if (!pathname) return false;

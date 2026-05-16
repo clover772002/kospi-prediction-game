@@ -2,6 +2,7 @@
 
 import { Suspense, useEffect, useState, useCallback, useRef, useLayoutEffect } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import { getMe, getToday, getDashboard, createChallenge, getMyChallenges, reactToChallenge, requestRematch, acceptChallenge, declineChallenge, getMyGroups, UserProfile, TodaySurvey, DashboardData, Challenge, Group } from "@/lib/api";
 import ShareSheet from "@/components/ShareSheet";
@@ -929,6 +930,14 @@ export default function DashboardPage() {
                   )}
                 </div>
               </div>
+
+              <Link
+                href="/expert-chat"
+                className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl border border-amber-500/35 bg-gradient-to-r from-amber-500/12 to-orange-900/15 px-3 py-2.5 text-[11px] font-bold text-amber-100/95 transition-colors hover:border-amber-400/50 active:scale-[0.99]"
+              >
+                <span aria-hidden>💬</span>
+                <span>순위권 고수에게 질문 보내기</span>
+              </Link>
 
               {/* 📊 집단 예측 VS (상승 vs 하락) */}
               {today.kospi_yes_pct !== null && (() => {

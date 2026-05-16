@@ -18,7 +18,12 @@ export default function PrivacyPage() {
             <li>· 이메일 주소</li>
             <li>· 텔레그램 연동 시: 텔레그램 채팅 ID</li>
           </ul>
-          <p className="mt-2 text-gray-500 text-xs">채팅 내용, 연락처, 위치정보, 프로필 사진은 수집하지 않습니다.</p>
+          <p className="mt-2 text-xs text-gray-500">
+            <span className="text-gray-400">고수 소통 기능 사용 시:</span> 참가자가 보낸 메시지 본문, 스레드
+            정보, 고수 「팁 수락」 시점 등이 서비스 제공·분쟁 대응·스팸 방지를 위해 Supabase(DB)에 저장됩니다. 보낸
+            직후에는 참가자 토큰만 차감되었다가 고수가 수락하면 상대에게 정산되는 흐름으로 처리합니다.
+          </p>
+          <p className="mt-1 text-gray-500 text-xs">프로필 사진·연락처·실시간 위치는 수집하지 않습니다.</p>
         </section>
 
         <section>
@@ -27,6 +32,7 @@ export default function PrivacyPage() {
             <li>· 서비스 회원 식별 및 로그인</li>
             <li>· 설문 발송 및 결과 알림 (알림 봇 이용)</li>
             <li>· 예측 정확도 기록 및 순위 산정</li>
+            <li>· 고수 소통 메시지 전달·안내 및 부정 이용 방지</li>
           </ul>
         </section>
 

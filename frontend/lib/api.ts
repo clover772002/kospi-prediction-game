@@ -769,3 +769,126 @@ export async function createStripePackCheckout(accessToken: string, packSlug: st
     }),
   });
 }
+
+/** 고수 소통: 리더보드 스냅샷 엔트리(`/api/expert-chat/eligibility` 등) */
+export interface ExpertChatLeaderboardEntry {
+  user_id: string;
+  masked_name: string;
+  kospi_answer: boolean;
+  accuracy: number | null;
+  total_predictions: number;
+  rank: number;
+}
+
+export interface ExpertChatEligibility {
+  survey_date: string;
+  tip_tokens_per_message: number;
+  top_n: number;
+  my_balance: number;
+  my_rank: number | null;
+  rank1: ExpertChatLeaderboardEntry | null;
+  top_recipients: ExpertChatLeaderboardEntry[];
+  allowed_recipient_ids: string[];
+  default_recipient_id: string | null;
+  can_send_message: boolean;
+  send_blocked_reason: string | null;
+}
+
+export interface ExpertChatThreadSummary {
+  thread_id: string;
+  survey_date: string;
+  participant_id: string;
+  expert_user_id: string;
+  my_role: "participant" | "expert";
+  updated_at: string | null;
+}
+
+export interface ExpertChatMessageRow {
+  id: string;
+  sender_id: string;
+  body: string;
+  tip_tokens: number;
+  tip_accepted_at?: string | null;
+  created_at: string;
+}
+
+export interface ExpertChatSendResult {
+  ok: boolean;
+  duplicate?: boolean;
+  thread_id: string;
+  message_id?: string;
+  tip_tokens?: number;
+  /** 보낸 직후 고수에게는 아직 정산 안 됐을 때 true */
+  tip_tokens_pending_expert_accept?: boolean;
+  tip_accepted_at?: string | null;
+  balance?: number | null;
+}
+
+export async function getExpertChatEligibility(
+  accessToken: string,
+  surveyDate?: string,
+): Promise<ExpertChatEligibility> {
+  const q = surveyDate?.trim() ? `?survey_date=${encodeURIComponent(surveyDate.trim())}` : "";
+  return authFetch<ExpertChatEligibility>(`/api/expert-chat/eligibility${q}`, accessToken);
+}
+
+export async function getExpertChatThreads(
+  accessToken: string,
+): Promise<{ threads: ExpertChatThreadSummary[] }> {
+  return authFetch("/api/expert-chat/threads", accessToken);
+}
+
+export async function getExpertChatThreadMessages(
+  accessToken: string,
+  threadId: string,
+): Promise<{ messages: ExpertChatMessageRow[] }> {
+  return authFetch(`/api/expert-chat/threads/${encodeURIComponent(threadId)}/messages`, accessToken);
+}
+
+export async function postExpertChatMessage(
+  accessToken: string,
+  body: {
+    body: string;
+    survey_date?: string | null;
+    recipient_user_id?: string | null;
+    idempotency_key?: string | null;
+  },
+): Promise<ExpertChatSendResult> {
+  return authFetch("/api/expert-chat/message", accessToken, {
+    method: "POST",
+    body: JSON.stringify({
+      body: body.body,
+      survey_date: body.survey_date ?? undefined,
+      recipient_user_id: body.recipient_user_id ?? undefined,
+      idempotency_key: body.idempotency_key ?? undefined,
+    }),
+  });
+}
+
+export async function postExpertChatReply(
+  accessToken: string,
+  body: { thread_id: string; body: string },
+): Promise<{ ok: boolean; message_id: string; participant_id: string; survey_date: string }> {
+  return authFetch("/api/expert-chat/reply", accessToken, {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}
+
+export async function postExpertChatAcceptTip(
+  accessToken: string,
+  body: { message_id: string },
+): Promise<{
+  ok: boolean;
+  duplicate?: boolean;
+  message_id: string;
+  tip_tokens?: number;
+  tip_accepted_at?: string | null;
+  balance?: number | null;
+  already_settled_via_ledger?: boolean;
+}> {
+  return authFetch("/api/expert-chat/accept-tip", accessToken, {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}
