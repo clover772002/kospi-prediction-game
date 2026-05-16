@@ -16,6 +16,54 @@ from token_wallet import grant_tokens_with_ledger, ledger_exists_by_idempotency,
 logger = logging.getLogger(__name__)
 
 
+def resolve_consumable_edit_survey_date(supabase: Client, user_id: str) -> str:
+    """
+    재투표·게이지·방향반전 아이템이 적용될 거래일.
+    달력 오늘과 다를 수 있음(다음 거래일 미리 예측 등). 응답이 있으면 그 중 마감 전 설문일을 우선.
+    """
+    try:
+        rr = (
+            supabase.table("survey_responses")
+            .select("survey_date")
+            .eq("user_id", user_id)
+            .execute()
+        )
+        dates = sorted({str(r["survey_date"]) for r in (rr.data or [])}, reverse=True)
+    except Exception:
+        dates = []
+    for sd in dates:
+        try:
+            ds = (
+                supabase.table("daily_surveys")
+                .select("is_closed, kospi_result")
+                .eq("survey_date", sd)
+                .limit(1)
+                .execute()
+            )
+        except Exception:
+            continue
+        if not ds.data:
+            continue
+        row = ds.data[0]
+        if not row.get("is_closed") and row.get("kospi_result") is None:
+            return sd
+    try:
+        open_r = (
+            supabase.table("daily_surveys")
+            .select("survey_date")
+            .eq("is_closed", False)
+            .is_("kospi_result", "null")
+            .order("survey_date")
+            .limit(1)
+            .execute()
+        )
+        if open_r.data:
+            return str(open_r.data[0]["survey_date"])
+    except Exception:
+        pass
+    return today_date_kst().isoformat()
+
+
 SLUG_TO_GRANT_KIND = {
     "vote_redo_once": "redo_full",
     "gauge_adjust_keep_direction_once": "gauge_only",
@@ -43,7 +91,7 @@ def purchase_consumable(
     nd = meta.get("requires_survey_date", False)
 
     if slug in _TODAY_BOUND_EDIT_SLUGS:
-        sd = today_date_kst().isoformat()
+        sd = resolve_consumable_edit_survey_date(supabase, user_id)
     elif nd and (not survey_date or not survey_date.strip()):
         return {"ok": False, "error": "survey_date_required", "message": "거래일(survey_date)이 필요합니다."}
     else:
