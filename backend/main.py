@@ -3567,17 +3567,17 @@ async def get_crowd_gauge_boxplots(
             if not dk:
                 continue
             kr = r.get("kospi_result")
-            result_bool: bool | None = kr if (kr is True or kr is False) else None
+            result_bool = _cell_truthy_bool(kr)
 
             rise_vals: list[int] = []
             fall_vals: list[int] = []
             for row in by_date.get(dk, []):
                 g = _coerce_gauge_from_row(row)
-                ka = row.get("kospi_answer")
+                ka = _cell_truthy_bool(row.get("kospi_answer"))
                 if g is None or ka is None:
                     continue
                 gi = int(g)
-                if bool(ka):
+                if ka:
                     rise_vals.append(max(0, min(100, gi)))
                 else:
                     fall_vals.append(max(-100, min(0, gi)))

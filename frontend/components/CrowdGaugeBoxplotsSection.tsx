@@ -200,7 +200,8 @@ export default function CrowdGaugeBoxplotsSection() {
           거래일마다 <strong className="text-gray-400">하락 선택</strong>은 게이지{" "}
           <strong className="text-gray-400">−100~0</strong>(왼쪽 막대), <strong className="text-gray-400">상승 선택</strong>은{" "}
           <strong className="text-gray-400">0~100</strong>(오른쪽 막대)으로 나란히 표시합니다. 코스피 종가 방향이 정해지면 맞은 쪽에{" "}
-          <strong className="text-amber-200/90">골드 링</strong>이 붙습니다.
+          <strong className="text-amber-200/90">골드 링</strong>이 붙습니다. 오른쪽 위가{" "}
+          <strong className="text-gray-400">결과 미확정</strong>이면 아직 그날 코스피 종가 방향이 서버 DB에 입력되지 않은 거예요.
         </p>
       </div>
 
