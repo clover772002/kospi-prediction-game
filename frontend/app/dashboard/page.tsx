@@ -94,10 +94,12 @@ function HistoryRow({ item }: { item: DashboardData["history"][0] }) {
   const hitLabel =
     verdict === true ? "적중" : verdict === false ? "미적중" : "대기중";
 
-  const winCell =
-    !hasResult || tokensWon === null || tokensWon === undefined
-      ? "—"
-      : `${tokensWon >= 0 ? "+" : ""}${tokensWon}`;
+  const tokensCell = (() => {
+    if (!hasResult || tokensWon === null || tokensWon === undefined) return "—";
+    if (tokensWon > 0) return `+${tokensWon} 얻음`;
+    if (tokensWon === 0) return "0";
+    return `${Math.abs(tokensWon)} 잃음`;
+  })();
 
   return (
     <tr
@@ -114,7 +116,7 @@ function HistoryRow({ item }: { item: DashboardData["history"][0] }) {
         {directionUp ? "상승" : "하락"}
       </td>
       <td className="py-1 px-0.5 align-middle text-right tabular-nums text-gray-200 whitespace-nowrap text-[10px]">
-        {gauge !== null && gauge !== undefined ? `${gauge > 0 ? "+" : ""}${gauge}` : "—"}
+        {gauge !== null && gauge !== undefined ? `${gauge > 0 ? "+" : ""}${gauge}%` : "—"}
       </td>
       <td className="py-1 px-0.5 align-middle text-right tabular-nums text-gray-200 whitespace-nowrap text-[10px]">
         {tokensBet != null && tokensBet !== undefined ? `${tokensBet}` : "—"}
@@ -125,12 +127,14 @@ function HistoryRow({ item }: { item: DashboardData["history"][0] }) {
       <td className={`py-1 px-0.5 align-middle text-right font-bold tabular-nums whitespace-nowrap text-[10px] ${
         !hasResult
           ? "text-gray-600"
-          : tokensWon != null && tokensWon >= 0
+          : tokensWon != null && tokensWon > 0
             ? "text-green-400"
-            : "text-red-400"
+            : tokensWon != null && tokensWon < 0
+              ? "text-red-400"
+              : "text-gray-400"
       }`}
       >
-        {winCell}
+        {tokensCell}
       </td>
       <td className={`py-1 pl-0.5 pr-2 align-middle whitespace-nowrap font-bold text-[10px] ${
         !hasResult ? "text-gray-600" : verdict ? "text-green-400/95" : "text-red-400/90"
@@ -998,10 +1002,12 @@ export default function DashboardPage() {
                         <tr className="text-left text-gray-500 border-b border-[#2A2A2A] bg-[#1A1A1A]/90">
                           <th className="py-1.5 pl-2 pr-0.5 font-bold text-[9px] leading-tight">거래일</th>
                           <th title="예측방향" className="py-1.5 px-0.5 font-bold text-[9px] leading-tight">방향</th>
-                          <th title="확신도" className="py-1.5 px-0.5 font-bold text-right text-[9px] leading-tight">확신</th>
-                          <th title="배팅토큰" className="py-1.5 px-0.5 font-bold text-right text-[9px] leading-tight">배팅</th>
+                          <th className="py-1.5 px-0.5 font-bold text-right text-[9px] leading-tight">확신도</th>
+                          <th className="py-1.5 px-0.5 font-bold text-right text-[9px] leading-tight">배팅토큰</th>
                           <th title="집단배율" className="py-1.5 px-0.5 font-bold text-right text-[9px] leading-tight">배율</th>
-                          <th title="획득토큰" className="py-1.5 px-0.5 font-bold text-right text-[9px] leading-tight">획득</th>
+                          <th title="적중 시 획득·실패 시 손실" className="py-1.5 px-0.5 font-bold text-right text-[9px] leading-tight">
+                            획득/손실
+                          </th>
                           <th title="적중여부" className="py-1.5 pl-0.5 pr-2 font-bold text-[9px] leading-tight">판정</th>
                         </tr>
                       </thead>
@@ -1013,7 +1019,7 @@ export default function DashboardPage() {
                     </table>
                   </div>
                   <p className="text-[9px] text-gray-600 leading-snug">
-                    획득 토큰은 정산 시점 기준이며, 적중 시 서버 규칙상 연승 배율이 추가로 곱해질 수 있어 배팅×집단배율과 숫자가 다를 수 있어요.
+                    획득·손실은 정산 시점 기준(얻음/잃음)이며, 적중 시 연승 배율 등이 더해져 배팅토큰×배율 단순 곱과 다를 수 있어요.
                   </p>
                 </div>
               )}
