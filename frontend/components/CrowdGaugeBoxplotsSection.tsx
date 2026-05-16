@@ -126,6 +126,53 @@ function HorizontalSignedBox({
   );
 }
 
+function DirectionShareRibbon({
+  pctRise,
+  pctFall,
+  nRise,
+  nFall,
+}: {
+  pctRise: number;
+  pctFall: number;
+  nRise: number;
+  nFall: number;
+}) {
+  const r = Number.isFinite(pctRise) ? Math.max(0, pctRise) : 0;
+  const f = Number.isFinite(pctFall) ? Math.max(0, pctFall) : 0;
+
+  return (
+    <div className="rounded-xl border border-[#333] bg-gradient-to-br from-[#151515] to-[#101010] px-3 py-2.5 mb-3 ring-1 ring-white/[0.04]">
+      <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 mb-2">
+        <div className="flex items-baseline gap-2 min-w-0">
+          <span className="text-sm font-black text-emerald-300 tabular-nums tracking-tight">상승 {r}%</span>
+          <span className="text-[10px] text-gray-500 tabular-nums">({nRise}명)</span>
+        </div>
+        <div className="flex items-baseline gap-2 min-w-0">
+          <span className="text-[10px] text-gray-500 tabular-nums">({nFall}명)</span>
+          <span className="text-sm font-black text-sky-300 tabular-nums tracking-tight">하락 {f}%</span>
+        </div>
+      </div>
+      <div
+        className="flex h-4 w-full rounded-lg overflow-hidden border border-[#2a2a2a] shadow-[inset_0_1px_3px_rgba(0,0,0,.4)]"
+        title={`예측 상승 ${r}% · 하락 ${f}% (유효 응답 ${nRise + nFall}명)`}
+      >
+        {(r > 0 || nRise > 0) && (
+          <div
+            className="h-full min-w-[6px] bg-gradient-to-b from-emerald-400/95 via-emerald-500/90 to-green-700/80"
+            style={{ flex: `${Math.max(r, 0.1)} 1 0%` }}
+          />
+        )}
+        {(f > 0 || nFall > 0) && (
+          <div
+            className="h-full min-w-[6px] bg-gradient-to-b from-sky-400/95 via-blue-500/90 to-blue-800/85"
+            style={{ flex: `${Math.max(f, 0.1)} 1 0%` }}
+          />
+        )}
+      </div>
+    </div>
+  );
+}
+
 function DayCard({ day }: { day: CrowdGaugeBoxplotDay }) {
   const resultLabel =
     day.kospi_result === true
@@ -136,6 +183,22 @@ function DayCard({ day }: { day: CrowdGaugeBoxplotDay }) {
 
   const hiRise = day.correct_team === "rise";
   const hiFall = day.correct_team === "fall";
+
+  const nRise = day.respondents_rise ?? day.rise?.n ?? 0;
+  const nFall = day.respondents_fall ?? day.fall?.n ?? 0;
+  const totalDir = nRise + nFall;
+  const pctRise =
+    typeof day.pct_rise === "number" && Number.isFinite(day.pct_rise)
+      ? day.pct_rise
+      : totalDir > 0
+        ? Math.round((1000 * nRise) / totalDir) / 10
+        : 0;
+  const pctFall =
+    typeof day.pct_fall === "number" && Number.isFinite(day.pct_fall)
+      ? day.pct_fall
+      : totalDir > 0
+        ? Math.round((1000 * nFall) / totalDir) / 10
+        : 0;
 
   return (
     <div className="rounded-xl border border-[#2A2A2A] bg-[#141414]/80 px-3 py-2.5">
@@ -153,6 +216,8 @@ function DayCard({ day }: { day: CrowdGaugeBoxplotDay }) {
           {resultLabel}
         </p>
       </div>
+
+      <DirectionShareRibbon pctRise={pctRise} pctFall={pctFall} nRise={nRise} nFall={nFall} />
 
       <div className="grid grid-cols-2 gap-2 sm:gap-3">
         <HorizontalSignedBox
@@ -197,11 +262,13 @@ export default function CrowdGaugeBoxplotsSection() {
       <div>
         <p className="font-bold text-sm text-white">전체 예측 방향·확신도</p>
         <p className="text-[10px] text-gray-500 mt-1 leading-relaxed">
-          거래일마다 <strong className="text-gray-400">하락 선택</strong>은 게이지{" "}
-          <strong className="text-gray-400">−100~0</strong>(왼쪽 막대), <strong className="text-gray-400">상승 선택</strong>은{" "}
-          <strong className="text-gray-400">0~100</strong>(오른쪽 막대)으로 나란히 표시합니다. 코스피 종가 방향이 정해지면 맞은 쪽에{" "}
-          <strong className="text-amber-200/90">골드 링</strong>이 붙습니다. 오른쪽 위가{" "}
-          <strong className="text-gray-400">결과 미확정</strong>이면 아직 그날 코스피 종가 방향이 서버 DB에 입력되지 않은 거예요.
+          거래일마다 숫자 줄로{" "}
+          <strong className="text-emerald-300/90">상승·하락 선택 비율(%)</strong>과 인원을 먼저 보여 주고,
+          아래 두 막대는 각각 확신 게이지 분포예요.{" "}
+          <strong className="text-gray-400">하락</strong>은{" "}
+          <strong className="text-gray-400">−100~0</strong>(왼쪽), <strong className="text-gray-400">상승</strong>은{" "}
+          <strong className="text-gray-400">0~100</strong>(오른쪽). 코스피 종가 방향 확정 후 맞은 쪽에{" "}
+          <strong className="text-amber-200/90">골드 링</strong>입니다.
         </p>
       </div>
 

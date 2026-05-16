@@ -176,6 +176,13 @@ export interface CrowdGaugeBoxplotDay {
   survey_date: string;
   kospi_result: boolean | null;
   correct_team: "rise" | "fall" | null;
+  /** 방향·게이지가 모두 있는 응답 수 */
+  respondents_rise?: number;
+  respondents_fall?: number;
+  /** 전체 참가자 중 상승(찍은) 선택 비율 % */
+  pct_rise?: number;
+  /** 전체 참가자 중 하락(찍은) 선택 비율 % */
+  pct_fall?: number;
   rise: CrowdGaugeBoxplotStats | null;
   fall: CrowdGaugeBoxplotStats | null;
 }

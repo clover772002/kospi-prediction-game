@@ -3595,6 +3595,15 @@ async def get_crowd_gauge_boxplots(
             if not rise_vals and not fall_vals:
                 continue
 
+            n_rise = len(rise_vals)
+            n_fall = len(fall_vals)
+            n_dir = n_rise + n_fall
+            if n_dir > 0:
+                rise_pct = round(100 * n_rise / n_dir, 1)
+                fall_pct = round(100 * n_fall / n_dir, 1)
+            else:
+                rise_pct = fall_pct = 0.0
+
             correct_team: str | None = None
             if result_bool is True:
                 correct_team = "rise"
@@ -3605,6 +3614,10 @@ async def get_crowd_gauge_boxplots(
                 "survey_date": dk,
                 "kospi_result": result_bool,
                 "correct_team": correct_team,
+                "respondents_rise": n_rise,
+                "respondents_fall": n_fall,
+                "pct_rise": rise_pct,
+                "pct_fall": fall_pct,
                 "rise": _five_number_summary(rise_vals),
                 "fall": _five_number_summary(fall_vals),
             })

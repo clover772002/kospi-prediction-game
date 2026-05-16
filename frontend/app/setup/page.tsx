@@ -290,13 +290,6 @@ export default function SetupPage() {
             </p>
           </div>
 
-          <button
-            onClick={() => router.push("/dashboard")}
-            className="w-full py-4 bg-blue-600 hover:bg-blue-500 text-white font-black text-lg rounded-2xl transition-all active:scale-95"
-          >
-            ← 대시보드로 이동
-          </button>
-
           <div className="bg-[#1A1A1A] rounded-2xl p-4 border border-[#2A2A2A] space-y-2 text-sm text-gray-400">
             <p className="font-bold text-white">설문 일정</p>
             <div className="space-y-1">
@@ -413,9 +406,6 @@ export default function SetupPage() {
             ))}
           </div>
 
-          <button onClick={() => router.push("/dashboard")} className="w-full py-4 bg-blue-600 hover:bg-blue-500 text-white font-black text-lg rounded-2xl transition-all active:scale-95">
-            ← 대시보드로 이동
-          </button>
           <button
             onClick={async () => {
               if (!token) return;
