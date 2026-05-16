@@ -77,8 +77,8 @@ export default function KospiChart() {
 /* ────────────────────────────────────────────────────── */
 function OhlcSummary({ ohlc, onRetry }: { ohlc: DayOhlc; onRetry: () => void }) {
   const isUp  = ohlc.is_up ?? (ohlc.change_pct ?? 0) >= 0;
-  const color = isUp ? "text-green-400" : "text-red-400";
-  const bg    = isUp ? "bg-green-500/10 border-green-500/20" : "bg-red-500/10 border-red-500/20";
+  const color = isUp ? "text-red-400" : "text-blue-400";
+  const bg    = isUp ? "bg-red-500/10 border-red-500/20" : "bg-blue-500/10 border-blue-500/20";
 
   /* 고저 범위 바 */
   const rangeW = ohlc.high! - ohlc.low!;
@@ -107,8 +107,8 @@ function OhlcSummary({ ohlc, onRetry }: { ohlc: DayOhlc; onRetry: () => void }) 
       <div className="grid grid-cols-4 gap-2 mb-3">
         {[
           { label: "시가", val: ohlc.open },
-          { label: "고가", val: ohlc.high, cls: "text-green-400" },
-          { label: "저가", val: ohlc.low,  cls: "text-red-400" },
+          { label: "고가", val: ohlc.high, cls: "text-emerald-400" },
+          { label: "저가", val: ohlc.low,  cls: "text-orange-400" },
           { label: "종가", val: ohlc.price, cls: color },
         ].map(({ label, val, cls }) => (
           <div key={label} className="text-center">
@@ -124,7 +124,7 @@ function OhlcSummary({ ohlc, onRetry }: { ohlc: DayOhlc; onRetry: () => void }) 
       <div className="relative h-4 bg-[#222] rounded-full overflow-hidden">
         {/* 고저 범위 */}
         <div
-          className={`absolute top-0 h-full rounded-full ${isUp ? "bg-green-500/30" : "bg-red-500/30"}`}
+          className={`absolute top-0 h-full rounded-full ${isUp ? "bg-red-500/30" : "bg-blue-500/30"}`}
           style={{ left: 0, right: 0 }}
         />
         {/* 시가 마커 */}
@@ -134,7 +134,7 @@ function OhlcSummary({ ohlc, onRetry }: { ohlc: DayOhlc; onRetry: () => void }) 
         />
         {/* 종가 마커 */}
         <div
-          className={`absolute top-0.5 h-3 w-1 rounded ${isUp ? "bg-green-400" : "bg-red-400"}`}
+          className={`absolute top-0.5 h-3 w-1 rounded ${isUp ? "bg-red-400" : "bg-blue-400"}`}
           style={{ left: `${closePct}%`, transform: "translateX(-50%)" }}
         />
       </div>
@@ -171,7 +171,7 @@ function LineChart({ data, onRetry }: { data: Candle[]; onRetry: () => void }) {
   const last   = closes[closes.length - 1];
   const first  = closes[0];
   const isUp   = last >= first;
-  const color  = isUp ? "#4ade80" : "#f87171";
+  const color  = isUp ? "#f87171" : "#60a5fa";
   const chgPct = (((last - first) / first) * 100).toFixed(2);
 
   const yTicks = [0, 1/3, 2/3, 1].map((t) => minV + t * range);
@@ -182,7 +182,7 @@ function LineChart({ data, onRetry }: { data: Candle[]; onRetry: () => void }) {
     <div className="px-1 pb-2">
       <div className="flex items-baseline justify-between mb-2 px-2">
         <span className="text-xs font-medium text-gray-400">KOSPI 오늘</span>
-        <span className={`text-sm font-bold ${isUp ? "text-green-400" : "text-red-400"}`}>
+        <span className={`text-sm font-bold ${isUp ? "text-red-400" : "text-blue-400"}`}>
           {last.toLocaleString()}
           <span className="text-xs font-normal ml-1">({isUp ? "+" : ""}{chgPct}%)</span>
         </span>

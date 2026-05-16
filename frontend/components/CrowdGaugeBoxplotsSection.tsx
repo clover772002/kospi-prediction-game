@@ -35,18 +35,18 @@ function HorizontalSignedBox({
   const palette =
     variant === "rise"
       ? {
-          border: "border-green-500/45",
-          box: "border-green-400/50 bg-green-500/15",
-          whisker: "bg-green-600/70",
-          med: "bg-green-200",
-          label: "text-green-400",
-        }
-      : {
           border: "border-red-500/45",
           box: "border-red-400/50 bg-red-500/15",
           whisker: "bg-red-600/70",
           med: "bg-red-200",
           label: "text-red-400",
+        }
+      : {
+          border: "border-blue-500/45",
+          box: "border-blue-400/50 bg-blue-500/15",
+          whisker: "bg-blue-600/70",
+          med: "bg-blue-200",
+          label: "text-blue-400",
         };
 
   const toPct = variant === "rise" ? riseToPercent : fallToPercent;
@@ -144,12 +144,12 @@ function DirectionShareRibbon({
     <div className="rounded-xl border border-[#333] bg-gradient-to-br from-[#151515] to-[#101010] px-3 py-2.5 mb-3 ring-1 ring-white/[0.04]">
       <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 mb-2">
         <div className="flex items-baseline gap-2 min-w-0">
-          <span className="text-sm font-black text-emerald-300 tabular-nums tracking-tight">상승 {r}%</span>
+          <span className="text-sm font-black text-red-400 tabular-nums tracking-tight">상승 {r}%</span>
           <span className="text-[10px] text-gray-500 tabular-nums">({nRise}명)</span>
         </div>
         <div className="flex items-baseline gap-2 min-w-0">
           <span className="text-[10px] text-gray-500 tabular-nums">({nFall}명)</span>
-          <span className="text-sm font-black text-sky-300 tabular-nums tracking-tight">하락 {f}%</span>
+          <span className="text-sm font-black text-blue-400 tabular-nums tracking-tight">하락 {f}%</span>
         </div>
       </div>
       <div
@@ -158,13 +158,13 @@ function DirectionShareRibbon({
       >
         {(r > 0 || nRise > 0) && (
           <div
-            className="h-full min-w-[6px] bg-gradient-to-b from-emerald-400/95 via-emerald-500/90 to-green-700/80"
+            className="h-full min-w-[6px] bg-gradient-to-b from-red-400/95 via-red-500/90 to-red-800/80"
             style={{ flex: `${Math.max(r, 0.1)} 1 0%` }}
           />
         )}
         {(f > 0 || nFall > 0) && (
           <div
-            className="h-full min-w-[6px] bg-gradient-to-b from-sky-400/95 via-blue-500/90 to-blue-800/85"
+            className="h-full min-w-[6px] bg-gradient-to-b from-blue-400/95 via-blue-500/90 to-blue-800/85"
             style={{ flex: `${Math.max(f, 0.1)} 1 0%` }}
           />
         )}
@@ -207,9 +207,9 @@ function DayCard({ day }: { day: CrowdGaugeBoxplotDay }) {
         <p
           className={`text-[10px] font-bold ${
             day.kospi_result === true
-              ? "text-green-400"
+              ? "text-red-400"
               : day.kospi_result === false
-                ? "text-red-400"
+                ? "text-blue-400"
                 : "text-gray-500"
           }`}
         >
@@ -263,7 +263,10 @@ export default function CrowdGaugeBoxplotsSection() {
         <p className="font-bold text-sm text-white">전체 예측 방향·확신도</p>
         <p className="text-[10px] text-gray-500 mt-1 leading-relaxed">
           거래일마다 숫자 줄로{" "}
-          <strong className="text-emerald-300/90">상승·하락 선택 비율(%)</strong>과 인원을 먼저 보여 주고,
+          <strong className="text-red-400">상승</strong>
+          ·
+          <strong className="text-blue-400">하락</strong>
+          선택 <strong className="text-gray-400">비율(%)</strong>과 인원을 먼저 보여 주고,
           아래 두 막대는 각각 확신 게이지 분포예요.{" "}
           <strong className="text-gray-400">하락</strong>은{" "}
           <strong className="text-gray-400">−100~0</strong>(왼쪽), <strong className="text-gray-400">상승</strong>은{" "}

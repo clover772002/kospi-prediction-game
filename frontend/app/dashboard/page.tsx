@@ -581,8 +581,8 @@ export default function DashboardPage() {
                   resolvedMarketFromMe === null
                     ? "bg-gray-500/10 border-gray-500/25"
                     : resolvedMarketFromMe
-                      ? "bg-green-500/10 border-green-500/25"
-                      : "bg-red-500/10 border-red-500/25"
+                      ? "bg-red-500/10 border-red-500/25"
+                      : "bg-blue-500/10 border-blue-500/25"
                 }`}
               >
                 <div>
@@ -592,8 +592,8 @@ export default function DashboardPage() {
                       resolvedMarketFromMe === null
                         ? "text-gray-400"
                         : resolvedMarketFromMe
-                          ? "text-green-400"
-                          : "text-red-400"
+                          ? "text-red-400"
+                          : "text-blue-400"
                     }`}
                   >
                     {resolvedMarketFromMe === null
@@ -612,8 +612,8 @@ export default function DashboardPage() {
                     resolvedMarketFromMe === null
                       ? "text-gray-500"
                       : resolvedMarketFromMe
-                        ? "text-green-400"
-                        : "text-red-400"
+                        ? "text-red-400"
+                        : "text-blue-400"
                   }`}
                 >
                   {resolvedMarketFromMe === null ? "—" : resolvedMarketFromMe ? "▲" : "▼"}
@@ -864,7 +864,7 @@ export default function DashboardPage() {
                   <p className="text-[10px] text-yellow-400/80 leading-tight">⭐고수</p>
                   {today.kospi_weighted_pct !== null ? (
                     <>
-                      <p className={`text-xs font-black ${today.kospi_weighted_pct >= 50 ? "text-green-400" : "text-red-400"}`}>
+                      <p className={`text-xs font-black ${today.kospi_weighted_pct >= 50 ? "text-red-400" : "text-blue-400"}`}>
                         {today.kospi_weighted_pct >= 50 ? "📈상승" : "📉하락"}
                       </p>
                       <p className="text-[10px] text-gray-400">{today.kospi_weighted_pct}%</p>
@@ -879,7 +879,7 @@ export default function DashboardPage() {
                   <p className="text-[10px] text-gray-500 leading-tight">단순</p>
                   {today.kospi_yes_pct !== null ? (
                     <>
-                      <p className={`text-xs font-black ${today.kospi_yes_pct >= 50 ? "text-green-400" : "text-red-400"}`}>
+                      <p className={`text-xs font-black ${today.kospi_yes_pct >= 50 ? "text-red-400" : "text-blue-400"}`}>
                         {today.kospi_yes_pct >= 50 ? "📈상승" : "📉하락"}
                       </p>
                       <p className="text-[10px] text-gray-400">{today.kospi_yes_pct}%</p>
@@ -894,7 +894,7 @@ export default function DashboardPage() {
                   <p className="text-[10px] text-gray-500 leading-tight">내선택</p>
                   {myEntry ? (
                     <>
-                      <p className={`text-xs font-black ${myEntry.kospi_answer ? "text-green-400" : "text-red-400"}`}>
+                      <p className={`text-xs font-black ${myEntry.kospi_answer ? "text-red-400" : "text-blue-400"}`}>
                         {myEntry.kospi_answer ? "📈상승" : "📉하락"}
                       </p>
                       <p className="text-[10px]">
@@ -915,11 +915,11 @@ export default function DashboardPage() {
                   <p className="text-[10px] text-gray-500 leading-tight">실적</p>
                   {effectiveMarketDir !== null ? (
                     <>
-                      <p className={`text-xs font-black ${effectiveMarketDir ? "text-green-400" : "text-red-400"}`}>
+                      <p className={`text-xs font-black ${effectiveMarketDir ? "text-red-400" : "text-blue-400"}`}>
                         {effectiveMarketDir ? "📈상승" : "📉하락"}
                       </p>
                       <p
-                        className={`text-[10px] ${today.kospi_change_pct == null ? "text-gray-500" : today.kospi_change_pct >= 0 ? "text-green-400/70" : "text-red-400/70"}`}
+                        className={`text-[10px] ${today.kospi_change_pct == null ? "text-gray-500" : today.kospi_change_pct >= 0 ? "text-red-400/70" : "text-blue-400/70"}`}
                       >
                         {today.kospi_change_pct == null ? "변동율 확인중" : `${today.kospi_change_pct >= 0 ? "+" : ""}${today.kospi_change_pct.toFixed(2)}%`}
                       </p>
@@ -941,13 +941,13 @@ export default function DashboardPage() {
                       <div
                         className={`flex-1 flex flex-col items-center justify-center rounded-2xl border-2 px-2 py-3 ${
                           up >= dn
-                            ? "border-green-500/50 bg-gradient-to-b from-green-500/15 to-green-900/10"
-                            : "border-green-600/25 bg-green-950/20"
+                            ? "border-red-500/50 bg-gradient-to-b from-red-500/15 to-red-900/10"
+                            : "border-red-600/25 bg-red-950/20"
                         }`}
                       >
                         <span className="text-2xl mb-1">📈</span>
-                        <span className="text-[10px] font-black text-green-400/90 uppercase tracking-tighter">상승</span>
-                        <span className="text-2xl font-black text-green-400 tabular-nums leading-tight">{up}<span className="text-sm">%</span></span>
+                        <span className="text-[10px] font-black text-red-400/90 uppercase tracking-tighter">상승</span>
+                        <span className="text-2xl font-black text-red-400 tabular-nums leading-tight">{up}<span className="text-sm">%</span></span>
                       </div>
                       <div className="flex flex-col items-center justify-center px-1 shrink-0">
                         <span className="text-lg font-black text-white/90 italic tracking-widest drop-shadow-[0_0_8px_rgba(255,255,255,0.15)]">
@@ -958,13 +958,13 @@ export default function DashboardPage() {
                       <div
                         className={`flex-1 flex flex-col items-center justify-center rounded-2xl border-2 px-2 py-3 ${
                           dn > up
-                            ? "border-red-500/50 bg-gradient-to-b from-red-500/15 to-red-900/10"
-                            : "border-red-600/25 bg-red-950/20"
+                            ? "border-blue-500/50 bg-gradient-to-b from-blue-500/15 to-blue-900/10"
+                            : "border-blue-600/25 bg-blue-950/20"
                         }`}
                       >
                         <span className="text-2xl mb-1">📉</span>
-                        <span className="text-[10px] font-black text-red-400/90 uppercase tracking-tighter">하락</span>
-                        <span className="text-2xl font-black text-red-400 tabular-nums leading-tight">{dn}<span className="text-sm">%</span></span>
+                        <span className="text-[10px] font-black text-blue-400/90 uppercase tracking-tighter">하락</span>
+                        <span className="text-2xl font-black text-blue-400 tabular-nums leading-tight">{dn}<span className="text-sm">%</span></span>
                       </div>
                     </div>
                   </div>
@@ -1252,7 +1252,7 @@ export default function DashboardPage() {
                         </span>
                         {/* 예측 + 결과 */}
                         <span className={`text-[11px] font-bold text-center flex items-center justify-center gap-0.5 ${
-                          p.kospi_answer ? "text-green-400" : "text-red-400"
+                          p.kospi_answer ? "text-red-400" : "text-blue-400"
                         }`}>
                           {p.kospi_answer ? "📈" : "📉"}
                           {result && <span className="text-xs">{result}</span>}
@@ -1296,7 +1296,7 @@ export default function DashboardPage() {
                         {me.masked_name}
                         <span className="text-[9px] bg-blue-500 text-white px-1.5 py-0.5 rounded-full font-black">나</span>
                       </span>
-                      <span className={`text-[11px] font-bold text-center ${me.kospi_answer ? "text-green-400" : "text-red-400"}`}>
+                      <span className={`text-[11px] font-bold text-center ${me.kospi_answer ? "text-red-400" : "text-blue-400"}`}>
                         {me.kospi_answer ? "📈" : "📉"}
                       </span>
                       <span className="text-xs text-right font-bold text-gray-400">

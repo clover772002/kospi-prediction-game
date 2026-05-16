@@ -37,9 +37,9 @@ const FEATURES = [
           {/* 설문 UI mockup */}
           <div className="bg-[#111] border border-[#2A2A2A] rounded-2xl p-4">
             <p className="text-[11px] text-gray-400 mb-2">알림 탭 → 바로 설문 참여</p>
-            <div className="flex gap-2">
-              <div className="flex-1 bg-green-500/20 border border-green-500/40 rounded-xl py-3 text-center text-green-400 text-xs font-bold">📈 상승</div>
-              <div className="flex-1 bg-red-500/20 border border-red-500/40 rounded-xl py-3 text-center text-red-400 text-xs font-bold">📉 하락</div>
+              <div className="flex gap-2">
+              <div className="flex-1 bg-red-500/20 border border-red-500/40 rounded-xl py-3 text-center text-red-400 text-xs font-bold">📈 상승</div>
+              <div className="flex-1 bg-blue-500/20 border border-blue-500/40 rounded-xl py-3 text-center text-blue-400 text-xs font-bold">📉 하락</div>
             </div>
           </div>
         </div>
@@ -58,8 +58,8 @@ const FEATURES = [
         const Bar = ({ yes, no }: { yes: number; no: number }) => (
           <div>
             <div className="flex rounded-full overflow-hidden h-5 text-xs font-bold">
-              <div className="bg-green-500 flex items-center justify-center text-white" style={{ width: `${yes}%` }}>{yes}%</div>
-              <div className="bg-red-500 flex items-center justify-center text-white" style={{ width: `${no}%` }}>{no}%</div>
+              <div className="bg-red-500 flex items-center justify-center text-white" style={{ width: `${yes}%` }}>{yes}%</div>
+              <div className="bg-blue-500 flex items-center justify-center text-white" style={{ width: `${no}%` }}>{no}%</div>
             </div>
             <div className="flex justify-between text-xs text-gray-500 mt-1">
               <span>📈 오른다</span><span>📉 내린다</span>

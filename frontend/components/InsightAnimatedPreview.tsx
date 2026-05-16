@@ -56,10 +56,10 @@ const THEMES: Record<InsightProductSlug, Theme> = {
     soft: "rgba(165,180,252,0.10)",
   },
   crowd_conviction_spread: {
-    primary: "rgba(251,113,133,0.92)",
-    secondary: "rgba(244,114,182,0.7)",
+    primary: "rgba(248,113,113,0.92)",
+    secondary: "rgba(96,165,250,0.88)",
     grid: "rgba(255,255,255,0.08)",
-    soft: "rgba(251,113,133,0.12)",
+    soft: "rgba(248,113,113,0.10)",
   },
 };
 

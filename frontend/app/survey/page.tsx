@@ -1139,12 +1139,12 @@ function KospiNowCard({
   // 결과 확정 (result 상태 + kospi_result 있음)
   if (status === "result" && resultUp !== null && resultPct !== null) {
     return (
-      <div className={`rounded-2xl p-4 border ${resultUp ? "bg-green-500/10 border-green-500/30" : "bg-red-500/10 border-red-500/20"}`}>
+      <div className={`rounded-2xl p-4 border ${resultUp ? "bg-red-500/10 border-red-500/25" : "bg-blue-500/10 border-blue-500/20"}`}>
         <p className="text-xs text-gray-400 mb-1">오늘 장 · 종가</p>
-        <p className={`font-black text-lg ${resultUp ? "text-green-400" : "text-red-400"}`}>
+        <p className={`font-black text-lg ${resultUp ? "text-red-400" : "text-blue-400"}`}>
           {resultUp ? "📈 상승" : "📉 하락"}
         </p>
-        <p className={`text-sm font-bold mt-0.5 ${resultUp ? "text-green-400" : "text-red-400"}`}>
+        <p className={`text-sm font-bold mt-0.5 ${resultUp ? "text-red-400" : "text-blue-400"}`}>
           {resultUp ? "+" : ""}{resultPct.toFixed(2)}%
         </p>
       </div>
@@ -1156,14 +1156,14 @@ function KospiNowCard({
     return (
       <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-2xl p-4">
         <div className="flex items-center gap-1 mb-1">
-          <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
           <p className="text-xs text-gray-400">오늘 장 · 진행중</p>
         </div>
         <p className="font-black text-lg text-white tabular-nums">
           {price.price.toLocaleString()}
         </p>
         {price.change_pct !== null && (
-          <p className={`text-sm font-bold mt-0.5 ${price.is_up ? "text-green-400" : "text-red-400"}`}>
+          <p className={`text-sm font-bold mt-0.5 ${price.is_up ? "text-red-400" : "text-blue-400"}`}>
             {price.is_up ? "+" : ""}{price.change_pct?.toFixed(2)}%
           </p>
         )}
@@ -1180,7 +1180,7 @@ function KospiNowCard({
           {price.price.toLocaleString()}
         </p>
         {price.change_pct !== null && (
-          <p className={`text-sm font-bold mt-0.5 ${price.is_up ? "text-green-400" : "text-red-400"}`}>
+          <p className={`text-sm font-bold mt-0.5 ${price.is_up ? "text-red-400" : "text-blue-400"}`}>
             {price.is_up ? "+" : ""}{price.change_pct?.toFixed(2)}%
           </p>
         )}

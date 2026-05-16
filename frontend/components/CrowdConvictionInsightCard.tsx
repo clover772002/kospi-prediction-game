@@ -206,7 +206,7 @@ export default function CrowdConvictionInsightCard({
           </p>
           <div className={`grid gap-2 ${ix.c ? "grid-cols-1" : "sm:grid-cols-2"}`}>
             <div className="rounded-lg border border-white/[0.07] bg-black/20 px-2 py-1.5 space-y-0.5">
-              <p className={`${ix.c ? "text-[9px]" : "text-[10px]"} font-bold text-rose-200/90`}>상승 선택 무리</p>
+              <p className={`${ix.c ? "text-[9px]" : "text-[10px]"} font-bold text-red-400`}>상승 선택 무리</p>
               {data.data?.rise_choice_stats ? (
                 <div className={`tabular-nums text-gray-400 ${ix.c ? "text-[9px] space-y-0.5" : "text-[10px] space-y-0.5"}`}>
                   <p>
@@ -223,7 +223,7 @@ export default function CrowdConvictionInsightCard({
               )}
             </div>
             <div className="rounded-lg border border-white/[0.07] bg-black/20 px-2 py-1.5 space-y-0.5">
-              <p className={`${ix.c ? "text-[9px]" : "text-[10px]"} font-bold text-rose-200/90`}>하락 선택 무리</p>
+              <p className={`${ix.c ? "text-[9px]" : "text-[10px]"} font-bold text-blue-400`}>하락 선택 무리</p>
               {data.data?.fall_choice_stats ? (
                 <div className={`tabular-nums text-gray-400 ${ix.c ? "text-[9px] space-y-0.5" : "text-[10px] space-y-0.5"}`}>
                   <p>
