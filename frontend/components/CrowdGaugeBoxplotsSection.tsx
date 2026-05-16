@@ -7,7 +7,18 @@ import {
   type CrowdGaugeBoxplotStats,
 } from "@/lib/api";
 
-function HorizontalAbsBox({
+/** 하락축 -100~0 → 플롯 0~100% (왼쪽이 -100, 오른쪽이 0) */
+function fallToPercent(v: number): number {
+  const c = Math.max(-100, Math.min(0, v));
+  return c + 100;
+}
+
+/** 상승축 0~100 → 플롯 0~100% */
+function riseToPercent(v: number): number {
+  return Math.max(0, Math.min(100, v));
+}
+
+function HorizontalSignedBox({
   stats,
   highlight,
   variant,
@@ -38,63 +49,77 @@ function HorizontalAbsBox({
           label: "text-red-400",
         };
 
+  const toPct = variant === "rise" ? riseToPercent : fallToPercent;
+
   if (isEmpty) {
     return (
       <div
-        className={`rounded-xl border border-dashed border-[#333] bg-[#101010]/80 px-3 py-3 text-[10px] text-gray-500 ${ring}`}
+        className={`rounded-xl border border-dashed border-[#333] bg-[#101010]/80 px-2 py-3 text-[10px] text-gray-500 min-h-[120px] flex flex-col justify-center ${ring}`}
       >
         <span className={palette.label}>{subtitle}</span>
-        <p className="mt-1">이 날 해당 방향 선택 응답이 없거나 게이지를 쓸 수 없어요.</p>
+        <p className="mt-1 leading-snug">이 날 해당 방향 응답이 없어요.</p>
       </div>
     );
   }
 
   const { min, q1, median, q3, max } = stats;
-  const pad = (v: number) => Math.max(0, Math.min(100, v));
+  const pMin = toPct(min);
+  const pMax = toPct(max);
+  const pQ1 = toPct(q1);
+  const pQ3 = toPct(q3);
+  const pMed = toPct(median);
+  const boxLeft = Math.min(pQ1, pQ3);
+  const boxW = Math.max(0.35, Math.abs(pQ3 - pQ1));
 
   return (
-    <div className={`rounded-xl border ${palette.border} bg-[#141414]/90 px-3 py-2.5 ${ring}`}>
-      <div className="flex items-center justify-between gap-2 mb-2">
-        <span className={`text-[10px] font-black uppercase tracking-tight ${palette.label}`}>{subtitle}</span>
-        <span className="text-[10px] text-gray-500 tabular-nums">n={stats.n}</span>
+    <div className={`rounded-xl border ${palette.border} bg-[#141414]/90 px-2 py-2.5 min-h-[120px] flex flex-col ${ring}`}>
+      <div className="flex items-center justify-between gap-1 mb-2">
+        <span className={`text-[9px] font-black uppercase tracking-tight leading-tight ${palette.label}`}>{subtitle}</span>
+        <span className="text-[9px] text-gray-500 tabular-nums shrink-0">n={stats.n}</span>
       </div>
-      <div className="relative h-14 w-full">
+      <div className="relative h-12 w-full flex-1 min-h-[48px]">
         <div className="absolute bottom-1 left-0 right-0 h-px bg-gray-700/90" />
         <div
-          className={`absolute bottom-2 h-3.5 w-px ${palette.whisker}`}
-          style={{ left: `${pad(min)}%`, transform: "translateX(-50%)" }}
+          className={`absolute bottom-2 h-3 w-px ${palette.whisker}`}
+          style={{ left: `${pMin}%`, transform: "translateX(-50%)" }}
         />
         <div
-          className={`absolute bottom-2 h-3.5 w-px ${palette.whisker}`}
-          style={{ left: `${pad(max)}%`, transform: "translateX(-50%)" }}
+          className={`absolute bottom-2 h-3 w-px ${palette.whisker}`}
+          style={{ left: `${pMax}%`, transform: "translateX(-50%)" }}
         />
         <div
           className={`absolute bottom-3 h-0.5 ${palette.whisker} rounded-full opacity-80`}
           style={{
-            left: `${pad(min)}%`,
-            width: `${Math.max(0, pad(max) - pad(min))}%`,
+            left: `${Math.min(pMin, pMax)}%`,
+            width: `${Math.abs(pMax - pMin)}%`,
           }}
         />
         <div
-          className={`absolute bottom-3 h-7 rounded-md border ${palette.box}`}
+          className={`absolute bottom-3 h-6 rounded-md border ${palette.box}`}
           style={{
-            left: `${pad(Math.min(q1, q3))}%`,
-            width: `${Math.max(0.35, Math.abs(pad(q3) - pad(q1)))}%`,
+            left: `${boxLeft}%`,
+            width: `${boxW}%`,
           }}
         />
         <div
-          className={`absolute bottom-2.5 w-0.5 h-8 ${palette.med} z-[1]`}
-          style={{ left: `${pad(median)}%`, transform: "translateX(-50%)" }}
+          className={`absolute bottom-2.5 w-0.5 h-7 ${palette.med} z-[1]`}
+          style={{ left: `${pMed}%`, transform: "translateX(-50%)" }}
         />
       </div>
-      <div className="flex justify-between text-[9px] text-gray-600 tabular-nums mt-1 px-0.5">
-        <span>0</span>
-        <span>25</span>
-        <span>50</span>
-        <span>75</span>
-        <span>100</span>
-      </div>
-      <p className="text-[9px] text-gray-600 mt-1 tabular-nums">
+      {variant === "fall" ? (
+        <div className="flex justify-between text-[8px] text-gray-600 tabular-nums mt-1 px-0.5">
+          <span>-100</span>
+          <span>-50</span>
+          <span>0</span>
+        </div>
+      ) : (
+        <div className="flex justify-between text-[8px] text-gray-600 tabular-nums mt-1 px-0.5">
+          <span>0</span>
+          <span>50</span>
+          <span>100</span>
+        </div>
+      )}
+      <p className="text-[8px] text-gray-600 mt-1 tabular-nums leading-snug">
         min {min} · Q1 {q1} · 중앙 {median} · Q3 {q3} · max {max}
       </p>
     </div>
@@ -103,29 +128,44 @@ function HorizontalAbsBox({
 
 function DayCard({ day }: { day: CrowdGaugeBoxplotDay }) {
   const resultLabel =
-    day.kospi_result === true ? "코스피 상승" : day.kospi_result === false ? "코스피 하락" : "결과 미확정";
+    day.kospi_result === true
+      ? "장 마감 상승"
+      : day.kospi_result === false
+        ? "장 마감 하락"
+        : "결과 미확정";
 
   const hiRise = day.correct_team === "rise";
   const hiFall = day.correct_team === "fall";
 
   return (
-    <div className="rounded-xl border border-[#2A2A2A] bg-[#141414]/80 px-3 py-3 space-y-3">
-      <div className="flex flex-wrap items-baseline justify-between gap-2">
+    <div className="rounded-xl border border-[#2A2A2A] bg-[#141414]/80 px-3 py-3">
+      <div className="flex flex-wrap items-baseline justify-between gap-2 mb-3">
         <p className="text-xs font-bold text-white tabular-nums">{day.survey_date}</p>
-        <p className="text-[10px] text-gray-500">{resultLabel}</p>
+        <p
+          className={`text-[10px] font-bold ${
+            day.kospi_result === true
+              ? "text-green-400"
+              : day.kospi_result === false
+                ? "text-red-400"
+                : "text-gray-500"
+          }`}
+        >
+          {resultLabel}
+        </p>
       </div>
-      <div className="space-y-3">
-        <HorizontalAbsBox
-          stats={day.rise}
-          highlight={hiRise}
-          variant="rise"
-          subtitle="📈 상승 선택"
-        />
-        <HorizontalAbsBox
+
+      <div className="grid grid-cols-2 gap-2 sm:gap-3">
+        <HorizontalSignedBox
           stats={day.fall}
           highlight={hiFall}
           variant="fall"
-          subtitle="📉 하락 선택"
+          subtitle="📉 하락 선택 (−100~0)"
+        />
+        <HorizontalSignedBox
+          stats={day.rise}
+          highlight={hiRise}
+          variant="rise"
+          subtitle="📈 상승 선택 (0~100)"
         />
       </div>
     </div>
@@ -157,9 +197,10 @@ export default function CrowdGaugeBoxplotsSection() {
       <div>
         <p className="font-bold text-sm text-white">전체 예측 방향·확신도</p>
         <p className="text-[10px] text-gray-500 mt-1 leading-relaxed">
-          참여자 전체 기준으로, 거래일마다 <strong className="text-gray-400">상승 선택</strong>·<strong className="text-gray-400">하락 선택</strong> 무리의{" "}
-          <strong className="text-gray-400">확신도 절댓값(0~100)</strong> 분포를 박스플롯으로 비교합니다. 사분위 박스·수염·중앙값(세로선). 코스피 결과가 확정된 날은 맞은 쪽에{" "}
-          <strong className="text-amber-200/90">골드 링</strong> 하이라이트입니다.
+          거래일마다 <strong className="text-gray-400">하락 선택</strong>은 게이지{" "}
+          <strong className="text-gray-400">−100~0</strong>(왼쪽 막대), <strong className="text-gray-400">상승 선택</strong>은{" "}
+          <strong className="text-gray-400">0~100</strong>(오른쪽 막대)으로 나란히 표시합니다. 코스피 종가 방향이 정해지면 맞은 쪽에{" "}
+          <strong className="text-amber-200/90">골드 링</strong>이 붙습니다.
         </p>
       </div>
 
@@ -168,9 +209,9 @@ export default function CrowdGaugeBoxplotsSection() {
       ) : null}
 
       {!err && days === null ? (
-        <div className="space-y-2 animate-pulse">
-          <div className="h-24 rounded-xl bg-[#252525]" />
-          <div className="h-24 rounded-xl bg-[#252525]" />
+        <div className="grid grid-cols-2 gap-2 animate-pulse">
+          <div className="h-28 rounded-xl bg-[#252525]" />
+          <div className="h-28 rounded-xl bg-[#252525]" />
         </div>
       ) : null}
 
@@ -179,9 +220,11 @@ export default function CrowdGaugeBoxplotsSection() {
       ) : null}
 
       {!err && days && days.length > 0 ? (
-        <div className="space-y-3 max-h-[min(520px,60vh)] overflow-y-auto pr-1">{days.map((d) => (
-          <DayCard key={d.survey_date} day={d} />
-        ))}</div>
+        <div className="space-y-3 max-h-[min(520px,60vh)] overflow-y-auto pr-1">
+          {days.map((d) => (
+            <DayCard key={d.survey_date} day={d} />
+          ))}
+        </div>
       ) : null}
     </div>
   );

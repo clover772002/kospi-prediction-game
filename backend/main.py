@@ -623,8 +623,8 @@ def _build_daily_expert_gap_payload(supabase: Client, survey_date_str: str) -> d
     }
 
 
-def _five_number_summary_abs(vals: list[int]) -> dict | None:
-    """확신도 절댓값(0~100) 표본의 min·Q1·중앙·Q3·max (박스플롯용)."""
+def _five_number_summary(vals: list[int]) -> dict | None:
+    """정수 표본의 min·Q1·중앙·Q3·max (부호 유지, 박스플롯용)."""
     if not vals:
         return None
     s = sorted(int(x) for x in vals)
@@ -3213,7 +3213,7 @@ async def get_crowd_gauge_boxplots(
 ):
     """
     대시보드: 최근 거래일별 전체 응답 기준,
-    상승 선택층·하락 선택층 각각의 확신도(|게이지|) 5수 요약(가로 박스플롯용).
+    상승 선택층 게이지(0~100)·하락 선택층 게이지(-100~0) 5수 요약(가로 박스플롯용).
     로그인 불필요(익명 집계).
     """
     lim = max(1, min(int(limit), 60))
@@ -3254,20 +3254,20 @@ async def get_crowd_gauge_boxplots(
             kr = r.get("kospi_result")
             result_bool: bool | None = kr if (kr is True or kr is False) else None
 
-            rise_abs: list[int] = []
-            fall_abs: list[int] = []
+            rise_vals: list[int] = []
+            fall_vals: list[int] = []
             for row in by_date.get(dk, []):
                 g = _coerce_gauge_from_row(row)
                 ka = row.get("kospi_answer")
                 if g is None or ka is None:
                     continue
-                av = max(0, min(100, abs(int(g))))
-            if bool(ka):
-                rise_abs.append(av)
-            else:
-                fall_abs.append(av)
+                gi = int(g)
+                if bool(ka):
+                    rise_vals.append(max(0, min(100, gi)))
+                else:
+                    fall_vals.append(max(-100, min(0, gi)))
 
-            if not rise_abs and not fall_abs:
+            if not rise_vals and not fall_vals:
                 continue
 
             correct_team: str | None = None
@@ -3280,8 +3280,8 @@ async def get_crowd_gauge_boxplots(
                 "survey_date": dk,
                 "kospi_result": result_bool,
                 "correct_team": correct_team,
-                "rise": _five_number_summary_abs(rise_abs),
-                "fall": _five_number_summary_abs(fall_abs),
+                "rise": _five_number_summary(rise_vals),
+                "fall": _five_number_summary(fall_vals),
             })
 
         return {"days": out}
