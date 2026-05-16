@@ -54,7 +54,7 @@ function HorizontalSignedBox({
   if (isEmpty) {
     return (
       <div
-        className={`rounded-xl border border-dashed border-[#333] bg-[#101010]/80 px-2 py-3 text-[10px] text-gray-500 min-h-[120px] flex flex-col justify-center ${ring}`}
+        className={`rounded-xl border border-dashed border-[#333] bg-[#101010]/80 px-2 py-2 text-[10px] text-gray-500 min-h-[80px] flex flex-col justify-center ${ring}`}
       >
         <span className={palette.label}>{subtitle}</span>
         <p className="mt-1 leading-snug">이 날 해당 방향 응답이 없어요.</p>
@@ -72,37 +72,37 @@ function HorizontalSignedBox({
   const boxW = Math.max(0.35, Math.abs(pQ3 - pQ1));
 
   return (
-    <div className={`rounded-xl border ${palette.border} bg-[#141414]/90 px-2 py-2.5 min-h-[120px] flex flex-col ${ring}`}>
-      <div className="flex items-center justify-between gap-1 mb-2">
+    <div className={`rounded-xl border ${palette.border} bg-[#141414]/90 px-2 py-2 min-h-[80px] flex flex-col ${ring}`}>
+      <div className="flex items-center justify-between gap-1 mb-1.5">
         <span className={`text-[9px] font-black uppercase tracking-tight leading-tight ${palette.label}`}>{subtitle}</span>
         <span className="text-[9px] text-gray-500 tabular-nums shrink-0">n={stats.n}</span>
       </div>
-      <div className="relative h-12 w-full flex-1 min-h-[48px]">
-        <div className="absolute bottom-1 left-0 right-0 h-px bg-gray-700/90" />
+      <div className="relative h-8 w-full flex-1 min-h-[32px]">
+        <div className="absolute bottom-0.5 left-0 right-0 h-px bg-gray-700/90" />
         <div
-          className={`absolute bottom-2 h-3 w-px ${palette.whisker}`}
+          className={`absolute bottom-1.5 h-2 w-px ${palette.whisker}`}
           style={{ left: `${pMin}%`, transform: "translateX(-50%)" }}
         />
         <div
-          className={`absolute bottom-2 h-3 w-px ${palette.whisker}`}
+          className={`absolute bottom-1.5 h-2 w-px ${palette.whisker}`}
           style={{ left: `${pMax}%`, transform: "translateX(-50%)" }}
         />
         <div
-          className={`absolute bottom-3 h-0.5 ${palette.whisker} rounded-full opacity-80`}
+          className={`absolute bottom-2 h-0.5 ${palette.whisker} rounded-full opacity-80`}
           style={{
             left: `${Math.min(pMin, pMax)}%`,
             width: `${Math.abs(pMax - pMin)}%`,
           }}
         />
         <div
-          className={`absolute bottom-3 h-6 rounded-md border ${palette.box}`}
+          className={`absolute bottom-2 h-4 rounded-md border ${palette.box}`}
           style={{
             left: `${boxLeft}%`,
             width: `${boxW}%`,
           }}
         />
         <div
-          className={`absolute bottom-2.5 w-0.5 h-7 ${palette.med} z-[1]`}
+          className={`absolute bottom-1.5 w-0.5 h-5 ${palette.med} z-[1]`}
           style={{ left: `${pMed}%`, transform: "translateX(-50%)" }}
         />
       </div>
@@ -119,7 +119,7 @@ function HorizontalSignedBox({
           <span>100</span>
         </div>
       )}
-      <p className="text-[8px] text-gray-600 mt-1 tabular-nums leading-snug">
+      <p className="text-[8px] text-gray-600 mt-0.5 tabular-nums leading-snug">
         min {min} · Q1 {q1} · 중앙 {median} · Q3 {q3} · max {max}
       </p>
     </div>
@@ -138,8 +138,8 @@ function DayCard({ day }: { day: CrowdGaugeBoxplotDay }) {
   const hiFall = day.correct_team === "fall";
 
   return (
-    <div className="rounded-xl border border-[#2A2A2A] bg-[#141414]/80 px-3 py-3">
-      <div className="flex flex-wrap items-baseline justify-between gap-2 mb-3">
+    <div className="rounded-xl border border-[#2A2A2A] bg-[#141414]/80 px-3 py-2.5">
+      <div className="flex flex-wrap items-baseline justify-between gap-2 mb-2">
         <p className="text-xs font-bold text-white tabular-nums">{day.survey_date}</p>
         <p
           className={`text-[10px] font-bold ${
@@ -211,8 +211,8 @@ export default function CrowdGaugeBoxplotsSection() {
 
       {!err && days === null ? (
         <div className="grid grid-cols-2 gap-2 animate-pulse">
-          <div className="h-28 rounded-xl bg-[#252525]" />
-          <div className="h-28 rounded-xl bg-[#252525]" />
+          <div className="h-20 rounded-xl bg-[#252525]" />
+          <div className="h-20 rounded-xl bg-[#252525]" />
         </div>
       ) : null}
 
