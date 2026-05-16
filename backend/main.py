@@ -3362,6 +3362,29 @@ def _survey_date_key(d) -> str:
     return s[:10] if len(s) >= 10 else s
 
 
+def _cell_truthy_bool(v) -> bool | None:
+    """
+    Supabase/Postgres boolean·문자·숫자 혼재 시 대시보드 비교용.
+    isinstance(True, int) 는 True 이므로 bool 은 먼저 처리.
+    """
+    if v is None:
+        return None
+    if isinstance(v, bool):
+        return v
+    if isinstance(v, str):
+        sl = v.strip().lower()
+        if sl in ("true", "t", "1", "yes"): return True
+        if sl in ("false", "f", "0", "no"): return False
+        return None
+    if isinstance(v, (int, float)):
+        if v == 1:
+            return True
+        if v == 0:
+            return False
+        return None
+    return None
+
+
 @app.get("/api/dashboard")
 async def get_dashboard(
     current_user=Depends(get_current_user),
@@ -3418,22 +3441,27 @@ async def get_dashboard(
                 .execute()
             )
             for row in ds_bulk.data or []:
-                kospi_result_by_date[_survey_date_key(row["survey_date"])] = row.get("kospi_result")
+                raw_kr = row.get("kospi_result")
+                kb = _cell_truthy_bool(raw_kr)
+                kospi_result_by_date[_survey_date_key(row["survey_date"])] = kb
 
         history = []
         for resp in responses_rows:
             d_key = _survey_date_key(resp["survey_date"])
             acc = accuracy_map.get(d_key, {})
             kospi_correct = acc.get("kospi_correct")
+            if kospi_correct is not None:
+                kospi_correct = _cell_truthy_bool(kospi_correct)
             kr = kospi_result_by_date.get(d_key)
-            if kospi_correct is None and (kr is True or kr is False):
-                kospi_correct = bool(resp["kospi_answer"]) == bool(kr)
+            ka = _cell_truthy_bool(resp.get("kospi_answer"))
+            if kospi_correct is None and ka is not None and kr is not None:
+                kospi_correct = ka == kr
 
             history.append({
                 "date": d_key or resp["survey_date"],
                 "kospi_answer": resp["kospi_answer"],
                 "kospi_correct": kospi_correct,
-                "kospi_market_result": kr if (kr is True or kr is False) else None,
+                "kospi_market_result": kr,
                 "gauge_position": resp.get("gauge_position"),
                 "tokens_bet": resp.get("tokens_bet"),
                 "tokens_won": resp.get("tokens_won"),

@@ -16,8 +16,13 @@ type DashboardHist = DashboardData["history"][number];
 
 function coerceBool(v: unknown): boolean | null {
   if (typeof v === "boolean") return v;
-  if (v === "true" || v === 1 || v === "1") return true;
-  if (v === "false" || v === 0 || v === "0") return false;
+  if (typeof v === "string") {
+    const s = v.trim().toLowerCase();
+    if (s === "true" || s === "1" || s === "t" || s === "yes") return true;
+    if (s === "false" || s === "0" || s === "f" || s === "no") return false;
+  }
+  if (v === 1 || v === "1") return true;
+  if (v === 0 || v === "0") return false;
   return null;
 }
 
