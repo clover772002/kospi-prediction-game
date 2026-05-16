@@ -141,6 +141,8 @@ export interface HistoryItem {
   kospi_correct: boolean | null;
   /** 해당일 daily_surveys 종가 방향(있으면 클라이언트에서 확정 표시에 사용) */
   kospi_market_result?: boolean | null;
+  /** 해당 거래일 코스피 종가 등락률(있을 때만) */
+  kospi_change_pct?: number | null;
   gauge_position?: number | null;
   tokens_bet?: number | null;
   tokens_won?: number | null;

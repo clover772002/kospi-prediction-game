@@ -67,6 +67,21 @@ function resolvedMarketDirection(
   return hc ? entry.kospi_answer : !entry.kospi_answer;
 }
 
+/** 이력 행 거래일이 현재 카드 기준 오늘 설문(survey_date)과 같으면 설문 탭과 동일 `getToday()` 스냅샷 재사용 */
+function historyUsesTodaySnapshot(entry: DashboardHist, todaySurvey: TodaySurvey | null): boolean {
+  return !!(todaySurvey?.survey_date && sameSurveyDate(entry.date, todaySurvey.survey_date));
+}
+
+function effectiveHistoryKospiChangePct(entry: DashboardHist, todaySurvey: TodaySurvey | null): unknown {
+  if (entry.kospi_change_pct != null && Number.isFinite(Number(entry.kospi_change_pct))) {
+    return entry.kospi_change_pct;
+  }
+  if (historyUsesTodaySnapshot(entry, todaySurvey) && todaySurvey?.kospi_change_pct != null) {
+    return todaySurvey.kospi_change_pct;
+  }
+  return null;
+}
+
 // 연속 적중 스트릭 계산
 function calcStreak(history: DashboardData["history"]): number {
   const withResult = [...history].filter((h) => effectiveKospiCorrect(h) !== null);
@@ -78,11 +93,33 @@ function calcStreak(history: DashboardData["history"]): number {
   return count;
 }
 
-function HistoryRow({ item }: { item: DashboardData["history"][0] }) {
+function marketDirectionRow(item: DashboardHist, todaySurvey: TodaySurvey | null): boolean | null {
+  const mk = coerceBool(item.kospi_market_result);
+  if (mk !== null) return mk;
+  if (historyUsesTodaySnapshot(item, todaySurvey)) {
+    const tr = coerceBool(todaySurvey?.kospi_result);
+    if (tr !== null) return tr;
+  }
+  const v = effectiveKospiCorrect(item);
+  if (v === true) return item.kospi_answer;
+  if (v === false) return !item.kospi_answer;
+  return null;
+}
+
+function formatKospiChangePct(pct: unknown): string | null {
+  if (pct === null || pct === undefined) return null;
+  const n = typeof pct === "number" ? pct : Number(pct);
+  if (!Number.isFinite(n)) return null;
+  const body = `${n >= 0 ? "+" : ""}${Number(n.toFixed(2))}`;
+  return `${body}%`;
+}
+
+function HistoryRow({ item, todaySurvey }: { item: DashboardData["history"][0]; todaySurvey: TodaySurvey | null }) {
   const verdict = effectiveKospiCorrect(item);
   const hasResult = verdict !== null;
   const gauge = item.gauge_position;
   const directionUp = gauge !== null && gauge !== undefined ? gauge > 0 : item.kospi_answer;
+
   const tokensWon = item.tokens_won;
   const tokensBet = item.tokens_bet;
   const rawMult = item.payout_multiplier;
@@ -101,6 +138,26 @@ function HistoryRow({ item }: { item: DashboardData["history"][0] }) {
     return `${Math.abs(tokensWon)} 잃음`;
   })();
 
+  const mk = marketDirectionRow(item, todaySurvey);
+  const pctStr = formatKospiChangePct(effectiveHistoryKospiChangePct(item, todaySurvey));
+
+  const kospiCell =
+    mk === null ? (
+      <div className="leading-tight text-gray-500">
+        <span className="block">미정</span>
+        <span className="block tabular-nums text-[9px] text-gray-600">—</span>
+      </div>
+    ) : (
+      <div className="leading-tight">
+        <span className={`font-bold ${mk ? "text-red-400" : "text-blue-400"}`}>{mk ? "상승" : "하락"}</span>
+        <span className="block tabular-nums text-gray-300 text-[9px] mt-0.5">{pctStr ?? "—"}</span>
+      </div>
+    );
+
+  const predictCls = directionUp ? "text-red-400" : "text-blue-400";
+  const gaugeLine =
+    gauge !== null && gauge !== undefined ? `${gauge > 0 ? "+" : ""}${gauge}%` : "—";
+
   return (
     <tr
       className={`border-b border-[#2A2A2A] last:border-0 leading-tight ${
@@ -111,12 +168,23 @@ function HistoryRow({ item }: { item: DashboardData["history"][0] }) {
           : ""
       }`}
     >
-      <td className="py-1 pl-2 pr-0.5 align-middle text-gray-500 tabular-nums whitespace-nowrap text-[10px]">{item.date.slice(5)}</td>
-      <td className={`py-1 px-0.5 align-middle font-bold whitespace-nowrap text-[10px] ${directionUp ? "text-red-400" : "text-blue-400"}`}>
-        {directionUp ? "상승" : "하락"}
+      <td className="py-1 pl-2 pr-0.5 align-middle text-gray-500 tabular-nums whitespace-nowrap text-[10px]">
+        {item.date.slice(5)}
       </td>
-      <td className="py-1 px-0.5 align-middle text-right tabular-nums text-gray-200 whitespace-nowrap text-[10px]">
-        {gauge !== null && gauge !== undefined ? `${gauge > 0 ? "+" : ""}${gauge}%` : "—"}
+      <td className="py-1 px-1 align-middle text-[10px] border-l border-[#2a2a2a]/80 bg-[#0f0f0f]/35">
+        <div className="leading-tight">
+          <span className={`font-bold ${predictCls}`}>{directionUp ? "상승" : "하락"}</span>
+          <span className="block tabular-nums text-gray-300 text-[9px] mt-0.5">{gaugeLine}</span>
+        </div>
+      </td>
+      <td className="py-1 px-0.5 align-middle text-[10px] border-l border-amber-500/25 bg-[#0f0f0f]/35">
+        {kospiCell}
+      </td>
+      <td className={`py-1 px-0.5 align-middle text-center whitespace-nowrap font-bold text-[10px] ${
+        !hasResult ? "text-gray-600" : verdict ? "text-green-400/95" : "text-red-400/90"
+      }`}
+      >
+        {hitLabel}
       </td>
       <td className="py-1 px-0.5 align-middle text-right tabular-nums text-gray-200 whitespace-nowrap text-[10px]">
         {tokensBet != null && tokensBet !== undefined ? `${tokensBet}` : "—"}
@@ -124,7 +192,7 @@ function HistoryRow({ item }: { item: DashboardData["history"][0] }) {
       <td className="py-1 px-0.5 align-middle text-right tabular-nums text-cyan-300/90 whitespace-nowrap text-[10px]">
         {mult != null ? `×${mult.toFixed(2)}` : "—"}
       </td>
-      <td className={`py-1 px-0.5 align-middle text-right font-bold tabular-nums whitespace-nowrap text-[10px] ${
+      <td className={`py-1 pl-0.5 pr-2 align-middle text-right font-bold tabular-nums whitespace-nowrap text-[10px] ${
         !hasResult
           ? "text-gray-600"
           : tokensWon != null && tokensWon > 0
@@ -135,12 +203,6 @@ function HistoryRow({ item }: { item: DashboardData["history"][0] }) {
       }`}
       >
         {tokensCell}
-      </td>
-      <td className={`py-1 pl-0.5 pr-2 align-middle whitespace-nowrap font-bold text-[10px] ${
-        !hasResult ? "text-gray-600" : verdict ? "text-green-400/95" : "text-red-400/90"
-      }`}
-      >
-        {hitLabel}
       </td>
     </tr>
   );
@@ -1000,26 +1062,49 @@ export default function DashboardPage() {
                     <table className="w-full border-collapse text-[10px]">
                       <thead>
                         <tr className="text-left text-gray-500 border-b border-[#2A2A2A] bg-[#1A1A1A]/90">
-                          <th className="py-1.5 pl-2 pr-0.5 font-bold text-[9px] leading-tight">거래일</th>
-                          <th title="예측방향" className="py-1.5 px-0.5 font-bold text-[9px] leading-tight">방향</th>
-                          <th className="py-1.5 px-0.5 font-bold text-right text-[9px] leading-tight">확신도</th>
-                          <th className="py-1.5 px-0.5 font-bold text-right text-[9px] leading-tight">배팅토큰</th>
-                          <th title="집단배율" className="py-1.5 px-0.5 font-bold text-right text-[9px] leading-tight">배율</th>
-                          <th title="적중 시 획득·실패 시 손실" className="py-1.5 px-0.5 font-bold text-right text-[9px] leading-tight">
+                          <th rowSpan={2} className="py-1.5 pl-2 pr-1 font-bold align-middle text-[9px] leading-tight whitespace-nowrap">
+                            거래일
+                          </th>
+                          <th rowSpan={2} className="py-1.5 px-1 font-bold align-middle text-[9px] leading-tight border-l border-[#2a2a2a]/80">
+                            예측
+                          </th>
+                          <th
+                            colSpan={5}
+                            className="py-1.5 px-1 font-bold align-middle text-center text-[9px] leading-tight border-l border-amber-500/30 text-amber-200/90"
+                          >
+                            결과
+                          </th>
+                        </tr>
+                        <tr className="text-left text-gray-500 border-b border-[#2A2A2A] bg-[#1A1A1A]/95">
+                          <th
+                            title="코스피 종가 방향·등락률"
+                            className="py-1.5 px-0.5 font-bold border-l border-amber-500/25 text-[9px] leading-tight whitespace-nowrap"
+                          >
+                            코스피
+                          </th>
+                          <th className="py-1.5 px-0.5 font-bold text-center text-[9px] leading-tight whitespace-nowrap">판정</th>
+                          <th className="py-1.5 px-0.5 font-bold text-right text-[9px] leading-tight whitespace-nowrap">배팅토큰</th>
+                          <th title="집단배율" className="py-1.5 px-0.5 font-bold text-right text-[9px] leading-tight whitespace-nowrap">
+                            배율
+                          </th>
+                          <th
+                            title="적중 시 획득·실패 시 손실"
+                            className="py-1.5 pl-0.5 pr-2 font-bold text-right text-[9px] leading-tight whitespace-nowrap"
+                          >
                             획득/손실
                           </th>
-                          <th title="적중여부" className="py-1.5 pl-0.5 pr-2 font-bold text-[9px] leading-tight">판정</th>
                         </tr>
                       </thead>
                       <tbody>
                         {dash.history.slice(0, 5).map((item) => (
-                          <HistoryRow key={item.date} item={item} />
+                          <HistoryRow key={item.date} item={item} todaySurvey={today} />
                         ))}
                       </tbody>
                     </table>
                   </div>
                   <p className="text-[9px] text-gray-600 leading-snug">
-                    획득·손실은 정산 시점 기준(얻음/잃음)이며, 적중 시 연승 배율 등이 더해져 배팅토큰×배율 단순 곱과 다를 수 있어요.
+                    코스피 등락률은 DB 이력에 있으면 그대로 쓰고, <strong className="text-gray-500">이력 행의 거래일이 오늘 설문과 같은 날</strong>이면
+                    설문 탭 결과에 나오는 등락률과 동일하게 맞춥니다. 획득/손실은 정산이며 적중 시 연승 등으로 배팅토큰×배율과 다를 수 있어요.
                   </p>
                 </div>
               )}

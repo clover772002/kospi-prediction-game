@@ -3433,17 +3433,26 @@ async def get_dashboard(
         )
         unique_dates_raw = [d for d in unique_dates_raw if len(d) >= 8]
         kospi_result_by_date: dict = {}
+        kospi_pct_by_date = {}
         if unique_dates_raw:
             ds_bulk = (
                 supabase.table("daily_surveys")
-                .select("survey_date, kospi_result")
+                .select("survey_date, kospi_result, kospi_change_pct")
                 .in_("survey_date", unique_dates_raw)
                 .execute()
             )
             for row in ds_bulk.data or []:
+                dk = _survey_date_key(row["survey_date"])
                 raw_kr = row.get("kospi_result")
-                kb = _cell_truthy_bool(raw_kr)
-                kospi_result_by_date[_survey_date_key(row["survey_date"])] = kb
+                kospi_result_by_date[dk] = _cell_truthy_bool(raw_kr)
+                raw_pct = row.get("kospi_change_pct")
+                pct_val = None
+                if raw_pct is not None:
+                    try:
+                        pct_val = round(float(raw_pct), 4)
+                    except (TypeError, ValueError):
+                        pct_val = None
+                kospi_pct_by_date[dk] = pct_val
 
         history = []
         for resp in responses_rows:
@@ -3462,6 +3471,7 @@ async def get_dashboard(
                 "kospi_answer": resp["kospi_answer"],
                 "kospi_correct": kospi_correct,
                 "kospi_market_result": kr,
+                "kospi_change_pct": kospi_pct_by_date.get(d_key),
                 "gauge_position": resp.get("gauge_position"),
                 "tokens_bet": resp.get("tokens_bet"),
                 "tokens_won": resp.get("tokens_won"),
