@@ -6,6 +6,7 @@ import time
 import logging
 import math
 import statistics
+from collections import Counter
 from datetime import date, timedelta, datetime, timezone
 from zoneinfo import ZoneInfo
 
@@ -2415,23 +2416,47 @@ async def get_my_groups(
     current_user=Depends(get_current_user),
     supabase: Client = Depends(get_supabase),
 ):
-    """내가 속한 그룹 목록"""
+    """내가 속한 그룹 목록 (배치 조회 — 그룹당 N+1 제거)"""
     user_id = str(current_user.id)
     memberships = supabase.table("group_members").select("group_id").eq("user_id", user_id).execute()
+    if not memberships.data:
+        return []
+
+    gids_order = [m["group_id"] for m in memberships.data]
+    uniq_gids = list(dict.fromkeys(gids_order))
+
+    gr = (
+        supabase.table("groups")
+        .select("id, name, invite_code, owner_id")
+        .in_("id", uniq_gids)
+        .execute()
+    )
+    groups_by_id = {g["id"]: g for g in (gr.data or [])}
+
+    gm = (
+        supabase.table("group_members")
+        .select("group_id")
+        .in_("group_id", uniq_gids)
+        .execute()
+    )
+    member_per_group = Counter(m["group_id"] for m in (gm.data or []))
+
     result = []
-    for m in memberships.data:
-        gid = m["group_id"]
-        grp = supabase.table("groups").select("id, name, invite_code, owner_id").eq("id", gid).execute()
-        if grp.data:
-            cnt = supabase.table("group_members").select("id", count="exact").eq("group_id", gid).execute()
-            g = grp.data[0]
-            result.append({
-                "group_id": g["id"],
-                "name": g["name"],
-                "invite_code": g["invite_code"],
-                "is_owner": g["owner_id"] == user_id,
-                "member_count": cnt.count or 0,
-            })
+    seen: set = set()
+    for gid in gids_order:
+        if gid in seen:
+            continue
+        seen.add(gid)
+        g = groups_by_id.get(gid)
+        if not g:
+            continue
+        result.append({
+            "group_id": g["id"],
+            "name": g["name"],
+            "invite_code": g["invite_code"],
+            "is_owner": g["owner_id"] == user_id,
+            "member_count": member_per_group.get(gid, 0),
+        })
     return result
 
 
@@ -2441,17 +2466,15 @@ async def get_group_leaderboard(
     current_user=Depends(get_current_user),
     supabase: Client = Depends(get_supabase),
 ):
-    """그룹 내 멤버 순위 (누적 적중률 기준)"""
+    """그룹 내 멤버 순위 (누적 적중률 기준) — 배치 조회 + accuracy 집계 캐시 1회"""
     user_id = str(current_user.id)
-    # 멤버 확인
     mem_check = supabase.table("group_members").select("id").eq("group_id", group_id).eq("user_id", user_id).execute()
     if not mem_check.data:
         raise HTTPException(403, "그룹 멤버만 볼 수 있어요")
 
     members = supabase.table("group_members").select("user_id").eq("group_id", group_id).execute()
-    member_ids = [m["user_id"] for m in members.data]
+    member_ids = [str(m["user_id"]) for m in (members.data or [])]
 
-    # 리더보드도 nudge와 동일하게 "현재 열린 설문" 날짜 기준으로 voted_today 판단
     open_sv = (
         supabase.table("daily_surveys")
         .select("survey_date")
@@ -2463,19 +2486,38 @@ async def get_group_leaderboard(
     )
     vote_check_date = open_sv.data[0]["survey_date"] if open_sv.data else today_kst()
 
+    grp = supabase.table("groups").select("name, invite_code").eq("id", group_id).execute()
+    base_out = {
+        "group_id": group_id,
+        "group_name": grp.data[0]["name"] if grp.data else "",
+        "invite_code": grp.data[0]["invite_code"] if grp.data else "",
+    }
+
+    if not member_ids:
+        return {**base_out, "members": []}
+
+    _, _, user_scores = get_accuracy_data(supabase)
+
+    name_rows = supabase.table("users").select("id, name").in_("id", member_ids).execute()
+    name_map = {str(row["id"]): (row.get("name") or "") for row in (name_rows.data or [])}
+
+    voted_res = (
+        supabase.table("survey_responses")
+        .select("user_id")
+        .eq("survey_date", vote_check_date)
+        .in_("user_id", member_ids)
+        .execute()
+    )
+    voted_set = {str(r["user_id"]) for r in (voted_res.data or [])}
+
     rows = []
     for uid in member_ids:
-        user_row = supabase.table("users").select("name").eq("id", uid).execute()
-        name = user_row.data[0]["name"] if user_row.data else "익명"
+        name = name_map.get(uid, "")
         masked = (name[0] + "**") if name else "익명"
-
-        acc_rows = supabase.table("accuracy_records").select("kospi_correct").eq("user_id", uid).execute()
-        total = len(acc_rows.data)
-        correct = sum(1 for r in acc_rows.data if r.get("kospi_correct"))
+        sc = user_scores.get(uid) or {"correct": 0, "total": 0}
+        total = int(sc["total"])
+        correct = int(sc["correct"])
         accuracy = round(correct / total * 100) if total > 0 else None
-
-        # 열린 설문 날짜 기준으로 참여 여부 확인
-        voted = supabase.table("survey_responses").select("id").eq("user_id", uid).eq("survey_date", vote_check_date).execute()
         rows.append({
             "user_id": uid,
             "masked_name": masked,
@@ -2483,20 +2525,14 @@ async def get_group_leaderboard(
             "accuracy": accuracy,
             "total_predictions": total,
             "correct": correct,
-            "voted_today": bool(voted.data),
+            "voted_today": uid in voted_set,
         })
 
     rows.sort(key=lambda r: (-(r["accuracy"] or -1), -r["total_predictions"]))
     for i, r in enumerate(rows):
         r["rank"] = i + 1
 
-    grp = supabase.table("groups").select("name, invite_code").eq("id", group_id).execute()
-    return {
-        "group_id": group_id,
-        "group_name": grp.data[0]["name"] if grp.data else "",
-        "invite_code": grp.data[0]["invite_code"] if grp.data else "",
-        "members": rows,
-    }
+    return {**base_out, "members": rows}
 
 
 @app.post("/api/groups/{group_id}/nudge")
@@ -2538,19 +2574,32 @@ async def nudge_group(
     sender_name = sender_row.data[0]["name"] if sender_row.data else "익명"
     sender_masked = (sender_name[0] + "**") if sender_name else "익명"
 
-    # 전체 멤버 중 대상 설문 미참여자
+    # 전체 멤버 중 대상 설문 미참여자 (투표·텔레그램 id 배치 조회 후 루프)
     members = supabase.table("group_members").select("user_id").eq("group_id", group_id).execute()
+    raw_members = members.data or []
+    other_ids = [str(m["user_id"]) for m in raw_members if str(m["user_id"]) != user_id]
+
+    voted_set: set[str] = set()
+    tg_by_uid: dict[str, str | None] = {}
+    if other_ids:
+        voted_res = (
+            supabase.table("survey_responses")
+            .select("user_id")
+            .eq("survey_date", target_date)
+            .in_("user_id", other_ids)
+            .execute()
+        )
+        voted_set = {str(r["user_id"]) for r in (voted_res.data or [])}
+
+        tg_rows = supabase.table("users").select("id, telegram_chat_id").in_("id", other_ids).execute()
+        tg_by_uid = {str(r["id"]): r.get("telegram_chat_id") for r in (tg_rows.data or [])}
+
     notified = 0
     no_channel = 0   # 미참여이지만 알림 수단 없는 멤버 수
     all_voted  = 0   # 이미 참여한 멤버 수
 
-    for m in members.data:
-        uid = m["user_id"]
-        if uid == user_id:
-            continue  # 자기 자신 제외
-
-        voted = supabase.table("survey_responses").select("id").eq("user_id", uid).eq("survey_date", target_date).execute()
-        if voted.data:
+    for uid in other_ids:
+        if uid in voted_set:
             all_voted += 1
             continue  # 이미 참여한 멤버 제외
 
@@ -2578,10 +2627,10 @@ async def nudge_group(
             logger.info(f"독촉 웹 푸시 전송 성공: target={uid}")
 
         # 텔레그램 시도
-        target_row = supabase.table("users").select("telegram_chat_id").eq("id", uid).execute()
-        if target_row.data and target_row.data[0].get("telegram_chat_id"):
+        chat_id = tg_by_uid.get(uid)
+        if chat_id:
             try:
-                await tg_send(target_row.data[0]["telegram_chat_id"], tg_text)
+                await tg_send(chat_id, tg_text)
                 sent_any = True
                 logger.info(f"독촉 텔레그램 전송 성공: target={uid}")
             except Exception as e:
@@ -2708,9 +2757,21 @@ async def get_my_challenges(
         .eq("challenged_id", user_id).eq("survey_date", date_str).execute()
     )
 
+    sent_list = sent_res.data or []
+    recv_list = recv_res.data or []
+    opponent_ids: set[str] = set()
+    for c in sent_list:
+        opponent_ids.add(str(c["challenged_id"]))
+    for c in recv_list:
+        opponent_ids.add(str(c["challenger_id"]))
+
+    name_map: dict[str, str] = {}
+    if opponent_ids:
+        name_rows = supabase.table("users").select("id, name").in_("id", list(opponent_ids)).execute()
+        name_map = {str(r["id"]): (r.get("name") or "") for r in (name_rows.data or [])}
+
     def _masked(uid: str) -> str:
-        row = supabase.table("users").select("name").eq("id", uid).execute()
-        name = row.data[0]["name"] if row.data else "익명"
+        name = name_map.get(str(uid), "")
         return (name[0] + "**") if name else "익명"
 
     def _enrich(c, is_sent: bool):
@@ -2731,8 +2792,8 @@ async def get_my_challenges(
         }
 
     return {
-        "sent":     [_enrich(c, True)  for c in sent_res.data],
-        "received": [_enrich(c, False) for c in recv_res.data],
+        "sent":     [_enrich(c, True)  for c in sent_list],
+        "received": [_enrich(c, False) for c in recv_list],
     }
 
 
