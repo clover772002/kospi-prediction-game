@@ -416,16 +416,6 @@ export default function SetupPage() {
           <button onClick={() => router.push("/dashboard")} className="w-full py-4 bg-blue-600 hover:bg-blue-500 text-white font-black text-lg rounded-2xl transition-all active:scale-95">
             ← 대시보드로 이동
           </button>
-          {/* 텔레그램 서브 유도 */}
-          {!linked && (
-            <button
-              onClick={() => setTab("telegram")}
-              className="w-full py-3 bg-[#1A1A1A] border border-[#0088CC]/30 text-[#0088CC]/70 hover:text-[#0088CC] hover:border-[#0088CC]/60 rounded-xl text-sm transition-all flex items-center justify-center gap-2"
-            >
-              <span>✈️</span>
-              <span>매번 접속이 귀찮다면? 텔레그램 봇으로 더 편하게</span>
-            </button>
-          )}
           <button
             onClick={async () => {
               if (!token) return;
