@@ -23,7 +23,7 @@ interface Props {
   onBalanceUpdated?: () => void;
 }
 
-/** 정답자 또는 오답자 투표 시간 분포(responded_at, 결과 확정 후) */
+/** 정답자 또는 오답자 투표시간대(responded_at, 결과 확정 후) */
 
 export default function VoteTimeProfileInsightCard({ accessToken, surveyDate, cohort, onBalanceUpdated }: Props) {
   const confirmShopOnInsufficientTokens = useConfirmShopOnInsufficientTokens();
@@ -185,7 +185,7 @@ export default function VoteTimeProfileInsightCard({ accessToken, surveyDate, co
         headline={
           <>
             <p className={`${ix.badge} font-black ${accentText} uppercase tracking-wide`}>아이템</p>
-            <p className={`${ix.titleClass} text-white mt-0.5`}>{data.title ?? (cohort === "expert" ? "정답자 투표 시간" : "오답자 투표 시간")}</p>
+            <p className={`${ix.titleClass} text-white mt-0.5`}>{data.title ?? (cohort === "expert" ? "정답자 투표시간대" : "오답자 투표시간대")}</p>
             <p className={`${ix.subDate} text-gray-600 mt-0.5`}>{data.survey_date}</p>
           </>
         }

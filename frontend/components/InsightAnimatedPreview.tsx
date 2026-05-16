@@ -229,7 +229,7 @@ export default function InsightAnimatedPreview({
       svgInner = (
         <>
           <SvgBackdrop theme={theme} />
-          <SvgTitle>{slug === "expert_vote_time_profile" ? "정답층 시간" : "오답층 시간"}</SvgTitle>
+          <SvgTitle>{slug === "expert_vote_time_profile" ? "정답층 투표시간대" : "오답층 투표시간대"}</SvgTitle>
           <Bars heights={[0.22, 0.38, 0.68, 0.52, 0.3]} fillForIndex={() => theme.primary} />
         </>
       );
