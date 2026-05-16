@@ -160,6 +160,28 @@ export interface DashboardData {
   current_streak?: number;
 }
 
+/** 전체 응답 일자별 박스플롯용(대시보드) */
+export interface CrowdGaugeBoxplotStats {
+  n: number;
+  min: number;
+  q1: number;
+  median: number;
+  q3: number;
+  max: number;
+}
+
+export interface CrowdGaugeBoxplotDay {
+  survey_date: string;
+  kospi_result: boolean | null;
+  correct_team: "rise" | "fall" | null;
+  rise: CrowdGaugeBoxplotStats | null;
+  fall: CrowdGaugeBoxplotStats | null;
+}
+
+export interface CrowdGaugeBoxplotsResponse {
+  days: CrowdGaugeBoxplotDay[];
+}
+
 // ─── API 함수 ────────────────────────────────────────────────
 
 export async function getMe(token: string): Promise<UserProfile> {
@@ -174,6 +196,20 @@ export async function getToday(): Promise<TodaySurvey> {
     return JSON.parse(text) as TodaySurvey;
   } catch {
     throw new Error("오늘 데이터 응답 형식 오류");
+  }
+}
+
+export async function getCrowdGaugeBoxplots(limit = 30): Promise<CrowdGaugeBoxplotsResponse> {
+  const res = await fetch(
+    `${resolveApiBase()}/api/survey/crowd-gauge-boxplots?limit=${encodeURIComponent(String(limit))}`,
+    { cache: "no-store" },
+  );
+  const text = await res.text();
+  if (!res.ok) throw new Error(formatApiErrorMessage(res.status, text));
+  try {
+    return JSON.parse(text) as CrowdGaugeBoxplotsResponse;
+  } catch {
+    throw new Error("전체 예측 분포 응답 형식 오류");
   }
 }
 

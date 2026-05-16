@@ -6,7 +6,7 @@ import time
 import logging
 import math
 import statistics
-from collections import Counter
+from collections import Counter, defaultdict
 from datetime import date, timedelta, datetime, timezone
 from zoneinfo import ZoneInfo
 
@@ -620,6 +620,35 @@ def _build_daily_expert_gap_payload(supabase: Client, survey_date_str: str) -> d
         "highlight": highlight,
         "bullets": bullets,
         "computed_note": "이 값은 패딩·표시 반올림이 없는 원시 분석 결과일 수 있습니다.",
+    }
+
+
+def _five_number_summary_abs(vals: list[int]) -> dict | None:
+    """확신도 절댓값(0~100) 표본의 min·Q1·중앙·Q3·max (박스플롯용)."""
+    if not vals:
+        return None
+    s = sorted(int(x) for x in vals)
+    n = len(s)
+    if n == 0:
+        return None
+
+    def quantile(p: float) -> float:
+        if n == 1:
+            return float(s[0])
+        idx = (n - 1) * p
+        lo = int(math.floor(idx))
+        hi = int(math.ceil(idx))
+        if lo == hi:
+            return float(s[lo])
+        return s[lo] + (s[hi] - s[lo]) * (idx - lo)
+
+    return {
+        "n": n,
+        "min": int(s[0]),
+        "q1": round(quantile(0.25), 2),
+        "median": round(quantile(0.5), 2),
+        "q3": round(quantile(0.75), 2),
+        "max": int(s[-1]),
     }
 
 
@@ -3174,6 +3203,93 @@ async def get_dashboard(
         raise HTTPException(
             status_code=500,
             detail="대시보드를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.",
+        ) from e
+
+
+@app.get("/api/survey/crowd-gauge-boxplots")
+async def get_crowd_gauge_boxplots(
+    limit: int = 30,
+    supabase: Client = Depends(get_supabase),
+):
+    """
+    대시보드: 최근 거래일별 전체 응답 기준,
+    상승 선택층·하락 선택층 각각의 확신도(|게이지|) 5수 요약(가로 박스플롯용).
+    로그인 불필요(익명 집계).
+    """
+    lim = max(1, min(int(limit), 60))
+    try:
+        ds = (
+            supabase.table("daily_surveys")
+            .select("survey_date, kospi_result")
+            .order("survey_date", desc=True)
+            .limit(lim)
+            .execute()
+        )
+        day_rows = ds.data or []
+        if not day_rows:
+            return {"days": []}
+
+        date_keys = [_survey_date_key(r["survey_date"]) for r in day_rows if r.get("survey_date")]
+        date_keys = [d for d in date_keys if len(d) >= 8]
+        if not date_keys:
+            return {"days": []}
+
+        resp = (
+            supabase.table("survey_responses")
+            .select("survey_date, kospi_answer, gauge_position")
+            .in_("survey_date", date_keys)
+            .execute()
+        )
+        by_date: dict[str, list] = defaultdict(list)
+        for row in resp.data or []:
+            dk = _survey_date_key(row.get("survey_date"))
+            if dk:
+                by_date[dk].append(row)
+
+        out: list[dict] = []
+        for r in day_rows:
+            dk = _survey_date_key(r.get("survey_date"))
+            if not dk:
+                continue
+            kr = r.get("kospi_result")
+            result_bool: bool | None = kr if (kr is True or kr is False) else None
+
+            rise_abs: list[int] = []
+            fall_abs: list[int] = []
+            for row in by_date.get(dk, []):
+                g = _coerce_gauge_from_row(row)
+                ka = row.get("kospi_answer")
+                if g is None or ka is None:
+                    continue
+                av = max(0, min(100, abs(int(g))))
+            if bool(ka):
+                rise_abs.append(av)
+            else:
+                fall_abs.append(av)
+
+            if not rise_abs and not fall_abs:
+                continue
+
+            correct_team: str | None = None
+            if result_bool is True:
+                correct_team = "rise"
+            elif result_bool is False:
+                correct_team = "fall"
+
+            out.append({
+                "survey_date": dk,
+                "kospi_result": result_bool,
+                "correct_team": correct_team,
+                "rise": _five_number_summary_abs(rise_abs),
+                "fall": _five_number_summary_abs(fall_abs),
+            })
+
+        return {"days": out}
+    except Exception as e:
+        logger.exception("crowd-gauge-boxplots 실패")
+        raise HTTPException(
+            status_code=500,
+            detail="전체 예측 분포를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.",
         ) from e
 
 
