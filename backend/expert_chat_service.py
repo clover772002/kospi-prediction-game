@@ -311,6 +311,7 @@ def send_participant_message(
         "thread_id": thread_id,
         "message_id": msg_id,
         "tip_tokens": TIP_TOKENS,
+        "expert_user_id": expert_id,
         "tip_tokens_pending_expert_accept": True,
         "tip_accepted_at": None,
         "balance": bal_p,

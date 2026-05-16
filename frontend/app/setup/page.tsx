@@ -41,6 +41,7 @@ export default function SetupPage() {
   const DEFAULT_PREFS: PushPreferences = {
     survey_open: true, survey_deadline: true,
     result: true, challenge: true, group_nudge: true,
+    expert_chat: true,
   };
   const [prefs, setPrefs]             = useState<PushPreferences>(DEFAULT_PREFS);
   const [prefsSaving, setPrefsSaving] = useState(false);
@@ -380,6 +381,7 @@ export default function SetupPage() {
               { key: "result",         icon: "📊", label: "실적·정확도 알림",  desc: "오후 15:35" },
               { key: "challenge",      icon: "⚔️", label: "대결 신청·결과 알림", desc: "수시" },
               { key: "group_nudge",    icon: "📣", label: "그룹 독촉 알림",    desc: "수시" },
+              { key: "expert_chat",    icon: "💬", label: "고수 소통 알림",    desc: "새 질문·답장" },
             ] as { key: keyof PushPreferences; icon: string; label: string; desc: string }[]).map(({ key, icon, label, desc }) => (
               <label key={key} className="flex items-center gap-3 cursor-pointer group">
                 <div className={`w-11 h-6 rounded-full transition-all flex-shrink-0 relative ${prefs[key] ? "bg-purple-600" : "bg-[#333]"}`}

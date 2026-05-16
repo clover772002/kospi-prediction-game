@@ -2715,7 +2715,7 @@ async def expert_chat_send_message(
     sd = (body.survey_date or "").strip() or today_kst()
     if len(sd) != 10:
         raise HTTPException(status_code=400, detail="survey_date 형식 오류 (YYYY-MM-DD)")
-    return send_participant_message(
+    out = send_participant_message(
         supabase,
         participant_id=user_id,
         survey_date=sd,
@@ -2723,6 +2723,36 @@ async def expert_chat_send_message(
         recipient_user_id=body.recipient_user_id,
         idempotency_key=body.idempotency_key,
     )
+    if (
+        isinstance(out, dict)
+        and out.get("ok")
+        and not out.get("duplicate")
+        and out.get("message_id")
+        and out.get("expert_user_id")
+    ):
+        expert_uid = str(out["expert_user_id"])
+        snippet = (body.body or "").strip()
+        if len(snippet) > 100:
+            snippet = snippet[:100] + "…"
+        tip_n = out.get("tip_tokens")
+        tail = ""
+        if isinstance(tip_n, int) and tip_n > 0:
+            tail = f" · 팁 {tip_n}(수락 시 받음)"
+        push_body = (snippet + tail) if snippet else ("새 고수 소통 메시지" + tail)
+        if len(push_body) > 180:
+            push_body = push_body[:177] + "…"
+        try:
+            send_web_push_to_user(
+                supabase,
+                expert_uid,
+                "💬 새 고수 소통 메시지",
+                push_body,
+                "/expert-chat",
+                "expert_chat",
+            )
+        except Exception as e:
+            logger.warning("expert-chat 발송 푸시 실패 recipient=%s: %s", expert_uid, e)
+    return out
 
 
 @app.get("/api/expert-chat/threads")
@@ -2797,7 +2827,7 @@ async def expert_chat_reply(
         "⭐ 고수 답장이 왔어요",
         snippet or "메시지를 확인해 보세요.",
         "/expert-chat",
-        None,
+        "expert_chat",
     )
     return out
 
