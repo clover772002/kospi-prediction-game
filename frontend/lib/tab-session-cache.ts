@@ -291,3 +291,17 @@ export function clearAllTabSnapshots(): void {
   clearSurveyTodaySnapshot();
   clearGroupsSnapshot();
 }
+
+/**
+ * 앱 탭(설문·대시보드·상점·그룹) 공통 첫 페인트용 캐시가 모두 있는지.
+ * 부트스트랩 프리패치 완료 후 true.
+ */
+export function isAppTabCacheWarm(): boolean {
+  if (typeof window === "undefined") return false;
+  return !!(
+    peekDashboardSnapshot() &&
+    peekSurveyTodaySnapshot() &&
+    peekShopSnapshot() &&
+    peekGroupsSnapshot()
+  );
+}

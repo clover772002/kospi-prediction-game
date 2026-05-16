@@ -1,6 +1,7 @@
 ﻿import type { Metadata } from "next";
 import "./globals.css";
 import InAppBrowserGate from "@/components/InAppBrowserGate";
+import AppTabBootstrap from "@/components/AppTabBootstrap";
 import SWRegister from "@/components/SWRegister";
 
 export const metadata: Metadata = {
@@ -31,7 +32,9 @@ export default function RootLayout({
       </head>
       <body className="bg-[#0D0D0D] text-white min-h-screen">
         <SWRegister />
-        <InAppBrowserGate>{children}</InAppBrowserGate>
+        <InAppBrowserGate>
+          <AppTabBootstrap>{children}</AppTabBootstrap>
+        </InAppBrowserGate>
       </body>
     </html>
   );
