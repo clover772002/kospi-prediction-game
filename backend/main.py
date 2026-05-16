@@ -1536,6 +1536,62 @@ async def _live_kospi_is_up_and_pct() -> tuple[bool | None, float | None]:
     return None, None
 
 
+async def _yahoo_kospi_daily_closes_kst(period1: int, period2: int) -> list[tuple[date, float]]:
+    """야후 ^KS11 일봉 종가. timestamp → KST 달력일."""
+    url = f"https://query1.finance.yahoo.com/v8/finance/chart/%5EKS11?period1={period1}&period2={period2}&interval=1d"
+    headers = {"User-Agent": "Mozilla/5.0 (compatible; KospiBot/1.0)", "Accept": "application/json"}
+    async with httpx.AsyncClient(timeout=25.0) as client:
+        resp = await client.get(url, headers=headers)
+    resp.raise_for_status()
+    js = resp.json()
+    res = (js.get("chart") or {}).get("result")
+    if not res:
+        return []
+    ts_list = res[0].get("timestamp") or []
+    quote = ((res[0].get("indicators") or {}).get("quote") or [{}])[0]
+    closes = quote.get("close") or []
+    merged: dict[date, float] = {}
+    for ts, cl in zip(ts_list, closes):
+        if ts is None or cl is None:
+            continue
+        kst_d = datetime.fromtimestamp(int(ts), tz=timezone.utc).astimezone(KST).date()
+        merged[kst_d] = float(cl)
+    return sorted(merged.items(), key=lambda x: x[0])
+
+
+async def _kospi_move_from_yahoo_for_date(survey_date_str: str) -> tuple[bool, float]:
+    """KST 기준 거래일 survey_date의 전 거래일 종가 대비 등락 방향·등락률(%)."""
+    d = date.fromisoformat(survey_date_str.strip()[:10])
+    end_dt = datetime.combine(d, datetime.strptime("23:59:59", "%H:%M:%S").time(), tzinfo=KST)
+    p2 = int(end_dt.timestamp())
+    p1 = p2 - 400 * 86400
+    series = await _yahoo_kospi_daily_closes_kst(p1, p2)
+    if not series:
+        raise ValueError("야후에서 일봉 시계열을 가져오지 못했습니다.")
+    by_day = dict(series)
+    if d not in by_day:
+        raise ValueError(
+            f"야후 차트에 {survey_date_str} (KST) 일봉이 없습니다. 휴장일이거나 데이터 지연이 있습니다."
+        )
+    ordered = sorted(by_day.items(), key=lambda x: x[0])
+    idx = next((i for i, (kd, _) in enumerate(ordered) if kd == d), -1)
+    if idx <= 0:
+        raise ValueError("직전 거래일 종가를 찾을 수 없습니다.")
+    prev_close = ordered[idx - 1][1]
+    close_val = ordered[idx][1]
+    if prev_close <= 0:
+        raise ValueError("전일 종가가 유효하지 않습니다.")
+    is_up = close_val > prev_close
+    pct = round((close_val / prev_close - 1) * 100, 2)
+    return is_up, pct
+
+
+def _require_admin_secret(request: Request) -> None:
+    expected = os.getenv("ADMIN_SECRET", "kospi-admin-2026")
+    if request.headers.get("x-admin-secret") != expected:
+        raise HTTPException(status_code=401, detail="unauthorized")
+
+
 def settle_kospi_survey_day(
     supabase: Client,
     survey_date_str: str,
@@ -1893,6 +1949,117 @@ async def admin_set_kospi_result(
         supabase, date, is_up, change_pct,
         update_daily_survey_row=True,
     )
+
+
+@app.post("/api/admin/backfill-kospi-yahoo")
+async def admin_backfill_kospi_yahoo(
+    request: Request,
+    payload: dict,
+    supabase: Client = Depends(get_supabase),
+):
+    """
+    과거 특정 거래일: 야후 ^KS11 일봉으로 종가·등락률을 조회한 뒤 daily_surveys + 정산 전체 반영.
+    헤더: x-admin-secret (ADMIN_SECRET)
+    Body: { "survey_date": "2026-05-01", "force": false }
+    - force가 false이면 이미 kospi_result가 있으면 스킵
+    """
+    _require_admin_secret(request)
+    survey_date = (payload.get("survey_date") or payload.get("date") or "").strip()[:10]
+    if len(survey_date) != 10 or survey_date[4] != "-" or survey_date[7] != "-":
+        raise HTTPException(status_code=400, detail="survey_date는 YYYY-MM-DD 형식이어야 합니다.")
+    force = bool(payload.get("force"))
+    if not force:
+        row = supabase.table("daily_surveys").select("kospi_result").eq("survey_date", survey_date).execute()
+        if row.data and row.data[0].get("kospi_result") is not None:
+            return {
+                "ok": True,
+                "skipped": True,
+                "survey_date": survey_date,
+                "reason": "kospi_result_already_set",
+            }
+    try:
+        is_up, pct = await _kospi_move_from_yahoo_for_date(survey_date)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
+    except Exception as e:
+        logger.exception("backfill-kospi-yahoo 조회 실패")
+        raise HTTPException(status_code=502, detail=f"야후 조회 실패: {e}") from e
+
+    settle_out = settle_kospi_survey_day(
+        supabase, survey_date, is_up, pct, update_daily_survey_row=True
+    )
+    clear_accuracy_cache()
+    return {
+        "ok": True,
+        "survey_date": survey_date,
+        "isUp": is_up,
+        "changePct": pct,
+        "settle": settle_out,
+    }
+
+
+@app.post("/api/admin/backfill-missing-kospi-yahoo")
+async def admin_backfill_missing_kospi_yahoo(
+    request: Request,
+    payload: dict,
+    supabase: Client = Depends(get_supabase),
+):
+    """
+    오늘 이전이면서 daily_surveys.kospi_result 가 비어 있는 날짜들을
+    최근 순으로 야후 일봉으로 채움 (한 번에 최대 max_days건).
+    헤더: x-admin-secret
+    Body: { "max_days": 15 }
+    """
+    _require_admin_secret(request)
+    max_days = int(payload.get("max_days") or 20)
+    max_days = max(1, min(max_days, 60))
+    today = today_kst()
+    try:
+        rows = (
+            supabase.table("daily_surveys")
+            .select("survey_date")
+            .filter("survey_date", "lt", today)
+            .is_("kospi_result", "null")
+            .order("survey_date", desc=True)
+            .limit(max_days)
+            .execute()
+        )
+    except Exception as e:
+        logger.exception("미결과 설문일 조회 실패")
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+    dates = []
+    for r in rows.data or []:
+        sd = r.get("survey_date")
+        if sd is None:
+            continue
+        dates.append(str(sd)[:10])
+
+    results: list[dict] = []
+    for sd in dates:
+        try:
+            is_up, pct = await _kospi_move_from_yahoo_for_date(sd)
+            settle_out = settle_kospi_survey_day(
+                supabase, sd, is_up, pct, update_daily_survey_row=True
+            )
+            results.append(
+                {
+                    "survey_date": sd,
+                    "ok": True,
+                    "isUp": is_up,
+                    "changePct": pct,
+                    "settle": settle_out,
+                }
+            )
+        except ValueError as e:
+            results.append({"survey_date": sd, "ok": False, "error": str(e)})
+        except Exception as e:
+            logger.warning("미결과 백필 실패 %s: %s", sd, e)
+            results.append({"survey_date": sd, "ok": False, "error": str(e)})
+        await asyncio.sleep(0.35)
+
+    clear_accuracy_cache()
+    return {"ok": True, "attempted": len(dates), "results": results}
 
 
 @app.get("/api/public/backtest")
