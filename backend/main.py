@@ -1550,9 +1550,17 @@ async def _yahoo_kospi_daily_closes_kst(period1: int, period2: int) -> list[tupl
     ts_list = res[0].get("timestamp") or []
     quote = ((res[0].get("indicators") or {}).get("quote") or [{}])[0]
     closes = quote.get("close") or []
+    adjs = quote.get("adjclose") or []
     merged: dict[date, float] = {}
-    for ts, cl in zip(ts_list, closes):
-        if ts is None or cl is None:
+    for i, ts in enumerate(ts_list):
+        if ts is None:
+            continue
+        cl = None
+        if i < len(closes) and closes[i] is not None:
+            cl = closes[i]
+        elif i < len(adjs) and adjs[i] is not None:
+            cl = adjs[i]
+        if cl is None:
             continue
         kst_d = datetime.fromtimestamp(int(ts), tz=timezone.utc).astimezone(KST).date()
         merged[kst_d] = float(cl)
@@ -1590,6 +1598,20 @@ def _require_admin_secret(request: Request) -> None:
     expected = os.getenv("ADMIN_SECRET", "kospi-admin-2026")
     if request.headers.get("x-admin-secret") != expected:
         raise HTTPException(status_code=401, detail="unauthorized")
+
+
+def _ensure_daily_survey_row(supabase: Client, survey_date_str: str) -> None:
+    """settle 전: 해당 거래일 daily_surveys 행이 없으면 생성(결과 반영이 0건이 되지 않도록)."""
+    r = supabase.table("daily_surveys").select("id").eq("survey_date", survey_date_str).limit(1).execute()
+    if r.data:
+        return
+    try:
+        supabase.table("daily_surveys").insert(
+            {"survey_date": survey_date_str, "is_closed": True}
+        ).execute()
+        logger.info("daily_surveys 자동 생성: %s", survey_date_str)
+    except Exception as e:
+        logger.warning("daily_surveys 자동 생성 실패 (%s): %s", survey_date_str, e)
 
 
 def settle_kospi_survey_day(
@@ -1646,6 +1668,7 @@ def _settle_kospi_survey_day_inner(
 
     if update_daily_survey_row:
         try:
+            _ensure_daily_survey_row(supabase, survey_date_str)
             supabase.table("daily_surveys").update({
                 "kospi_result": is_up,
                 "kospi_change_pct": pct_out,
@@ -2060,6 +2083,103 @@ async def admin_backfill_missing_kospi_yahoo(
 
     clear_accuracy_cache()
     return {"ok": True, "attempted": len(dates), "results": results}
+
+
+@app.post("/api/admin/backfill-kospi-yahoo-dates")
+async def admin_backfill_kospi_yahoo_dates(
+    request: Request,
+    payload: dict,
+    supabase: Client = Depends(get_supabase),
+):
+    """
+    지정한 거래일만 야후 일봉으로 백필 (DB 미결과 조건 없음).
+    헤더: x-admin-secret
+    Body: { "dates": ["2026-05-11", "2026-05-12"], "force": false }
+    """
+    _require_admin_secret(request)
+    raw = payload.get("dates")
+    if not isinstance(raw, list) or not raw:
+        raise HTTPException(status_code=400, detail="dates 배열이 필요합니다.")
+    force = bool(payload.get("force"))
+    results: list[dict] = []
+    for sd_raw in raw:
+        sd = str(sd_raw).strip()[:10]
+        if len(sd) != 10 or sd[4] != "-" or sd[7] != "-":
+            results.append({"survey_date": sd_raw, "ok": False, "error": "날짜 형식은 YYYY-MM-DD"})
+            continue
+        if not force:
+            row = supabase.table("daily_surveys").select("kospi_result").eq("survey_date", sd).execute()
+            if row.data and row.data[0].get("kospi_result") is not None:
+                results.append({"survey_date": sd, "ok": True, "skipped": True, "reason": "already_set"})
+                continue
+        try:
+            is_up, pct = await _kospi_move_from_yahoo_for_date(sd)
+            settle_out = settle_kospi_survey_day(
+                supabase, sd, is_up, pct, update_daily_survey_row=True
+            )
+            results.append(
+                {
+                    "survey_date": sd,
+                    "ok": True,
+                    "isUp": is_up,
+                    "changePct": pct,
+                    "settle": settle_out,
+                }
+            )
+        except ValueError as e:
+            results.append({"survey_date": sd, "ok": False, "error": str(e)})
+        except Exception as e:
+            logger.warning("지정일 백필 실패 %s: %s", sd, e)
+            results.append({"survey_date": sd, "ok": False, "error": str(e)})
+        await asyncio.sleep(0.35)
+
+    clear_accuracy_cache()
+    return {"ok": True, "results": results}
+
+
+@app.post("/api/admin/set-kospi-results-bulk")
+async def admin_set_kospi_results_bulk(
+    request: Request,
+    payload: dict,
+    supabase: Client = Depends(get_supabase),
+):
+    """
+    외부에서 본 코스피 등락만 일괄 반영 (네이버/직접 입력).
+    헤더: x-admin-secret
+    Body: { "items": [ { "date": "2026-05-11", "isUp": true, "changePct": 0.35 }, ... ] }
+    """
+    _require_admin_secret(request)
+    items = payload.get("items")
+    if not isinstance(items, list) or not items:
+        raise HTTPException(status_code=400, detail="items 배열이 필요합니다.")
+    results: list[dict] = []
+    for it in items:
+        if not isinstance(it, dict):
+            results.append({"ok": False, "error": "items 요소는 객체여야 합니다."})
+            continue
+        d = str(it.get("date") or "").strip()[:10]
+        if len(d) != 10 or d[4] != "-" or d[7] != "-":
+            results.append({"date": d, "ok": False, "error": "YYYY-MM-DD 필요"})
+            continue
+        raw_pct = it.get("changePct", it.get("change_pct"))
+        change_pct = float(raw_pct) if raw_pct is not None else None
+        if "isUp" in it or "is_up" in it:
+            is_up = bool(it.get("isUp", it.get("is_up")))
+        elif change_pct is not None:
+            is_up = change_pct > 0
+        else:
+            results.append({"date": d, "ok": False, "error": "isUp 또는 changePct 필요"})
+            continue
+        try:
+            settle_out = settle_kospi_survey_day(
+                supabase, d, is_up, change_pct, update_daily_survey_row=True
+            )
+            results.append({"date": d, "ok": True, "settle": settle_out})
+        except Exception as e:
+            logger.exception("일괄 수동 정산 실패 %s", d)
+            results.append({"date": d, "ok": False, "error": str(e)})
+    clear_accuracy_cache()
+    return {"ok": True, "results": results}
 
 
 @app.get("/api/public/backtest")
