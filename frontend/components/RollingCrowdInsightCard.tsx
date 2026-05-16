@@ -5,6 +5,7 @@ import { useConfirmShopOnInsufficientTokens } from "@/hooks/useConfirmShopOnInsu
 import InsightCardHeroGrid from "@/components/InsightCardHeroGrid";
 import InsightUnavailableCard from "@/components/InsightUnavailableCard";
 import InsightTokenPriceButton from "@/components/InsightTokenPriceButton";
+import InsightUnlockShopHint from "@/components/InsightUnlockShopHint";
 import InsightDetailDisclosure from "@/components/InsightDetailDisclosure";
 import { insightMeta } from "@/lib/insight_card_meta";
 import { useInsightDashLayout } from "@/hooks/useInsightDashLayout";
@@ -22,6 +23,7 @@ interface Props {
   /** 대시보드에서 고른 거래일 = 종료 거래일(윈도우 끝) */
   surveyDateAsEndDate: string;
   onBalanceUpdated?: () => void;
+  hideUnlockControl?: boolean;
 }
 
 /** 최근 7거래일 무리 규격 고수층 적중률 시계열 (토큰 잠금) */
@@ -29,6 +31,7 @@ export default function RollingCrowdInsightCard({
   accessToken,
   surveyDateAsEndDate,
   onBalanceUpdated,
+  hideUnlockControl = false,
 }: Props) {
   const confirmShopOnInsufficientTokens = useConfirmShopOnInsufficientTokens();
   const d = useInsightDashLayout();
@@ -145,13 +148,19 @@ export default function RollingCrowdInsightCard({
         }
         tokenRow={
           <>
-            <InsightTokenPriceButton
-              priceTokens={priceTokens}
-              className="border-sky-500/45 bg-sky-500/15 text-sky-100 hover:bg-sky-500/25"
-              locked={locked}
-              unlocking={unlocking}
-              onActivate={() => void handleUnlock()}
-            />
+            {!hideUnlockControl ? (
+              <InsightTokenPriceButton
+                priceTokens={priceTokens}
+                className="border-sky-500/45 bg-sky-500/15 text-sky-100 hover:bg-sky-500/25"
+                locked={locked}
+                unlocking={unlocking}
+                onActivate={() => void handleUnlock()}
+              />
+            ) : locked ? (
+              <span className="rounded-lg font-black tabular-nums border px-2.5 py-1 text-[11px] whitespace-nowrap border-sky-500/35 bg-sky-500/10 text-sky-200/80">
+                {priceTokens} 토큰
+              </span>
+            ) : null}
             <span className={d.icon} aria-hidden>
               {locked ? "🔐" : "✨"}
             </span>
@@ -161,10 +170,13 @@ export default function RollingCrowdInsightCard({
       <InsightDetailDisclosure accentSummaryClass="text-sky-400/85 hover:text-sky-300">
         <p>{META.hint}</p>
         {locked ? (
-          <p className="text-gray-500">
-            {data.description ??
-              "종료 거래일 기준 최근 거래일 7일 동안 무리 규격 고수층의 일별 코스피 적중률입니다."}
-          </p>
+          <>
+            <p className="text-gray-500">
+              {data.description ??
+                "종료 거래일 기준 최근 거래일 7일 동안 무리 규격 고수층의 일별 코스피 적중률입니다."}
+            </p>
+            {hideUnlockControl ? <InsightUnlockShopHint /> : null}
+          </>
         ) : null}
       </InsightDetailDisclosure>
 

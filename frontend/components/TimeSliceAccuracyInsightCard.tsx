@@ -5,6 +5,7 @@ import { useConfirmShopOnInsufficientTokens } from "@/hooks/useConfirmShopOnInsu
 import InsightCardHeroGrid from "@/components/InsightCardHeroGrid";
 import InsightUnavailableCard from "@/components/InsightUnavailableCard";
 import InsightTokenPriceButton from "@/components/InsightTokenPriceButton";
+import InsightUnlockShopHint from "@/components/InsightUnlockShopHint";
 import InsightDetailDisclosure from "@/components/InsightDetailDisclosure";
 import { insightMeta } from "@/lib/insight_card_meta";
 import { useInsightDashLayout } from "@/hooks/useInsightDashLayout";
@@ -21,10 +22,16 @@ interface Props {
   accessToken: string;
   surveyDate: string;
   onBalanceUpdated?: () => void;
+  hideUnlockControl?: boolean;
 }
 
 /** 전역 최고 고수 1명의 최근 7거래일 제출 시각 버킷 분포 (responded_at 필요) */
-export default function TimeSliceAccuracyInsightCard({ accessToken, surveyDate, onBalanceUpdated }: Props) {
+export default function TimeSliceAccuracyInsightCard({
+  accessToken,
+  surveyDate,
+  onBalanceUpdated,
+  hideUnlockControl = false,
+}: Props) {
   const confirmShopOnInsufficientTokens = useConfirmShopOnInsufficientTokens();
   const d = useInsightDashLayout();
   const [loading, setLoading] = useState(true);
@@ -152,13 +159,19 @@ export default function TimeSliceAccuracyInsightCard({ accessToken, surveyDate, 
         }
         tokenRow={
           <>
-            <InsightTokenPriceButton
-              priceTokens={priceTokens}
-              className="border-amber-500/45 bg-amber-500/15 text-amber-100 hover:bg-amber-500/25"
-              locked={locked}
-              unlocking={unlocking}
-              onActivate={() => void handleUnlock()}
-            />
+            {!hideUnlockControl ? (
+              <InsightTokenPriceButton
+                priceTokens={priceTokens}
+                className="border-amber-500/45 bg-amber-500/15 text-amber-100 hover:bg-amber-500/25"
+                locked={locked}
+                unlocking={unlocking}
+                onActivate={() => void handleUnlock()}
+              />
+            ) : locked ? (
+              <span className="rounded-lg font-black tabular-nums border px-2.5 py-1 text-[11px] whitespace-nowrap border-amber-500/35 bg-amber-500/10 text-amber-200/80">
+                {priceTokens} 토큰
+              </span>
+            ) : null}
             <span className={d.icon} aria-hidden>
               {locked ? "🔐" : "✨"}
             </span>
@@ -167,7 +180,12 @@ export default function TimeSliceAccuracyInsightCard({ accessToken, surveyDate, 
       />
       <InsightDetailDisclosure accentSummaryClass="text-amber-400/85 hover:text-amber-300">
         <p>{META.hint}</p>
-        {locked ? <p className="text-gray-500">{data.description ?? "전역 최고 고수 한 명의 최근 7거래일 제출 시각 분포입니다."}</p> : null}
+        {locked ? (
+          <>
+            <p className="text-gray-500">{data.description ?? "전역 최고 고수 한 명의 최근 7거래일 제출 시각 분포입니다."}</p>
+            {hideUnlockControl ? <InsightUnlockShopHint /> : null}
+          </>
+        ) : null}
       </InsightDetailDisclosure>
 
       {!locked ? (

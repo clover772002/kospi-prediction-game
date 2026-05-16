@@ -5,6 +5,7 @@ import { useConfirmShopOnInsufficientTokens } from "@/hooks/useConfirmShopOnInsu
 import InsightCardHeroGrid from "@/components/InsightCardHeroGrid";
 import InsightUnavailableCard from "@/components/InsightUnavailableCard";
 import InsightTokenPriceButton from "@/components/InsightTokenPriceButton";
+import InsightUnlockShopHint from "@/components/InsightUnlockShopHint";
 import InsightDetailDisclosure from "@/components/InsightDetailDisclosure";
 import { insightMeta, type InsightProductSlug } from "@/lib/insight_card_meta";
 import { useInsightDashLayout } from "@/hooks/useInsightDashLayout";
@@ -21,11 +22,18 @@ interface Props {
   surveyDate: string;
   cohort: "expert" | "novice";
   onBalanceUpdated?: () => void;
+  hideUnlockControl?: boolean;
 }
 
 /** 정답자 또는 오답자 투표시간대(responded_at, 결과 확정 후) */
 
-export default function VoteTimeProfileInsightCard({ accessToken, surveyDate, cohort, onBalanceUpdated }: Props) {
+export default function VoteTimeProfileInsightCard({
+  accessToken,
+  surveyDate,
+  cohort,
+  onBalanceUpdated,
+  hideUnlockControl = false,
+}: Props) {
   const confirmShopOnInsufficientTokens = useConfirmShopOnInsufficientTokens();
   const ix = useInsightDashLayout();
   const slug = cohort === "expert" ? "expert_vote_time_profile" : "novice_vote_time_profile";
@@ -169,6 +177,10 @@ export default function VoteTimeProfileInsightCard({ accessToken, surveyDate, co
     cohort === "expert"
       ? "border-indigo-500/45 bg-indigo-500/15 text-indigo-100 hover:bg-indigo-500/25"
       : "border-slate-500/45 bg-slate-600/20 text-slate-100 hover:bg-slate-600/35";
+  const priceChipReadonly =
+    cohort === "expert"
+      ? "border-indigo-500/35 bg-indigo-500/10 text-indigo-200/80"
+      : "border-slate-500/35 bg-slate-600/15 text-slate-200/80";
   const disclosureAccent =
     cohort === "expert"
       ? "text-indigo-400/85 hover:text-indigo-300"
@@ -191,13 +203,21 @@ export default function VoteTimeProfileInsightCard({ accessToken, surveyDate, co
         }
         tokenRow={
           <>
-            <InsightTokenPriceButton
-              priceTokens={priceTokens}
-              className={priceChipClass}
-              locked={locked}
-              unlocking={unlocking}
-              onActivate={() => void handleUnlock()}
-            />
+            {!hideUnlockControl ? (
+              <InsightTokenPriceButton
+                priceTokens={priceTokens}
+                className={priceChipClass}
+                locked={locked}
+                unlocking={unlocking}
+                onActivate={() => void handleUnlock()}
+              />
+            ) : locked ? (
+              <span
+                className={`rounded-lg font-black tabular-nums border px-2.5 py-1 text-[11px] whitespace-nowrap ${priceChipReadonly}`}
+              >
+                {priceTokens} 토큰
+              </span>
+            ) : null}
             <span className={ix.icon} aria-hidden>
               {locked ? "🔐" : "✨"}
             </span>
@@ -207,9 +227,12 @@ export default function VoteTimeProfileInsightCard({ accessToken, surveyDate, co
       <InsightDetailDisclosure accentSummaryClass={disclosureAccent}>
         <p>{META.hint}</p>
         {locked ? (
-          <p className="text-gray-500">
-            {data.description ?? `${cohort === "expert" ? "정답자" : "오답자"} 집단의 제출 시각 버킷 비율입니다.`}
-          </p>
+          <>
+            <p className="text-gray-500">
+              {data.description ?? `${cohort === "expert" ? "정답자" : "오답자"} 집단의 제출 시각 버킷 비율입니다.`}
+            </p>
+            {hideUnlockControl ? <InsightUnlockShopHint /> : null}
+          </>
         ) : null}
       </InsightDetailDisclosure>
 

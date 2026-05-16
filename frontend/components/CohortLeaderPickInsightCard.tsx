@@ -5,6 +5,7 @@ import { useConfirmShopOnInsufficientTokens } from "@/hooks/useConfirmShopOnInsu
 import InsightCardHeroGrid from "@/components/InsightCardHeroGrid";
 import InsightUnavailableCard from "@/components/InsightUnavailableCard";
 import InsightTokenPriceButton from "@/components/InsightTokenPriceButton";
+import InsightUnlockShopHint from "@/components/InsightUnlockShopHint";
 import InsightDetailDisclosure from "@/components/InsightDetailDisclosure";
 import { insightMeta, type InsightProductSlug } from "@/lib/insight_card_meta";
 import { useInsightDashLayout } from "@/hooks/useInsightDashLayout";
@@ -21,6 +22,7 @@ interface Props {
   surveyDate: string;
   cohort: "expert" | "novice";
   onBalanceUpdated?: () => void;
+  hideUnlockControl?: boolean;
 }
 
 /** 무리 규격 고수·하수 중 그날 1순위 픽: 방향 + 확신도 */
@@ -30,6 +32,7 @@ export default function CohortLeaderPickInsightCard({
   surveyDate,
   cohort,
   onBalanceUpdated,
+  hideUnlockControl = false,
 }: Props) {
   const confirmShopOnInsufficientTokens = useConfirmShopOnInsufficientTokens();
   const ix = useInsightDashLayout();
@@ -160,6 +163,10 @@ export default function CohortLeaderPickInsightCard({
     cohort === "expert"
       ? "border-violet-500/45 bg-violet-500/15 text-violet-100 hover:bg-violet-500/25"
       : "border-slate-500/45 bg-slate-600/20 text-slate-100 hover:bg-slate-600/35";
+  const priceChipReadonly =
+    cohort === "expert"
+      ? "border-violet-500/35 bg-violet-500/10 text-violet-200/80"
+      : "border-slate-500/35 bg-slate-600/15 text-slate-200/80";
   const disclosureAccent =
     cohort === "expert"
       ? "text-violet-400/85 hover:text-violet-300"
@@ -186,13 +193,21 @@ export default function CohortLeaderPickInsightCard({
         }
         tokenRow={
           <>
-            <InsightTokenPriceButton
-              priceTokens={priceTokens}
-              className={priceChipClass}
-              locked={locked}
-              unlocking={unlocking}
-              onActivate={() => void handleUnlock()}
-            />
+            {!hideUnlockControl ? (
+              <InsightTokenPriceButton
+                priceTokens={priceTokens}
+                className={priceChipClass}
+                locked={locked}
+                unlocking={unlocking}
+                onActivate={() => void handleUnlock()}
+              />
+            ) : locked ? (
+              <span
+                className={`rounded-lg font-black tabular-nums border px-2.5 py-1 text-[11px] whitespace-nowrap ${priceChipReadonly}`}
+              >
+                {priceTokens} 토큰
+              </span>
+            ) : null}
             <span className={ix.icon} aria-hidden>
               {locked ? "🔐" : "✨"}
             </span>
@@ -202,10 +217,13 @@ export default function CohortLeaderPickInsightCard({
       <InsightDetailDisclosure accentSummaryClass={disclosureAccent}>
         <p>{META.hint}</p>
         {locked ? (
-          <p className="text-gray-500">
-            {data.description ??
-              `${cohort === "expert" ? "그날 무리 규격 고수층" : "그날 무리 규격 하수층"}에서 한 명을 골라 방향과 확신도(게이지)를 초성 형태로 보여 줍니다.`}
-          </p>
+          <>
+            <p className="text-gray-500">
+              {data.description ??
+                `${cohort === "expert" ? "그날 무리 규격 고수층" : "그날 무리 규격 하수층"}에서 한 명을 골라 방향과 확신도(게이지)를 초성 형태로 보여 줍니다.`}
+            </p>
+            {hideUnlockControl ? <InsightUnlockShopHint /> : null}
+          </>
         ) : null}
       </InsightDetailDisclosure>
 

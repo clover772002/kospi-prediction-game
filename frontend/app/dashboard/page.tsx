@@ -1326,8 +1326,6 @@ export default function DashboardPage() {
           <Suspense fallback={<DashboardInsightSectionSkeleton />}>
             <DashboardInsightSection
               accessToken={token}
-              today={today}
-              dash={dash}
               onBalanceUpdated={() => void refreshDashboard()}
             />
           </Suspense>

@@ -5,6 +5,7 @@ import { useConfirmShopOnInsufficientTokens } from "@/hooks/useConfirmShopOnInsu
 import InsightCardHeroGrid from "@/components/InsightCardHeroGrid";
 import InsightUnavailableCard from "@/components/InsightUnavailableCard";
 import InsightTokenPriceButton from "@/components/InsightTokenPriceButton";
+import InsightUnlockShopHint from "@/components/InsightUnlockShopHint";
 import InsightDetailDisclosure from "@/components/InsightDetailDisclosure";
 import { insightMeta } from "@/lib/insight_card_meta";
 import { useInsightDashLayout } from "@/hooks/useInsightDashLayout";
@@ -21,10 +22,17 @@ interface Props {
   accessToken: string;
   surveyDate: string;
   onBalanceUpdated?: () => void;
+  /** 대시보드: 잠금 해제 버튼은 아이템 탭 전용 */
+  hideUnlockControl?: boolean;
 }
 
 /** 대시보드용: 해당 거래일 고수·다수결 차이 아이템 (토큰 잠금) */
-export default function ExpertGapInsightCard({ accessToken, surveyDate, onBalanceUpdated }: Props) {
+export default function ExpertGapInsightCard({
+  accessToken,
+  surveyDate,
+  onBalanceUpdated,
+  hideUnlockControl = false,
+}: Props) {
   const confirmShopOnInsufficientTokens = useConfirmShopOnInsufficientTokens();
   const d = useInsightDashLayout();
   const [loading, setLoading] = useState(true);
@@ -144,13 +152,19 @@ export default function ExpertGapInsightCard({ accessToken, surveyDate, onBalanc
         }
         tokenRow={
           <>
-            <InsightTokenPriceButton
-              priceTokens={priceTokens}
-              className="border-violet-500/45 bg-violet-500/15 text-violet-100 hover:bg-violet-500/25"
-              locked={locked}
-              unlocking={unlocking}
-              onActivate={() => void handleUnlock()}
-            />
+            {!hideUnlockControl ? (
+              <InsightTokenPriceButton
+                priceTokens={priceTokens}
+                className="border-violet-500/45 bg-violet-500/15 text-violet-100 hover:bg-violet-500/25"
+                locked={locked}
+                unlocking={unlocking}
+                onActivate={() => void handleUnlock()}
+              />
+            ) : locked ? (
+              <span className="rounded-lg font-black tabular-nums border px-2.5 py-1 text-[11px] whitespace-nowrap border-violet-500/35 bg-violet-500/10 text-violet-200/80">
+                {priceTokens} 토큰
+              </span>
+            ) : null}
             <span className={d.icon} aria-hidden>
               {locked ? "🔐" : "✨"}
             </span>
@@ -160,10 +174,13 @@ export default function ExpertGapInsightCard({ accessToken, surveyDate, onBalanc
       <InsightDetailDisclosure accentSummaryClass="text-violet-400/85 hover:text-violet-300">
         <p>{META.hint}</p>
         {locked ? (
-          <p className="text-gray-500">
-            {data.description ??
-              "누적 적중 반영 가중예측과 단순 다수결의 차이를 한 장으로 정리합니다. 개인별 응답은 포함하지 않습니다."}
-          </p>
+          <>
+            <p className="text-gray-500">
+              {data.description ??
+                "누적 적중 반영 가중예측과 단순 다수결의 차이를 한 장으로 정리합니다. 개인별 응답은 포함하지 않습니다."}
+            </p>
+            {hideUnlockControl ? <InsightUnlockShopHint /> : null}
+          </>
         ) : null}
       </InsightDetailDisclosure>
 

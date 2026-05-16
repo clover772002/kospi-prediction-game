@@ -5,6 +5,7 @@ import { useConfirmShopOnInsufficientTokens } from "@/hooks/useConfirmShopOnInsu
 import InsightCardHeroGrid from "@/components/InsightCardHeroGrid";
 import InsightUnavailableCard from "@/components/InsightUnavailableCard";
 import InsightTokenPriceButton from "@/components/InsightTokenPriceButton";
+import InsightUnlockShopHint from "@/components/InsightUnlockShopHint";
 import InsightDetailDisclosure from "@/components/InsightDetailDisclosure";
 import { insightMeta } from "@/lib/insight_card_meta";
 import { useInsightDashLayout } from "@/hooks/useInsightDashLayout";
@@ -21,10 +22,16 @@ interface Props {
   accessToken: string;
   surveyDate: string;
   onBalanceUpdated?: () => void;
+  hideUnlockControl?: boolean;
 }
 
 /** 상승·하락 선택 무리별 확신도(게이지) 분포 (토큰 잠금) */
-export default function CrowdConvictionInsightCard({ accessToken, surveyDate, onBalanceUpdated }: Props) {
+export default function CrowdConvictionInsightCard({
+  accessToken,
+  surveyDate,
+  onBalanceUpdated,
+  hideUnlockControl = false,
+}: Props) {
   const confirmShopOnInsufficientTokens = useConfirmShopOnInsufficientTokens();
   const ix = useInsightDashLayout();
   const [loading, setLoading] = useState(true);
@@ -159,13 +166,19 @@ export default function CrowdConvictionInsightCard({ accessToken, surveyDate, on
         }
         tokenRow={
           <>
-            <InsightTokenPriceButton
-              priceTokens={priceTokens}
-              className="border-rose-500/45 bg-rose-500/15 text-rose-100 hover:bg-rose-500/25"
-              locked={locked}
-              unlocking={unlocking}
-              onActivate={() => void handleUnlock()}
-            />
+            {!hideUnlockControl ? (
+              <InsightTokenPriceButton
+                priceTokens={priceTokens}
+                className="border-rose-500/45 bg-rose-500/15 text-rose-100 hover:bg-rose-500/25"
+                locked={locked}
+                unlocking={unlocking}
+                onActivate={() => void handleUnlock()}
+              />
+            ) : locked ? (
+              <span className="rounded-lg font-black tabular-nums border px-2.5 py-1 text-[11px] whitespace-nowrap border-rose-500/35 bg-rose-500/10 text-rose-200/80">
+                {priceTokens} 토큰
+              </span>
+            ) : null}
             <span className={ix.icon} aria-hidden>
               {locked ? "🔐" : "✨"}
             </span>
@@ -175,9 +188,12 @@ export default function CrowdConvictionInsightCard({ accessToken, surveyDate, on
       <InsightDetailDisclosure accentSummaryClass="text-rose-400/85 hover:text-rose-300">
         <p>{META.hint}</p>
         {locked ? (
-          <p className="text-gray-500">
-            {data.description ?? "상승을 택한 무리와 하락을 택한 무리로 나누어 확신도(게이지) 분포만 요약합니다."}
-          </p>
+          <>
+            <p className="text-gray-500">
+              {data.description ?? "상승을 택한 무리와 하락을 택한 무리로 나누어 확신도(게이지) 분포만 요약합니다."}
+            </p>
+            {hideUnlockControl ? <InsightUnlockShopHint /> : null}
+          </>
         ) : null}
       </InsightDetailDisclosure>
 

@@ -5,14 +5,14 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import { createStripePackCheckout, getDashboard, getShopCatalog, ShopCatalog } from "@/lib/api";
-import InsightAnimatedPreview from "@/components/InsightAnimatedPreview";
 import AppAmbientBackground from "@/components/AppAmbientBackground";
+import AppTabNav from "@/components/AppTabNav";
 import PageLoadProgress from "@/components/PageLoadProgress";
 import StaleRefreshIndicator from "@/components/StaleRefreshIndicator";
-import AppTabNav from "@/components/AppTabNav";
 import { clearAllTabSnapshots, peekShopSnapshot, saveShopSnapshot } from "@/lib/tab-session-cache";
 import ConsumableShopCard from "@/components/ConsumableShopCard";
-import { isInsightProductSlug } from "@/lib/insight_card_meta";
+import InsightProductUnlockList from "@/components/InsightProductUnlockList";
+import { useInsightSurveyDatePicker } from "@/hooks/useInsightSurveyDatePicker";
 
 /** 당분간 원화(Stripe) 토큰팩 UI 비표시. 다시 켤 때는 true로 변경하고 아래 token pack 섹션·핸들러 복구 */
 const SHOW_STRIPE_TOKEN_PACKS = false;
@@ -123,6 +123,8 @@ function ShopInner() {
 
   const [purchaseBusy, setPurchaseBusy] = useState<string | null>(null);
 
+  const { dateOptions, selectedDate, setSelectedDate } = useInsightSurveyDatePicker(token);
+
   const refreshWalletTokens = async () => {
     if (!token) return;
     try {
@@ -183,7 +185,7 @@ function ShopInner() {
 
         {catalog && !catalog.paywall_enabled ? (
           <p className="text-xs text-gray-500 rounded-xl border border-white/[0.08] bg-white/[0.03] px-3 py-2">
-            현재 아이템 잠금(페이월)이 꺼져 있어 대시보드에서 추가 토큰 없이 미리 볼 수 있어요. 정책이 켜지면 아래 요금이 적용됩니다.
+            현재 아이템 잠금(페이월)이 꺼져 있어 집계 카드를 추가 토큰 없이 미리 볼 수 있어요. 정책이 켜지면 아래 금액만큼 토큰이 필요합니다.
           </p>
         ) : null}
 
@@ -195,36 +197,43 @@ function ShopInner() {
 
         <section className="space-y-3">
           <h2 className="text-[11px] font-black text-gray-500 uppercase tracking-widest">토큰으로 여는 아이템</h2>
-          <ul className="space-y-2">
-            {(catalog?.insight_products ?? []).map((p) => (
-              <li
-                key={p.slug}
-                className="rounded-2xl border border-violet-500/25 bg-violet-950/20 px-4 py-3 text-sm space-y-3"
+          <p className="text-[10px] text-gray-500 leading-relaxed">
+            잠금 해제할 <strong className="text-gray-400">거래일</strong>을 고른 뒤, 각 카드에서 토큰을 사용하세요. 열람한 내용은 대시보드 집계 카드에서 바로 볼 수 있어요.
+          </p>
+          {dateOptions.length === 0 ? (
+            <p className="text-xs text-amber-200/80 rounded-xl border border-amber-500/20 bg-amber-500/5 px-3 py-2">
+              거래일 목록을 불러오는 중이거나 아직 공개된 설문 이력이 없어요. 잠시 후 다시 열거나 설문에 참여해 보세요.
+            </p>
+          ) : (
+            <div className="space-y-1.5">
+              <label htmlFor="insight-survey-date" className="block text-[10px] font-bold text-gray-500">
+                집계 기준 거래일
+              </label>
+              <select
+                id="insight-survey-date"
+                value={selectedDate ?? ""}
+                onChange={(e) => setSelectedDate(e.target.value)}
+                className="w-full rounded-xl border border-white/10 bg-[#1a1a1a] text-white text-sm px-3 py-2.5 outline-none focus:border-violet-500/50"
               >
-                <div className="flex items-start justify-between gap-2 flex-wrap">
-                  <p className="font-bold text-white min-w-0 flex-1">{p.title}</p>
-                  <p className="text-xs text-amber-300 font-black tabular-nums shrink-0">{p.price_tokens} 토큰</p>
-                </div>
-                {isInsightProductSlug(p.slug) ? <InsightAnimatedPreview slug={p.slug} /> : null}
-                {p.description ? (
-                  <details className="group border-t border-white/[0.06] pt-2">
-                    <summary className="cursor-pointer list-none text-[10px] font-bold text-gray-500 hover:text-gray-400 [&::-webkit-details-marker]:hidden">
-                      상품 안내
-                      <span className="text-gray-600 ml-1 font-normal opacity-70 group-open:hidden">열기</span>
-                      <span className="text-gray-600 ml-1 font-normal opacity-70 hidden group-open:inline">접기</span>
-                    </summary>
-                    <p className="text-[11px] text-gray-500 mt-2 leading-relaxed">{p.description}</p>
-                  </details>
-                ) : null}
-                <Link
-                  href="/dashboard"
-                  className="inline-flex text-[11px] font-bold text-violet-300 hover:text-white underline underline-offset-2"
-                >
-                  대시보드에서 열 거래일 고르고 잠금 해제 →
-                </Link>
-              </li>
-            ))}
-          </ul>
+                {dateOptions.map((d) => (
+                  <option key={d} value={d}>
+                    {d}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+          {token && (catalog?.insight_products?.length ?? 0) > 0 ? (
+            <InsightProductUnlockList
+              products={catalog!.insight_products}
+              accessToken={token}
+              surveyDate={selectedDate}
+              walletTokens={walletTokens}
+              onBalanceRefresh={refreshWalletTokens}
+              setFlash={setFlash}
+              setErr={setErr}
+            />
+          ) : null}
         </section>
 
         <section className="space-y-3">
