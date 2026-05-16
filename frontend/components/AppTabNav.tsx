@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+import { useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 
 const TABS = [
@@ -14,6 +16,10 @@ export default function AppTabNav() {
   const pathname = usePathname();
   const router = useRouter();
 
+  useEffect(() => {
+    TABS.forEach((t) => router.prefetch(t.href));
+  }, [router]);
+
   return (
     <nav className="app-nav-shell fixed bottom-0 left-0 right-0 z-50 border-t border-white/[0.07] pb-[max(6px,env(safe-area-inset-bottom))]">
       <div className="relative mx-auto flex max-w-md gap-0.5 px-1 pt-1.5">
@@ -21,10 +27,11 @@ export default function AppTabNav() {
         {TABS.map((tab) => {
           const active = pathname === tab.href;
           return (
-            <button
+            <Link
               key={tab.href}
-              type="button"
-              onClick={() => router.push(tab.href)}
+              href={tab.href}
+              prefetch
+              scroll={false}
               className="relative flex min-h-[52px] flex-1 flex-col items-center justify-center gap-0.5 rounded-xl py-1.5 text-gray-500 transition-colors hover:text-gray-300 active:scale-[0.97]"
               aria-current={active ? "page" : undefined}
             >
@@ -48,7 +55,7 @@ export default function AppTabNav() {
               >
                 {tab.label}
               </span>
-            </button>
+            </Link>
           );
         })}
       </div>

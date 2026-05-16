@@ -289,29 +289,48 @@ function SurveyPageInner() {
   }, [token, nextSurvey?.survey_date, nextSurvey?.is_open]);
 
   useEffect(() => {
+    let cancelled = false;
+
+    const bootstrapSession = (session: { access_token: string }) => {
+      if (cancelled) return;
+      setToken(session.access_token);
+      void loadToday();
+      void (async () => {
+        await checkMyResponse(session.access_token);
+        fetch(`${resolveApiBase()}/api/dashboard`, {
+          headers: { Authorization: `Bearer ${session.access_token}` },
+        })
+          .then((r) => r.json())
+          .then((d) => {
+            if (typeof d.tokens === "number") setUserTokens(d.tokens);
+            if (typeof d.current_streak === "number") setUserStreak(d.current_streak);
+          })
+          .catch(() => {});
+      })();
+    };
+
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (cancelled) return;
+      if (!session) {
+        router.replace("/");
+        setLoading(false);
+        return;
+      }
+      bootstrapSession(session);
+    });
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === "SIGNED_OUT" || (event === "INITIAL_SESSION" && !session)) {
         router.replace("/");
         return;
       }
-      if (session) {
-        setToken(session.access_token);
-        loadToday();
-        void (async () => {
-          await checkMyResponse(session.access_token);
-          fetch(`${resolveApiBase()}/api/dashboard`, {
-            headers: { Authorization: `Bearer ${session.access_token}` },
-          })
-            .then((r) => r.json())
-            .then((d) => {
-              if (typeof d.tokens === "number") setUserTokens(d.tokens);
-              if (typeof d.current_streak === "number") setUserStreak(d.current_streak);
-            })
-            .catch(() => {});
-        })();
-      }
+      if (event === "SIGNED_IN" && session) bootstrapSession(session);
     });
-    return () => subscription.unsubscribe();
+
+    return () => {
+      cancelled = true;
+      subscription.unsubscribe();
+    };
   }, [router, loadToday, checkMyResponse]);
 
   // 거래일/설문이 바뀌면 오늘 설문 게이지는 다시 미리보기부터

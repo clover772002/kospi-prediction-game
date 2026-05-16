@@ -43,16 +43,22 @@ function ShopInner() {
     const load = async (accessToken: string) => {
       setErr(null);
       try {
-        const [c, dash] = await Promise.all([
-          getShopCatalog(accessToken),
-          getDashboard(accessToken),
-        ]);
-        if (mounted) {
-          setCatalog(c);
+        const c = await getShopCatalog(accessToken);
+        if (!mounted) return;
+        setCatalog(c);
+        setLoading(false);
+
+        try {
+          const dash = await getDashboard(accessToken);
+          if (!mounted) return;
           setWalletTokens(typeof dash.tokens === "number" ? dash.tokens : null);
+        } catch {
+          /* 카탈로그는 표시하고 잔액만 나중에 새로고침 가능 */
         }
       } catch (e: unknown) {
         if (mounted) setErr(e instanceof Error ? e.message : String(e));
+      } finally {
+        if (mounted) setLoading(false);
       }
     };
 

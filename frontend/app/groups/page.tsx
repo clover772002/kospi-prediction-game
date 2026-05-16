@@ -49,17 +49,42 @@ export default function GroupsPage() {
   }, []);
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (event === "SIGNED_OUT" || (event === "INITIAL_SESSION" && !session)) {
-        router.replace("/"); return;
+    let mounted = true;
+
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!mounted) return;
+      if (!session) {
+        router.replace("/");
+        setLoading(false);
+        return;
       }
-      if (session) {
+      setToken(session.access_token);
+      void loadGroups(session.access_token).finally(() => {
+        if (mounted) setLoading(false);
+      });
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === "SIGNED_OUT") {
+        router.replace("/");
+        return;
+      }
+      if (event === "INITIAL_SESSION" && !session) {
+        router.replace("/");
+        setLoading(false);
+        return;
+      }
+      if (event === "SIGNED_IN" && session) {
         setToken(session.access_token);
         await loadGroups(session.access_token);
-        setLoading(false);
+        if (mounted) setLoading(false);
       }
     });
-    return () => subscription.unsubscribe();
+
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
   }, [router, loadGroups]);
 
   useEffect(() => {

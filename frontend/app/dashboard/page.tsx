@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useState, useCallback } from "react";
+import { Suspense, useEffect, useState, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { getMe, getToday, getDashboard, createChallenge, getMyChallenges, reactToChallenge, requestRematch, acceptChallenge, declineChallenge, getMyGroups, getGroupLeaderboard, UserProfile, TodaySurvey, DashboardData, Challenge, Group, GroupLeaderboard } from "@/lib/api";
@@ -9,6 +9,7 @@ import AppAmbientBackground from "@/components/AppAmbientBackground";
 import AppTabNav from "@/components/AppTabNav";
 import DashboardInsightSection, { DashboardInsightSectionSkeleton } from "@/components/DashboardInsightSection";
 import PageLoadProgress from "@/components/PageLoadProgress";
+import { clearDashboardSnapshot, peekDashboardSnapshot, saveDashboardSnapshot } from "@/lib/tab-session-cache";
 
 type DashboardHist = DashboardData["history"][number];
 
@@ -136,16 +137,26 @@ export default function DashboardPage() {
   const [selectedGroupId, setSelectedGroupId]      = useState<string | null>(null);
   const [groupLeaderboard, setGroupLeaderboard]    = useState<GroupLeaderboard | null>(null);
   const [groupLbLoading, setGroupLbLoading]        = useState(false);
+  const dashboardFetchSeq = useRef(0);
 
   useEffect(() => {
-    let called = false;
+    const cached = peekDashboardSnapshot();
+    if (cached) {
+      setUser(cached.user);
+      setToday(cached.today);
+      setDash(cached.dash);
+      setChallenges(cached.challenges);
+      if (cached.groups.length > 0) {
+        setMyGroups(cached.groups);
+        setSelectedGroupId(cached.groups[0].group_id);
+      }
+      setLoading(false);
+    }
 
     const loadData = async (accessToken: string) => {
-      if (called) return;
-      called = true;
+      const seq = ++dashboardFetchSeq.current;
       setToken(accessToken);
       try {
-        // 각 요청에 20초 타임아웃 적용 (Railway 콜드스타트 대응)
         const withTimeout = <T,>(p: Promise<T>, ms = 20000): Promise<T> =>
           Promise.race([
             p,
@@ -157,11 +168,13 @@ export default function DashboardPage() {
         const [profile, todayData, dashData, chResult, grpResult] = await Promise.all([
           withTimeout(getMe(accessToken)),
           withTimeout(getToday()),
-          // 대시보드는 정산 보강 등으로 응답이 길어질 수 있어 상한만 길게 잡음
           withTimeout(getDashboard(accessToken), 60000),
           withTimeout(getMyChallenges(accessToken)).catch(() => ({ sent: [] as Challenge[], received: [] as Challenge[] })),
           withTimeout(getMyGroups(accessToken)).catch(() => [] as Group[]),
         ]);
+
+        if (seq !== dashboardFetchSeq.current) return;
+
         setUser(profile);
         setToday(todayData);
         setDash(dashData);
@@ -171,7 +184,14 @@ export default function DashboardPage() {
           setSelectedGroupId(grpResult[0].group_id);
         }
 
-        // 오늘 결과가 나왔고 참여했다면 → 결과 카드 팝업 (하루 1번)
+        saveDashboardSnapshot({
+          user: profile,
+          today: todayData,
+          dash: dashData,
+          challenges: chResult,
+          groups: grpResult,
+        });
+
         if (todayData.status === "result" && todayData.survey_date) {
           const key = `result_card_${todayData.survey_date}`;
           if (!localStorage.getItem(key)) {
@@ -182,24 +202,34 @@ export default function DashboardPage() {
           }
         }
       } catch (e: unknown) {
+        if (seq !== dashboardFetchSeq.current) return;
         const msg = e instanceof Error ? e.message : String(e);
         console.error("데이터 로딩 오류:", msg);
         setError(msg);
       } finally {
-        setLoading(false);
+        if (seq === dashboardFetchSeq.current) setLoading(false);
       }
     };
 
-    // 1) 기존 세션 즉시 확인
     supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) loadData(session.access_token);
+      if (!session) {
+        clearDashboardSnapshot();
+        setLoading(false);
+        router.replace("/");
+        return;
+      }
+      void loadData(session.access_token);
     });
 
-    // 2) OAuth 리다이렉트 후 세션 감지
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === "SIGNED_OUT") { router.replace("/"); return; }
-      if (event === "SIGNED_IN" && session) loadData(session.access_token);
+      if (event === "SIGNED_OUT") {
+        clearDashboardSnapshot();
+        router.replace("/");
+        return;
+      }
+      if (event === "SIGNED_IN" && session) void loadData(session.access_token);
       if (event === "INITIAL_SESSION" && !session) {
+        clearDashboardSnapshot();
         setLoading(false);
         router.replace("/");
       }
@@ -209,6 +239,7 @@ export default function DashboardPage() {
   }, [router]);
 
   const handleLogout = async () => {
+    clearDashboardSnapshot();
     await supabase.auth.signOut();
     router.replace("/");
   };
