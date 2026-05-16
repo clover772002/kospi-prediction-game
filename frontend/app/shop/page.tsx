@@ -12,6 +12,8 @@ import StaleRefreshIndicator from "@/components/StaleRefreshIndicator";
 import { clearAllTabSnapshots, peekShopSnapshot, saveShopSnapshot } from "@/lib/tab-session-cache";
 import ConsumableShopCard from "@/components/ConsumableShopCard";
 import InsightProductUnlockList from "@/components/InsightProductUnlockList";
+import InsightCardsStack, { InsightsInView, InsightCardsStackSkeleton } from "@/components/InsightCardsStack";
+import { InsightDashboardCompactProvider } from "@/contexts/InsightDashboardCompactContext";
 import { useInsightSurveyDatePicker } from "@/hooks/useInsightSurveyDatePicker";
 
 /** 당분간 원화(Stripe) 토큰팩 UI 비표시. 다시 켤 때는 true로 변경하고 아래 token pack 섹션·핸들러 복구 */
@@ -122,6 +124,8 @@ function ShopInner() {
   }, [router]);
 
   const [purchaseBusy, setPurchaseBusy] = useState<string | null>(null);
+  /** 잠금 해제 후 집계 카드 데이터 리패치(대시보드와 동일 UI) */
+  const [insightDeckKey, setInsightDeckKey] = useState(0);
 
   const { dateOptions, selectedDate, setSelectedDate } = useInsightSurveyDatePicker(token);
 
@@ -198,7 +202,11 @@ function ShopInner() {
         <section className="space-y-3">
           <h2 className="text-[11px] font-black text-gray-500 uppercase tracking-widest">토큰으로 여는 아이템</h2>
           <p className="text-[10px] text-gray-500 leading-relaxed">
-            잠금 해제할 <strong className="text-gray-400">거래일</strong>을 고른 뒤, 각 카드에서 토큰을 사용하세요. 열람한 내용은 대시보드 집계 카드에서 바로 볼 수 있어요.
+            잠금 해제할 <strong className="text-gray-400">거래일</strong>을 고른 뒤 토큰으로 해제하세요. 같은 거래일의 <strong className="text-gray-400">집계 열람</strong>은 아래에 표시되며,{" "}
+            <Link href="/dashboard" className="text-violet-400 hover:text-violet-300 underline underline-offset-2">
+              대시보드
+            </Link>
+            에서도 동일합니다.
           </p>
           {dateOptions.length === 0 ? (
             <p className="text-xs text-amber-200/80 rounded-xl border border-amber-500/20 bg-amber-500/5 px-3 py-2">
@@ -232,9 +240,31 @@ function ShopInner() {
               onBalanceRefresh={refreshWalletTokens}
               setFlash={setFlash}
               setErr={setErr}
+              onUnlocked={() => setInsightDeckKey((k) => k + 1)}
             />
           ) : null}
         </section>
+
+        {token && selectedDate ? (
+          <section className="space-y-3">
+            <h2 className="text-[11px] font-black text-gray-500 uppercase tracking-widest">이 거래일 집계 열람</h2>
+            <p className="text-[10px] text-gray-500 leading-relaxed">
+              대시보드와 같은 데이터예요. 위에서 잠금 해제하면 아래에 바로 펼쳐집니다. 페이월이 꺼져 있으면 토큰 없이도 볼 수 있어요.
+            </p>
+            <InsightDashboardCompactProvider>
+              <InsightsInView fallback={<InsightCardsStackSkeleton />}>
+                <div key={`${selectedDate}-${insightDeckKey}`}>
+                  <InsightCardsStack
+                    accessToken={token}
+                    surveyDate={selectedDate}
+                    hideUnlockControl
+                    onBalanceUpdated={refreshWalletTokens}
+                  />
+                </div>
+              </InsightsInView>
+            </InsightDashboardCompactProvider>
+          </section>
+        ) : null}
 
         <section className="space-y-3">
           <h2 className="text-[11px] font-black text-gray-500 uppercase tracking-widest">소모품 (설문·토큰 규칙)</h2>

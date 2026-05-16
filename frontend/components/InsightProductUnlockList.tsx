@@ -17,6 +17,7 @@ export default function InsightProductUnlockList({
   onBalanceRefresh,
   setFlash,
   setErr,
+  onUnlocked,
 }: {
   products: Product[];
   accessToken: string;
@@ -25,6 +26,7 @@ export default function InsightProductUnlockList({
   onBalanceRefresh: () => void | Promise<void>;
   setFlash: (s: string | null) => void;
   setErr: (s: string | null) => void;
+  onUnlocked?: () => void;
 }) {
   const confirmShopOnInsufficientTokens = useConfirmShopOnInsufficientTokens();
   const [busySlug, setBusySlug] = useState<string | null>(null);
@@ -52,6 +54,7 @@ export default function InsightProductUnlockList({
         setFlash("잠금 해제가 반영됐어요. 대시보드에서 확인해 보세요.");
       }
       void onBalanceRefresh();
+      onUnlocked?.();
     } catch (e: unknown) {
       if (e instanceof InsightInsufficientTokensError) {
         void confirmShopOnInsufficientTokens(e.detail);
