@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useLayoutEffect } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import {
@@ -11,12 +11,15 @@ import ShareSheet from "@/components/ShareSheet";
 import AppAmbientBackground from "@/components/AppAmbientBackground";
 import AppTabNav from "@/components/AppTabNav";
 import PageLoadProgress from "@/components/PageLoadProgress";
+import StaleRefreshIndicator from "@/components/StaleRefreshIndicator";
+import { clearAllTabSnapshots, peekGroupsSnapshot, saveGroupsSnapshot } from "@/lib/tab-session-cache";
 
 export default function GroupsPage() {
   const router = useRouter();
   const [token, setToken]                     = useState<string | null>(null);
   const [loading, setLoading]                 = useState(true);
-  const [groups, setGroups]                   = useState<Group[]>([]);
+  const [revalidating, setRevalidating]       = useState(false);
+  const [groups, setGroups]                   = useState<Group[] | null>(null);
   const [selectedId, setSelectedId]           = useState<string | null>(null);
   const [leaderboard, setLeaderboard]         = useState<GroupLeaderboard | null>(null);
   const [lbLoading, setLbLoading]             = useState(false);
@@ -32,12 +35,27 @@ export default function GroupsPage() {
   };
 
   const loadGroups = useCallback(async (tk: string) => {
+    setRevalidating(true);
     try {
       const list = await getMyGroups(tk);
       setGroups(list);
+      saveGroupsSnapshot(list);
       if (list.length > 0 && !selectedId) setSelectedId(list[0].group_id);
-    } catch { /* ignore */ }
+    } catch {
+      setGroups([]);
+    } finally {
+      setRevalidating(false);
+    }
   }, [selectedId]);
+
+  useLayoutEffect(() => {
+    const s = peekGroupsSnapshot();
+    if (s) {
+      setGroups(s.groups);
+      if (s.groups.length > 0) setSelectedId(s.groups[0].group_id);
+      setLoading(false);
+    }
+  }, []);
 
   const loadLeaderboard = useCallback(async (tk: string, gid: string) => {
     setLbLoading(true);
@@ -66,6 +84,7 @@ export default function GroupsPage() {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === "SIGNED_OUT") {
+        clearAllTabSnapshots();
         router.replace("/");
         return;
       }
@@ -139,11 +158,15 @@ export default function GroupsPage() {
     typeof window !== "undefined" ? `${window.location.origin}/join?code=${code}` : "";
 
   const medals = ["🥇", "🥈", "🥉"];
+  const groupList = groups ?? [];
 
-  if (loading) return <PageLoadProgress label="그룹 불러오는 중…" accent="green" />;
+  if (loading && groups === null) {
+    return <PageLoadProgress label="그룹 불러오는 중…" accent="green" />;
+  }
 
   return (
     <main className="relative max-w-md mx-auto min-h-screen pb-28 px-5 text-white">
+      <StaleRefreshIndicator show={revalidating && groups !== null} tone="emerald" />
       <AppAmbientBackground />
       <div className="relative z-10">
       {/* 플로팅 토스트 */}
@@ -168,7 +191,7 @@ export default function GroupsPage() {
 
 
       {/* 그룹 없을 때 온보딩 */}
-      {groups.length === 0 && mode === "list" && (
+      {groupList.length === 0 && mode === "list" && (
         <div className="flex flex-col items-center gap-5 py-10 text-center">
           <span className="text-6xl">🏆</span>
           <div>
@@ -231,12 +254,12 @@ export default function GroupsPage() {
       )}
 
       {/* 그룹 있을 때 */}
-      {groups.length > 0 && mode === "list" && (
+      {groupList.length > 0 && mode === "list" && (
         <div className="space-y-4">
           {/* 그룹 탭 (여러 그룹) */}
-          {groups.length > 1 && (
+          {groupList.length > 1 && (
             <div className="flex gap-1.5 flex-wrap">
-              {groups.map((g) => (
+              {groupList.map((g) => (
                 <button key={g.group_id} onClick={() => setSelectedId(g.group_id)}
                   className={`flex items-center gap-1.5 text-sm font-bold px-4 py-2 rounded-xl transition-all ${selectedId === g.group_id ? "bg-green-600 text-white" : "bg-[#1A1A1A] text-gray-400 border border-[#2A2A2A]"}`}>
                   {g.name}
@@ -250,7 +273,7 @@ export default function GroupsPage() {
 
           {/* 선택된 그룹 정보 */}
           {selectedId && (() => {
-            const g = groups.find((x) => x.group_id === selectedId);
+            const g = groupList.find((x) => x.group_id === selectedId);
             if (!g) return null;
             return (
               <>

@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useLayoutEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
@@ -8,7 +8,9 @@ import { createStripePackCheckout, getDashboard, getShopCatalog, ShopCatalog } f
 import InsightAnimatedPreview from "@/components/InsightAnimatedPreview";
 import AppAmbientBackground from "@/components/AppAmbientBackground";
 import PageLoadProgress from "@/components/PageLoadProgress";
+import StaleRefreshIndicator from "@/components/StaleRefreshIndicator";
 import AppTabNav from "@/components/AppTabNav";
+import { clearAllTabSnapshots, peekShopSnapshot, saveShopSnapshot } from "@/lib/tab-session-cache";
 import ConsumableShopCard from "@/components/ConsumableShopCard";
 import { isInsightProductSlug } from "@/lib/insight_card_meta";
 
@@ -25,6 +27,16 @@ function ShopInner() {
   const [err, setErr] = useState<string | null>(null);
   const [checkoutSlug, setCheckoutSlug] = useState<string | null>(null);
   const [flash, setFlash] = useState<string | null>(null);
+  const [revalidating, setRevalidating] = useState(false);
+
+  useLayoutEffect(() => {
+    const s = peekShopSnapshot();
+    if (s) {
+      setCatalog(s.catalog);
+      setWalletTokens(s.walletTokens);
+      setLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
     const paid = searchParams.get("paid");
@@ -42,29 +54,37 @@ function ShopInner() {
     let mounted = true;
     const load = async (accessToken: string) => {
       setErr(null);
+      setRevalidating(true);
       try {
         const c = await getShopCatalog(accessToken);
         if (!mounted) return;
         setCatalog(c);
         setLoading(false);
 
+        let w: number | null = null;
         try {
           const dash = await getDashboard(accessToken);
           if (!mounted) return;
-          setWalletTokens(typeof dash.tokens === "number" ? dash.tokens : null);
+          w = typeof dash.tokens === "number" ? dash.tokens : null;
+          setWalletTokens(w);
         } catch {
           /* 카탈로그는 표시하고 잔액만 나중에 새로고침 가능 */
         }
+        saveShopSnapshot({ catalog: c, walletTokens: w });
       } catch (e: unknown) {
         if (mounted) setErr(e instanceof Error ? e.message : String(e));
       } finally {
-        if (mounted) setLoading(false);
+        if (mounted) {
+          setLoading(false);
+          setRevalidating(false);
+        }
       }
     };
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (!mounted) return;
       if (event === "SIGNED_OUT") {
+        clearAllTabSnapshots();
         router.replace("/");
         return;
       }
@@ -126,12 +146,13 @@ function ShopInner() {
     }
   };
 
-  if (loading) {
+  if (loading && !catalog) {
     return <PageLoadProgress label="상점 불러오는 중…" accent="amber" />;
   }
 
   return (
     <main className="relative max-w-md mx-auto min-h-screen pb-36 px-5">
+      <StaleRefreshIndicator show={revalidating && !!catalog} tone="amber" />
       <AppAmbientBackground />
       <div className="relative z-10 space-y-6 pt-8">
         <div className="flex items-start justify-between gap-2">

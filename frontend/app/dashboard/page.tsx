@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useState, useCallback, useRef } from "react";
+import { Suspense, useEffect, useState, useCallback, useRef, useLayoutEffect } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { getMe, getToday, getDashboard, createChallenge, getMyChallenges, reactToChallenge, requestRematch, acceptChallenge, declineChallenge, getMyGroups, getGroupLeaderboard, UserProfile, TodaySurvey, DashboardData, Challenge, Group, GroupLeaderboard } from "@/lib/api";
@@ -9,7 +9,8 @@ import AppAmbientBackground from "@/components/AppAmbientBackground";
 import AppTabNav from "@/components/AppTabNav";
 import DashboardInsightSection, { DashboardInsightSectionSkeleton } from "@/components/DashboardInsightSection";
 import PageLoadProgress from "@/components/PageLoadProgress";
-import { clearDashboardSnapshot, peekDashboardSnapshot, saveDashboardSnapshot } from "@/lib/tab-session-cache";
+import StaleRefreshIndicator from "@/components/StaleRefreshIndicator";
+import { clearAllTabSnapshots, peekDashboardSnapshot, saveDashboardSnapshot } from "@/lib/tab-session-cache";
 
 type DashboardHist = DashboardData["history"][number];
 
@@ -137,9 +138,10 @@ export default function DashboardPage() {
   const [selectedGroupId, setSelectedGroupId]      = useState<string | null>(null);
   const [groupLeaderboard, setGroupLeaderboard]    = useState<GroupLeaderboard | null>(null);
   const [groupLbLoading, setGroupLbLoading]        = useState(false);
+  const [revalidating, setRevalidating]            = useState(false);
   const dashboardFetchSeq = useRef(0);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const cached = peekDashboardSnapshot();
     if (cached) {
       setUser(cached.user);
@@ -152,10 +154,13 @@ export default function DashboardPage() {
       }
       setLoading(false);
     }
+  }, []);
 
+  useEffect(() => {
     const loadData = async (accessToken: string) => {
       const seq = ++dashboardFetchSeq.current;
       setToken(accessToken);
+      setRevalidating(true);
       try {
         const withTimeout = <T,>(p: Promise<T>, ms = 20000): Promise<T> =>
           Promise.race([
@@ -207,13 +212,16 @@ export default function DashboardPage() {
         console.error("데이터 로딩 오류:", msg);
         setError(msg);
       } finally {
-        if (seq === dashboardFetchSeq.current) setLoading(false);
+        if (seq === dashboardFetchSeq.current) {
+          setLoading(false);
+          setRevalidating(false);
+        }
       }
     };
 
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (!session) {
-        clearDashboardSnapshot();
+        clearAllTabSnapshots();
         setLoading(false);
         router.replace("/");
         return;
@@ -223,13 +231,13 @@ export default function DashboardPage() {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === "SIGNED_OUT") {
-        clearDashboardSnapshot();
+        clearAllTabSnapshots();
         router.replace("/");
         return;
       }
       if (event === "SIGNED_IN" && session) void loadData(session.access_token);
       if (event === "INITIAL_SESSION" && !session) {
-        clearDashboardSnapshot();
+        clearAllTabSnapshots();
         setLoading(false);
         router.replace("/");
       }
@@ -239,7 +247,7 @@ export default function DashboardPage() {
   }, [router]);
 
   const handleLogout = async () => {
-    clearDashboardSnapshot();
+    clearAllTabSnapshots();
     await supabase.auth.signOut();
     router.replace("/");
   };
@@ -357,7 +365,7 @@ export default function DashboardPage() {
     }
   };
 
-  if (loading) {
+  if (loading && (!dash || !user)) {
     return <PageLoadProgress label="대시보드 불러오는 중…" accent="blue" />;
   }
 
@@ -479,6 +487,7 @@ export default function DashboardPage() {
 
   return (
     <main className="max-w-md mx-auto min-h-screen pb-36 px-5 relative">
+      <StaleRefreshIndicator show={revalidating && !!dash && !!user} tone="sky" />
       <AppAmbientBackground />
       <div className="relative z-10">
       {/* ── 결과 공유 카드 팝업 ── */}

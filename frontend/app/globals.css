@@ -94,6 +94,15 @@ body {
 .fade-up-4 { animation: fadeUp 0.45s ease-out 0.35s both; }
 .fade-up-5 { animation: fadeUp 0.45s ease-out 0.45s both; }
 
+/* 탭 백그라운드 갱신 시 상단 얇은 바 */
+@keyframes tabSyncShimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(350%); }
+}
+.tab-sync-indicator__bar {
+  animation: tabSyncShimmer 1.15s ease-in-out infinite;
+}
+
 /* ── 아이템 ‘표본 부족’ 카드 (Tailwind 동적 조합 누락 대비 — 항상 전체 카드·미리보기·상세가 보이게) ── */
 .iu-card.iu-var-violet {
   border-color: rgba(167, 139, 250, 0.32);

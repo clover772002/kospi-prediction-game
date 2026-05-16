@@ -7,6 +7,7 @@ import { getMe, unlinkTelegram, getVapidPublicKey, savePushSubscription, deleteP
 import AppAmbientBackground from "@/components/AppAmbientBackground";
 import PageLoadProgress from "@/components/PageLoadProgress";
 import AppTabNav from "@/components/AppTabNav";
+import { clearAllTabSnapshots } from "@/lib/tab-session-cache";
 
 const BOT_USERNAME = process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME || "Profitchat123bot";
 
@@ -191,6 +192,7 @@ export default function SetupPage() {
   }, [token]);
 
   const handleLogout = async () => {
+    clearAllTabSnapshots();
     await supabase.auth.signOut();
     router.replace("/");
   };

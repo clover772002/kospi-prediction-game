@@ -1,4 +1,11 @@
-import type { Challenge, DashboardData, Group, TodaySurvey, UserProfile } from "@/lib/api";
+import type {
+  Challenge,
+  DashboardData,
+  Group,
+  ShopCatalog,
+  TodaySurvey,
+  UserProfile,
+} from "@/lib/api";
 
 /** 탭 왕복·새로고침 직후에도 즉시 그리기용 스냅샷 (백그라운드에서 최신화) */
 export type DashboardTabSnapshot = {
@@ -10,7 +17,26 @@ export type DashboardTabSnapshot = {
   savedAt: number;
 };
 
+export type ShopTabSnapshot = {
+  catalog: ShopCatalog;
+  walletTokens: number | null;
+  savedAt: number;
+};
+
+export type SurveyTodaySnapshot = {
+  today: TodaySurvey;
+  savedAt: number;
+};
+
+export type GroupsTabSnapshot = {
+  groups: Group[];
+  savedAt: number;
+};
+
 const STORAGE_KEY = "kp_dash_snap_v1";
+const SHOP_KEY = "kp_shop_snap_v1";
+const SURVEY_TODAY_KEY = "kp_survey_today_snap_v1";
+const GROUPS_KEY = "kp_groups_snap_v1";
 
 let dashboardSnap: DashboardTabSnapshot | null = null;
 
@@ -73,4 +99,195 @@ export function clearDashboardSnapshot(): void {
       /* noop */
     }
   }
+}
+
+// ── 상점 ─────────────────────────────────────────────────────
+
+let shopSnapMemory: ShopTabSnapshot | null = null;
+
+function readShopFromStorage(): ShopTabSnapshot | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = sessionStorage.getItem(SHOP_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as ShopTabSnapshot;
+    if (!parsed?.savedAt || Date.now() - parsed.savedAt > DASHBOARD_SNAPSHOT_TTL_MS) {
+      sessionStorage.removeItem(SHOP_KEY);
+      return null;
+    }
+    return parsed;
+  } catch {
+    try {
+      sessionStorage.removeItem(SHOP_KEY);
+    } catch {
+      /* noop */
+    }
+    return null;
+  }
+}
+
+export function peekShopSnapshot(): ShopTabSnapshot | null {
+  if (shopSnapMemory && Date.now() - shopSnapMemory.savedAt <= DASHBOARD_SNAPSHOT_TTL_MS) {
+    return shopSnapMemory;
+  }
+  shopSnapMemory = null;
+  const s = readShopFromStorage();
+  if (s) {
+    shopSnapMemory = s;
+    return s;
+  }
+  return null;
+}
+
+export function saveShopSnapshot(payload: Omit<ShopTabSnapshot, "savedAt">): void {
+  const full: ShopTabSnapshot = { ...payload, savedAt: Date.now() };
+  shopSnapMemory = full;
+  if (typeof window !== "undefined") {
+    try {
+      sessionStorage.setItem(SHOP_KEY, JSON.stringify(full));
+    } catch {
+      /* noop */
+    }
+  }
+}
+
+export function clearShopSnapshot(): void {
+  shopSnapMemory = null;
+  if (typeof window !== "undefined") {
+    try {
+      sessionStorage.removeItem(SHOP_KEY);
+    } catch {
+      /* noop */
+    }
+  }
+}
+
+// ── 설문 (/today) ─────────────────────────────────────────────
+
+let surveyTodayMemory: SurveyTodaySnapshot | null = null;
+
+function readSurveyTodayFromStorage(): SurveyTodaySnapshot | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = sessionStorage.getItem(SURVEY_TODAY_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as SurveyTodaySnapshot;
+    if (!parsed?.savedAt || Date.now() - parsed.savedAt > DASHBOARD_SNAPSHOT_TTL_MS) {
+      sessionStorage.removeItem(SURVEY_TODAY_KEY);
+      return null;
+    }
+    return parsed;
+  } catch {
+    try {
+      sessionStorage.removeItem(SURVEY_TODAY_KEY);
+    } catch {
+      /* noop */
+    }
+    return null;
+  }
+}
+
+export function peekSurveyTodaySnapshot(): SurveyTodaySnapshot | null {
+  if (surveyTodayMemory && Date.now() - surveyTodayMemory.savedAt <= DASHBOARD_SNAPSHOT_TTL_MS) {
+    return surveyTodayMemory;
+  }
+  surveyTodayMemory = null;
+  const s = readSurveyTodayFromStorage();
+  if (s) {
+    surveyTodayMemory = s;
+    return s;
+  }
+  return null;
+}
+
+export function saveSurveyTodaySnapshot(today: TodaySurvey): void {
+  const full: SurveyTodaySnapshot = { today, savedAt: Date.now() };
+  surveyTodayMemory = full;
+  if (typeof window !== "undefined") {
+    try {
+      sessionStorage.setItem(SURVEY_TODAY_KEY, JSON.stringify(full));
+    } catch {
+      /* noop */
+    }
+  }
+}
+
+export function clearSurveyTodaySnapshot(): void {
+  surveyTodayMemory = null;
+  if (typeof window !== "undefined") {
+    try {
+      sessionStorage.removeItem(SURVEY_TODAY_KEY);
+    } catch {
+      /* noop */
+    }
+  }
+}
+
+// ── 그룹 목록 ────────────────────────────────────────────────
+
+let groupsSnapMemory: GroupsTabSnapshot | null = null;
+
+function readGroupsFromStorage(): GroupsTabSnapshot | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = sessionStorage.getItem(GROUPS_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as GroupsTabSnapshot;
+    if (!parsed?.savedAt || Date.now() - parsed.savedAt > DASHBOARD_SNAPSHOT_TTL_MS) {
+      sessionStorage.removeItem(GROUPS_KEY);
+      return null;
+    }
+    return parsed;
+  } catch {
+    try {
+      sessionStorage.removeItem(GROUPS_KEY);
+    } catch {
+      /* noop */
+    }
+    return null;
+  }
+}
+
+export function peekGroupsSnapshot(): GroupsTabSnapshot | null {
+  if (groupsSnapMemory && Date.now() - groupsSnapMemory.savedAt <= DASHBOARD_SNAPSHOT_TTL_MS) {
+    return groupsSnapMemory;
+  }
+  groupsSnapMemory = null;
+  const s = readGroupsFromStorage();
+  if (s) {
+    groupsSnapMemory = s;
+    return s;
+  }
+  return null;
+}
+
+export function saveGroupsSnapshot(groups: Group[]): void {
+  const full: GroupsTabSnapshot = { groups, savedAt: Date.now() };
+  groupsSnapMemory = full;
+  if (typeof window !== "undefined") {
+    try {
+      sessionStorage.setItem(GROUPS_KEY, JSON.stringify(full));
+    } catch {
+      /* noop */
+    }
+  }
+}
+
+export function clearGroupsSnapshot(): void {
+  groupsSnapMemory = null;
+  if (typeof window !== "undefined") {
+    try {
+      sessionStorage.removeItem(GROUPS_KEY);
+    } catch {
+      /* noop */
+    }
+  }
+}
+
+/** 로그아웃 시 탭 스냅샷 전부 제거 */
+export function clearAllTabSnapshots(): void {
+  clearDashboardSnapshot();
+  clearShopSnapshot();
+  clearSurveyTodaySnapshot();
+  clearGroupsSnapshot();
 }

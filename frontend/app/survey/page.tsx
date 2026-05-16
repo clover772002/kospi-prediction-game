@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { useEffect, useState, useCallback, useRef, Suspense } from "react";
+import { useEffect, useState, useCallback, useRef, Suspense, useLayoutEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
@@ -13,6 +13,8 @@ import SurveyConfidencePlayground from "@/components/SurveyConfidencePlayground"
 import AppAmbientBackground from "@/components/AppAmbientBackground";
 import PageLoadProgress from "@/components/PageLoadProgress";
 import AppTabNav from "@/components/AppTabNav";
+import StaleRefreshIndicator from "@/components/StaleRefreshIndicator";
+import { clearAllTabSnapshots, peekSurveyTodaySnapshot, saveSurveyTodaySnapshot } from "@/lib/tab-session-cache";
 
 interface KospiPrice {
   price: number | null;
@@ -141,6 +143,7 @@ function SurveyPageInner() {
   const [token, setToken] = useState<string | null>(null);
   const [today, setToday] = useState<TodaySurvey | null>(null);
   const [loading, setLoading] = useState(true);
+  const [revalidating, setRevalidating] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -169,9 +172,11 @@ function SurveyPageInner() {
   const [nextGaugePhase, setNextGaugePhase] = useState<GaugeSubmitPhase>("preview");
 
   const loadToday = useCallback(async () => {
+    setRevalidating(true);
     try {
       const data = await getToday();
       setToday(data);
+      saveSurveyTodaySnapshot(data);
       setError(null);
       // 항상 다음 거래일 설문 확인 (주말 포함)
       fetch("/api/next-survey", { cache: "no-store" })
@@ -182,6 +187,7 @@ function SurveyPageInner() {
       setError("설문 정보를 불러오지 못했습니다.");
     } finally {
       setLoading(false);
+      setRevalidating(false);
     }
   }, []);
 
@@ -288,6 +294,14 @@ function SurveyPageInner() {
     };
   }, [token, nextSurvey?.survey_date, nextSurvey?.is_open]);
 
+  useLayoutEffect(() => {
+    const s = peekSurveyTodaySnapshot();
+    if (s) {
+      setToday(s.today);
+      setLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     let cancelled = false;
 
@@ -312,6 +326,7 @@ function SurveyPageInner() {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (cancelled) return;
       if (!session) {
+        clearAllTabSnapshots();
         router.replace("/");
         setLoading(false);
         return;
@@ -321,6 +336,7 @@ function SurveyPageInner() {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === "SIGNED_OUT" || (event === "INITIAL_SESSION" && !session)) {
+        clearAllTabSnapshots();
         router.replace("/");
         return;
       }
@@ -399,7 +415,7 @@ function SurveyPageInner() {
     }
   };
 
-  if (loading) {
+  if (loading && !today) {
     return <PageLoadProgress label="설문 불러오는 중…" accent="violet" />;
   }
 
@@ -412,6 +428,7 @@ function SurveyPageInner() {
 
   return (
     <main className="relative w-full min-h-screen pb-36 min-w-0 box-border">
+      <StaleRefreshIndicator show={revalidating && !!today} tone="violet" />
       <AppAmbientBackground />
       <div className="relative z-10">
       {/* 독촉 토스트 */}
