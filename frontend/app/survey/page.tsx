@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback, useRef, Suspense, useLayoutEffect } f
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
-import { getToday, resolveApiBase, TodaySurvey } from "@/lib/api";
+import { getToday, getTodaySummary, resolveApiBase, TodaySurvey } from "@/lib/api";
 import { formatApiErrorMessage } from "@/lib/format-api-error";
 import FlipClock from "@/components/FlipClock";
 import KospiChart from "@/components/KospiChart";
@@ -174,19 +174,28 @@ function SurveyPageInner() {
   const loadToday = useCallback(async () => {
     setRevalidating(true);
     try {
-      const data = await getToday();
-      setToday(data);
-      saveSurveyTodaySnapshot(data);
+      const summary = await getTodaySummary();
+      setToday(summary);
+      saveSurveyTodaySnapshot(summary);
       setError(null);
-      // 항상 다음 거래일 설문 확인 (주말 포함)
+      setLoading(false);
+
       fetch("/api/next-survey", { cache: "no-store" })
         .then((r) => r.json())
         .then((d) => setNextSurvey(d))
         .catch(() => {});
+
+      try {
+        const full = await getToday();
+        setToday(full);
+        saveSurveyTodaySnapshot(full);
+      } catch {
+        /* 요약만으로 설문 UI 유지 */
+      }
     } catch {
       setError("설문 정보를 불러오지 못했습니다.");
-    } finally {
       setLoading(false);
+    } finally {
       setRevalidating(false);
     }
   }, []);

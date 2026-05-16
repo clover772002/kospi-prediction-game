@@ -1950,14 +1950,15 @@ async def get_backtest(supabase: Client = Depends(get_supabase)):
         return {"results": {}, "total_days": 0}
 
 
-@app.get("/api/today")
-async def get_today(supabase: Client = Depends(get_supabase)):
-    """오늘의 설문 집계 결과 조회 (인증 불필요)"""
+async def _build_today_payload(supabase: Client, *, detail: bool) -> dict:
+    """
+    detail=True: 전체 응답 행·정확도 맵·참여자 목록(대시보드용).
+    detail=False: 설문 탭용 요약 — 응답 수만 head count, 참여자/가중/다수결 생략.
+    """
     today_str = today_kst()
 
     survey_res = supabase.table("daily_surveys").select("*").eq("survey_date", today_str).execute()
     if not survey_res.data:
-        # 평일 00:00~09:00 사이에 레코드가 없으면 자동 생성 (22:00 job이 누락된 경우 대비)
         now_kst = datetime.now(KST)
         if now_kst.weekday() < 5 and now_kst.hour < 9:
             try:
@@ -1979,12 +1980,52 @@ async def get_today(supabase: Client = Depends(get_supabase)):
             survey_res = supabase.table("daily_surveys").select("*").eq("survey_date", today_str).execute()
             survey = survey_res.data[0]
 
-    # 종가 반영 후·미정산 참가자 보강: 설문 페이지만 보는 사용자도 토큰이 반영되도록
-    # (pending 없으면 쿼리만 빠르게 끝남 — 이전에 제거했던 병목은 settle 전부 매번 호출이었음)
     try:
         ensure_kospi_tokens_settled_for_date(supabase, today_str)
     except Exception as e:
         logger.warning(f"get_today 토큰 정산 보강 스킵: {e}")
+
+    if survey.get("kospi_result") is not None:
+        status = "result"
+    elif survey["is_closed"]:
+        status = "closed"
+    else:
+        status = "open"
+
+    if not detail:
+        total = 0
+        try:
+            cnt_res = (
+                supabase.table("survey_responses")
+                .select("user_id", count="exact", head=True)
+                .eq("survey_date", today_str)
+                .execute()
+            )
+            c = getattr(cnt_res, "count", None)
+            if c is not None:
+                total = int(c)
+        except Exception as e:
+            logger.warning("오늘 설문 응답 수 count 실패, 폴백: %s", e)
+            try:
+                fb = (
+                    supabase.table("survey_responses")
+                    .select("user_id")
+                    .eq("survey_date", today_str)
+                    .execute()
+                )
+                total = len(fb.data or [])
+            except Exception:
+                total = 0
+
+        return {
+            "status": status,
+            "survey_date": today_str,
+            "total_responses": total,
+            "kospi_yes_pct": None,
+            "kospi_weighted_pct": None,
+            "kospi_result": survey.get("kospi_result"),
+            "kospi_change_pct": survey.get("kospi_change_pct"),
+        }
 
     responses = (
         supabase.table("survey_responses")
@@ -1993,13 +2034,6 @@ async def get_today(supabase: Client = Depends(get_supabase)):
         .execute()
     )
     total = len(responses.data)
-
-    if survey.get("kospi_result") is not None:
-        status = "result"
-    elif survey["is_closed"]:
-        status = "closed"
-    else:
-        status = "open"
 
     base = {
         "status": status,
@@ -2016,7 +2050,6 @@ async def get_today(supabase: Client = Depends(get_supabase)):
         kospi_yes = sum(1 for r in responses.data if r["kospi_answer"])
         raw_yes_pct = kospi_yes / total
 
-        # 실제 참여자가 적으면 패딩 적용 (자연스러운 분포 유지)
         _PAD_THRESHOLD = 28
         if total < _PAD_THRESHOLD:
             pad_n = _rand.randint(20, 27)
@@ -2031,24 +2064,19 @@ async def get_today(supabase: Client = Depends(get_supabase)):
 
         base["kospi_yes_pct"] = round(display_yes / display_total * 100)
 
-        # 가중예측치 계산 (캐시된 정확도 맵 사용, 실제 데이터 기반)
         acc_map, pred_count, _ = get_accuracy_data(supabase)
         raw_weighted = _calc_weighted_pct(responses.data, acc_map, pred_count)
         if raw_weighted is not None and total < _PAD_THRESHOLD:
-            # 가중치도 패딩 방향으로 자연스럽게 보정
             raw_dir = raw_weighted >= 50
             pad_w = _rand.uniform(0.58, 0.68) if raw_dir else _rand.uniform(0.32, 0.42)
-            # 실제값과 패딩 평균 (실제 비중 낮게)
             base["kospi_weighted_pct"] = round(
                 (raw_weighted * total + pad_w * 100 * pad_n) / display_total
             )
         else:
             base["kospi_weighted_pct"] = raw_weighted
 
-        # 참여자 전체 user_id 수집 (acc_map 키와 형식 통일: str)
         all_uids = [str(r["user_id"]) for r in responses.data]
 
-        # 유저 이름 한 번에 일괄 조회 (N+1 제거)
         try:
             name_rows = supabase.table("users").select("id, name").in_("id", all_uids).execute()
             name_map = {str(row["id"]): row["name"] for row in (name_rows.data or [])}
@@ -2069,24 +2097,34 @@ async def get_today(supabase: Client = Depends(get_supabase)):
 
         resp_map = {str(r["user_id"]): r for r in responses.data}
 
-        # 전체 참여자 목록 (정확도 순 정렬)
         participants = [_make_entry(uid, resp_map[uid]) for uid in all_uids]
         participants.sort(key=lambda x: (-(x["accuracy"] or -1), -x["total_predictions"]))
         base["participants"] = participants
 
-        # 고수 / 하수 (정확도 기록이 있는 참여자 중)
         try:
             candidates = [uid for uid in all_uids if uid in acc_map]
             if candidates:
-                top_uid   = max(candidates, key=lambda u: (acc_map[u], pred_count.get(u, 0)))
+                top_uid = max(candidates, key=lambda u: (acc_map[u], pred_count.get(u, 0)))
                 worst_uid = min(candidates, key=lambda u: (acc_map[u], -pred_count.get(u, 0)))
-                base["top_predictor"]   = _make_entry(top_uid, resp_map[top_uid])
+                base["top_predictor"] = _make_entry(top_uid, resp_map[top_uid])
                 if len(candidates) >= 2 and worst_uid != top_uid:
                     base["worst_predictor"] = _make_entry(worst_uid, resp_map[worst_uid])
         except Exception as e:
             logger.warning(f"고수/하수 조회 실패: {e}")
 
     return base
+
+
+@app.get("/api/today/summary")
+async def get_today_summary(supabase: Client = Depends(get_supabase)):
+    """설문 탭 빠른 첫 페인트용. 참여자·가중·다수결 패딩 없음 — 대시보드는 /api/today 사용."""
+    return await _build_today_payload(supabase, detail=False)
+
+
+@app.get("/api/today")
+async def get_today(supabase: Client = Depends(get_supabase)):
+    """오늘의 설문 집계 결과 조회 (인증 불필요)"""
+    return await _build_today_payload(supabase, detail=True)
 
 
 @app.post("/api/survey/respond")

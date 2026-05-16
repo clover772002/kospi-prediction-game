@@ -177,6 +177,18 @@ export async function getToday(): Promise<TodaySurvey> {
   }
 }
 
+/** 설문 탭 빠른 첫 페인트 — 참여자·가중 집계 생략(백엔드 /api/today/summary) */
+export async function getTodaySummary(): Promise<TodaySurvey> {
+  const res = await fetch(`${resolveApiBase()}/api/today/summary`);
+  const text = await res.text();
+  if (!res.ok) throw new Error(formatApiErrorMessage(res.status, text));
+  try {
+    return JSON.parse(text) as TodaySurvey;
+  } catch {
+    throw new Error("오늘 요약 응답 형식 오류");
+  }
+}
+
 export async function getDashboard(token: string): Promise<DashboardData> {
   return authFetch<DashboardData>("/api/dashboard", token);
 }
