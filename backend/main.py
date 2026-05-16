@@ -61,6 +61,7 @@ from consumables_catalog import CONSUMABLE_PRODUCTS
 from consumables_service import purchase_consumable
 from survey_writes import (
     SurveySubmissionLocked,
+    fetch_pending_grant,
     persist_survey_answer,
     apply_gauge_adjust_once,
     apply_direction_flip_once,
@@ -2226,6 +2227,21 @@ async def get_my_response(
             "tokens_bet": row.get("tokens_bet"),
         }
     return {"answered": False, "kospi_answer": None, "gauge_position": None, "tokens_bet": None}
+
+
+@app.get("/api/survey/pending-grant")
+async def get_pending_survey_grant(
+    survey_date: str | None = None,
+    current_user=Depends(get_current_user),
+    supabase: Client = Depends(get_supabase),
+):
+    """미소비 설문 수정 권한(재투표·게이지·방향반전) — 소모품 구매 후 설문 화면에서 사용."""
+    user_id = str(current_user.id)
+    sd = survey_date.strip() if survey_date else today_kst()
+    row = fetch_pending_grant(supabase, user_id, sd)
+    if not row:
+        return {"grant_kind": None}
+    return {"grant_kind": row.get("grant_kind")}
 
 
 class SurveyGaugeAdjustBody(BaseModel):

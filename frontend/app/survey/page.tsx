@@ -169,6 +169,9 @@ function SurveyPageInner() {
   /** 게이지: 미리보기만 vs 확정 후 제출 */
   const [todayGaugePhase, setTodayGaugePhase] = useState<GaugeSubmitPhase>("preview");
   const [nextGaugePhase, setNextGaugePhase] = useState<GaugeSubmitPhase>("preview");
+  /** 상점 소모품 grant 조회용 */
+  const [pendingGrantToday, setPendingGrantToday] = useState<string | null>(null);
+  const [pendingGrantNext, setPendingGrantNext] = useState<string | null>(null);
 
   const loadToday = useCallback(async () => {
     setRevalidating(true);
@@ -357,6 +360,49 @@ function SurveyPageInner() {
     };
   }, [router, loadToday, checkMyResponse]);
 
+  const refreshPendingGrants = useCallback(async () => {
+    if (!token) return;
+    const kst = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Seoul" }));
+    const todayStr = `${kst.getFullYear()}-${String(kst.getMonth() + 1).padStart(2, "0")}-${String(kst.getDate()).padStart(2, "0")}`;
+    const sdToday = today?.survey_date ?? todayStr;
+    try {
+      const r = await fetch(`/api/survey/pending-grant?survey_date=${encodeURIComponent(sdToday)}`, {
+        headers: { Authorization: `Bearer ${token}` },
+        cache: "no-store",
+      });
+      if (r.ok) {
+        const d = (await r.json()) as { grant_kind?: string | null };
+        setPendingGrantToday(typeof d.grant_kind === "string" ? d.grant_kind : null);
+      } else {
+        setPendingGrantToday(null);
+      }
+    } catch {
+      setPendingGrantToday(null);
+    }
+    if (nextSurvey?.survey_date) {
+      try {
+        const r2 = await fetch(
+          `/api/survey/pending-grant?survey_date=${encodeURIComponent(nextSurvey.survey_date)}`,
+          { headers: { Authorization: `Bearer ${token}` }, cache: "no-store" },
+        );
+        if (r2.ok) {
+          const d2 = (await r2.json()) as { grant_kind?: string | null };
+          setPendingGrantNext(typeof d2.grant_kind === "string" ? d2.grant_kind : null);
+        } else {
+          setPendingGrantNext(null);
+        }
+      } catch {
+        setPendingGrantNext(null);
+      }
+    } else {
+      setPendingGrantNext(null);
+    }
+  }, [token, today?.survey_date, nextSurvey?.survey_date]);
+
+  useEffect(() => {
+    void refreshPendingGrants();
+  }, [refreshPendingGrants, today?.status, alreadyAnswered, submitted, nextAlreadyAnswered, nextSubmitted]);
+
   // 거래일/설문이 바뀌면 오늘 설문 게이지는 다시 미리보기부터
   useEffect(() => {
     setTodayGaugePhase("preview");
@@ -372,21 +418,31 @@ function SurveyPageInner() {
     setSubmitting(true);
     setError(null);
     try {
+      const kst = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Seoul" }));
+      const todayStr = `${kst.getFullYear()}-${String(kst.getMonth() + 1).padStart(2, "0")}-${String(kst.getDate()).padStart(2, "0")}`;
+      const surveyDate = today?.survey_date ?? todayStr;
       const res = await fetch(`/api/survey/respond`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ kospi_answer: kospiAnswer, gauge_position: gaugePosition }),
+        body: JSON.stringify({
+          kospi_answer: kospiAnswer,
+          gauge_position: gaugePosition,
+          survey_date: surveyDate,
+        }),
       });
       if (!res.ok) {
         const text = await res.text();
         throw new Error(formatApiErrorMessage(res.status, text));
       }
+      const data = (await res.json().catch(() => ({}))) as { current_tokens?: number };
+      if (typeof data.current_tokens === "number") setUserTokens(data.current_tokens);
       setSubmitted(true);
       setAlreadyAnswered(true);
       setPreviousAnswer(kospiAnswer);
+      void refreshPendingGrants();
     } catch (e: unknown) {
       const raw = e instanceof Error ? e.message : String(e);
       if (/failed\s*to\s*fetch|load\s*failed|network\s*error/i.test(raw) || !raw) {
@@ -413,9 +469,12 @@ function SurveyPageInner() {
         const text = await res.text();
         throw new Error(formatApiErrorMessage(res.status, text));
       }
+      const data = (await res.json().catch(() => ({}))) as { current_tokens?: number };
+      if (typeof data.current_tokens === "number") setUserTokens(data.current_tokens);
       setNextSubmitted(true);
       setNextAlreadyAnswered(true);
       setNextPreviousAnswer(nextKospiAnswer);
+      void refreshPendingGrants();
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "오류가 발생했습니다.");
     } finally {
@@ -523,6 +582,33 @@ function SurveyPageInner() {
                 <p className="text-xs text-gray-500">예측 참여 여부 확인 중…</p>
               </div>
             ) : nextSubmitted || nextAlreadyAnswered ? (
+              pendingGrantNext === "redo_full" ? (
+                <>
+                  <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-center">
+                    <p className="text-amber-300 text-xs font-bold">재투표 1회 · 게이지를 다시 정한 뒤 제출하세요</p>
+                  </div>
+                  <SurveyGaugeWithPreview
+                    phase={nextGaugePhase}
+                    setPhase={setNextGaugePhase}
+                    gaugeValue={nextGaugePosition}
+                    onGaugeChange={(v) => {
+                      setNextGaugePosition(v);
+                      setNextKospiAnswer(v > 0);
+                    }}
+                    userTokens={userTokens}
+                    submitting={nextSubmitting}
+                    lockBtnClass="bg-amber-500 hover:bg-amber-400 disabled:bg-[#333] disabled:text-gray-500 text-white"
+                    submitBtnClass="bg-amber-500 hover:bg-amber-400 disabled:bg-[#333] disabled:text-gray-500 text-white"
+                    submitLabel="재투표 제출하기"
+                    onSubmit={handleNextSubmit}
+                  />
+                  {error ? (
+                    <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-3 text-red-400 text-sm text-center">
+                      {error}
+                    </div>
+                  ) : null}
+                </>
+              ) : (
               <div className="flex flex-col gap-3 w-full items-stretch">
                 <div className="flex flex-col items-center text-center gap-1">
                   <div className="text-4xl">✅</div>
@@ -543,6 +629,7 @@ function SurveyPageInner() {
                   </p>
                 </div>
               </div>
+              )
             ) : (
               <>
                 <SurveyGaugeWithPreview
@@ -608,18 +695,46 @@ function SurveyPageInner() {
         );
       })()}
 
-      {/* 설문 진행 중 — 이미 완료됨 */}
-      {status === "open" && !isWeekendKST && alreadyAnswered && (
+      {/* 설문 진행 중 — 이미 완료됨(세션 제출 전, 서버에서 불러온 응답) */}
+      {status === "open" && !isWeekendKST && alreadyAnswered && !submitted && (
         <div className="flex flex-col gap-4 mt-6 fade-up">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 w-full min-w-0">
             <div className="bg-[#1A1A1A] border border-green-500/30 rounded-2xl p-4 min-w-0 flex flex-col gap-2 w-full">
-              <GaugeBar
-                value={gaugePosition}
-                onChange={() => {}}
-                tokens={userTokens}
-                disabled
-                beginnerTips={false}
-              />
+              {pendingGrantToday === "redo_full" ? (
+                <>
+                  <div className="rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-center">
+                    <p className="text-emerald-300 text-xs font-bold">재투표 1회 · 게이지를 다시 정한 뒤 제출하세요</p>
+                  </div>
+                  <SurveyGaugeWithPreview
+                    phase={todayGaugePhase}
+                    setPhase={setTodayGaugePhase}
+                    gaugeValue={gaugePosition}
+                    onGaugeChange={(v) => {
+                      setGaugePosition(v);
+                      setKospiAnswer(v > 0);
+                    }}
+                    userTokens={userTokens}
+                    submitting={submitting}
+                    lockBtnClass="bg-cyan-600 hover:bg-cyan-500 disabled:bg-[#333] disabled:text-gray-500 text-white"
+                    submitBtnClass="bg-emerald-600 hover:bg-emerald-500 disabled:bg-[#333] disabled:text-gray-500 text-white"
+                    submitLabel="재투표 제출하기"
+                    onSubmit={handleSubmit}
+                  />
+                  {error ? (
+                    <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-3 text-red-400 text-sm text-center">
+                      {error}
+                    </div>
+                  ) : null}
+                </>
+              ) : (
+                <>
+                  <GaugeBar
+                    value={gaugePosition}
+                    onChange={() => {}}
+                    tokens={userTokens}
+                    disabled
+                    beginnerTips={false}
+                  />
               <div className="rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 space-y-2">
                 <p className="text-[11px] text-gray-400 leading-relaxed">
                   같은 거래일에는 첫 전송 후 바로 수정할 수 없습니다. 「재투표 1회」「게이지만 조정」「방향만 반전」은 모두 당일 오늘 설문에만 적용되며(날짜 지정 불가) 상점 구매 시 자동으로 오늘 픽에만 붙습니다.
@@ -692,6 +807,8 @@ function SurveyPageInner() {
                   </div>
                 ) : null}
               </div>
+                </>
+              )}
             </div>
             <KospiNowCard price={kospiPrice} status="open" />
           </div>
@@ -760,19 +877,49 @@ function SurveyPageInner() {
         </div>
       )}
 
-      {/* 제출 완료 — 읽기 전용 게이지 + 코스피 차트 */}
+      {/* 제출 완료 — 읽기 전용 게이지 + 코스피 차트 (재투표 grant 시 편집 가능) */}
       {status === "open" && !isWeekendKST && submitted && (
         <div className="flex flex-col gap-4 mt-6 fade-up">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 w-full min-w-0">
             <div className="bg-[#1A1A1A] border border-green-500/30 rounded-2xl p-4 min-w-0 flex flex-col gap-2 w-full">
-              <GaugeBar
-                value={gaugePosition}
-                onChange={() => {}}
-                tokens={userTokens}
-                disabled
-                beginnerTips={false}
-              />
-              <p className="text-[10px] text-gray-600">15:35 결과 공개</p>
+              {pendingGrantToday === "redo_full" ? (
+                <>
+                  <div className="rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-center">
+                    <p className="text-emerald-300 text-xs font-bold">재투표 1회 · 게이지를 다시 정한 뒤 제출하세요</p>
+                  </div>
+                  <SurveyGaugeWithPreview
+                    phase={todayGaugePhase}
+                    setPhase={setTodayGaugePhase}
+                    gaugeValue={gaugePosition}
+                    onGaugeChange={(v) => {
+                      setGaugePosition(v);
+                      setKospiAnswer(v > 0);
+                    }}
+                    userTokens={userTokens}
+                    submitting={submitting}
+                    lockBtnClass="bg-cyan-600 hover:bg-cyan-500 disabled:bg-[#333] disabled:text-gray-500 text-white"
+                    submitBtnClass="bg-emerald-600 hover:bg-emerald-500 disabled:bg-[#333] disabled:text-gray-500 text-white"
+                    submitLabel="재투표 제출하기"
+                    onSubmit={handleSubmit}
+                  />
+                  {error ? (
+                    <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-3 text-red-400 text-sm text-center">
+                      {error}
+                    </div>
+                  ) : null}
+                </>
+              ) : (
+                <>
+                  <GaugeBar
+                    value={gaugePosition}
+                    onChange={() => {}}
+                    tokens={userTokens}
+                    disabled
+                    beginnerTips={false}
+                  />
+                  <p className="text-[10px] text-gray-600">15:35 결과 공개</p>
+                </>
+              )}
             </div>
             <KospiNowCard price={kospiPrice} status="open" />
           </div>
@@ -851,6 +998,33 @@ function SurveyPageInner() {
                     <p className="text-xs text-gray-500">예측 참여 여부 확인 중…</p>
                   </div>
                 ) : nextSubmitted || nextAlreadyAnswered ? (
+                  pendingGrantNext === "redo_full" ? (
+                    <>
+                      <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-center">
+                        <p className="text-amber-300 text-xs font-bold">재투표 1회 · 게이지를 다시 정한 뒤 제출하세요</p>
+                      </div>
+                      <SurveyGaugeWithPreview
+                        phase={nextGaugePhase}
+                        setPhase={setNextGaugePhase}
+                        gaugeValue={nextGaugePosition}
+                        onGaugeChange={(v) => {
+                          setNextGaugePosition(v);
+                          setNextKospiAnswer(v > 0);
+                        }}
+                        userTokens={userTokens}
+                        submitting={nextSubmitting}
+                        lockBtnClass="bg-amber-500 hover:bg-amber-400 disabled:bg-[#333] disabled:text-gray-500 text-white"
+                        submitBtnClass="bg-amber-500 hover:bg-amber-400 disabled:bg-[#333] disabled:text-gray-500 text-white"
+                        submitLabel="재투표 제출하기"
+                        onSubmit={handleNextSubmit}
+                      />
+                      {error ? (
+                        <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-3 text-red-400 text-sm text-center mt-2">
+                          {error}
+                        </div>
+                      ) : null}
+                    </>
+                  ) : (
                   <div className="flex flex-col gap-3 w-full items-stretch">
                     <div className="flex flex-col items-center text-center gap-1">
                       <div className="text-4xl">✅</div>
@@ -871,6 +1045,7 @@ function SurveyPageInner() {
                       </p>
                     </div>
                   </div>
+                  )
                 ) : (
                   <>
                     <SurveyGaugeWithPreview
