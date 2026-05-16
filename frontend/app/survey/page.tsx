@@ -2,7 +2,6 @@
 
 import { useEffect, useState, useCallback, useRef, Suspense, useLayoutEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import { getToday, getTodaySummary, resolveApiBase, TodaySurvey } from "@/lib/api";
 import { formatApiErrorMessage } from "@/lib/format-api-error";
@@ -530,7 +529,6 @@ function SurveyPageInner() {
                   <p className="text-white font-bold">{getSurveyDayLabel(nextSurvey.survey_date).shortLabel} 예측 완료!</p>
                 </div>
                 <div className="w-full min-w-0 space-y-1">
-                  <p className="text-[11px] text-gray-500">저장된 설정 · 읽기 전용입니다</p>
                   <GaugeBar
                     value={nextGaugePosition}
                     onChange={() => {}}
@@ -539,13 +537,10 @@ function SurveyPageInner() {
                     beginnerTips={false}
                   />
                 </div>
-                <div className="rounded-xl border border-amber-500/25 bg-black/20 px-3 py-2 space-y-2 text-center">
+                <div className="rounded-xl border border-amber-500/25 bg-black/20 px-3 py-2 text-center">
                   <p className="text-[11px] text-gray-400 leading-relaxed">
                     이 거래일 응답은 1회 확정 후 바로 수정할 수 없어요. 「재투표」「게이지 조정」「방향 반전」아이템은 모두 오늘의 장 설문(당일 픽)에만 해당합니다. 미리 참여 중인 다른 거래일 픽은 이 아이템으로 수정할 수 없습니다.
                   </p>
-                  <Link href="/shop" className="text-[11px] font-bold text-amber-400 hover:text-amber-200 underline underline-offset-2">
-                    상점 이동
-                  </Link>
                 </div>
               </div>
             ) : (
@@ -618,7 +613,6 @@ function SurveyPageInner() {
         <div className="flex flex-col gap-4 mt-6 fade-up">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 w-full min-w-0">
             <div className="bg-[#1A1A1A] border border-green-500/30 rounded-2xl p-4 min-w-0 flex flex-col gap-2 w-full">
-              <p className="text-[11px] text-gray-500">읽기 전용입니다</p>
               <GaugeBar
                 value={gaugePosition}
                 onChange={() => {}}
@@ -630,12 +624,6 @@ function SurveyPageInner() {
                 <p className="text-[11px] text-gray-400 leading-relaxed">
                   같은 거래일에는 첫 전송 후 바로 수정할 수 없습니다. 「재투표 1회」「게이지만 조정」「방향만 반전」은 모두 당일 오늘 설문에만 적용되며(날짜 지정 불가) 상점 구매 시 자동으로 오늘 픽에만 붙습니다.
                 </p>
-                <Link
-                  href="/shop"
-                  className="inline-block text-[11px] font-bold text-amber-400 hover:text-amber-200 underline underline-offset-2"
-                >
-                  토큰 상점 가기 →
-                </Link>
                 {token && today?.survey_date ? (
                   <div className="flex flex-col gap-1.5 pt-1 border-t border-white/10 mt-2">
                     <p className="text-[10px] text-gray-500">아이템을 이미 샀다면 이 거래일에 바로 적용해 보세요.</p>
@@ -777,7 +765,6 @@ function SurveyPageInner() {
         <div className="flex flex-col gap-4 mt-6 fade-up">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 w-full min-w-0">
             <div className="bg-[#1A1A1A] border border-green-500/30 rounded-2xl p-4 min-w-0 flex flex-col gap-2 w-full">
-              <p className="text-[11px] text-gray-500">읽기 전용입니다</p>
               <GaugeBar
                 value={gaugePosition}
                 onChange={() => {}}
@@ -810,7 +797,6 @@ function SurveyPageInner() {
                     : "bg-red-500/10 border-red-500/20"
                   : "bg-[#1A1A1A] border-[#2A2A2A]"
               }`}>
-                <p className="text-[11px] text-gray-500">읽기 전용입니다</p>
                 <GaugeBar
                   value={gaugePosition}
                   onChange={() => {}}
@@ -871,7 +857,6 @@ function SurveyPageInner() {
                       <p className="text-white font-bold">{getSurveyDayLabel(nextSurvey.survey_date).shortLabel} 예측 완료!</p>
                     </div>
                     <div className="w-full min-w-0 space-y-1">
-                      <p className="text-[11px] text-gray-500">저장된 설정 · 읽기 전용입니다</p>
                       <GaugeBar
                         value={nextGaugePosition}
                         onChange={() => {}}
@@ -880,13 +865,10 @@ function SurveyPageInner() {
                         beginnerTips={false}
                       />
                     </div>
-                    <div className="rounded-xl border border-amber-500/25 bg-black/20 px-3 py-2 space-y-2 text-center">
+                    <div className="rounded-xl border border-amber-500/25 bg-black/20 px-3 py-2 text-center">
                       <p className="text-[11px] text-gray-400 leading-relaxed">
                         이 거래일 응답은 1회 확정 후 바로 수정할 수 없어요. 「재투표」「게이지 조정」「방향 반전」아이템은 모두 오늘의 장 설문(당일 픽)에만 해당합니다. 미리 참여 중인 다른 거래일 픽은 이 아이템으로 수정할 수 없습니다.
                       </p>
-                      <Link href="/shop" className="text-[11px] font-bold text-amber-400 hover:text-amber-200 underline underline-offset-2">
-                        상점 이동
-                      </Link>
                     </div>
                   </div>
                 ) : (
