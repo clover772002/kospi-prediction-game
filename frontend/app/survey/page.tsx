@@ -10,7 +10,6 @@ import { formatApiErrorMessage } from "@/lib/format-api-error";
 import FlipClock from "@/components/FlipClock";
 import KospiChart from "@/components/KospiChart";
 import GaugeBar from "@/components/GaugeBar";
-import SurveyConfidenceNotice from "@/components/SurveyConfidenceNotice";
 import AppAmbientBackground from "@/components/AppAmbientBackground";
 import PageLoadProgress from "@/components/PageLoadProgress";
 import AppTabNav from "@/components/AppTabNav";
@@ -91,7 +90,6 @@ function SurveyGaugeWithPreview({
   const isPreview = phase === "preview";
   return (
     <div className="space-y-3 w-full min-w-0 box-border">
-      <SurveyConfidenceNotice compact={!isPreview} />
       {isPreview ? (
         <>
           <GaugeBar
@@ -635,9 +633,6 @@ function SurveyPageInner() {
                   <p className="text-center font-black text-white text-lg sm:text-xl mb-2">
                     📅 {nextSurvey.survey_date.slice(5).replace("-","/")} 코스피 — 상승·하락 + 확신도
                   </p>
-                  <p className="text-center text-sm text-gray-500 mb-4 px-2 leading-snug">
-                    막대 숫자는 등락률이 아니라 「얼마나 확신하는지」예요.
-                  </p>
                 </>
               );
             })()}
@@ -805,7 +800,6 @@ function SurveyPageInner() {
                 </>
               ) : (
                 <>
-                  <SurveyConfidenceNotice compact />
                   <GaugeBar
                     value={gaugePosition}
                     onChange={() => {}}
@@ -1034,7 +1028,6 @@ function SurveyPageInner() {
                     : "bg-red-500/10 border-red-500/20"
                   : "bg-[#1A1A1A] border-[#2A2A2A]"
               }`}>
-                <SurveyConfidenceNotice compact />
                 <GaugeBar
                   value={gaugePosition}
                   onChange={() => {}}
@@ -1080,11 +1073,8 @@ function SurveyPageInner() {
                   return (
                     <>
                       <p className="text-center text-base text-gray-500 mb-2">{shortLabel} 사전 예측</p>
-                      <p className="text-center font-black text-white text-lg sm:text-xl mb-2">
+                      <p className="text-center font-black text-white text-lg sm:text-xl mb-5">
                         📅 {nextSurvey.survey_date.slice(5).replace("-","/")} 코스피 — 상승·하락 + 확신도
-                      </p>
-                      <p className="text-center text-sm text-gray-500 mb-4 px-2 leading-snug">
-                        막대 숫자는 등락률이 아니라 「얼마나 확신하는지」예요.
                       </p>
                     </>
                   );

@@ -123,14 +123,15 @@ export default function GaugeBar({
     hitPreviewTokens = Math.max(1, Math.round(bet * crowdMult * streakM));
   }
 
+  const gaugeDisclaimer = (
+    <p className="text-base text-gray-500 leading-snug pt-3 border-t border-[#2A2A2A]">
+      아래 표시는 <span className="text-gray-400">등락률 예측</span>이 아니라, 제출하신 예측의{" "}
+      <span className="text-gray-400">방향·확신도</span>입니다.
+    </p>
+  );
+
   return (
     <div className={`w-full max-w-full min-w-0 rounded-2xl border ${borderCls} ${bgGlow} px-5 py-6 sm:px-6 space-y-4 box-border`}>
-      {tipsReadonly && (
-        <p className="text-base text-gray-500 leading-snug border-b border-[#2A2A2A] pb-3">
-          아래 표시는 <span className="text-gray-400">등락률 예측</span>이 아니라, 제출하신 예측의{" "}
-          <span className="text-gray-400">방향·확신도</span>(배팅 산출 기준)입니다.
-        </p>
-      )}
       {tipsInteractive && (
         <div className="space-y-2 pb-2 border-b border-[#2A2A2A] w-full min-w-0">
           <p id={helpId} className="text-base text-gray-300 leading-snug">
@@ -273,6 +274,8 @@ export default function GaugeBar({
           <span className="text-red-400 font-bold">-{bet.toLocaleString()} 토큰</span>
         </div>
       </div>
+
+      {tipsEnabled ? gaugeDisclaimer : null}
     </div>
   );
 }
