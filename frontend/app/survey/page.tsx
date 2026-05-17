@@ -10,6 +10,7 @@ import { formatApiErrorMessage } from "@/lib/format-api-error";
 import FlipClock from "@/components/FlipClock";
 import KospiChart from "@/components/KospiChart";
 import GaugeBar from "@/components/GaugeBar";
+import SurveyConfidenceNotice from "@/components/SurveyConfidenceNotice";
 import AppAmbientBackground from "@/components/AppAmbientBackground";
 import PageLoadProgress from "@/components/PageLoadProgress";
 import AppTabNav from "@/components/AppTabNav";
@@ -90,6 +91,7 @@ function SurveyGaugeWithPreview({
   const isPreview = phase === "preview";
   return (
     <div className="space-y-3 w-full min-w-0 box-border">
+      <SurveyConfidenceNotice compact={!isPreview} />
       {isPreview ? (
         <>
           <GaugeBar
@@ -97,7 +99,7 @@ function SurveyGaugeWithPreview({
             onChange={onGaugeChange}
             tokens={userTokens}
             disabled={submitting}
-            beginnerTips={false}
+            beginnerTips
             kospiYesPct={kospiYesPct}
             streakBetMult={streakBetMult}
           />
@@ -120,7 +122,7 @@ function SurveyGaugeWithPreview({
             onChange={onGaugeChange}
             tokens={userTokens}
             disabled
-            beginnerTips={false}
+            beginnerTips
             kospiYesPct={kospiYesPct}
             streakBetMult={streakBetMult}
           />
@@ -630,8 +632,11 @@ function SurveyPageInner() {
               return (
                 <>
                   <p className="text-center text-base text-gray-500 mb-2">{shortLabel} 사전 예측</p>
-                  <p className="text-center font-black text-white text-lg sm:text-xl mb-5">
-                    📅 {nextSurvey.survey_date.slice(5).replace("-","/")} 코스피 방향
+                  <p className="text-center font-black text-white text-lg sm:text-xl mb-2">
+                    📅 {nextSurvey.survey_date.slice(5).replace("-","/")} 코스피 — 상승·하락 + 확신도
+                  </p>
+                  <p className="text-center text-sm text-gray-500 mb-4 px-2 leading-snug">
+                    막대 숫자는 등락률이 아니라 「얼마나 확신하는지」예요.
                   </p>
                 </>
               );
@@ -682,7 +687,7 @@ function SurveyPageInner() {
                     onChange={() => {}}
                     tokens={userTokens}
                     disabled
-                    beginnerTips={false}
+                    beginnerTips
                     kospiYesPct={null}
                     streakBetMult={streakBetMultForGauge}
                   />
@@ -800,12 +805,13 @@ function SurveyPageInner() {
                 </>
               ) : (
                 <>
+                  <SurveyConfidenceNotice compact />
                   <GaugeBar
                     value={gaugePosition}
                     onChange={() => {}}
                     tokens={userTokens}
                     disabled
-                    beginnerTips={false}
+                    beginnerTips
                     kospiYesPct={today?.kospi_yes_pct ?? null}
                     streakBetMult={streakBetMultForGauge}
                   />
@@ -819,7 +825,10 @@ function SurveyPageInner() {
                         className="text-sm font-bold px-3 py-2 rounded-lg bg-white/10 hover:bg-white/15"
                         onClick={async () => {
                           if (!token || !today.survey_date) return;
-                          const inp = window.prompt("확신도 -100~100 (0 제외·방향 유지)", String(gaugePosition));
+                          const inp = window.prompt(
+                            "확신도 -100~100 (등락률 아님·0 제외·방향 유지)",
+                            String(gaugePosition),
+                          );
                           const n = inp != null ? Number(inp) : NaN;
                           if (!Number.isFinite(n) || n === 0 || n < -100 || n > 100) return;
                           setError(null);
@@ -910,21 +919,16 @@ function SurveyPageInner() {
             </div>
           )}
 
-          {/* 코스피 단일 질문 + GaugeBar */}
-          <div className="w-full min-w-0">
-            <p className="font-black text-white text-lg sm:text-xl mb-2 leading-snug">
+          {/* 코스피 방향 + 확신도 */}
+          <div className="w-full min-w-0 space-y-3">
+            <p className="font-black text-white text-lg sm:text-xl leading-snug">
               {(() => {
                 const kst = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Seoul" }));
                 const todayStr = `${kst.getFullYear()}-${String(kst.getMonth()+1).padStart(2,"0")}-${String(kst.getDate()).padStart(2,"0")}`;
                 const sd = today?.survey_date ?? todayStr;
                 const { shortLabel } = getSurveyDayLabel(sd);
-                return `📈 코스피 (${shortLabel}) 상승·하락 여부 예측`;
+                return `📈 코스피 (${shortLabel}) — 상승·하락 + 확신도`;
               })()}
-            </p>
-            <p className="text-base sm:text-lg font-bold text-gray-300 mb-2">확신도 선택</p>
-            <p className="text-base text-gray-500 mb-4 leading-relaxed">
-              ±% 표기는 장 <strong className="text-gray-400">등락률</strong>이 아니라 선택한 방향에 대한{" "}
-              <strong className="text-gray-400">확신도</strong>입니다.
             </p>
             <SurveyGaugeWithPreview
               phase={todayGaugePhase}
@@ -999,7 +1003,7 @@ function SurveyPageInner() {
                     onChange={() => {}}
                     tokens={userTokens}
                     disabled
-                    beginnerTips={false}
+                    beginnerTips
                     kospiYesPct={today?.kospi_yes_pct ?? null}
                     streakBetMult={streakBetMultForGauge}
                   />
@@ -1030,12 +1034,13 @@ function SurveyPageInner() {
                     : "bg-red-500/10 border-red-500/20"
                   : "bg-[#1A1A1A] border-[#2A2A2A]"
               }`}>
+                <SurveyConfidenceNotice compact />
                 <GaugeBar
                   value={gaugePosition}
                   onChange={() => {}}
                   tokens={userTokens}
                   disabled
-                  beginnerTips={false}
+                  beginnerTips
                   kospiYesPct={today?.kospi_yes_pct ?? null}
                   streakBetMult={streakBetMultForGauge}
                 />
@@ -1075,8 +1080,11 @@ function SurveyPageInner() {
                   return (
                     <>
                       <p className="text-center text-base text-gray-500 mb-2">{shortLabel} 사전 예측</p>
-                      <p className="text-center font-black text-white text-lg sm:text-xl mb-5">
-                        📅 {nextSurvey.survey_date.slice(5).replace("-","/")} 코스피 방향
+                      <p className="text-center font-black text-white text-lg sm:text-xl mb-2">
+                        📅 {nextSurvey.survey_date.slice(5).replace("-","/")} 코스피 — 상승·하락 + 확신도
+                      </p>
+                      <p className="text-center text-sm text-gray-500 mb-4 px-2 leading-snug">
+                        막대 숫자는 등락률이 아니라 「얼마나 확신하는지」예요.
                       </p>
                     </>
                   );
@@ -1128,7 +1136,7 @@ function SurveyPageInner() {
                         onChange={() => {}}
                         tokens={userTokens}
                         disabled
-                        beginnerTips={false}
+                        beginnerTips
                         kospiYesPct={null}
                         streakBetMult={streakBetMultForGauge}
                       />

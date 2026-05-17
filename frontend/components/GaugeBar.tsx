@@ -133,23 +133,21 @@ export default function GaugeBar({
       )}
       {tipsInteractive && (
         <div className="space-y-2 pb-2 border-b border-[#2A2A2A] w-full min-w-0">
-          <p id={helpId} className="text-base text-gray-400 leading-snug">
-            <strong className="text-gray-300 font-bold">확신도 입력</strong>: 익 거래일 코스피{" "}
-            <strong className="text-red-400 font-bold">상승</strong> 또는{" "}
-            <strong className="text-blue-400 font-bold">하락</strong>을 선택하고, 해당 방향에 대한{" "}
-            <strong className="text-gray-300">확신 정도</strong>를 막대로 지정합니다. 막대를{" "}
-            <strong className="text-blue-400">왼쪽</strong>(하락)·<strong className="text-red-400">오른쪽</strong>(상승)으로 이동하면
-            방향과 확신도가 함께 변경됩니다.
+          <p id={helpId} className="text-base text-gray-300 leading-snug">
+            <strong className="text-amber-200 font-bold">얼마나 확신하세요?</strong> 막대{" "}
+            <strong className="text-blue-400">왼쪽</strong>=하락·<strong className="text-red-400">오른쪽</strong>
+            =상승, 멀수록 그 방향 확신이 큽니다. 숫자는{" "}
+            <strong className="text-white">등락률이 아닙니다</strong> (예: −5 ≠ 코스피 5% 하락 예측).
           </p>
           <details className="group rounded-xl bg-[#111]/90 border border-[#2a2a2a] px-4 py-2.5">
             <summary className="text-base text-cyan-400 font-bold cursor-pointer list-none [&::-webkit-details-marker]:hidden flex items-center gap-1">
-              <span>±% 수치 및 토큰 설명 펼치기</span>
+              <span>확신도·토큰 자세히 보기</span>
               <span className="text-gray-600 group-open:rotate-180 transition-transform">▼</span>
             </summary>
             <div className="mt-2 text-base text-gray-500 leading-relaxed space-y-2 pb-1 w-full min-w-0">
               <p>
-                표시되는 ±%는 <strong className="text-gray-400">등락률 수치 입력</strong>이 아니라 확신도에 따른 표기입니다.
-                장 마감 시점의 등락률 예측치를 입력하는 항목이 <strong className="text-gray-400">아닙니다.</strong>
+                표시되는 ±숫자는 <strong className="text-gray-300">확신도 스케일</strong>입니다. 코스피가 몇 % 오르거나
+                내릴지 맞히는 항목이 <strong className="text-gray-300">아닙니다.</strong>
               </p>
               <p>
                 해당 방향으로 마갭될 것에 대한{" "}
@@ -166,13 +164,19 @@ export default function GaugeBar({
         </div>
       )}
 
-      {/* 방향 + 게이지 수치 */}
-      <div className="flex items-center justify-between">
-        <span className={`text-2xl font-black ${dirColor}`}>{dirLabel}</span>
-        <span className={`text-3xl font-black tabular-nums ${dirColor}`}>
-          {isUp ? "+" : ""}
-          {value}%
-        </span>
+      {/* 방향 + 확신도 수치 */}
+      <div className="flex items-end justify-between gap-3">
+        <div>
+          <p className="text-xs text-gray-500 font-bold mb-0.5">예측 방향</p>
+          <span className={`text-2xl font-black ${dirColor}`}>{dirLabel}</span>
+        </div>
+        <div className="text-right">
+          <p className="text-xs text-gray-500 font-bold mb-0.5">확신도 (등락률 아님)</p>
+          <span className={`text-3xl font-black tabular-nums ${dirColor}`}>
+            {isUp ? "+" : ""}
+            {value}
+          </span>
+        </div>
       </div>
 
       {/* 드래그 게이지 */}
@@ -220,15 +224,24 @@ export default function GaugeBar({
           />
         </div>
         {!disabled && (
-          <p className="text-center text-sm text-gray-500 mt-2">막대를 드래그하면 배팅 토큰 산출이 함께 변경됩니다.</p>
+          <p className="text-center text-sm text-gray-500 mt-2">
+            막대를 드래그해 방향·확신도를 정하면 배팅 토큰이 함께 바뀝니다.
+          </p>
         )}
       </div>
 
-      {/* -100 / 0 / +100 라벨 */}
-      <div className="flex justify-between text-sm text-gray-600 px-1">
-        <span>-100%</span>
-        <span>0</span>
-        <span>+100%</span>
+      {/* 확신 스케일 (등락률 아님) */}
+      <div className="space-y-1">
+        <div className="flex justify-between text-sm text-gray-500 px-1">
+          <span className="text-blue-400/90">하락·약함</span>
+          <span>0</span>
+          <span className="text-red-400/90">상승·강함</span>
+        </div>
+        <div className="flex justify-between text-xs text-gray-600 px-1 tabular-nums">
+          <span>−100</span>
+          <span>확신 스케일</span>
+          <span>+100</span>
+        </div>
       </div>
 
       {/* 배팅 정보 */}
