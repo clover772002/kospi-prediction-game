@@ -124,6 +124,11 @@ function formatConfidenceGauge(gauge: number | null | undefined): string {
   return `${n > 0 ? "+" : ""}${Math.round(n)}`;
 }
 
+/** 최근이력 표: 가로 스크롤·칸 최소 너비 */
+const HISTORY_TH =
+  "py-3 px-3 font-bold align-middle text-sm leading-snug whitespace-nowrap";
+const HISTORY_TD = "py-3 px-3 align-middle text-sm leading-snug whitespace-nowrap";
+
 function HistoryRow({ item, todaySurvey }: { item: DashboardData["history"][0]; todaySurvey: TodaySurvey | null }) {
   const verdict = effectiveKospiCorrect(item);
   const hasResult = verdict !== null;
@@ -179,33 +184,33 @@ function HistoryRow({ item, todaySurvey }: { item: DashboardData["history"][0]; 
           : ""
       }`}
     >
-      <td className="py-2 pl-2 pr-0.5 align-middle text-white tabular-nums whitespace-nowrap text-sm">
+      <td className={`${HISTORY_TD} min-w-[4.75rem] text-white tabular-nums pl-4`}>
         {item.date.slice(5)}
       </td>
-      <td className="py-2 px-1 align-middle text-sm border-l border-[#2a2a2a]/80 bg-[#0f0f0f]/35">
-        <div className="leading-tight">
-          <span className={`font-bold ${predictCls}`}>{directionUp ? "상승" : "하락"}</span>
-          <span className="block tabular-nums text-white/90 text-xs mt-0.5">
+      <td className={`${HISTORY_TD} min-w-[6.5rem] border-l border-[#2a2a2a]/80 bg-[#0f0f0f]/35`}>
+        <div className="leading-snug">
+          <span className={`font-bold text-base ${predictCls}`}>{directionUp ? "상승" : "하락"}</span>
+          <span className="block tabular-nums text-white/90 text-sm mt-1">
             확신도 {confidenceLine}
           </span>
         </div>
       </td>
-      <td className="py-2 px-0.5 align-middle text-sm border-l border-amber-500/25 bg-[#0f0f0f]/35">
+      <td className={`${HISTORY_TD} min-w-[6.5rem] border-l border-amber-500/25 bg-[#0f0f0f]/35`}>
         {kospiCell}
       </td>
-      <td className={`py-2 px-0.5 align-middle text-center whitespace-nowrap font-bold text-base ${
+      <td className={`${HISTORY_TD} min-w-[5rem] text-center font-bold text-base ${
         !hasResult ? "text-white/90" : verdict ? "text-green-400/95" : "text-red-400/90"
       }`}
       >
         {hitLabel}
       </td>
-      <td className="py-2 px-0.5 align-middle text-right tabular-nums text-white whitespace-nowrap text-sm">
+      <td className={`${HISTORY_TD} min-w-[5.5rem] text-right tabular-nums text-white`}>
         {tokensBet != null && tokensBet !== undefined ? `${tokensBet}` : "—"}
       </td>
-      <td className="py-2 px-0.5 align-middle text-right tabular-nums text-cyan-300 whitespace-nowrap text-sm">
+      <td className={`${HISTORY_TD} min-w-[4.75rem] text-right tabular-nums text-cyan-300`}>
         {mult != null ? `×${mult.toFixed(2)}` : "—"}
       </td>
-      <td className={`py-2 pl-0.5 pr-2 align-middle text-right font-bold tabular-nums whitespace-nowrap text-sm ${
+      <td className={`${HISTORY_TD} min-w-[6.75rem] pr-4 text-right font-bold tabular-nums ${
         !hasResult
           ? "text-white/90"
           : tokensWon != null && tokensWon > 0
@@ -1132,25 +1137,28 @@ export default function DashboardPage() {
               {/* 최근 이력 */}
               {dash.history.length > 0 && (
                 <div className="space-y-2">
-                  <p className="text-sm text-white font-bold">최근이력(5거래일)</p>
-                  <div className="rounded-xl border border-[#2A2A2A] bg-[#141414]/60 overflow-hidden">
-                    <table className="w-full border-collapse text-sm">
+                  <div className="flex items-end justify-between gap-2">
+                    <p className="text-sm text-white font-bold">최근이력(5거래일)</p>
+                    <p className="text-xs text-white/65 shrink-0 pb-0.5">← 옆으로 밀어 보기</p>
+                  </div>
+                  <div className="rounded-xl border border-[#2A2A2A] bg-[#141414]/60 overflow-x-auto overscroll-x-contain [-webkit-overflow-scrolling:touch]">
+                    <table className="w-max min-w-full border-collapse text-sm">
                       <thead>
                         <tr className="text-left text-white border-b border-[#2A2A2A] bg-[#1A1A1A]/90">
-                          <th rowSpan={2} className="py-2 pl-2 pr-1 font-bold align-middle text-sm leading-tight whitespace-nowrap">
+                          <th rowSpan={2} className={`${HISTORY_TH} min-w-[4.75rem] pl-4`}>
                             거래일
                           </th>
                           <th
                             rowSpan={2}
                             title="내가 고른 방향과 확신도(게이지). 코스피 등락률이 아닙니다."
-                            className="py-2 px-1 font-bold align-middle text-sm leading-tight border-l border-[#2a2a2a]/80"
+                            className={`${HISTORY_TH} min-w-[6.5rem] border-l border-[#2a2a2a]/80`}
                           >
                             <span className="block">예측</span>
-                            <span className="block text-xs font-normal text-white/75">(확신도)</span>
+                            <span className="block text-xs font-normal text-white/75 mt-0.5">(확신도)</span>
                           </th>
                           <th
                             colSpan={5}
-                            className="py-2 px-1 font-bold align-middle text-center text-sm leading-tight border-l border-amber-500/30 text-amber-200"
+                            className={`${HISTORY_TH} text-center border-l border-amber-500/30 text-amber-200`}
                           >
                             결과
                           </th>
@@ -1158,19 +1166,19 @@ export default function DashboardPage() {
                         <tr className="text-left text-white border-b border-[#2A2A2A] bg-[#1A1A1A]/95">
                           <th
                             title="코스피 종가 방향·실제 등락률"
-                            className="py-2 px-0.5 font-bold border-l border-amber-500/25 text-sm leading-tight whitespace-nowrap"
+                            className={`${HISTORY_TH} min-w-[6.5rem] border-l border-amber-500/25`}
                           >
                             <span className="block">코스피</span>
-                            <span className="block text-xs font-normal text-amber-100/75">(등락률)</span>
+                            <span className="block text-xs font-normal text-amber-100/75 mt-0.5">(등락률)</span>
                           </th>
-                          <th className="py-2 px-0.5 font-bold text-center text-sm leading-tight whitespace-nowrap">판정</th>
-                          <th className="py-2 px-0.5 font-bold text-right text-sm leading-tight whitespace-nowrap">배팅토큰</th>
-                          <th title="집단배율" className="py-2 px-0.5 font-bold text-right text-sm leading-tight whitespace-nowrap">
+                          <th className={`${HISTORY_TH} min-w-[5rem] text-center`}>판정</th>
+                          <th className={`${HISTORY_TH} min-w-[5.5rem] text-right`}>배팅토큰</th>
+                          <th title="집단배율" className={`${HISTORY_TH} min-w-[4.75rem] text-right`}>
                             배율
                           </th>
                           <th
                             title="적중 시 획득·실패 시 손실"
-                            className="py-2 pl-0.5 pr-2 font-bold text-right text-sm leading-tight whitespace-nowrap"
+                            className={`${HISTORY_TH} min-w-[6.75rem] pr-4 text-right`}
                           >
                             획득/손실
                           </th>
