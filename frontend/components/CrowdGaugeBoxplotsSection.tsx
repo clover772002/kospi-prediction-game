@@ -125,6 +125,19 @@ function HorizontalSignedBox({
             style={{ left: `${pMed}%`, transform: "translateX(-50%)" }}
           />
         </div>
+        {variant === "fall" ? (
+          <div className="flex justify-between text-xs text-white/90 tabular-nums mt-1 px-0.5">
+            <span>-100</span>
+            <span>-50</span>
+            <span>0</span>
+          </div>
+        ) : (
+          <div className="flex justify-between text-xs text-white/90 tabular-nums mt-1 px-0.5">
+            <span>0</span>
+            <span>50</span>
+            <span>100</span>
+          </div>
+        )}
       </div>
     </BoxplotCardWrap>
   );
