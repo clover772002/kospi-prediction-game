@@ -3,28 +3,18 @@
 import Link from "next/link";
 
 type Props = {
-  /** 오늘(기준 거래일) 설문에 참여해 질문 수신 대상인지 */
   receivesToday: boolean;
-  /** 설문 제출 직후 등 좁은 영역용 */
   compact?: boolean;
   expertChatHref?: string;
   expertChatUnlocked?: boolean;
 };
 
-/** 전역 최고 고수에게 표시하는 선정 안내 */
 export default function GlobalTopExpertBanner({
   receivesToday,
   compact = false,
   expertChatHref = "/expert-chat",
   expertChatUnlocked = true,
 }: Props) {
-  const title = receivesToday
-    ? "오늘의 최고 고수로 지정됐어요"
-    : "누적 적중 1순위(최고 고수)입니다";
-  const body = receivesToday
-    ? "다른 참가자가 고수 탭에서 질문을 보낼 수 있어요. 알림을 켜 두면 푸시로도 받을 수 있습니다."
-    : "오늘 설문에 참여하면 그날 질문을 받을 수 있어요.";
-
   return (
     <div
       className={`rounded-2xl border border-violet-500/35 bg-gradient-to-br from-violet-950/50 to-indigo-950/30 ${
@@ -36,10 +26,10 @@ export default function GlobalTopExpertBanner({
         <span className="mr-1" aria-hidden>
           ⭐
         </span>
-        {title}
+        최고 고수로 지정됐어요
       </p>
       <p className={`mt-1 leading-relaxed text-violet-200/90 ${compact ? "text-xs" : "text-sm"}`}>
-        {body}
+        다른 사람에게 질문을 받으면 토큰을 받을 수 있어요.
       </p>
       {receivesToday && expertChatUnlocked ? (
         <Link
@@ -52,9 +42,34 @@ export default function GlobalTopExpertBanner({
         </Link>
       ) : receivesToday && !expertChatUnlocked ? (
         <p className={`mt-2 text-violet-300/70 ${compact ? "text-[11px]" : "text-xs"}`}>
-          고수 탭은 토큰 210개 이상일 때 열립니다. 질문은 그때 확인할 수 있어요.
+          고수 탭은 토큰 210개 이상일 때 열립니다.
+        </p>
+      ) : !receivesToday ? (
+        <p className={`mt-2 text-violet-300/70 ${compact ? "text-[11px]" : "text-xs"}`}>
+          오늘 설문에 참여하면 그날 질문을 받을 수 있어요.
         </p>
       ) : null}
+    </div>
+  );
+}
+
+export function GlobalTopExpertDethronedBanner({ compact = false }: { compact?: boolean }) {
+  return (
+    <div
+      className={`rounded-2xl border border-zinc-500/40 bg-gradient-to-br from-zinc-900/80 to-zinc-950/60 ${
+        compact ? "px-3 py-3" : "px-4 py-4"
+      }`}
+      role="status"
+    >
+      <p className={`font-black text-zinc-200 ${compact ? "text-sm" : "text-base"}`}>
+        <span className="mr-1" aria-hidden>
+          💔
+        </span>
+        고수의 자리를 빼앗겼어요
+      </p>
+      <p className={`mt-1 leading-relaxed text-zinc-400 ${compact ? "text-xs" : "text-sm"}`}>
+        누적 적중 1순위가 바뀌었습니다. 적중을 더 쌓으면 다시 최고 고수가 될 수 있어요.
+      </p>
     </div>
   );
 }

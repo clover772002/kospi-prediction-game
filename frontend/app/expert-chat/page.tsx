@@ -22,7 +22,7 @@ import {
 import AppAmbientBackground from "@/components/AppAmbientBackground";
 import AppTabNav from "@/components/AppTabNav";
 import ExpertChatTabGate from "@/components/ExpertChatTabGate";
-import GlobalTopExpertBanner from "@/components/GlobalTopExpertBanner";
+import TopExpertNoticeBlock from "@/components/TopExpertNoticeBlock";
 import PageLoadProgress from "@/components/PageLoadProgress";
 
 function newIdempotencyKey(): string {
@@ -263,6 +263,16 @@ export default function ExpertChatPage() {
         <AppAmbientBackground />
         <main className="relative z-10 mx-auto min-h-screen max-w-md px-4 pb-28 pt-6">
           <h1 className="mb-4 text-center text-2xl font-black text-white">고수 소통</h1>
+          {me && eligibility ? (
+            <div className="mb-4">
+              <TopExpertNoticeBlock
+                userId={me.id}
+                isGlobalTopExpert={eligibility.is_global_top_expert}
+                receivesToday={eligibility.receives_expert_questions_today}
+                expertChatUnlocked={eligibility.can_access_expert_chat}
+              />
+            </div>
+          ) : null}
           <ExpertChatTabGate
             myBalance={eligibility.my_balance}
             minBalance={eligibility.min_balance_for_tab}
@@ -291,20 +301,23 @@ export default function ExpertChatPage() {
         </div>
 
         <h1 className="mb-1 text-2xl font-black text-white">고수 소통</h1>
-        {eligibility?.is_global_top_expert ? (
+        {me && eligibility ? (
           <div className="mb-4">
-            <GlobalTopExpertBanner
+            <TopExpertNoticeBlock
+              userId={me.id}
+              isGlobalTopExpert={eligibility.is_global_top_expert}
               receivesToday={eligibility.receives_expert_questions_today}
               expertChatUnlocked={eligibility.can_access_expert_chat}
             />
           </div>
-        ) : (
+        ) : null}
+        {eligibility && !eligibility.is_global_top_expert ? (
           <p className="mb-4 text-sm leading-relaxed text-white/90">
             오늘 설문에 참여한 <strong className="text-white">최고 고수 1명</strong>에게 질문을 보낼 수 있습니다. 질문 1통당{" "}
-            <span className="font-bold text-amber-200">{eligibility?.tip_tokens_per_message ?? "—"}토큰</span>이
+            <span className="font-bold text-amber-200">{eligibility.tip_tokens_per_message}토큰</span>이
             차감되며, 고수가 <strong className="text-white">팁을 수락할 때</strong> 해당 토큰이 전달됩니다.
           </p>
-        )}
+        ) : null}
 
         {err ? (
           <div className="mb-3 rounded-xl border border-red-500/30 bg-red-950/40 px-3 py-2 text-xs text-red-200">

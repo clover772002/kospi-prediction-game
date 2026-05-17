@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import { getMe, getToday, getDashboard, getExpertChatEligibility, createChallenge, getMyChallenges, reactToChallenge, requestRematch, acceptChallenge, declineChallenge, getMyGroups, UserProfile, TodaySurvey, DashboardData, Challenge, Group, type ExpertChatEligibility } from "@/lib/api";
-import GlobalTopExpertBanner from "@/components/GlobalTopExpertBanner";
+import TopExpertNoticeBlock from "@/components/TopExpertNoticeBlock";
 import ShareSheet from "@/components/ShareSheet";
 import AppAmbientBackground from "@/components/AppAmbientBackground";
 import AppTabNav from "@/components/AppTabNav";
@@ -944,9 +944,11 @@ export default function DashboardPage() {
                 </div>
               </div>
 
-              {expertEligibility?.is_global_top_expert ? (
+              {user && expertEligibility ? (
                 <div className="mt-3">
-                  <GlobalTopExpertBanner
+                  <TopExpertNoticeBlock
+                    userId={user.id}
+                    isGlobalTopExpert={expertEligibility.is_global_top_expert}
                     receivesToday={expertEligibility.receives_expert_questions_today}
                     expertChatUnlocked={expertEligibility.can_access_expert_chat}
                   />

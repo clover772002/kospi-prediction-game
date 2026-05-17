@@ -4,7 +4,8 @@ import { useEffect, useState, useCallback, useRef, Suspense, useLayoutEffect } f
 import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { getToday, getTodaySummary, getExpertChatEligibility, resolveApiBase, TodaySurvey } from "@/lib/api";
-import GlobalTopExpertBanner from "@/components/GlobalTopExpertBanner";
+import TopExpertNoticeBlock from "@/components/TopExpertNoticeBlock";
+import { markWasTopExpert } from "@/lib/top-expert-notice";
 import { formatApiErrorMessage } from "@/lib/format-api-error";
 import FlipClock from "@/components/FlipClock";
 import KospiChart from "@/components/KospiChart";
@@ -160,7 +161,8 @@ function SurveyPageInner() {
   const [revalidating, setRevalidating] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
-  const [showTopExpertNotice, setShowTopExpertNotice] = useState(false);
+  const [userId, setUserId] = useState<string | null>(null);
+  const [isGlobalTopExpert, setIsGlobalTopExpert] = useState<boolean | undefined>(undefined);
   const [error, setError] = useState<string | null>(null);
 
   const [kospiAnswer, setKospiAnswer] = useState<boolean | null>(null);
@@ -331,7 +333,7 @@ function SurveyPageInner() {
     let cancelled = false;
     void getExpertChatEligibility(token, sd)
       .then((e) => {
-        if (!cancelled && e.is_global_top_expert) setShowTopExpertNotice(true);
+        if (!cancelled) setIsGlobalTopExpert(e.is_global_top_expert);
       })
       .catch(() => {});
     return () => {
@@ -350,9 +352,10 @@ function SurveyPageInner() {
   useEffect(() => {
     let cancelled = false;
 
-    const bootstrapSession = (session: { access_token: string }) => {
+    const bootstrapSession = (session: { access_token: string; user?: { id: string } }) => {
       if (cancelled) return;
       setToken(session.access_token);
+      if (session.user?.id) setUserId(session.user.id);
       void loadToday();
       void (async () => {
         await checkMyResponse(session.access_token);
@@ -476,7 +479,14 @@ function SurveyPageInner() {
         is_global_top_expert?: boolean;
       };
       if (typeof data.current_tokens === "number") setUserTokens(data.current_tokens);
-      if (data.is_global_top_expert) setShowTopExpertNotice(true);
+      if (data.is_global_top_expert) {
+        setIsGlobalTopExpert(true);
+        const uid = userId ?? (await supabase.auth.getUser()).data.user?.id ?? null;
+        if (uid) {
+          setUserId(uid);
+          markWasTopExpert(uid);
+        }
+      }
       setSubmitted(true);
       setAlreadyAnswered(true);
       setPreviousAnswer(kospiAnswer);
@@ -512,7 +522,14 @@ function SurveyPageInner() {
         is_global_top_expert?: boolean;
       };
       if (typeof data.current_tokens === "number") setUserTokens(data.current_tokens);
-      if (data.is_global_top_expert) setShowTopExpertNotice(true);
+      if (data.is_global_top_expert) {
+        setIsGlobalTopExpert(true);
+        const uid = userId ?? (await supabase.auth.getUser()).data.user?.id ?? null;
+        if (uid) {
+          setUserId(uid);
+          markWasTopExpert(uid);
+        }
+      }
       setNextSubmitted(true);
       setNextAlreadyAnswered(true);
       setNextPreviousAnswer(nextKospiAnswer);
@@ -742,8 +759,10 @@ function SurveyPageInner() {
       {/* 설문 진행 중 — 이미 완료됨(세션 제출 전, 서버에서 불러온 응답) */}
       {status === "open" && !isWeekendKST && alreadyAnswered && !submitted && (
         <div className="flex flex-col gap-4 mt-6 fade-up">
-          {showTopExpertNotice ? (
-            <GlobalTopExpertBanner
+          {userId && isGlobalTopExpert !== undefined ? (
+            <TopExpertNoticeBlock
+              userId={userId}
+              isGlobalTopExpert={isGlobalTopExpert}
               receivesToday
               compact
               expertChatUnlocked={userTokens >= 210}
@@ -934,8 +953,10 @@ function SurveyPageInner() {
       {/* 제출 완료 — 읽기 전용 게이지 + 코스피 차트 (재투표 grant 시 편집 가능) */}
       {status === "open" && !isWeekendKST && submitted && (
         <div className="flex flex-col gap-4 mt-6 fade-up">
-          {showTopExpertNotice ? (
-            <GlobalTopExpertBanner
+          {userId && isGlobalTopExpert !== undefined ? (
+            <TopExpertNoticeBlock
+              userId={userId}
+              isGlobalTopExpert={isGlobalTopExpert}
               receivesToday
               compact
               expertChatUnlocked={userTokens >= 210}
