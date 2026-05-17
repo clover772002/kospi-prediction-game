@@ -625,12 +625,6 @@ function SurveyPageInner() {
       {(status === "no_survey" || isWeekendKST) && nextSurvey?.is_open && (
         <div className="mt-4 space-y-4">
           <div className="border-t border-[#2A2A2A] pt-5">
-            {(() => {
-              const { shortLabel } = getSurveyDayLabel(nextSurvey.survey_date);
-              return (
-                <p className="text-center text-base text-gray-500 mb-5">{shortLabel} 사전 예측</p>
-              );
-            })()}
             {nextMyResponseLoading ? (
               <div className="flex flex-col items-center py-8 gap-2">
                 <div className="w-8 h-8 border-2 border-white/20 border-t-amber-400 rounded-full animate-spin" />
@@ -667,10 +661,7 @@ function SurveyPageInner() {
                 </>
               ) : (
               <div className="flex flex-col gap-3 w-full items-stretch">
-                <div className="flex flex-col items-center text-center gap-1">
-                  <div className="text-4xl">✅</div>
-                  <p className="text-white font-bold text-lg">{getSurveyDayLabel(nextSurvey.survey_date).shortLabel} 예측 제출 완료</p>
-                </div>
+                <p className="text-center text-base text-emerald-400 font-bold mb-1">제출 완료</p>
                 <div className="w-full min-w-0 space-y-1">
                   <GaugeBar
                     value={nextGaugePosition}
@@ -686,6 +677,7 @@ function SurveyPageInner() {
               )
             ) : (
               <>
+                <p className="text-center text-base text-gray-500 mb-4">사전 예측</p>
                 <SurveyGaugeWithPreview
                   phase={nextGaugePhase}
                   setPhase={setNextGaugePhase}
@@ -695,7 +687,7 @@ function SurveyPageInner() {
                   submitting={nextSubmitting}
                   lockBtnClass="bg-amber-500 hover:bg-amber-400 disabled:bg-[#333] disabled:text-gray-500 text-white"
                   submitBtnClass="bg-amber-500 hover:bg-amber-400 disabled:bg-[#333] disabled:text-gray-500 text-white"
-                  submitLabel={`${getSurveyDayLabel(nextSurvey.survey_date).shortLabel} 예측 제출하기`}
+                  submitLabel="사전 예측 제출하기"
                   onSubmit={handleNextSubmit}
                   kospiYesPct={null}
                   streakBetMult={streakBetMultForGauge}
@@ -1053,13 +1045,6 @@ function SurveyPageInner() {
           {status === "result" && nextSurvey?.is_open && (
             <div className="mt-2 space-y-4">
               <div className="border-t border-[#2A2A2A] pt-5">
-                {(() => {
-                  const { shortLabel } = getSurveyDayLabel(nextSurvey.survey_date);
-                  return (
-                    <p className="text-center text-base text-gray-500 mb-5">{shortLabel} 사전 예측</p>
-                  );
-                })()}
-
                 {nextMyResponseLoading ? (
                   <div className="flex flex-col items-center py-8 gap-2">
                     <div className="w-8 h-8 border-2 border-white/20 border-t-amber-400 rounded-full animate-spin" />
@@ -1096,10 +1081,7 @@ function SurveyPageInner() {
                     </>
                   ) : (
                   <div className="flex flex-col gap-3 w-full items-stretch">
-                    <div className="flex flex-col items-center text-center gap-1">
-                      <div className="text-4xl">✅</div>
-                      <p className="text-white font-bold text-lg">{getSurveyDayLabel(nextSurvey.survey_date).shortLabel} 예측 제출 완료</p>
-                    </div>
+                    <p className="text-center text-base text-emerald-400 font-bold mb-1">제출 완료</p>
                     <div className="w-full min-w-0 space-y-1">
                       <GaugeBar
                         value={nextGaugePosition}
@@ -1115,6 +1097,7 @@ function SurveyPageInner() {
                   )
                 ) : (
                   <>
+                    <p className="text-center text-base text-gray-500 mb-4">사전 예측</p>
                     <SurveyGaugeWithPreview
                       phase={nextGaugePhase}
                       setPhase={setNextGaugePhase}
@@ -1124,7 +1107,7 @@ function SurveyPageInner() {
                       submitting={nextSubmitting}
                       lockBtnClass="bg-amber-500 hover:bg-amber-400 disabled:bg-[#333] disabled:text-gray-500 text-white"
                       submitBtnClass="bg-amber-500 hover:bg-amber-400 disabled:bg-[#333] disabled:text-gray-500 text-white"
-                      submitLabel={`${getSurveyDayLabel(nextSurvey.survey_date).shortLabel} 예측 제출하기`}
+                      submitLabel="사전 예측 제출하기"
                       onSubmit={handleNextSubmit}
                       kospiYesPct={null}
                       streakBetMult={streakBetMultForGauge}

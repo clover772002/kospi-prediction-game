@@ -9,7 +9,7 @@ interface GaugeBarProps {
   disabled?: boolean;
   /** false면 안내 숨김 · 생략 시 조작/읽기 전용 각각 맞는 짧은 안내 표시 */
   beginnerTips?: boolean;
-  /** 집단배율 추정(당일 오늘의 상승 응답 비율). 없으면 적중 금액은 문구만 표시 */
+  /** 상승 응답 비율(적중 시 보유 토큰 예상용). 없으면 50%로 예상 */
   kospiYesPct?: number | null;
   /** 서버 적중 계산 시 곱해지는 연승 배수(1 · 1.5 · 2) · 없으면 1로 간주 */
   streakBetMult?: number | null;
@@ -59,7 +59,9 @@ export default function GaugeBar({
   const isUp = value > 0;
   const abs = Math.abs(value);
   const bet = calcBet(value, tokens);
-  const crowdMult = estimateCrowdMultiplier(value, kospiYesPct);
+  const yesPctForPreview = kospiYesPct ?? 50;
+  const hitPreviewIsEstimate = kospiYesPct == null;
+  const crowdMult = estimateCrowdMultiplier(value, yesPctForPreview);
   const streakM = streakBetMult != null && Number.isFinite(streakBetMult) && streakBetMult > 0 ? streakBetMult : 1;
 
   const applyPointerX = useCallback(
@@ -118,10 +120,9 @@ export default function GaugeBar({
   const helpIdRaw = useId();
   const helpId = helpIdRaw.includes(":") ? helpIdRaw.replace(/:/g, "") : helpIdRaw;
 
-  let hitPreviewTokens: number | null = null;
-  if (crowdMult !== null) {
-    hitPreviewTokens = Math.max(1, Math.round(bet * crowdMult * streakM));
-  }
+  const hitGain =
+    crowdMult !== null ? Math.max(1, Math.round(bet * crowdMult * streakM)) : null;
+  const hitBalance = hitGain !== null ? tokens + hitGain : null;
 
   const gaugeDisclaimer = (
     <p className="text-base text-gray-500 leading-snug pt-3 border-t border-[#2A2A2A]">
@@ -154,9 +155,8 @@ export default function GaugeBar({
                 방향에 대한 <strong className="text-gray-400">강한 확신</strong>을 의미합니다.
               </p>
               <p>
-                <strong className="text-gray-400">배팅 토큰</strong>은 확신도와 보유량에 따라 자동 산출됩니다. 적중 시 지급은{" "}
-                <strong className="text-gray-400">배팅 토큰 × 집단배율</strong>을 기준으로 확정되며, 연승에 따라 추가 배율이 적용될 수
-                있습니다.
+                <strong className="text-gray-400">배팅 토큰</strong>은 확신도와 보유량에 따라 자동 산출됩니다. 적중 시 보유
+                토큰은 참여자 분포·연승 등에 따라 달라질 수 있습니다.
               </p>
             </div>
           </details>
@@ -233,18 +233,9 @@ export default function GaugeBar({
         )}
       </div>
 
-      {/* 확신 스케일 (등락률 아님) */}
-      <div className="space-y-1">
-        <div className="flex justify-between text-sm text-gray-500 px-1">
-          <span className="text-blue-400/90">하락·약함</span>
-          <span>0</span>
-          <span className="text-red-400/90">상승·강함</span>
-        </div>
-        <div className="flex justify-between text-xs text-gray-600 px-1 tabular-nums">
-          <span>−100</span>
-          <span>확신 스케일</span>
-          <span>+100</span>
-        </div>
+      <div className="flex justify-between text-sm font-bold px-1">
+        <span className="text-blue-400">하락</span>
+        <span className="text-red-400">상승</span>
       </div>
 
       {/* 배팅 정보 */}
@@ -259,16 +250,19 @@ export default function GaugeBar({
         </div>
         <div className="h-px bg-[#222]" />
         <div className="flex justify-between gap-2 text-base items-start flex-wrap">
-          <span className="text-gray-500 shrink-0">적중 시</span>
-          {crowdMult !== null ? (
-            <span className="text-green-400 font-bold text-right leading-snug">
-              {bet.toLocaleString()} × {crowdMult.toFixed(2)} (집단배율)
-              {streakM > 1 ? ` × ${streakM} (연승)` : ""}
-              {" → "}
-              약 +{hitPreviewTokens?.toLocaleString()} 토큰
+          <span className="text-gray-500 shrink-0">적중 시 보유</span>
+          {hitBalance !== null ? (
+            <span className="text-green-400 font-bold text-right leading-snug tabular-nums">
+              약 {hitBalance.toLocaleString()} 토큰
+              {hitPreviewIsEstimate ? (
+                <span className="block text-xs font-normal text-gray-500 mt-0.5">예상치</span>
+              ) : null}
+              {streakM > 1 && !hitPreviewIsEstimate ? (
+                <span className="block text-xs font-normal text-orange-400/90 mt-0.5">연승 배율 반영</span>
+              ) : null}
             </span>
           ) : (
-            <span className="text-green-400 font-bold text-right leading-snug">배팅 토큰 × 집단배율</span>
+            <span className="text-gray-500 text-right leading-snug">—</span>
           )}
         </div>
         <div className="flex justify-between text-base">
