@@ -45,6 +45,17 @@ function getSurveyDayLabel(surveyDate: string): { isNextDay: boolean; label: str
   return { isNextDay: true, label: `다음 거래일 장 예측 (${mm}/${dd} ${dayKor})`, shortLabel: `${mm}/${dd}(${dayKor})` };
 }
 
+/** 페이지 제목: 「월요일」 / 「예측」 두 줄 */
+function SurveyHeadingTitle({ label }: { label: string }) {
+  const head = label.replace(/\s*장\s*예측.*$/, "").trim() || label;
+  return (
+    <h1 className="text-2xl sm:text-3xl font-black text-white leading-tight">
+      <span className="block">{head}</span>
+      <span className="block mt-1">예측</span>
+    </h1>
+  );
+}
+
 /** 설문 게이지: 미리보기(조작만) → 확정 후 제출 */
 type GaugeSubmitPhase = "preview" | "locked";
 
@@ -522,7 +533,7 @@ function SurveyPageInner() {
         const dd = String(_kstNow.getDate()).padStart(2, "0");
         const dayNames = ["일","월","화","수","목","금","토"];
         return (
-          <div className="pt-6 pb-1">
+          <div className="pt-6 pb-1 flex justify-center">
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gray-800 border border-gray-700 text-base text-gray-400">
               <span>🏖️</span>
               <span>{mm}/{dd}({dayNames[_kstDay]}) 오늘은 휴장일입니다</span>
@@ -547,7 +558,8 @@ function SurveyPageInner() {
               return (
                 <>
                   <h1 className="text-2xl sm:text-3xl font-black text-white leading-tight">
-                    {dayNames[next.getDay()]}요일 장 예측
+                    <span className="block">{dayNames[next.getDay()]}요일</span>
+                    <span className="block mt-1">예측</span>
                   </h1>
                   <p className="text-base text-gray-500 mt-1">{nextDateStr} (KST)</p>
                 </>
@@ -560,7 +572,7 @@ function SurveyPageInner() {
             const displayDate = surveyDate.replace(/-/g, ".");
             return (
               <>
-                <h1 className="text-2xl sm:text-3xl font-black text-white leading-tight">{label}</h1>
+                <SurveyHeadingTitle label={label} />
                 <p className="text-base text-gray-500 mt-1">{displayDate} (KST)</p>
               </>
             );
@@ -637,11 +649,6 @@ function SurveyPageInner() {
                     kospiYesPct={null}
                     streakBetMult={streakBetMultForGauge}
                   />
-                </div>
-                <div className="rounded-xl border border-amber-500/25 bg-black/20 px-3 py-2 text-center">
-                  <p className="text-base text-gray-400 leading-snug px-1">
-                    동일 거래일 응답은 1회 확정 직후 수정할 수 없습니다. 「재투표」「게이지 조정」「방향 반전」 소모품은 당일 진행 중인 장 설문(당일 픽)에만 적용되며, 사전 참여한 다른 거래일 픽에는 적용되지 않습니다.
-                  </p>
                 </div>
               </div>
               )
@@ -756,12 +763,9 @@ function SurveyPageInner() {
                     kospiYesPct={today?.kospi_yes_pct ?? null}
                     streakBetMult={streakBetMultForGauge}
                   />
-              <div className="rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 space-y-2">
-                <p className="text-base text-gray-400 leading-snug">
-                  동일 거래일에는 최초 전송 이후 즉시 수정할 수 없습니다. 「재투표 1회」「게이지만 조정」「방향만 반전」 소모품은 당일 설문에만 적용되며(거래일 지정 불가) 상점 구매 시 당일 픽에 자동 적용됩니다.
-                </p>
-                {token && today?.survey_date ? (
-                  <div className="flex flex-col gap-1.5 pt-1 border-t border-white/10 mt-2">
+              {token && today?.survey_date ? (
+                <div className="rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 space-y-2 mt-2">
+                  <div className="flex flex-col gap-1.5">
                     <p className="text-base text-gray-500 leading-snug">상점에서 해당 소모품을 보유한 경우 이 거래일에 즉시 적용할 수 있습니다.</p>
                     <div className="flex flex-wrap gap-2">
                       <button
@@ -826,8 +830,8 @@ function SurveyPageInner() {
                     </div>
                     {error ? <p className="text-sm text-red-400 mt-2">{error}</p> : null}
                   </div>
-                ) : null}
-              </div>
+                </div>
+              ) : null}
                 </>
               )}
             </div>
@@ -1076,11 +1080,6 @@ function SurveyPageInner() {
                         kospiYesPct={null}
                         streakBetMult={streakBetMultForGauge}
                       />
-                    </div>
-                    <div className="rounded-xl border border-amber-500/25 bg-black/20 px-3 py-2 text-center">
-                      <p className="text-base text-gray-400 leading-snug px-1">
-                        동일 거래일 응답은 1회 확정 직후 수정할 수 없습니다. 「재투표」「게이지 조정」「방향 반전」 소모품은 당일 진행 중인 장 설문(당일 픽)에만 적용되며, 사전 참여한 다른 거래일 픽에는 적용되지 않습니다.
-                      </p>
                     </div>
                   </div>
                   )

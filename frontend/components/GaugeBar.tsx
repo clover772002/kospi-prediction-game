@@ -252,7 +252,7 @@ export default function GaugeBar({
               약 +{hitPreviewTokens?.toLocaleString()} 토큰
             </span>
           ) : (
-            <span className="text-green-400 font-bold text-right leading-snug">배팅 토큰 × 집단배율 (종가 후 확정)</span>
+            <span className="text-green-400 font-bold text-right leading-snug">배팅 토큰 × 집단배율</span>
           )}
         </div>
         <div className="flex justify-between text-base">
