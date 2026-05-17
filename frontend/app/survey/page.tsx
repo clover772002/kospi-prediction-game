@@ -81,8 +81,8 @@ function SurveyGaugeWithPreview({
       {isPreview ? (
         <>
           <SurveyConfidencePlayground />
-          <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/[0.08] px-3 py-2 text-center">
-            <p className="text-emerald-300 text-xs font-black tracking-tight">실제 설문</p>
+          <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/[0.08] px-4 py-3 text-center">
+            <p className="text-emerald-300 text-sm sm:text-base font-black tracking-tight">실제 설문</p>
           </div>
           <GaugeBar
             value={gaugeValue}
@@ -97,15 +97,15 @@ function SurveyGaugeWithPreview({
             type="button"
             onClick={() => setPhase("locked")}
             disabled={submitting}
-            className={`w-full py-4 font-black text-base rounded-2xl transition-all active:scale-95 ${lockBtnClass}`}
+            className={`w-full py-5 font-black text-lg rounded-2xl transition-all active:scale-95 ${lockBtnClass}`}
           >
             이 설정으로 확정하기
           </button>
         </>
       ) : (
         <>
-          <div className="bg-[#1A1A1A] border border-emerald-500/25 rounded-xl px-3 py-2 text-center">
-            <p className="text-emerald-400 text-xs font-black">예측 확정됨 · 아래 설정으로 서버에 보냅니다</p>
+          <div className="bg-[#1A1A1A] border border-emerald-500/25 rounded-xl px-4 py-3 text-center">
+            <p className="text-emerald-400 text-sm sm:text-base font-black">예측 확정 · 아래 설정으로 서버 전송합니다</p>
           </div>
           <GaugeBar
             value={gaugeValue}
@@ -120,7 +120,7 @@ function SurveyGaugeWithPreview({
             type="button"
             onClick={() => setPhase("preview")}
             disabled={submitting}
-            className="w-full py-3 bg-[#1A1A1A] border border-[#333] text-gray-300 hover:border-gray-500 text-sm font-bold rounded-xl transition-all"
+            className="w-full py-4 bg-[#1A1A1A] border border-[#333] text-gray-300 hover:border-gray-500 text-base font-bold rounded-xl transition-all"
           >
             미리보기로 다시 조정
           </button>
@@ -128,7 +128,7 @@ function SurveyGaugeWithPreview({
             type="button"
             onClick={() => void onSubmit()}
             disabled={submitting}
-            className={`w-full py-4 font-black text-base rounded-2xl transition-all active:scale-95 ${submitBtnClass}`}
+            className={`w-full py-5 font-black text-lg rounded-2xl transition-all active:scale-95 ${submitBtnClass}`}
           >
             {submitting ? (
               <span className="flex items-center justify-center gap-2">
@@ -225,7 +225,7 @@ function SurveyPageInner() {
     const from  = searchParams.get("nudge_from");
     const group = searchParams.get("nudge_group");
     if (!from) return;
-    const msg = group ? `📣 ${from}님이 [${group}] 독촉장을 보냈어요!` : `📣 ${from}님이 독촉장을 보냈어요!`;
+    const msg = group ? `📣 ${from}님이 [${group}] 독촉 알림을 보냈습니다.` : `📣 ${from}님이 독촉 알림을 보냈습니다.`;
     setNudgeToast(msg);
     const t = setTimeout(() => setNudgeToast(null), 4000);
     return () => clearTimeout(t);
@@ -494,7 +494,7 @@ function SurveyPageInner() {
   };
 
   if (loading && !today) {
-    return <PageLoadProgress label="설문 불러오는 중…" accent="violet" />;
+    return <PageLoadProgress label="설문 정보 불러오는 중…" accent="violet" />;
   }
 
   const status = today?.status ?? "no_survey";
@@ -505,13 +505,13 @@ function SurveyPageInner() {
   const isWeekendKST = _kstDay === 0 || _kstDay === 6;
 
   return (
-    <main className="relative w-full min-h-screen pb-36 min-w-0 box-border">
+    <main className="relative w-full min-h-screen pb-36 min-w-0 box-border text-[1.0625rem] sm:text-lg px-4 sm:px-5">
       <StaleRefreshIndicator show={revalidating && !!today} tone="violet" />
       <AppAmbientBackground />
       <div className="relative z-10">
       {/* 독촉 토스트 */}
       {nudgeToast && (
-        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[100] px-4 py-3 bg-orange-500 text-white text-sm font-bold rounded-2xl shadow-xl animate-bounce-in max-w-xs text-center">
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[100] px-5 py-4 bg-orange-500 text-white text-base font-bold rounded-2xl shadow-xl animate-bounce-in max-w-sm text-center">
           {nudgeToast}
         </div>
       )}
@@ -523,9 +523,9 @@ function SurveyPageInner() {
         const dayNames = ["일","월","화","수","목","금","토"];
         return (
           <div className="pt-6 pb-1">
-            <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gray-800 border border-gray-700 text-xs text-gray-400">
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gray-800 border border-gray-700 text-base text-gray-400">
               <span>🏖️</span>
-              <span>{mm}/{dd}({dayNames[_kstDay]}) 오늘은 휴장일이에요</span>
+              <span>{mm}/{dd}({dayNames[_kstDay]}) 오늘은 휴장일입니다</span>
             </div>
           </div>
         );
@@ -546,10 +546,10 @@ function SurveyPageInner() {
               const nextDateStr = `${next.getFullYear()}.${mm}.${dd}`;
               return (
                 <>
-                  <h1 className="text-lg font-black text-white leading-tight">
+                  <h1 className="text-2xl sm:text-3xl font-black text-white leading-tight">
                     {dayNames[next.getDay()]}요일 장 예측
                   </h1>
-                  <p className="text-xs text-gray-500 mt-0.5">{nextDateStr} (KST)</p>
+                  <p className="text-base text-gray-500 mt-1">{nextDateStr} (KST)</p>
                 </>
               );
             }
@@ -560,8 +560,8 @@ function SurveyPageInner() {
             const displayDate = surveyDate.replace(/-/g, ".");
             return (
               <>
-                <h1 className="text-lg font-black text-white leading-tight">{label}</h1>
-                <p className="text-xs text-gray-500 mt-0.5">{displayDate} (KST)</p>
+                <h1 className="text-2xl sm:text-3xl font-black text-white leading-tight">{label}</h1>
+                <p className="text-base text-gray-500 mt-1">{displayDate} (KST)</p>
               </>
             );
           })()}
@@ -580,9 +580,9 @@ function SurveyPageInner() {
               const { shortLabel } = getSurveyDayLabel(nextSurvey.survey_date);
               return (
                 <>
-                  <p className="text-center text-xs text-gray-500 mb-1">{shortLabel} 예측 미리하기</p>
-                  <p className="text-center font-black text-white text-base mb-4">
-                    📅 {nextSurvey.survey_date.slice(5).replace("-","/")} 코스피 어떨까요?
+                  <p className="text-center text-base text-gray-500 mb-2">{shortLabel} 사전 예측</p>
+                  <p className="text-center font-black text-white text-lg sm:text-xl mb-5">
+                    📅 {nextSurvey.survey_date.slice(5).replace("-","/")} 코스피 방향
                   </p>
                 </>
               );
@@ -590,13 +590,13 @@ function SurveyPageInner() {
             {nextMyResponseLoading ? (
               <div className="flex flex-col items-center py-8 gap-2">
                 <div className="w-8 h-8 border-2 border-white/20 border-t-amber-400 rounded-full animate-spin" />
-                <p className="text-xs text-gray-500">예측 참여 여부 확인 중…</p>
+                <p className="text-base text-gray-500">사전 참여 여부 확인 중…</p>
               </div>
             ) : nextSubmitted || nextAlreadyAnswered ? (
               pendingGrantNext === "redo_full" ? (
                 <>
                   <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-center">
-                    <p className="text-amber-300 text-xs font-bold">재투표 1회 · 게이지를 다시 정한 뒤 제출하세요</p>
+                    <p className="text-amber-300 text-base font-bold leading-snug">재투표 1회: 게이지를 재설정한 뒤 제출합니다</p>
                   </div>
                   <SurveyGaugeWithPreview
                     phase={nextGaugePhase}
@@ -616,7 +616,7 @@ function SurveyPageInner() {
                     streakBetMult={streakBetMultForGauge}
                   />
                   {error ? (
-                    <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-3 text-red-400 text-sm text-center">
+                    <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4 text-red-400 text-base text-center">
                       {error}
                     </div>
                   ) : null}
@@ -625,7 +625,7 @@ function SurveyPageInner() {
               <div className="flex flex-col gap-3 w-full items-stretch">
                 <div className="flex flex-col items-center text-center gap-1">
                   <div className="text-4xl">✅</div>
-                  <p className="text-white font-bold">{getSurveyDayLabel(nextSurvey.survey_date).shortLabel} 예측 완료!</p>
+                  <p className="text-white font-bold text-lg">{getSurveyDayLabel(nextSurvey.survey_date).shortLabel} 예측 제출 완료</p>
                 </div>
                 <div className="w-full min-w-0 space-y-1">
                   <GaugeBar
@@ -639,8 +639,8 @@ function SurveyPageInner() {
                   />
                 </div>
                 <div className="rounded-xl border border-amber-500/25 bg-black/20 px-3 py-2 text-center">
-                  <p className="text-[11px] text-gray-400 leading-relaxed">
-                    이 거래일 응답은 1회 확정 후 바로 수정할 수 없어요. 「재투표」「게이지 조정」「방향 반전」아이템은 모두 오늘의 장 설문(당일 픽)에만 해당합니다. 미리 참여 중인 다른 거래일 픽은 이 아이템으로 수정할 수 없습니다.
+                  <p className="text-base text-gray-400 leading-snug px-1">
+                    동일 거래일 응답은 1회 확정 직후 수정할 수 없습니다. 「재투표」「게이지 조정」「방향 반전」 소모품은 당일 진행 중인 장 설문(당일 픽)에만 적용되며, 사전 참여한 다른 거래일 픽에는 적용되지 않습니다.
                   </p>
                 </div>
               </div>
@@ -682,27 +682,27 @@ function SurveyPageInner() {
               {isEarlyMorning ? (
                 <>
                   <div className="text-5xl">⏳</div>
-                  <p className="text-xl font-bold text-white">설문 준비 중이에요</p>
-                  <p className="text-sm text-gray-400">
-                    잠시 후 새로고침 해주세요
+                  <p className="text-2xl sm:text-3xl font-bold text-white leading-snug">설문 준비 중입니다</p>
+                  <p className="text-base text-gray-400 px-2">
+                    잠시 후 화면을 새로 고침해 주십시오.
                   </p>
                 </>
               ) : isPreSurvey ? (
                 <>
                   <div className="text-5xl">⏳</div>
-                  <p className="text-xl font-bold text-white">설문 시작 전이에요</p>
-                  <p className="text-sm text-gray-400">
-                    오늘 밤 22:00에 다음 거래일 설문이 열려요
+                  <p className="text-2xl sm:text-3xl font-bold text-white leading-snug">설문 시작 전입니다</p>
+                  <p className="text-base text-gray-400 px-2">
+                    당일 22:00에 차기 거래일 설문이 시작됩니다.
                   </p>
                 </>
               ) : (
                 <>
                   <div className="text-5xl">🏖️</div>
-                  <p className="text-xl font-bold text-white">오늘은 장이 없어요</p>
-                  <p className="text-sm text-gray-400">주말·공휴일에는 장이 열리지 않아요</p>
+                  <p className="text-2xl sm:text-3xl font-bold text-white leading-snug">당일은 개장하지 않습니다</p>
+                  <p className="text-base text-gray-400 px-2">주말·공휴일에는 거래소가 개장하지 않습니다.</p>
                   {nextSurvey?.is_open && (
-                    <p className="text-xs text-yellow-400 mt-1">
-                      💡 {getSurveyDayLabel(nextSurvey.survey_date).shortLabel} 예측은 미리 참여 가능해요
+                    <p className="text-base text-yellow-400 mt-2 px-2">
+                      💡 {getSurveyDayLabel(nextSurvey.survey_date).shortLabel} 거래일은 사전 참여할 수 있습니다
                     </p>
                   )}
                 </>
@@ -720,7 +720,7 @@ function SurveyPageInner() {
               {pendingGrantToday === "redo_full" ? (
                 <>
                   <div className="rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-center">
-                    <p className="text-emerald-300 text-xs font-bold">재투표 1회 · 게이지를 다시 정한 뒤 제출하세요</p>
+                    <p className="text-emerald-300 text-base font-bold leading-snug">재투표 1회: 게이지를 재설정한 뒤 제출합니다</p>
                   </div>
                   <SurveyGaugeWithPreview
                     phase={todayGaugePhase}
@@ -740,7 +740,7 @@ function SurveyPageInner() {
                     streakBetMult={streakBetMultForGauge}
                   />
                   {error ? (
-                    <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-3 text-red-400 text-sm text-center">
+                    <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4 text-red-400 text-base text-center">
                       {error}
                     </div>
                   ) : null}
@@ -757,19 +757,19 @@ function SurveyPageInner() {
                     streakBetMult={streakBetMultForGauge}
                   />
               <div className="rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 space-y-2">
-                <p className="text-[11px] text-gray-400 leading-relaxed">
-                  같은 거래일에는 첫 전송 후 바로 수정할 수 없습니다. 「재투표 1회」「게이지만 조정」「방향만 반전」은 모두 당일 오늘 설문에만 적용되며(날짜 지정 불가) 상점 구매 시 자동으로 오늘 픽에만 붙습니다.
+                <p className="text-base text-gray-400 leading-snug">
+                  동일 거래일에는 최초 전송 이후 즉시 수정할 수 없습니다. 「재투표 1회」「게이지만 조정」「방향만 반전」 소모품은 당일 설문에만 적용되며(거래일 지정 불가) 상점 구매 시 당일 픽에 자동 적용됩니다.
                 </p>
                 {token && today?.survey_date ? (
                   <div className="flex flex-col gap-1.5 pt-1 border-t border-white/10 mt-2">
-                    <p className="text-[10px] text-gray-500">아이템을 이미 샀다면 이 거래일에 바로 적용해 보세요.</p>
+                    <p className="text-base text-gray-500 leading-snug">상점에서 해당 소모품을 보유한 경우 이 거래일에 즉시 적용할 수 있습니다.</p>
                     <div className="flex flex-wrap gap-2">
                       <button
                         type="button"
-                        className="text-[10px] font-bold px-2 py-1 rounded-md bg-white/10 hover:bg-white/15"
+                        className="text-sm font-bold px-3 py-2 rounded-lg bg-white/10 hover:bg-white/15"
                         onClick={async () => {
                           if (!token || !today.survey_date) return;
-                          const inp = window.prompt("새 게이지 -100~100 (0 제외, 방향은 그대로)", String(gaugePosition));
+                          const inp = window.prompt("확신도 -100~100 (0 제외·방향 유지)", String(gaugePosition));
                           const n = inp != null ? Number(inp) : NaN;
                           if (!Number.isFinite(n) || n === 0 || n < -100 || n > 100) return;
                           setError(null);
@@ -797,7 +797,7 @@ function SurveyPageInner() {
                       </button>
                       <button
                         type="button"
-                        className="text-[10px] font-bold px-2 py-1 rounded-md bg-white/10 hover:bg-white/15"
+                        className="text-sm font-bold px-3 py-2 rounded-lg bg-white/10 hover:bg-white/15"
                         onClick={async () => {
                           if (!token || !today.survey_date) return;
                           setError(null);
@@ -824,7 +824,7 @@ function SurveyPageInner() {
                         방향만 반전
                       </button>
                     </div>
-                    {error ? <p className="text-[10px] text-red-400 mt-1">{error}</p> : null}
+                    {error ? <p className="text-sm text-red-400 mt-2">{error}</p> : null}
                   </div>
                 ) : null}
               </div>
@@ -835,7 +835,7 @@ function SurveyPageInner() {
           </div>
 
           <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-2xl overflow-hidden">
-            <p className="text-xs text-gray-500 px-4 pt-3 pb-2">📈 KODEX200 (코스피200 추종)</p>
+            <p className="text-base sm:text-lg text-gray-500 px-4 pt-4 pb-2">📈 KODEX200 (코스피200 추종)</p>
             <KospiChart />
           </div>
         </div>
@@ -845,38 +845,39 @@ function SurveyPageInner() {
       {status === "open" && !isWeekendKST && !alreadyAnswered && !submitted && (
         <div className="space-y-6 mt-4 fade-up">
           <div className="bg-amber-500/10 border border-amber-500/30 rounded-2xl p-4 text-center">
-            <p className="text-amber-400 font-bold text-sm">⏰ 설문 진행 중 · 장 시작 전 마감</p>
+            <p className="text-amber-400 font-black text-lg sm:text-xl leading-snug">⏰ 설문 진행 중 · 개장 전 마감</p>
           </div>
 
           {/* 스트릭 뱃지 */}
           {userStreak >= 3 && (
-            <div className={`flex items-center gap-2 px-3 py-2 rounded-xl border text-xs font-bold ${
+            <div className={`flex items-center gap-3 px-4 py-3 rounded-xl border text-base font-bold leading-snug ${
               userStreak >= 5
                 ? "bg-yellow-500/10 border-yellow-500/30 text-yellow-400"
                 : "bg-orange-500/10 border-orange-500/30 text-orange-400"
             }`}>
               <span>{userStreak >= 5 ? "🏆" : "🔥"}</span>
-              <span>{userStreak}연속 적중! 배당 {userStreak >= 5 ? "×2.0" : "×1.5"} 적용 중</span>
+              <span>연속 적중 {userStreak}회 · 배당 {userStreak >= 5 ? "×2.0" : "×1.5"} 적용</span>
             </div>
           )}
 
           {/* 코스피 단일 질문 + GaugeBar */}
           <div className="w-full min-w-0">
-            <p className="font-bold text-white text-base mb-1">
+            <p className="font-black text-white text-lg sm:text-xl mb-2 leading-snug">
               {(() => {
                 const kst = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Seoul" }));
                 const todayStr = `${kst.getFullYear()}-${String(kst.getMonth()+1).padStart(2,"0")}-${String(kst.getDate()).padStart(2,"0")}`;
                 const sd = today?.survey_date ?? todayStr;
                 const { shortLabel } = getSurveyDayLabel(sd);
-                return `📈 코스피 ${shortLabel}, 오를까요 내릴까요?`;
+                return `📈 코스피 (${shortLabel}) 상승·하락 여부 예측`;
               })()}
             </p>
-            <p className="text-sm font-bold text-gray-300 mb-1">얼마나 확신하나요?</p>
-            <p className="text-[11px] text-gray-500 mb-3 leading-relaxed">
-              위 <strong className="text-gray-400">예시</strong>는 이해용이에요 · 아래 바는{" "}
-              <strong className="text-emerald-300/95">실제 설문</strong>입니다.
-              숫자(±%)는 <strong className="text-gray-400">등락률</strong>이 아니라{" "}
-              <strong className="text-gray-400">그 방향에 대한 확신</strong>이에요.
+            <p className="text-base sm:text-lg font-bold text-gray-300 mb-2">확신도 선택</p>
+            <p className="text-base text-gray-500 mb-4 leading-relaxed">
+              상단의 <strong className="text-gray-400">예시</strong> 참고용입니다. 아래 막대는{" "}
+              <strong className="text-emerald-300/95">실제 설문</strong> 입력입니다.
+              ±% 표기는 장{" "}
+              <strong className="text-gray-400">등락률</strong>이 아니라 선택한 방향에 대한{" "}
+              <strong className="text-gray-400">확신도</strong>입니다.
             </p>
             <SurveyGaugeWithPreview
               phase={todayGaugePhase}
@@ -895,7 +896,7 @@ function SurveyPageInner() {
           </div>
 
           {error && (
-            <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-3 text-red-400 text-sm text-center">
+            <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4 text-red-400 text-base text-center">
               {error}
             </div>
           )}
@@ -910,7 +911,7 @@ function SurveyPageInner() {
               {pendingGrantToday === "redo_full" ? (
                 <>
                   <div className="rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-center">
-                    <p className="text-emerald-300 text-xs font-bold">재투표 1회 · 게이지를 다시 정한 뒤 제출하세요</p>
+                    <p className="text-emerald-300 text-base font-bold leading-snug">재투표 1회: 게이지를 재설정한 뒤 제출합니다</p>
                   </div>
                   <SurveyGaugeWithPreview
                     phase={todayGaugePhase}
@@ -930,7 +931,7 @@ function SurveyPageInner() {
                     streakBetMult={streakBetMultForGauge}
                   />
                   {error ? (
-                    <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-3 text-red-400 text-sm text-center">
+                    <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4 text-red-400 text-base text-center">
                       {error}
                     </div>
                   ) : null}
@@ -946,7 +947,7 @@ function SurveyPageInner() {
                     kospiYesPct={today?.kospi_yes_pct ?? null}
                     streakBetMult={streakBetMultForGauge}
                   />
-                  <p className="text-[10px] text-gray-600">15:35 결과 공개</p>
+                  <p className="text-base text-gray-600">15:35 결과 공개 예정</p>
                 </>
               )}
             </div>
@@ -954,7 +955,7 @@ function SurveyPageInner() {
           </div>
 
           <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-2xl overflow-hidden">
-            <p className="text-xs text-gray-500 px-4 pt-3 pb-2">📈 KODEX200 (코스피200 추종)</p>
+            <p className="text-base sm:text-lg text-gray-500 px-4 pt-4 pb-2">📈 KODEX200 (코스피200 추종)</p>
             <KospiChart />
           </div>
         </div>
@@ -984,13 +985,13 @@ function SurveyPageInner() {
                 />
                 <div className="mt-0.5">
                   {status === "result" && today?.kospi_result != null ? (
-                    <span className={`text-xl font-bold ${
+                    <span className={`text-2xl sm:text-3xl font-bold ${
                       (previousAnswer ?? kospiAnswer) === today.kospi_result ? "text-green-400" : "text-red-400/95"
                     }`}>
                       {(previousAnswer ?? kospiAnswer) === today.kospi_result ? "적중" : "미적중"}
                     </span>
                   ) : (
-                    <p className="text-[10px] text-gray-500">15:35 결과 공개</p>
+                    <p className="text-base text-gray-500">15:35 결과 공개 예정</p>
                   )}
                 </div>
               </div>
@@ -1005,7 +1006,7 @@ function SurveyPageInner() {
 
           {/* KOSPI 차트 */}
           <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-2xl overflow-hidden">
-            <p className="text-xs text-gray-500 px-4 pt-3 pb-2">📈 KODEX200 (코스피200 추종)</p>
+            <p className="text-base sm:text-lg text-gray-500 px-4 pt-4 pb-2">📈 KODEX200 (코스피200 추종)</p>
             <KospiChart />
           </div>
 
@@ -1017,9 +1018,9 @@ function SurveyPageInner() {
                   const { shortLabel } = getSurveyDayLabel(nextSurvey.survey_date);
                   return (
                     <>
-                      <p className="text-center text-xs text-gray-500 mb-1">{shortLabel} 예측 미리하기</p>
-                      <p className="text-center font-black text-white text-base mb-4">
-                        📅 {nextSurvey.survey_date.slice(5).replace("-","/")} 코스피 어떨까요?
+                      <p className="text-center text-base text-gray-500 mb-2">{shortLabel} 사전 예측</p>
+                      <p className="text-center font-black text-white text-lg sm:text-xl mb-5">
+                        📅 {nextSurvey.survey_date.slice(5).replace("-","/")} 코스피 방향
                       </p>
                     </>
                   );
@@ -1028,13 +1029,13 @@ function SurveyPageInner() {
                 {nextMyResponseLoading ? (
                   <div className="flex flex-col items-center py-8 gap-2">
                     <div className="w-8 h-8 border-2 border-white/20 border-t-amber-400 rounded-full animate-spin" />
-                    <p className="text-xs text-gray-500">예측 참여 여부 확인 중…</p>
+                    <p className="text-base text-gray-500">사전 참여 여부 확인 중…</p>
                   </div>
                 ) : nextSubmitted || nextAlreadyAnswered ? (
                   pendingGrantNext === "redo_full" ? (
                     <>
                       <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-center">
-                        <p className="text-amber-300 text-xs font-bold">재투표 1회 · 게이지를 다시 정한 뒤 제출하세요</p>
+                        <p className="text-amber-300 text-base font-bold leading-snug">재투표 1회: 게이지를 재설정한 뒤 제출합니다</p>
                       </div>
                       <SurveyGaugeWithPreview
                         phase={nextGaugePhase}
@@ -1054,7 +1055,7 @@ function SurveyPageInner() {
                         streakBetMult={streakBetMultForGauge}
                       />
                       {error ? (
-                        <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-3 text-red-400 text-sm text-center mt-2">
+                        <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4 text-red-400 text-base text-center mt-2">
                           {error}
                         </div>
                       ) : null}
@@ -1063,7 +1064,7 @@ function SurveyPageInner() {
                   <div className="flex flex-col gap-3 w-full items-stretch">
                     <div className="flex flex-col items-center text-center gap-1">
                       <div className="text-4xl">✅</div>
-                      <p className="text-white font-bold">{getSurveyDayLabel(nextSurvey.survey_date).shortLabel} 예측 완료!</p>
+                      <p className="text-white font-bold text-lg">{getSurveyDayLabel(nextSurvey.survey_date).shortLabel} 예측 제출 완료</p>
                     </div>
                     <div className="w-full min-w-0 space-y-1">
                       <GaugeBar
@@ -1077,8 +1078,8 @@ function SurveyPageInner() {
                       />
                     </div>
                     <div className="rounded-xl border border-amber-500/25 bg-black/20 px-3 py-2 text-center">
-                      <p className="text-[11px] text-gray-400 leading-relaxed">
-                        이 거래일 응답은 1회 확정 후 바로 수정할 수 없어요. 「재투표」「게이지 조정」「방향 반전」아이템은 모두 오늘의 장 설문(당일 픽)에만 해당합니다. 미리 참여 중인 다른 거래일 픽은 이 아이템으로 수정할 수 없습니다.
+                      <p className="text-base text-gray-400 leading-snug px-1">
+                        동일 거래일 응답은 1회 확정 직후 수정할 수 없습니다. 「재투표」「게이지 조정」「방향 반전」 소모품은 당일 진행 중인 장 설문(당일 픽)에만 적용되며, 사전 참여한 다른 거래일 픽에는 적용되지 않습니다.
                       </p>
                     </div>
                   </div>
@@ -1100,7 +1101,7 @@ function SurveyPageInner() {
                       streakBetMult={streakBetMultForGauge}
                     />
                     {error && (
-                      <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-3 text-red-400 text-sm text-center mt-2">
+                      <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4 text-red-400 text-base text-center mt-2">
                         {error}
                       </div>
                     )}
@@ -1140,11 +1141,11 @@ function KospiNowCard({
   if (status === "result" && resultUp !== null && resultPct !== null) {
     return (
       <div className={`rounded-2xl p-4 border ${resultUp ? "bg-red-500/10 border-red-500/25" : "bg-blue-500/10 border-blue-500/20"}`}>
-        <p className="text-xs text-gray-400 mb-1">오늘 장 · 종가</p>
-        <p className={`font-black text-lg ${resultUp ? "text-red-400" : "text-blue-400"}`}>
+        <p className="text-base text-gray-400 mb-2 leading-snug">당일 종가 반영 결과</p>
+        <p className={`font-black text-xl sm:text-2xl ${resultUp ? "text-red-400" : "text-blue-400"}`}>
           {resultUp ? "📈 상승" : "📉 하락"}
         </p>
-        <p className={`text-sm font-bold mt-0.5 ${resultUp ? "text-red-400" : "text-blue-400"}`}>
+        <p className={`text-base sm:text-lg font-bold mt-1 ${resultUp ? "text-red-400" : "text-blue-400"}`}>
           {resultUp ? "+" : ""}{resultPct.toFixed(2)}%
         </p>
       </div>
@@ -1157,13 +1158,13 @@ function KospiNowCard({
       <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-2xl p-4">
         <div className="flex items-center gap-1 mb-1">
           <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-          <p className="text-xs text-gray-400">오늘 장 · 진행중</p>
+          <p className="text-base text-gray-400 leading-snug">당일 장 · 진행 중</p>
         </div>
-        <p className="font-black text-lg text-white tabular-nums">
+        <p className="font-black text-xl sm:text-2xl text-white tabular-nums">
           {price.price.toLocaleString()}
         </p>
         {price.change_pct !== null && (
-          <p className={`text-sm font-bold mt-0.5 ${price.is_up ? "text-red-400" : "text-blue-400"}`}>
+          <p className={`text-base sm:text-lg font-bold mt-1 ${price.is_up ? "text-red-400" : "text-blue-400"}`}>
             {price.is_up ? "+" : ""}{price.change_pct?.toFixed(2)}%
           </p>
         )}
@@ -1175,12 +1176,12 @@ function KospiNowCard({
   if (price?.price) {
     return (
       <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-2xl p-4">
-        <p className="text-xs text-gray-400 mb-1">오늘 장 · 종가</p>
-        <p className="font-black text-lg text-white tabular-nums">
+        <p className="text-base text-gray-400 mb-2 leading-snug">당일 종가 참고</p>
+        <p className="font-black text-xl sm:text-2xl text-white tabular-nums">
           {price.price.toLocaleString()}
         </p>
         {price.change_pct !== null && (
-          <p className={`text-sm font-bold mt-0.5 ${price.is_up ? "text-red-400" : "text-blue-400"}`}>
+          <p className={`text-base sm:text-lg font-bold mt-1 ${price.is_up ? "text-red-400" : "text-blue-400"}`}>
             {price.is_up ? "+" : ""}{price.change_pct?.toFixed(2)}%
           </p>
         )}
@@ -1190,7 +1191,7 @@ function KospiNowCard({
 
   return (
     <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-2xl p-4 flex items-center justify-center">
-      <p className="text-xs text-gray-600">데이터 로딩 중</p>
+      <p className="text-base text-gray-600">데이터 불러오는 중…</p>
     </div>
   );
 }
