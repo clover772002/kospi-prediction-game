@@ -735,7 +735,7 @@ export default function DashboardPage() {
                 <div className="text-5xl">📝</div>
                 <p className="font-black text-xl text-white">오늘 설문을 해야 볼 수 있어요</p>
                 <p className="text-sm text-white leading-relaxed">
-                  오늘의 코스피 예측에 먼저 참여해야<br />집계 결과와 고수 예측을 확인할 수 있어요.
+                  오늘의 코스피 예측에 먼저 참여해야<br />집계 결과와 고수강화예측을 확인할 수 있어요.
                 </p>
                 <p className="text-sm text-white/90 leading-relaxed">
                   설문에 참여하지 않으셨나요?<br />
@@ -860,9 +860,9 @@ export default function DashboardPage() {
             return (
               <>
               <div className="grid grid-cols-4 gap-1.5">
-                {/* 고수예측 */}
+                {/* 고수강화예측 */}
                 <div className="bg-yellow-500/5 border border-yellow-500/20 rounded-xl py-3 px-1 flex flex-col items-center gap-1 text-center">
-                  <p className="text-sm text-yellow-400/80 leading-tight">⭐고수</p>
+                  <p className="text-sm text-yellow-400/80 leading-tight">고수강화예측</p>
                   {today.kospi_weighted_pct !== null ? (
                     <>
                       <p className={`text-sm font-black ${today.kospi_weighted_pct >= 50 ? "text-red-400" : "text-blue-400"}`}>
@@ -946,7 +946,7 @@ export default function DashboardPage() {
                   >
                     <span className="flex items-center gap-2">
                       <span aria-hidden>{expertUnlocked ? "💬" : "🔒"}</span>
-                      <span>순위권 고수에게 질문 보내기</span>
+                      <span>최고 고수에게 질문 보내기</span>
                     </span>
                     {!expertUnlocked && tokens != null ? (
                       <span className="text-sm font-normal text-white/70">

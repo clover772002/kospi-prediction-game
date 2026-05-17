@@ -81,6 +81,7 @@ from expert_chat_service import (
     send_participant_message,
 )
 from accuracy_aggregate import clear_accuracy_cache, get_accuracy_data
+from expert_tier import SEGMENT_PRED_COUNT_MIN, global_top_expert_ids_on_day, global_top_expert_uid
 
 KST = pytz.timezone("Asia/Seoul")
 
@@ -662,11 +663,10 @@ def _five_number_summary(vals: list[int]) -> dict | None:
 
 _MIN_CROWD_CONVICTION_SAMPLE = 20  # crowd_conviction_spread: 플랜 표본 하한
 _ROLLING_CROWD_WINDOW_TRADING_DAYS = 7
-_MIN_ROLLING_DAY_RESPONSES = 5
+_MIN_ROLLING_DAY_RESPONSES = 1
 _MIN_TIME_SLICE_BUCKET_N = 8
 _MIN_TOTAL_TIMESTAMPS_WAVE_B = 30
 _MIN_SEGMENT_TIMESTAMPS_VOTE_PROFILE = 15
-_SEGMENT_PRED_COUNT_MIN = 5
 _EXPERT_NOVICE_FRAC = 0.30
 _MIN_SEGMENT_LEADER_PICK = 5  # 고수·하수 1위 픽: 같은 규격 세그먼트 최소 인원
 _TIME_SLICE_BUCKET_LABEL_ID = ["pre_market_kst", "morning_trade_kst", "midday_trade_kst", "late_trade_kst"]
@@ -830,7 +830,7 @@ def _percentages_from_vote_rows(
 
 def _build_rolling_crowd_summary_payload(supabase: Client, end_date_str: str) -> tuple[dict | None, str | None]:
     """
-    종료 거래일 기준 직전 포함 7거래일 — 일자별 무리 규격 고수층의 코스피 방향 적중률(%).
+    종료 거래일 기준 직전 포함 7거래일 — 일자별 전역 최고 고수 1명의 코스피 방향 적중률(%).
     """
     try:
         end_d = datetime.strptime(end_date_str, "%Y-%m-%d").date()
@@ -841,7 +841,7 @@ def _build_rolling_crowd_summary_payload(supabase: Client, end_date_str: str) ->
     except ValueError:
         return (None, "no_survey_data")
 
-    acc_map, pred_count, _ = get_accuracy_data(supabase)
+    leader_uid, _leader_err = global_top_expert_uid(supabase)
     series: list[dict] = []
     any_responses = False
     ok_cells = 0
@@ -858,7 +858,7 @@ def _build_rolling_crowd_summary_payload(supabase: Client, end_date_str: str) ->
         if len(rows) > 0:
             any_responses = True
         day_uids = {str(r["user_id"]) for r in rows if r.get("user_id") is not None}
-        experts, _nov = _wave_b_expert_and_novice_ids(day_uids, acc_map, pred_count)
+        experts = global_top_expert_ids_on_day(day_uids, leader_uid)
         expert_rows = [r for r in rows if str(r.get("user_id")) in experts]
         en = len(expert_rows)
         result_known = kr is not None
@@ -885,8 +885,8 @@ def _build_rolling_crowd_summary_payload(supabase: Client, end_date_str: str) ->
     last_s = series[-1]["survey_date"]
     bullets = [
         f"종료 거래일 {end_date_str} 기준, 직전 포함 {_ROLLING_CROWD_WINDOW_TRADING_DAYS}거래일({first_s} ~ {last_s})입니다.",
-        "각 날짜는 그날 응답자 가운데 무리 규격 ‘고수층’에 들어간 사람만 모아, 코스피 결과가 확정된 날의 적중 비율(%)을 셉니다.",
-        f"고수층 인원이 {_MIN_ROLLING_DAY_RESPONSES}명 미만이거나 아직 결과가 없는 날은 수치를 숨깁니다.",
+        "각 날짜는 지금까지 기준 누적 적중 1순위(최고 고수)가 그날 설문에 참여했을 때만, 코스피 결과가 확정된 날의 적중 여부(0%·100%)를 셉니다.",
+        "최고 고수가 그날 미참여이거나 아직 결과가 없는 날은 수치를 숨깁니다.",
         f"적중률을 채운 칸은 {ok_cells}개입니다.",
         "투자·매매 의사결정이 아니며 수익을 보장하지 않습니다.",
     ]
@@ -897,7 +897,7 @@ def _build_rolling_crowd_summary_payload(supabase: Client, end_date_str: str) ->
             "window_trading_days": _ROLLING_CROWD_WINDOW_TRADING_DAYS,
             "series": series,
             "bullets": bullets,
-            "computed_note": "고수층 정의와 동률 처리는 무리 시간대 카드와 같은 무리 규격입니다.",
+            "computed_note": "최고 고수는 예측 횟수 규격 통과 후 누적 적중률 1순위(동률 시 id순) 한 명입니다.",
         },
         None,
     )
@@ -969,7 +969,7 @@ def _wave_b_expert_and_novice_ids(
     day_user_ids: set[str], acc_map: dict, pred_count: dict
 ) -> tuple[set[str], set[str]]:
     """pred_count 충족 응답자 기준 고수층 상위·하위 30% 규격(중복 가능성 제거)."""
-    eligible = [u for u in day_user_ids if int(pred_count.get(u, 0) or 0) >= _SEGMENT_PRED_COUNT_MIN]
+    eligible = [u for u in day_user_ids if int(pred_count.get(u, 0) or 0) >= SEGMENT_PRED_COUNT_MIN]
     if not eligible:
         return set(), set()
 
@@ -1002,28 +1002,10 @@ def _wave_b_expert_and_novice_ids(
 _MIN_TOP_EXPERT_WINDOW_TIMESTAMPS = 8
 
 
-def _global_top_expert_uid(supabase: Client) -> tuple[str | None, str | None]:
-    """예측 횟수 규격 통과자 중 누적 적중률 1순위(동률 시 id순). 없으면 segment_empty."""
-    acc_map, pred_count, _ = get_accuracy_data(supabase)
-    eligible = [
-        str(uid)
-        for uid in pred_count
-        if int(pred_count.get(uid, 0) or 0) >= _SEGMENT_PRED_COUNT_MIN
-    ]
-    if not eligible:
-        return None, "segment_empty"
-
-    def acc_of(u: str) -> float:
-        return float(acc_map.get(u, 0.5))
-
-    leader = sorted(eligible, key=lambda u: (-acc_of(u), u))[0]
-    return leader, None
-
-
 def _build_leader_pick_payload(
     supabase: Client, survey_date_str: str, cohort: str
 ) -> tuple[dict | None, str | None]:
-    """고수층 또는 하수층 규격 안에서 순위 1명의 그날 코스피 방향(kospi_answer)."""
+    """전역 최고 고수 또는 하수층 규격 안 1명의 그날 코스피 방향(kospi_answer)."""
     res = (
         supabase.table("survey_responses")
         .select("user_id, kospi_answer, gauge_position")
@@ -1036,25 +1018,28 @@ def _build_leader_pick_payload(
 
     acc_map, pred_count, _ = get_accuracy_data(supabase)
     day_uids = {str(r["user_id"]) for r in rows if r.get("user_id") is not None}
-    experts, novices = _wave_b_expert_and_novice_ids(day_uids, acc_map, pred_count)
-    segment = experts if cohort == "expert" else novices
-
-    if not segment:
-        return None, "segment_empty"
-    if len(segment) < _MIN_SEGMENT_LEADER_PICK:
-        return None, "insufficient_segment_size"
-
-    segment_list = list(segment)
 
     def acc_of(uid: str) -> float:
         return float(acc_map.get(uid, 0.5))
 
     if cohort == "expert":
-        leader = sorted(segment_list, key=lambda u: (-acc_of(u), u))[0]
-        rank_label_ko = "오늘 고수 픽 대상"
+        leader, tier_err = global_top_expert_uid(supabase)
+        if tier_err:
+            return None, tier_err
+        if not leader or leader not in day_uids:
+            return None, "segment_empty"
+        rank_label_ko = "전역 최고 고수"
+        segment_n = 1
     else:
-        leader = sorted(segment_list, key=lambda u: (acc_of(u), u))[0]
+        _experts, novices = _wave_b_expert_and_novice_ids(day_uids, acc_map, pred_count)
+        segment = novices
+        if not segment:
+            return None, "segment_empty"
+        if len(segment) < _MIN_SEGMENT_LEADER_PICK:
+            return None, "insufficient_segment_size"
+        leader = sorted(segment, key=lambda u: (acc_of(u), u))[0]
         rank_label_ko = "오늘 하수 픽 대상"
+        segment_n = len(segment)
 
     pick: bool | None = None
     gauge_v: int | None = None
@@ -1079,20 +1064,21 @@ def _build_leader_pick_payload(
     pct = round(acc_of(leader) * 100)
     direction_label_ko = "📈 코스피 상승" if pick else "📉 코스피 하락"
 
-    cohort_title = "고수층" if cohort == "expert" else "하수층"
+    cohort_title = "최고 고수" if cohort == "expert" else "하수층"
     frac_pct = int(round(_EXPERT_NOVICE_FRAC * 100))
+    expert_bullet = (
+        f"※ {rank_label_ko}: 예측 횟수 ≥ {SEGMENT_PRED_COUNT_MIN}인 전체 무리에서 "
+        "누적 적중률 1순위(동률 시 id순) 한 명이며, 그날 설문에 참여했을 때만 표시합니다."
+    )
+    novice_bullet = (
+        f"※ {rank_label_ko}: 그날 설문 응답자 중 예측 횟수 ≥ {SEGMENT_PRED_COUNT_MIN}, "
+        f"무리 규격 하위 약 {frac_pct}% 층에 들어간 사람 가운데 "
+        "누적 적중률이 가장 낮은 사람 한 명(동률 시 id순)입니다."
+    )
     bullets = [
-        (
-            f"※ {rank_label_ko}: 그날 설문 응답자 중 예측 횟수 ≥ {_SEGMENT_PRED_COUNT_MIN}, "
-            f"무리 규격으로 나뉜 상·하 각 약 {frac_pct}% 층에 들어 간 사람만 대상입니다. "
-            + (
-                "그중 누적 적중률이 가장 높은 사람 한 명(동률 시 사용자 id 순)입니다."
-                if cohort == "expert"
-                else "그중 누적 적중률이 가장 낮은 사람 한 명(동률 시 사용자 id 순)입니다."
-            )
-        ),
+        expert_bullet if cohort == "expert" else novice_bullet,
         "그날 방향과 게이지를 함께 보여 주는 요약입니다.",
-        "무리 규격(고수층·하수층 정의)과 동률 처리는 다른 무리 카드와 같습니다.",
+        "하수층 정의·동률 처리는 다른 무리 카드와 같습니다." if cohort != "expert" else "최고 고수 정의는 고수 탭·7일 적중 카드와 같습니다.",
         "닉네임은 초성 형태만 표시합니다.",
         "투자·매매 의사결정이 아니며 수익을 보장하지 않습니다.",
     ]
@@ -1110,7 +1096,7 @@ def _build_leader_pick_payload(
         "direction_label_ko": direction_label_ko,
         "leader_gauge_position": gauge_v,
         "conviction_label_ko": conviction_label_ko,
-        "segment_n": len(segment),
+        "segment_n": segment_n,
         "bullets": bullets,
         "computed_note": computed_note,
     }
@@ -1136,7 +1122,7 @@ def _build_time_slice_accuracy_payload(
     supabase: Client, survey_date_str: str
 ) -> tuple[dict | None, str | None]:
     """전체 무리에서 적중 1순위 1명이, 종료 거래일까지 직전 7거래일 구간에서 남긴 제출 시각 버킷 분포."""
-    leader, tier_err = _global_top_expert_uid(supabase)
+    leader, tier_err = global_top_expert_uid(supabase)
     if tier_err:
         return None, tier_err
     try:
@@ -4096,6 +4082,8 @@ def _unlock_precheck_leader_pick(supabase: Client, product_slug: str, survey_dat
     if er == "no_survey_data":
         raise HTTPException(status_code=400, detail="그날 설문 응답이 없어 구매할 수 없습니다.")
     if er == "segment_empty":
+        if product_slug == "expert_leader_pick":
+            raise HTTPException(status_code=400, detail="그날 설문에 참여한 최고 고수가 없어 구매할 수 없습니다.")
         raise HTTPException(status_code=400, detail="고수/하수층을 구분할 표본 자격군이 부족합니다.")
     if er == "insufficient_segment_size":
         raise HTTPException(

@@ -26,7 +26,7 @@ interface Props {
   hideUnlockControl?: boolean;
 }
 
-/** 최근 7거래일 무리 규격 고수층 적중률 시계열 (토큰 잠금) */
+/** 최근 7거래일 전역 최고 고수 1명 적중 시계열 (토큰 잠금) */
 export default function RollingCrowdInsightCard({
   accessToken,
   surveyDateAsEndDate,
@@ -122,7 +122,7 @@ export default function RollingCrowdInsightCard({
         surveyDatePrefix="종료 "
       >
         <p className="text-xs text-gray-400 leading-relaxed">
-          이 종료 거래일을 끝으로 잡히는 최근 7거래일 구간에 무리 규격 고수층 적중 집계를 채울 데이터가 부족하거나 해당 구간 설문 이력이 없어요.
+          이 종료 거래일을 끝으로 잡히는 최근 7거래일 구간에 최고 고수 적중 집계를 채울 데이터가 부족하거나 해당 구간 설문 이력이 없어요.
         </p>
       </InsightUnavailableCard>
     );
@@ -173,7 +173,7 @@ export default function RollingCrowdInsightCard({
           <>
             <p className="text-gray-500">
               {data.description ??
-                "종료 거래일 기준 최근 거래일 7일 동안 무리 규격 고수층의 일별 코스피 적중률입니다."}
+                "종료 거래일 기준 최근 거래일 7일 동안 최고 고수가 참여한 날의 코스피 적중 여부(0%·100%)입니다."}
             </p>
             {hideUnlockControl ? <InsightUnlockShopHint /> : null}
           </>

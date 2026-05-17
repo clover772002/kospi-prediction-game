@@ -11,7 +11,8 @@ from typing import Any
 from fastapi import HTTPException
 from supabase import Client
 
-from daily_kospi_leaderboard import build_kospi_leaderboard_for_survey_date, ranked_user_ids
+from daily_kospi_leaderboard import build_kospi_leaderboard_for_survey_date
+from expert_tier import global_top_expert_uid
 from token_wallet import grant_tokens_with_ledger, spend_tokens_idempotent
 
 logger = logging.getLogger(__name__)
@@ -19,7 +20,7 @@ logger = logging.getLogger(__name__)
 TIP_TOKENS = int(os.getenv("EXPERT_CHAT_TIP_TOKENS", "25"))
 # 시작 100토큰 대비 약 3회 적중·참여 분량(기본 100 + ~110) — 한 번만 100% 맞춰 열리는 것 방지
 MIN_TAB_BALANCE = int(os.getenv("EXPERT_CHAT_MIN_TAB_BALANCE", "210"))
-TOP_N = int(os.getenv("EXPERT_CHAT_TOP_N", "20"))
+TOP_N = 1
 MAX_BODY_LEN = int(os.getenv("EXPERT_CHAT_MAX_BODY", "1200"))
 MAX_MESSAGES_PER_PARTICIPANT_SURVEY = int(os.getenv("EXPERT_CHAT_MAX_MSG_PER_SURVEY", "30"))
 
@@ -39,16 +40,20 @@ def assert_expert_chat_tab_access(supabase: Client, user_id: str) -> int:
     return balance
 
 
-def _resolve_recipient_id(entries: list[dict], recipient_user_id: str | None, top_n: int) -> str | None:
-    allowed = set(ranked_user_ids(entries, top_n=top_n))
-    if not allowed:
+def _resolve_global_top_recipient(
+    entries: list[dict], leader_uid: str | None, recipient_user_id: str | None
+) -> str | None:
+    if not leader_uid:
+        return None
+    entry = next((e for e in entries if str(e["user_id"]) == leader_uid), None)
+    if not entry:
         return None
     if recipient_user_id is None or str(recipient_user_id).strip() == "":
-        return entries[0]["user_id"] if entries else None
+        return leader_uid
     rid = str(recipient_user_id).strip()
-    if rid not in allowed:
+    if rid != leader_uid:
         return None
-    return rid
+    return leader_uid
 
 
 def _legacy_expert_grant_exists_for_message(
@@ -143,9 +148,10 @@ def build_eligibility_payload(
     current_user_id: str,
 ) -> dict[str, Any]:
     entries = build_kospi_leaderboard_for_survey_date(supabase, survey_date)
-    top_slice = entries[:TOP_N] if entries else []
-    rank1 = top_slice[0] if top_slice else None
-    allowed_ids = ranked_user_ids(entries, top_n=TOP_N)
+    leader_uid, leader_err = global_top_expert_uid(supabase)
+    top_entry = next((e for e in entries if str(e["user_id"]) == leader_uid), None) if leader_uid else None
+    top_slice = [top_entry] if top_entry else []
+    allowed_ids = [leader_uid] if top_entry and leader_uid else []
 
     me_entry = next((e for e in entries if e["user_id"] == current_user_id), None)
     my_rank = me_entry["rank"] if me_entry else None
@@ -153,25 +159,22 @@ def build_eligibility_payload(
     my_balance = user_token_balance(supabase, current_user_id)
     can_access_tab = my_balance >= MIN_TAB_BALANCE
 
-    default_expert = rank1["user_id"] if rank1 else None
-    allowed_others = [uid for uid in allowed_ids if uid != current_user_id]
-    can_send = bool(
-        can_access_tab
-        and len(entries) >= 2
-        and allowed_others
-        and my_balance >= TIP_TOKENS
-    )
+    default_expert = leader_uid if top_entry else None
+    can_message_leader = bool(top_entry and leader_uid and leader_uid != current_user_id)
+    can_send = bool(can_access_tab and can_message_leader and my_balance >= TIP_TOKENS)
 
     def _blocked() -> str:
         if not can_access_tab:
             return TAB_BLOCKED_REASON
-        if len(entries) < 2:
-            return "참가자가 부족해요"
-        if not allowed_others:
-            return "보낼 수 있는 고수(다른 참가자)가 없어요"
+        if leader_err == "segment_empty":
+            return "아직 최고 고수를 정할 표본이 부족해요"
+        if not top_entry:
+            return "오늘 설문에 참여한 최고 고수가 없어요"
+        if leader_uid == current_user_id:
+            return "최고 고수 본인은 질문을 보낼 수 없어요"
         if my_balance < TIP_TOKENS:
             return f"질문 보내기에 토큰이 부족해요. (필요 {TIP_TOKENS}개)"
-        return "고수(수신자)를 정할 수 없어요"
+        return "최고 고수에게 보낼 수 없어요"
 
     send_blocked_reason: str | None = None if can_send else _blocked()
     tab_blocked_reason: str | None = None if can_access_tab else TAB_BLOCKED_REASON
@@ -183,7 +186,7 @@ def build_eligibility_payload(
         "top_n": TOP_N,
         "my_balance": my_balance,
         "my_rank": my_rank,
-        "rank1": rank1,
+        "rank1": top_entry,
         "top_recipients": top_slice,
         "allowed_recipient_ids": allowed_ids,
         "default_recipient_id": default_expert,
@@ -243,13 +246,15 @@ def send_participant_message(
         }
 
     entries = build_kospi_leaderboard_for_survey_date(supabase, survey_date)
-    expert_id = _resolve_recipient_id(entries, recipient_user_id, TOP_N)
+    leader_uid, _ = global_top_expert_uid(supabase)
+    expert_id = _resolve_global_top_recipient(entries, leader_uid, recipient_user_id)
     if not expert_id:
-        raise HTTPException(status_code=400, detail="선택한 고수를 찾을 수 없거나 순위권에 없어요.")
+        raise HTTPException(
+            status_code=400,
+            detail="오늘 설문에 참여한 최고 고수에게만 보낼 수 있어요.",
+        )
     if expert_id == participant_id:
         raise HTTPException(status_code=400, detail="본인에게는 보낼 수 없어요.")
-    if len(entries) < 2:
-        raise HTTPException(status_code=400, detail="참가자가 부족해 소통을 열 수 없어요.")
 
     if _count_participant_messages_on_survey(supabase, participant_id, survey_date) >= MAX_MESSAGES_PER_PARTICIPANT_SURVEY:
         raise HTTPException(status_code=429, detail="이 거래일에 보낼 수 있는 메시지 수를 초과했어요.")

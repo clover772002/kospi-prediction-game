@@ -8,9 +8,9 @@ export const INSIGHT_CARD_META = {
   },
   rolling_crowd_summary: {
     priceTokens: 140,
-    instantExample: "예: 최근 7거래일 · 날짜별 고수층 적중률(결과 확정일만 숫자)",
+    instantExample: "예: 최근 7거래일 · 최고 고수 일별 적중(0%·100%)",
     hint:
-      "선택한 날을 끝으로 최근 거래일 7일 구간에서, 무리 규격 고수층만 모아 코스피 결과가 확정된 날의 적중 비율(%)을 볼 수 있어요. 표본 부족·미확정일은 줄에서 비워 둘 수 있습니다.",
+      "선택한 날을 끝으로 최근 거래일 7일 구간에서, 지금까지 기준 최고 고수 1명이 참여한 날만 코스피 결과 확정 시 적중 여부를 볼 수 있어요. 미참여·미확정일은 비워 둡니다.",
   },
   time_slice_accuracy: {
     priceTokens: 130,
@@ -32,9 +32,9 @@ export const INSIGHT_CARD_META = {
   },
   expert_leader_pick: {
     priceTokens: 95,
-    instantExample: "예: 무리 규격 고수 중 그날 1순위 — 방향 + 확신도(게이지)",
+    instantExample: "예: 전역 최고 고수 — 그날 방향 + 확신도(게이지)",
     hint:
-      "그날 무리 규격 고수층에서 적중률 최고 참가자(동률 시 id순) 한 명만 골라, 초성 처리된 이름과 함께 선택한 코스피 방향과 설문 게이지(확신도 규모)를 보여 줍니다.",
+      "지금까지 기준 누적 적중 1순위(최고 고수)가 그날 설문에 참여했을 때, 초성 이름과 함께 선택한 코스피 방향과 설문 게이지(확신도)를 보여 줍니다.",
   },
   novice_leader_pick: {
     priceTokens: 85,

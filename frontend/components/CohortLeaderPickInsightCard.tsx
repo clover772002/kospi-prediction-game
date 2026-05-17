@@ -220,7 +220,7 @@ export default function CohortLeaderPickInsightCard({
           <>
             <p className="text-gray-500">
               {data.description ??
-                `${cohort === "expert" ? "그날 무리 규격 고수층" : "그날 무리 규격 하수층"}에서 한 명을 골라 방향과 확신도(게이지)를 초성 형태로 보여 줍니다.`}
+                `${cohort === "expert" ? "전역 최고 고수" : "그날 무리 규격 하수층"}의 그날 방향과 확신도(게이지)를 초성 형태로 보여 줍니다.`}
             </p>
             {hideUnlockControl ? <InsightUnlockShopHint /> : null}
           </>

@@ -8,7 +8,6 @@ import { formatApiErrorMessage } from "@/lib/format-api-error";
 import FlipClock from "@/components/FlipClock";
 import KospiChart from "@/components/KospiChart";
 import GaugeBar from "@/components/GaugeBar";
-import SurveyConfidencePlayground from "@/components/SurveyConfidencePlayground";
 import AppAmbientBackground from "@/components/AppAmbientBackground";
 import PageLoadProgress from "@/components/PageLoadProgress";
 import AppTabNav from "@/components/AppTabNav";
@@ -91,10 +90,6 @@ function SurveyGaugeWithPreview({
     <div className="space-y-3 w-full min-w-0 box-border">
       {isPreview ? (
         <>
-          <SurveyConfidencePlayground />
-          <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/[0.08] px-4 py-3 text-center">
-            <p className="text-emerald-300 text-sm sm:text-base font-black tracking-tight">실제 설문</p>
-          </div>
           <GaugeBar
             value={gaugeValue}
             onChange={onGaugeChange}
@@ -877,10 +872,7 @@ function SurveyPageInner() {
             </p>
             <p className="text-base sm:text-lg font-bold text-gray-300 mb-2">확신도 선택</p>
             <p className="text-base text-gray-500 mb-4 leading-relaxed">
-              상단의 <strong className="text-gray-400">예시</strong> 참고용입니다. 아래 막대는{" "}
-              <strong className="text-emerald-300/95">실제 설문</strong> 입력입니다.
-              ±% 표기는 장{" "}
-              <strong className="text-gray-400">등락률</strong>이 아니라 선택한 방향에 대한{" "}
+              ±% 표기는 장 <strong className="text-gray-400">등락률</strong>이 아니라 선택한 방향에 대한{" "}
               <strong className="text-gray-400">확신도</strong>입니다.
             </p>
             <SurveyGaugeWithPreview

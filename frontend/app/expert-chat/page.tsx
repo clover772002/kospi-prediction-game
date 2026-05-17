@@ -447,24 +447,19 @@ export default function ExpertChatPage() {
 
         <section className="rounded-2xl border border-amber-500/20 bg-amber-500/[0.07] p-4">
           <h2 className="mb-2 text-sm font-bold text-amber-100">메시지 보내기</h2>
-          <span className="mb-1 block text-[10px] font-bold text-gray-500">받는 사람 (순위권 고수)</span>
-          <select
-            value={recipientId ?? ""}
-            onChange={(e) => setRecipientId(e.target.value || null)}
-            className="mb-3 w-full rounded-xl border border-[#333] bg-[#111] px-3 py-2 text-sm text-white"
-            disabled={!pickerRecipients.length}
-          >
-            {pickerRecipients.length === 0 ? (
-              <option value="">선택 가능한 고수가 없어요</option>
-            ) : (
-              pickerRecipients.map((r) => (
-                <option key={r.user_id} value={r.user_id}>
-                  {r.rank}위 · {r.masked_name}
-                  {r.accuracy != null ? ` · 적중 ${r.accuracy}%` : ""}
-                </option>
-              ))
-            )}
-          </select>
+          <span className="mb-1 block text-[10px] font-bold text-gray-500">받는 사람 (최고 고수)</span>
+          {pickerRecipients.length > 0 ? (
+            <div className="mb-3 rounded-xl border border-[#333] bg-[#111] px-3 py-2.5 text-sm text-white">
+              {pickerRecipients.map((r) => (
+                <p key={r.user_id}>
+                  {r.masked_name}
+                  {r.accuracy != null ? ` · 누적 적중 ${r.accuracy}%` : ""}
+                </p>
+              ))}
+            </div>
+          ) : (
+            <p className="mb-3 text-sm text-gray-500">오늘 설문에 참여한 최고 고수가 없어요.</p>
+          )}
 
           <textarea
             value={body}
