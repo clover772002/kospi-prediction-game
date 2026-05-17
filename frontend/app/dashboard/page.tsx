@@ -131,10 +131,17 @@ function HistoryRow({ item, todaySurvey }: { item: DashboardData["history"][0]; 
     verdict === true ? "적중" : verdict === false ? "미적중" : "대기중";
 
   const tokensCell = (() => {
-    if (!hasResult || tokensWon === null || tokensWon === undefined) return "—";
-    if (tokensWon > 0) return `+${tokensWon} 얻음`;
-    if (tokensWon === 0) return "0";
-    return `${Math.abs(tokensWon)} 잃음`;
+    if (!hasResult) return "—";
+    if (tokensWon !== null && tokensWon !== undefined) {
+      if (tokensWon > 0) return `+${tokensWon} 얻음`;
+      if (tokensWon === 0) return "0";
+      return `${Math.abs(tokensWon)} 잃음`;
+    }
+    if (tokensBet != null && tokensBet !== undefined && verdict !== null) {
+      if (verdict) return `+${tokensBet} 얻음`;
+      return `${tokensBet} 잃음`;
+    }
+    return "—";
   })();
 
   const mk = marketDirectionRow(item, todaySurvey);
@@ -194,9 +201,9 @@ function HistoryRow({ item, todaySurvey }: { item: DashboardData["history"][0]; 
       <td className={`${HISTORY_TD} min-w-[6.75rem] pr-4 text-right font-bold tabular-nums ${
         !hasResult
           ? "text-white/90"
-          : tokensWon != null && tokensWon > 0
+          : (tokensWon != null && tokensWon > 0) || (tokensWon == null && verdict === true)
             ? "text-green-400"
-            : tokensWon != null && tokensWon < 0
+            : (tokensWon != null && tokensWon < 0) || (tokensWon == null && verdict === false)
               ? "text-red-400"
               : "text-white"
       }`}

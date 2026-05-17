@@ -1753,6 +1753,92 @@ def _settle_kospi_survey_day_inner(
     }
 
 
+def _settle_kospi_tokens_for_user_date(
+    supabase: Client,
+    user_id: str,
+    survey_date_str: str,
+    is_up: bool,
+) -> bool:
+    """해당 유저·거래일 tokens_won 미정산이면 1:1 규칙으로 잔액·기록 반영."""
+    try:
+        resp = (
+            supabase.table("survey_responses")
+            .select("kospi_answer, gauge_position, tokens_bet, tokens_won")
+            .eq("user_id", user_id)
+            .eq("survey_date", survey_date_str)
+            .maybe_single()
+            .execute()
+        )
+    except Exception as e:
+        logger.warning(
+            "개인 토큰 정산: 응답 조회 실패 user=%s date=%s — %s",
+            user_id,
+            survey_date_str,
+            e,
+        )
+        return False
+
+    if not resp.data or resp.data.get("tokens_won") is not None:
+        return False
+
+    row = resp.data
+    gp = row.get("gauge_position")
+    if gp is None:
+        gp = 50 if row.get("kospi_answer") else -50
+    else:
+        gp = int(gp)
+    is_up_bet = gp > 0
+    correct_game = is_up_bet == is_up
+
+    try:
+        u_row = supabase.table("users").select("tokens, game_over_count").eq("id", user_id).execute()
+    except Exception as e:
+        logger.warning("개인 토큰 정산: users 조회 실패 user=%s — %s", user_id, e)
+        return False
+    if not u_row.data:
+        return False
+    u = u_row.data[0]
+    tokens = int(u.get("tokens") or 100)
+    game_over_count = int(u.get("game_over_count") or 0)
+
+    tokens_bet = row.get("tokens_bet")
+    if tokens_bet is None:
+        tokens_bet = max(1, round(abs(gp) / 100 * tokens))
+    else:
+        tokens_bet = int(tokens_bet)
+
+    if correct_game:
+        won = tokens_bet
+        new_tokens = tokens + won
+    else:
+        won = -tokens_bet
+        new_tokens = tokens - tokens_bet
+
+    if new_tokens <= 0:
+        new_tokens = 100
+        game_over_count += 1
+
+    try:
+        supabase.table("users").update({
+            "tokens": new_tokens,
+            "game_over_count": game_over_count,
+        }).eq("id", user_id).execute()
+        supabase.table("survey_responses").update({
+            "payout_multiplier": 1.0,
+            "tokens_won": won,
+        }).eq("user_id", user_id).eq("survey_date", survey_date_str).is_("tokens_won", "null").execute()
+    except Exception as e:
+        logger.error(
+            "개인 토큰 정산: DB 업데이트 실패 user=%s date=%s — %s",
+            user_id,
+            survey_date_str,
+            e,
+        )
+        return False
+
+    return True
+
+
 def ensure_kospi_tokens_settled_for_date(supabase: Client, survey_date_str: str) -> None:
     """DB에 종가 결과만 있고 토큰 정산이 빠진 날 보강 (Vercel·온디맨드 분기 등)."""
     try:
@@ -3594,6 +3680,37 @@ async def get_dashboard(
                     except (TypeError, ValueError):
                         pct_val = None
                 kospi_pct_by_date[dk] = pct_val
+
+        pending_settle_dates = sorted({
+            _survey_date_key(resp["survey_date"])
+            for resp in responses_rows
+            if resp.get("tokens_won") is None and resp.get("survey_date") is not None
+        })
+        pending_settle_dates = [
+            d
+            for d in pending_settle_dates
+            if len(d) >= 8 and kospi_result_by_date.get(d) is not None
+        ]
+        user_tokens_settled = False
+        for d in pending_settle_dates:
+            if _settle_kospi_tokens_for_user_date(
+                supabase, user_id, d, bool(kospi_result_by_date[d]),
+            ):
+                user_tokens_settled = True
+
+        if user_tokens_settled:
+            user_row = supabase.table("users").select("tokens, current_streak").eq("id", user_id).execute()
+            user_tokens = user_row.data[0].get("tokens", 100) if user_row.data else user_tokens
+            user_streak = user_row.data[0].get("current_streak", 0) if user_row.data else user_streak
+            my_responses = (
+                supabase.table("survey_responses")
+                .select("survey_date, kospi_answer, gauge_position, tokens_bet, tokens_won, payout_multiplier")
+                .eq("user_id", user_id)
+                .order("survey_date", desc=True)
+                .limit(30)
+                .execute()
+            )
+            responses_rows = my_responses.data or []
 
         history = []
         for resp in responses_rows:
