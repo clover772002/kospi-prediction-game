@@ -71,8 +71,6 @@ function SurveyGaugeWithPreview({
   submitBtnClass,
   submitLabel,
   onSubmit,
-  kospiYesPct,
-  streakBetMult,
 }: {
   phase: GaugeSubmitPhase;
   setPhase: (p: GaugeSubmitPhase) => void;
@@ -84,8 +82,6 @@ function SurveyGaugeWithPreview({
   submitBtnClass: string;
   submitLabel: string;
   onSubmit: () => void | Promise<void>;
-  kospiYesPct?: number | null;
-  streakBetMult?: number | null;
 }) {
   const isPreview = phase === "preview";
   return (
@@ -98,8 +94,6 @@ function SurveyGaugeWithPreview({
             tokens={userTokens}
             disabled={submitting}
             beginnerTips
-            kospiYesPct={kospiYesPct}
-            streakBetMult={streakBetMult}
           />
           <button
             type="button"
@@ -121,8 +115,6 @@ function SurveyGaugeWithPreview({
             tokens={userTokens}
             disabled
             beginnerTips
-            kospiYesPct={kospiYesPct}
-            streakBetMult={streakBetMult}
           />
           <button
             type="button"
@@ -168,7 +160,6 @@ function SurveyPageInner() {
   const [kospiAnswer, setKospiAnswer] = useState<boolean | null>(null);
   const [gaugePosition, setGaugePosition] = useState<number>(10); // -100~+100, 양수=상승
   const [userTokens, setUserTokens] = useState<number>(100);
-  const [userStreak, setUserStreak] = useState<number>(0);
   const [alreadyAnswered, setAlreadyAnswered] = useState(false);
   const [previousAnswer, setPreviousAnswer] = useState<boolean | null>(null);
 
@@ -190,9 +181,6 @@ function SurveyPageInner() {
   /** 상점 소모품 grant 조회용 */
   const [pendingGrantToday, setPendingGrantToday] = useState<string | null>(null);
   const [pendingGrantNext, setPendingGrantNext] = useState<string | null>(null);
-
-  /** 서버 적중 계산 연승 배수와 맞춤 (게이지 예상표시용) */
-  const streakBetMultForGauge = userStreak >= 5 ? 2 : userStreak >= 3 ? 1.5 : 1;
 
   const loadToday = useCallback(async () => {
     setRevalidating(true);
@@ -365,7 +353,6 @@ function SurveyPageInner() {
           .then((r) => r.json())
           .then((d) => {
             if (typeof d.tokens === "number") setUserTokens(d.tokens);
-            if (typeof d.current_streak === "number") setUserStreak(d.current_streak);
           })
           .catch(() => {});
       })();
@@ -651,7 +638,6 @@ function SurveyPageInner() {
                     submitLabel="재투표 제출하기"
                     onSubmit={handleNextSubmit}
                     kospiYesPct={null}
-                    streakBetMult={streakBetMultForGauge}
                   />
                   {error ? (
                     <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4 text-red-400 text-base text-center">
@@ -670,7 +656,6 @@ function SurveyPageInner() {
                     disabled
                     beginnerTips
                     kospiYesPct={null}
-                    streakBetMult={streakBetMultForGauge}
                   />
                 </div>
               </div>
@@ -690,7 +675,6 @@ function SurveyPageInner() {
                   submitLabel="사전 예측 제출하기"
                   onSubmit={handleNextSubmit}
                   kospiYesPct={null}
-                  streakBetMult={streakBetMultForGauge}
                 />
               </>
             )}
@@ -777,7 +761,6 @@ function SurveyPageInner() {
                     submitLabel="재투표 제출하기"
                     onSubmit={handleSubmit}
                     kospiYesPct={today?.kospi_yes_pct ?? null}
-                    streakBetMult={streakBetMultForGauge}
                   />
                   {error ? (
                     <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4 text-red-400 text-base text-center">
@@ -794,7 +777,6 @@ function SurveyPageInner() {
                     disabled
                     beginnerTips
                     kospiYesPct={today?.kospi_yes_pct ?? null}
-                    streakBetMult={streakBetMultForGauge}
                   />
               {token && today?.survey_date ? (
                 <div className="rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 space-y-2 mt-2">
@@ -888,18 +870,6 @@ function SurveyPageInner() {
             <p className="text-amber-400 font-black text-lg sm:text-xl leading-snug">⏰ 설문 진행 중 · 개장 전 마감</p>
           </div>
 
-          {/* 스트릭 뱃지 */}
-          {userStreak >= 3 && (
-            <div className={`flex items-center gap-3 px-4 py-3 rounded-xl border text-base font-bold leading-snug ${
-              userStreak >= 5
-                ? "bg-yellow-500/10 border-yellow-500/30 text-yellow-400"
-                : "bg-orange-500/10 border-orange-500/30 text-orange-400"
-            }`}>
-              <span>{userStreak >= 5 ? "🏆" : "🔥"}</span>
-              <span>연속 적중 {userStreak}회 · 배당 {userStreak >= 5 ? "×2.0" : "×1.5"} 적용</span>
-            </div>
-          )}
-
           <div className="w-full min-w-0">
             <SurveyGaugeWithPreview
               phase={todayGaugePhase}
@@ -913,7 +883,6 @@ function SurveyPageInner() {
               submitLabel="예측 제출하기"
               onSubmit={handleSubmit}
               kospiYesPct={today?.kospi_yes_pct ?? null}
-              streakBetMult={streakBetMultForGauge}
             />
           </div>
 
@@ -959,7 +928,6 @@ function SurveyPageInner() {
                     submitLabel="재투표 제출하기"
                     onSubmit={handleSubmit}
                     kospiYesPct={today?.kospi_yes_pct ?? null}
-                    streakBetMult={streakBetMultForGauge}
                   />
                   {error ? (
                     <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4 text-red-400 text-base text-center">
@@ -976,7 +944,6 @@ function SurveyPageInner() {
                     disabled
                     beginnerTips
                     kospiYesPct={today?.kospi_yes_pct ?? null}
-                    streakBetMult={streakBetMultForGauge}
                   />
                   <p className="text-base text-gray-600">15:35 결과 공개 예정</p>
                 </>
@@ -1012,7 +979,6 @@ function SurveyPageInner() {
                   disabled
                   beginnerTips
                   kospiYesPct={today?.kospi_yes_pct ?? null}
-                  streakBetMult={streakBetMultForGauge}
                 />
                 <div className="mt-0.5">
                   {status === "result" && today?.kospi_result != null ? (
@@ -1071,7 +1037,6 @@ function SurveyPageInner() {
                         submitLabel="재투표 제출하기"
                         onSubmit={handleNextSubmit}
                         kospiYesPct={null}
-                        streakBetMult={streakBetMultForGauge}
                       />
                       {error ? (
                         <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4 text-red-400 text-base text-center mt-2">
@@ -1090,7 +1055,6 @@ function SurveyPageInner() {
                         disabled
                         beginnerTips
                         kospiYesPct={null}
-                        streakBetMult={streakBetMultForGauge}
                       />
                     </div>
                   </div>
@@ -1110,7 +1074,6 @@ function SurveyPageInner() {
                       submitLabel="사전 예측 제출하기"
                       onSubmit={handleNextSubmit}
                       kospiYesPct={null}
-                      streakBetMult={streakBetMultForGauge}
                     />
                     {error && (
                       <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4 text-red-400 text-base text-center mt-2">

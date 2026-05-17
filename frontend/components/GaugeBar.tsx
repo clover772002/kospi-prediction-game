@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useCallback, useId, useRef, useState } from "react";
 
@@ -9,25 +9,10 @@ interface GaugeBarProps {
   disabled?: boolean;
   /** false면 안내 숨김 · 생략 시 조작/읽기 전용 각각 맞는 짧은 안내 표시 */
   beginnerTips?: boolean;
-  /** 상승 응답 비율(적중 시 보유 토큰 예상용). 없으면 50%로 예상 */
-  kospiYesPct?: number | null;
-  /** 서버 적중 계산 시 곱해지는 연승 배수(1 · 1.5 · 2) · 없으면 1로 간주 */
-  streakBetMult?: number | null;
 }
 
 function calcBet(gauge: number, tokens: number) {
   return Math.max(1, Math.round((Math.abs(gauge) / 100) * tokens));
-}
-
-function estimateCrowdMultiplier(gauge: number, yesPct: number | null | undefined): number | null {
-  if (yesPct === null || yesPct === undefined) return null;
-  const y = Number(yesPct);
-  if (!Number.isFinite(y)) return null;
-  const crowdUp = Math.max(5, y);
-  const crowdDn = Math.max(5, 100 - y);
-  return gauge > 0
-    ? Math.round((crowdDn / crowdUp) * 1000) / 1000
-    : Math.round((crowdUp / crowdDn) * 1000) / 1000;
 }
 
 /** 트랙 좌표(왼쪽 0 ~ 오른쪽 1) → -100..100 (0 불가) */
@@ -46,12 +31,9 @@ export default function GaugeBar({
   tokens,
   disabled = false,
   beginnerTips,
-  kospiYesPct,
-  streakBetMult,
 }: GaugeBarProps) {
   const tipsEnabled = beginnerTips !== false;
   const tipsInteractive = tipsEnabled && !disabled;
-  const tipsReadonly = tipsEnabled && disabled;
   const trackRef = useRef<HTMLDivElement>(null);
   const draggingRef = useRef(false);
   const [dragging, setDragging] = useState(false);
@@ -59,10 +41,7 @@ export default function GaugeBar({
   const isUp = value > 0;
   const abs = Math.abs(value);
   const bet = calcBet(value, tokens);
-  const yesPctForPreview = kospiYesPct ?? 50;
-  const hitPreviewIsEstimate = kospiYesPct == null;
-  const crowdMult = estimateCrowdMultiplier(value, yesPctForPreview);
-  const streakM = streakBetMult != null && Number.isFinite(streakBetMult) && streakBetMult > 0 ? streakBetMult : 1;
+  const hitBalance = tokens + bet;
 
   const applyPointerX = useCallback(
     (clientX: number) => {
@@ -120,10 +99,6 @@ export default function GaugeBar({
   const helpIdRaw = useId();
   const helpId = helpIdRaw.includes(":") ? helpIdRaw.replace(/:/g, "") : helpIdRaw;
 
-  const hitGain =
-    crowdMult !== null ? Math.max(1, Math.round(bet * crowdMult * streakM)) : null;
-  const hitBalance = hitGain !== null ? tokens + hitGain : null;
-
   const gaugeDisclaimer = (
     <p className="text-base text-gray-500 leading-snug pt-3 border-t border-[#2A2A2A]">
       아래 표시는 <span className="text-gray-400">등락률 예측</span>이 아니라, 제출하신 예측의{" "}
@@ -155,8 +130,8 @@ export default function GaugeBar({
                 방향에 대한 <strong className="text-gray-400">강한 확신</strong>을 의미합니다.
               </p>
               <p>
-                <strong className="text-gray-400">배팅 토큰</strong>은 확신도와 보유량에 따라 자동 산출됩니다. 적중 시 보유
-                토큰은 참여자 분포·연승 등에 따라 달라질 수 있습니다.
+                <strong className="text-gray-400">배팅 토큰</strong>은 확신도와 보유량에 따라 자동 산출됩니다. 적중 시{" "}
+                <strong className="text-gray-300">배팅한 만큼 토큰을 얻고</strong>, 미적중 시 배팅한 만큼 잃습니다.
               </p>
             </div>
           </details>
@@ -251,23 +226,13 @@ export default function GaugeBar({
         <div className="h-px bg-[#222]" />
         <div className="flex justify-between gap-2 text-base items-start flex-wrap">
           <span className="text-gray-500 shrink-0">적중 시 보유</span>
-          {hitBalance !== null ? (
-            <span className="text-green-400 font-bold text-right leading-snug tabular-nums">
-              약 {hitBalance.toLocaleString()} 토큰
-              {hitPreviewIsEstimate ? (
-                <span className="block text-xs font-normal text-gray-500 mt-0.5">예상치</span>
-              ) : null}
-              {streakM > 1 && !hitPreviewIsEstimate ? (
-                <span className="block text-xs font-normal text-orange-400/90 mt-0.5">연승 배율 반영</span>
-              ) : null}
-            </span>
-          ) : (
-            <span className="text-gray-500 text-right leading-snug">—</span>
-          )}
+          <span className="text-green-400 font-bold text-right leading-snug tabular-nums">
+            약 {hitBalance.toLocaleString()} 토큰
+          </span>
         </div>
         <div className="flex justify-between text-base">
           <span className="text-gray-500">실패 시</span>
-          <span className="text-red-400 font-bold">-{bet.toLocaleString()} 토큰</span>
+          <span className="text-red-400 font-bold tabular-nums">약 {(tokens - bet).toLocaleString()} 토큰</span>
         </div>
       </div>
 

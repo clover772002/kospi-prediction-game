@@ -1683,19 +1683,6 @@ def _settle_kospi_survey_day_inner(
             logger.error(f"daily_surveys 결과 반영 실패 ({survey_date_str}): {e}")
             raise
 
-    survey_info = supabase.table("daily_surveys").select("kospi_yes_pct").eq("survey_date", survey_date_str).execute()
-    kospi_yes_pct = survey_info.data[0].get("kospi_yes_pct") if survey_info.data else 50
-    if kospi_yes_pct is None:
-        total_n = len(rows)
-        yes_cnt = sum(1 for r in rows if r.get("kospi_answer"))
-        kospi_yes_pct = round(yes_cnt / total_n * 100) if total_n > 0 else 50
-
-    crowd_up = max(5, kospi_yes_pct)
-    crowd_dn = max(5, 100 - kospi_yes_pct)
-
-    all_group_members = supabase.table("group_members").select("user_id").execute()
-    group_user_ids = {m["user_id"] for m in (all_group_members.data or [])}
-
     game_overs = 0
     did_token_row = False
     for r in rows:
@@ -1720,37 +1707,21 @@ def _settle_kospi_survey_day_inner(
 
         did_token_row = True
 
-        u_row = supabase.table("users").select(
-            "tokens, current_streak, game_over_count, streak_shield_charges",
-        ).eq("id", uid).execute()
+        u_row = supabase.table("users").select("tokens, game_over_count").eq("id", uid).execute()
         if not u_row.data:
             continue
         u = u_row.data[0]
         tokens = u.get("tokens") or 100
-        streak = u.get("current_streak") or 0
         game_over_count = u.get("game_over_count") or 0
-        shield_charges = int(u.get("streak_shield_charges") or 0)
-
-        payout_mult = round(crowd_dn / crowd_up, 3) if is_up_bet else round(crowd_up / crowd_dn, 3)
-        streak_mult = 2.0 if streak >= 5 else (1.5 if streak >= 3 else 1.0)
 
         tokens_bet = r.get("tokens_bet") or max(1, round(abs(gp) / 100 * tokens))
-        participation_bonus = 10 if uid in group_user_ids else 5
 
-        new_shields = shield_charges
         if correct_game:
-            won = int(tokens_bet * payout_mult * streak_mult)
-            new_tokens = tokens + won + participation_bonus
-            new_streak = streak + 1
+            won = int(tokens_bet)
+            new_tokens = tokens + won
         else:
-            won = -tokens_bet
-            new_tokens = tokens - tokens_bet + participation_bonus
-            if shield_charges > 0:
-                new_shields = shield_charges - 1
-                new_streak = streak
-            else:
-                new_shields = shield_charges
-                new_streak = 0
+            won = -int(tokens_bet)
+            new_tokens = tokens - tokens_bet
 
         game_over = new_tokens <= 0
         if game_over:
@@ -1760,13 +1731,11 @@ def _settle_kospi_survey_day_inner(
 
         supabase.table("users").update({
             "tokens": new_tokens,
-            "current_streak": new_streak,
             "game_over_count": game_over_count,
-            "streak_shield_charges": new_shields,
         }).eq("id", uid).execute()
 
         supabase.table("survey_responses").update({
-            "payout_multiplier": payout_mult,
+            "payout_multiplier": 1.0,
             "tokens_won": won,
         }).eq("user_id", uid).eq("survey_date", survey_date_str).is_("tokens_won", "null").execute()
 

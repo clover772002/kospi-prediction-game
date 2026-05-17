@@ -84,17 +84,6 @@ function effectiveHistoryKospiChangePct(entry: DashboardHist, todaySurvey: Today
   return null;
 }
 
-// 연속 적중 스트릭 계산
-function calcStreak(history: DashboardData["history"]): number {
-  const withResult = [...history].filter((h) => effectiveKospiCorrect(h) !== null);
-  let count = 0;
-  for (const item of withResult) {
-    if (effectiveKospiCorrect(item) === true) count++;
-    else break;
-  }
-  return count;
-}
-
 function marketDirectionRow(item: DashboardHist, todaySurvey: TodaySurvey | null): boolean | null {
   const mk = coerceBool(item.kospi_market_result);
   if (mk !== null) return mk;
@@ -525,9 +514,6 @@ export default function DashboardPage() {
   }
   const marketStatus = getMarketStatus();
 
-  // 스트릭 계산
-  const streak = dash?.history ? calcStreak(dash.history) : 0;
-
   // 오늘 결과 공유용 데이터
   const todayEntry = dash?.history?.find((h) => sameSurveyDate(h.date, today?.survey_date));
   const isCorrectToday =
@@ -542,7 +528,6 @@ export default function DashboardPage() {
   };
 
   const handleShareResult = () => {
-    const streakText = streak > 1 ? ` 🔥${streak}연속 적중!` : "";
     const verdict = userPickVerdictFromTodayAndHistory(today, todayEntry ?? undefined);
     const resultText = verdict === null ? "" : verdict ? "✅ 오늘 맞췄어요!" : "❌ 오늘 틀렸어요";
     const dir = resolvedMarketDirection(today, todayEntry ?? undefined);
@@ -553,7 +538,7 @@ export default function DashboardPage() {
           : `코스피 📉 하락 ${today?.kospi_change_pct != null ? `${today.kospi_change_pct.toFixed(2)}%` : ""}`
         : "코스피 결과 처리 중…";
     const accuracyText = dash?.accuracy?.kospi != null ? ` (내 적중률 ${dash.accuracy.kospi}%)` : "";
-    const shareText = `${resultText}${streakText}\n${kospiText}${accuracyText}\n\n코스피 예측에 참여해봐요 👉`;
+    const shareText = `${resultText}\n${kospiText}${accuracyText}\n\n코스피 예측에 참여해봐요 👉`;
     const shareUrl = typeof window !== "undefined" ? window.location.origin : "";
     if (navigator.share) {
       navigator.share({ title: "코스피 예측 결과", text: shareText, url: shareUrl });
@@ -669,19 +654,11 @@ export default function DashboardPage() {
               </div>
 
               {/* 스탯 */}
-              <div className="grid grid-cols-2 gap-2">
-                <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-2xl px-4 py-3">
-                  <p className="text-sm text-white/90 mb-1">누적 적중률</p>
-                  <p className="text-2xl font-black text-white">
-                    {dash?.accuracy?.kospi != null ? `${dash.accuracy.kospi}%` : "—"}
-                  </p>
-                </div>
-                <div className={`rounded-2xl px-4 py-3 ${streak > 1 ? "bg-orange-500/10 border border-orange-500/25" : "bg-[#1A1A1A] border border-[#2A2A2A]"}`}>
-                  <p className="text-sm text-white/90 mb-1">연속 적중</p>
-                  <p className={`text-2xl font-black ${streak > 1 ? "text-orange-400" : "text-white"}`}>
-                    {streak > 1 ? `${streak}일` : "—"}
-                  </p>
-                </div>
+              <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-2xl px-4 py-3">
+                <p className="text-sm text-white/90 mb-1">누적 적중률</p>
+                <p className="text-2xl font-black text-white">
+                  {dash?.accuracy?.kospi != null ? `${dash.accuracy.kospi}%` : "—"}
+                </p>
               </div>
 
               {/* 버튼 */}
@@ -693,11 +670,10 @@ export default function DashboardPage() {
                   const pctText = today.kospi_change_pct != null
                     ? ` ${today.kospi_change_pct >= 0 ? "+" : ""}${today.kospi_change_pct.toFixed(2)}%`
                     : "";
-                  const streakText = streak > 1 ? ` | ${streak}일 연속 적중` : "";
                   const accuracyText = dash?.accuracy?.kospi != null ? ` | 적중률 ${dash.accuracy.kospi}%` : "";
                   const verdictLine =
                     isCorrectToday === null ? "" : `${isCorrectToday ? " ✅ 맞췄어요!" : " ❌ 틀렸어요"}`;
-                  const shareText = `코스피 ${direction}${pctText}${verdictLine}${streakText}${accuracyText}\n\n코스피 예측에 참여해봐요 👉`;
+                  const shareText = `코스피 ${direction}${pctText}${verdictLine}${accuracyText}\n\n코스피 예측에 참여해봐요 👉`;
                   return (
                     <ShareSheet
                       url={shareUrl}
@@ -1065,16 +1041,6 @@ export default function DashboardPage() {
                 </button>
               )}
             </div>
-            {streak >= 2 && (
-              <span className="flex items-center gap-1 text-sm font-black text-orange-400 bg-orange-400/10 border border-orange-400/30 px-2.5 py-1 rounded-full fire-glow badge-pop">
-                🔥 {streak}연속 적중
-              </span>
-            )}
-            {streak === 1 && (
-              <span className="flex items-center gap-1 text-sm font-bold text-orange-300/70 bg-orange-400/5 px-2 py-0.5 rounded-full badge-pop">
-                🔥 1연속 적중
-              </span>
-            )}
           </div>
 
           {dash && dash.total_predictions === 0 ? (
@@ -1098,31 +1064,12 @@ export default function DashboardPage() {
                 <p className="text-sm text-white pb-1 ml-1">적중률 · {dash.total_predictions}일 참여</p>
               </div>
 
-              {/* 토큰 + 스트릭 */}
               {dash.tokens != null && (
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-xl px-4 py-3">
-                    <p className="text-sm text-white mb-1">보유 토큰</p>
-                    <p className="text-xl font-black text-yellow-400 tabular-nums">
-                      💰 {dash.tokens.toLocaleString()}
-                    </p>
-                  </div>
-                  <div className={`rounded-xl px-4 py-3 border ${
-                    streak >= 5
-                      ? "bg-yellow-500/10 border-yellow-500/30"
-                      : streak >= 3
-                        ? "bg-orange-500/10 border-orange-500/30"
-                        : "bg-[#1A1A1A] border-[#2A2A2A]"
-                  }`}>
-                    <p className="text-sm text-white mb-1">연속 적중</p>
-                    <p className={`text-xl font-black tabular-nums ${
-                      streak >= 5 ? "text-yellow-400" :
-                      streak >= 3 ? "text-orange-400" : "text-white"
-                    }`}>
-                      {streak >= 5 ? "🏆 " : streak >= 3 ? "🔥 " : ""}
-                      {streak}일
-                    </p>
-                  </div>
+                <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-xl px-4 py-3">
+                  <p className="text-sm text-white mb-1">보유 토큰</p>
+                  <p className="text-xl font-black text-yellow-400 tabular-nums">
+                    💰 {dash.tokens.toLocaleString()}
+                  </p>
                 </div>
               )}
 
