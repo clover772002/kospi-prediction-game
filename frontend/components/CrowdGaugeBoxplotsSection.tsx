@@ -54,7 +54,7 @@ function HorizontalSignedBox({
   if (isEmpty) {
     return (
       <div
-        className={`rounded-xl border border-dashed border-[#333] bg-[#101010]/80 px-2 py-2 text-[10px] text-gray-500 min-h-[80px] flex flex-col justify-center ${ring}`}
+        className={`rounded-xl border border-dashed border-[#333] bg-[#101010]/80 px-2 py-2 text-sm text-white min-h-[80px] flex flex-col justify-center ${ring}`}
       >
         <span className={palette.label}>{subtitle}</span>
         <p className="mt-1 leading-snug">이 날 해당 방향 응답이 없어요.</p>
@@ -74,8 +74,8 @@ function HorizontalSignedBox({
   return (
     <div className={`rounded-xl border ${palette.border} bg-[#141414]/90 px-2 py-2 min-h-[80px] flex flex-col ${ring}`}>
       <div className="flex items-center justify-between gap-1 mb-1.5">
-        <span className={`text-[9px] font-black uppercase tracking-tight leading-tight ${palette.label}`}>{subtitle}</span>
-        <span className="text-[9px] text-gray-500 tabular-nums shrink-0">n={stats.n}</span>
+        <span className={`text-sm font-black uppercase tracking-tight leading-tight ${palette.label}`}>{subtitle}</span>
+        <span className="text-sm text-white tabular-nums shrink-0">n={stats.n}</span>
       </div>
       <div className="relative h-8 w-full flex-1 min-h-[32px]">
         <div className="absolute bottom-0.5 left-0 right-0 h-px bg-gray-700/90" />
@@ -107,19 +107,19 @@ function HorizontalSignedBox({
         />
       </div>
       {variant === "fall" ? (
-        <div className="flex justify-between text-[8px] text-gray-600 tabular-nums mt-1 px-0.5">
+        <div className="flex justify-between text-xs text-white/90 tabular-nums mt-1 px-0.5">
           <span>-100</span>
           <span>-50</span>
           <span>0</span>
         </div>
       ) : (
-        <div className="flex justify-between text-[8px] text-gray-600 tabular-nums mt-1 px-0.5">
+        <div className="flex justify-between text-xs text-white/90 tabular-nums mt-1 px-0.5">
           <span>0</span>
           <span>50</span>
           <span>100</span>
         </div>
       )}
-      <p className="text-[8px] text-gray-600 mt-0.5 tabular-nums leading-snug">
+      <p className="text-xs text-white/90 mt-0.5 tabular-nums leading-snug">
         min {min} · Q1 {q1} · 중앙 {median} · Q3 {q3} · max {max}
       </p>
     </div>
@@ -145,10 +145,10 @@ function DirectionShareRibbon({
       <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 mb-2">
         <div className="flex items-baseline gap-2 min-w-0">
           <span className="text-sm font-black text-red-400 tabular-nums tracking-tight">상승 {r}%</span>
-          <span className="text-[10px] text-gray-500 tabular-nums">({nRise}명)</span>
+          <span className="text-sm text-white tabular-nums">({nRise}명)</span>
         </div>
         <div className="flex items-baseline gap-2 min-w-0">
-          <span className="text-[10px] text-gray-500 tabular-nums">({nFall}명)</span>
+          <span className="text-sm text-white tabular-nums">({nFall}명)</span>
           <span className="text-sm font-black text-blue-400 tabular-nums tracking-tight">하락 {f}%</span>
         </div>
       </div>
@@ -203,14 +203,14 @@ function DayCard({ day }: { day: CrowdGaugeBoxplotDay }) {
   return (
     <div className="rounded-xl border border-[#2A2A2A] bg-[#141414]/80 px-3 py-2.5">
       <div className="flex flex-wrap items-baseline justify-between gap-2 mb-2">
-        <p className="text-xs font-bold text-white tabular-nums">{day.survey_date}</p>
+        <p className="text-sm font-bold text-white tabular-nums">{day.survey_date}</p>
         <p
-          className={`text-[10px] font-bold ${
+          className={`text-sm font-bold ${
             day.kospi_result === true
               ? "text-red-400"
               : day.kospi_result === false
                 ? "text-blue-400"
-                : "text-gray-500"
+                : "text-white"
           }`}
         >
           {resultLabel}
@@ -260,23 +260,23 @@ export default function CrowdGaugeBoxplotsSection() {
   return (
     <div className="bg-[#1A1A1A] rounded-2xl p-5 border border-[#2A2A2A] fade-up-3 space-y-4">
       <div>
-        <p className="font-bold text-sm text-white">전체 예측 방향·확신도</p>
-        <p className="text-[10px] text-gray-500 mt-1 leading-relaxed">
+        <p className="font-bold text-base text-white">전체 예측 방향·확신도</p>
+        <p className="text-sm text-white mt-2 leading-relaxed">
           거래일마다 숫자 줄로{" "}
           <strong className="text-red-400">상승</strong>
           ·
           <strong className="text-blue-400">하락</strong>
-          선택 <strong className="text-gray-400">비율(%)</strong>과 인원을 먼저 보여 주고,
+          선택 <strong className="text-white">비율(%)</strong>과 인원을 먼저 보여 주고,
           아래 두 막대는 각각 확신 게이지 분포예요.{" "}
-          <strong className="text-gray-400">하락</strong>은{" "}
-          <strong className="text-gray-400">−100~0</strong>(왼쪽), <strong className="text-gray-400">상승</strong>은{" "}
-          <strong className="text-gray-400">0~100</strong>(오른쪽). 코스피 종가 방향 확정 후 맞은 쪽에{" "}
+          <strong className="text-white">하락</strong>은{" "}
+          <strong className="text-white">−100~0</strong>(왼쪽), <strong className="text-white">상승</strong>은{" "}
+          <strong className="text-white">0~100</strong>(오른쪽). 코스피 종가 방향 확정 후 맞은 쪽에{" "}
           <strong className="text-amber-200/90">골드 링</strong>입니다.
         </p>
       </div>
 
       {err ? (
-        <p className="text-xs text-red-400/90 rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-2">{err}</p>
+        <p className="text-sm text-red-400 rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-2">{err}</p>
       ) : null}
 
       {!err && days === null ? (
@@ -287,7 +287,7 @@ export default function CrowdGaugeBoxplotsSection() {
       ) : null}
 
       {!err && days && days.length === 0 ? (
-        <p className="text-[11px] text-gray-500">아직 집계할 거래일이 없어요.</p>
+        <p className="text-base text-white">아직 집계할 거래일이 없어요.</p>
       ) : null}
 
       {!err && days && days.length > 0 ? (

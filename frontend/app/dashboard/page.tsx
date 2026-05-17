@@ -144,14 +144,14 @@ function HistoryRow({ item, todaySurvey }: { item: DashboardData["history"][0]; 
 
   const kospiCell =
     mk === null ? (
-      <div className="leading-tight text-gray-500">
+      <div className="leading-tight text-white">
         <span className="block">미정</span>
-        <span className="block tabular-nums text-[9px] text-gray-600">—</span>
+        <span className="block tabular-nums text-sm text-white">—</span>
       </div>
     ) : (
       <div className="leading-tight">
         <span className={`font-bold ${mk ? "text-red-400" : "text-blue-400"}`}>{mk ? "상승" : "하락"}</span>
-        <span className="block tabular-nums text-gray-300 text-[9px] mt-0.5">{pctStr ?? "—"}</span>
+        <span className="block tabular-nums text-white text-sm mt-0.5">{pctStr ?? "—"}</span>
       </div>
     );
 
@@ -169,38 +169,38 @@ function HistoryRow({ item, todaySurvey }: { item: DashboardData["history"][0]; 
           : ""
       }`}
     >
-      <td className="py-1 pl-2 pr-0.5 align-middle text-gray-500 tabular-nums whitespace-nowrap text-[10px]">
+      <td className="py-2 pl-2 pr-0.5 align-middle text-white tabular-nums whitespace-nowrap text-sm">
         {item.date.slice(5)}
       </td>
-      <td className="py-1 px-1 align-middle text-[10px] border-l border-[#2a2a2a]/80 bg-[#0f0f0f]/35">
+      <td className="py-2 px-1 align-middle text-sm border-l border-[#2a2a2a]/80 bg-[#0f0f0f]/35">
         <div className="leading-tight">
           <span className={`font-bold ${predictCls}`}>{directionUp ? "상승" : "하락"}</span>
-          <span className="block tabular-nums text-gray-300 text-[9px] mt-0.5">{gaugeLine}</span>
+          <span className="block tabular-nums text-white text-sm mt-0.5">{gaugeLine}</span>
         </div>
       </td>
-      <td className="py-1 px-0.5 align-middle text-[10px] border-l border-amber-500/25 bg-[#0f0f0f]/35">
+      <td className="py-2 px-0.5 align-middle text-sm border-l border-amber-500/25 bg-[#0f0f0f]/35">
         {kospiCell}
       </td>
-      <td className={`py-1 px-0.5 align-middle text-center whitespace-nowrap font-bold text-[10px] ${
-        !hasResult ? "text-gray-600" : verdict ? "text-green-400/95" : "text-red-400/90"
+      <td className={`py-2 px-0.5 align-middle text-center whitespace-nowrap font-bold text-base ${
+        !hasResult ? "text-white/90" : verdict ? "text-green-400/95" : "text-red-400/90"
       }`}
       >
         {hitLabel}
       </td>
-      <td className="py-1 px-0.5 align-middle text-right tabular-nums text-gray-200 whitespace-nowrap text-[10px]">
+      <td className="py-2 px-0.5 align-middle text-right tabular-nums text-white whitespace-nowrap text-sm">
         {tokensBet != null && tokensBet !== undefined ? `${tokensBet}` : "—"}
       </td>
-      <td className="py-1 px-0.5 align-middle text-right tabular-nums text-cyan-300/90 whitespace-nowrap text-[10px]">
+      <td className="py-2 px-0.5 align-middle text-right tabular-nums text-cyan-300 whitespace-nowrap text-sm">
         {mult != null ? `×${mult.toFixed(2)}` : "—"}
       </td>
-      <td className={`py-1 pl-0.5 pr-2 align-middle text-right font-bold tabular-nums whitespace-nowrap text-[10px] ${
+      <td className={`py-2 pl-0.5 pr-2 align-middle text-right font-bold tabular-nums whitespace-nowrap text-sm ${
         !hasResult
-          ? "text-gray-600"
+          ? "text-white/90"
           : tokensWon != null && tokensWon > 0
             ? "text-green-400"
             : tokensWon != null && tokensWon < 0
               ? "text-red-400"
-              : "text-gray-400"
+              : "text-white"
       }`}
       >
         {tokensCell}
@@ -437,7 +437,7 @@ export default function DashboardPage() {
           <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4 text-left">
             <p className="text-red-400 text-sm font-mono break-all">{error}</p>
           </div>
-          <p className="text-xs text-gray-500">
+          <p className="text-sm text-white">
             서버가 잠시 느릴 수 있어요. 다시 시도해주세요.
           </p>
           <button
@@ -448,7 +448,7 @@ export default function DashboardPage() {
           </button>
           <button
             onClick={handleLogout}
-            className="block w-full text-xs text-gray-500 hover:text-gray-300"
+            className="block w-full text-sm text-white hover:text-white"
           >
             로그아웃
           </button>
@@ -544,7 +544,7 @@ export default function DashboardPage() {
   };
 
   return (
-    <main className="max-w-md mx-auto min-h-screen pb-36 px-5 relative">
+    <main className="max-w-md mx-auto min-h-screen pb-36 px-5 relative text-[1.0625rem] sm:text-lg">
       <StaleRefreshIndicator show={revalidating && !!dash && !!user} tone="sky" />
       <AppAmbientBackground />
       <div className="relative z-10">
@@ -563,14 +563,14 @@ export default function DashboardPage() {
             {/* 헤더 */}
             <div className="flex items-center justify-between px-5 pt-5 pb-3">
               <div>
-                <p className="text-[10px] text-gray-600 tracking-widest uppercase">코스피 예측</p>
+                <p className="text-sm text-white/90 tracking-widest uppercase">코스피 예측</p>
                 <p className="text-sm font-bold text-white mt-0.5">
                   {today.survey_date
                     ? new Date(today.survey_date).toLocaleDateString("ko-KR", { month: "numeric", day: "numeric", weekday: "short" })
                     : "오늘"}
                 </p>
               </div>
-              <span className="text-[11px] text-gray-500 bg-[#1A1A1A] border border-[#2A2A2A] px-3 py-1 rounded-full">
+              <span className="text-base text-white bg-[#1A1A1A] border border-[#2A2A2A] px-3 py-1 rounded-full">
                 오늘 코스피, 함께 맞춰요
               </span>
             </div>
@@ -587,11 +587,11 @@ export default function DashboardPage() {
                 }`}
               >
                 <div>
-                  <p className="text-[11px] text-gray-500 mb-1">KOSPI 오늘 결과</p>
+                  <p className="text-base text-white mb-1">KOSPI 오늘 결과</p>
                   <p
                     className={`text-3xl font-black tracking-tight ${
                       resolvedMarketFromMe === null
-                        ? "text-gray-400"
+                        ? "text-white"
                         : resolvedMarketFromMe
                           ? "text-red-400"
                           : "text-blue-400"
@@ -611,7 +611,7 @@ export default function DashboardPage() {
                 <span
                   className={`text-4xl font-black ${
                     resolvedMarketFromMe === null
-                      ? "text-gray-500"
+                      ? "text-white"
                       : resolvedMarketFromMe
                         ? "text-red-400"
                         : "text-blue-400"
@@ -639,7 +639,7 @@ export default function DashboardPage() {
                   {isCorrectToday === null ? "?" : isCorrectToday ? "O" : "X"}
                 </div>
                 <div>
-                  <p className="text-[11px] text-gray-500">내 예측</p>
+                  <p className="text-base text-white">내 예측</p>
                   <p className="text-base font-black text-white">
                     {todayEntry?.kospi_answer ? "상승" : "하락"} 예측 ·{" "}
                     {isCorrectToday === null ? "판정 대기" : isCorrectToday ? "정답!" : "오답"}
@@ -650,13 +650,13 @@ export default function DashboardPage() {
               {/* 스탯 */}
               <div className="grid grid-cols-2 gap-2">
                 <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-2xl px-4 py-3">
-                  <p className="text-[10px] text-gray-600 mb-1">누적 적중률</p>
+                  <p className="text-sm text-white/90 mb-1">누적 적중률</p>
                   <p className="text-2xl font-black text-white">
                     {dash?.accuracy?.kospi != null ? `${dash.accuracy.kospi}%` : "—"}
                   </p>
                 </div>
                 <div className={`rounded-2xl px-4 py-3 ${streak > 1 ? "bg-orange-500/10 border border-orange-500/25" : "bg-[#1A1A1A] border border-[#2A2A2A]"}`}>
-                  <p className="text-[10px] text-gray-600 mb-1">연속 적중</p>
+                  <p className="text-sm text-white/90 mb-1">연속 적중</p>
                   <p className={`text-2xl font-black ${streak > 1 ? "text-orange-400" : "text-white"}`}>
                     {streak > 1 ? `${streak}일` : "—"}
                   </p>
@@ -695,7 +695,7 @@ export default function DashboardPage() {
                 })()}
                 <button
                   onClick={handleCloseResultCard}
-                  className="w-full py-2.5 text-gray-600 text-sm hover:text-gray-400 transition-colors"
+                  className="w-full py-2.5 text-white/90 text-sm hover:text-white transition-colors"
                 >
                   닫기
                 </button>
@@ -720,7 +720,7 @@ export default function DashboardPage() {
               <>
                 <div className="text-5xl">🔔</div>
                 <p className="font-black text-xl text-white">알림 연동이 필요해요</p>
-                <p className="text-sm text-gray-400 leading-relaxed">
+                <p className="text-sm text-white leading-relaxed">
                   텔레그램 또는 브라우저 알림을 연결해야<br />대시보드를 볼 수 있어요.
                 </p>
                 <button
@@ -734,12 +734,12 @@ export default function DashboardPage() {
               <>
                 <div className="text-5xl">📝</div>
                 <p className="font-black text-xl text-white">오늘 설문을 해야 볼 수 있어요</p>
-                <p className="text-sm text-gray-400 leading-relaxed">
+                <p className="text-sm text-white leading-relaxed">
                   오늘의 코스피 예측에 먼저 참여해야<br />집계 결과와 고수 예측을 확인할 수 있어요.
                 </p>
-                <p className="text-xs text-gray-600 leading-relaxed">
+                <p className="text-sm text-white/90 leading-relaxed">
                   설문에 참여하지 않으셨나요?<br />
-                  <span className="text-gray-500">장 마감(15:35) 후에는 누구나 열람 가능합니다.</span>
+                  <span className="text-white">장 마감(15:35) 후에는 누구나 열람 가능합니다.</span>
                 </p>
                 <button
                   onClick={() => router.push("/survey")}
@@ -751,7 +751,7 @@ export default function DashboardPage() {
             )}
             <button
               onClick={handleLogout}
-              className="block w-full text-xs text-gray-600 hover:text-gray-400 transition-colors"
+              className="block w-full text-sm text-white/90 hover:text-white transition-colors"
             >
               로그아웃
             </button>
@@ -761,7 +761,7 @@ export default function DashboardPage() {
       {/* 헤더 */}
       <div className="pt-8 pb-5 flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-black">
+          <h1 className="text-2xl sm:text-[1.65rem] font-black">
             {(() => {
               const kst = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Seoul" }));
               const mm = String(kst.getMonth() + 1).padStart(2, "0");
@@ -779,12 +779,12 @@ export default function DashboardPage() {
             })()}
           </h1>
           {user && (
-            <p className="text-xs text-gray-400 mt-0.5">
+            <p className="text-sm text-white mt-0.5">
               {user.name || user.email}
             </p>
           )}
         </div>
-        <button onClick={handleLogout} className="text-xs text-gray-500 hover:text-gray-300 transition-colors">
+        <button onClick={handleLogout} className="text-sm text-white hover:text-white transition-colors">
           로그아웃
         </button>
       </div>
@@ -810,12 +810,12 @@ export default function DashboardPage() {
             return (
               <>
                 <div className="flex items-center justify-between mb-4">
-                  <p className="font-bold text-sm">
+                  <p className="font-bold text-base">
                     {isPreSurvey ? "설문 대기중" : isHoliday ? "오늘 휴장" : "오늘 코스피"}
                   </p>
                   {!isHoliday && !isPreSurvey && (
                     <span
-                      className="flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full font-bold"
+                      className="flex items-center gap-1.5 text-sm px-2.5 py-1 rounded-full font-bold"
                       style={{ backgroundColor: `${marketStatus.color}20`, color: marketStatus.color }}
                     >
                       {status === "open" && (
@@ -828,7 +828,7 @@ export default function DashboardPage() {
                     </span>
                   )}
                   {isPreSurvey && (
-                    <span className="text-xs px-2.5 py-1 rounded-full font-bold bg-blue-500/20 text-blue-400">
+                    <span className="text-sm px-2.5 py-1 rounded-full font-bold bg-blue-500/20 text-blue-400">
                       설문 준비중
                     </span>
                   )}
@@ -838,7 +838,7 @@ export default function DashboardPage() {
                   <div className="flex flex-col items-center gap-3 py-4 text-center">
                     <span className="text-4xl">⏳</span>
                     <p className="text-white font-bold">오늘 설문이 곧 열려요</p>
-                    <p className="text-sm text-gray-400">밤 22:00에 알림이 발송됩니다</p>
+                    <p className="text-sm text-white">밤 22:00에 알림이 발송됩니다</p>
                   </div>
                 )}
 
@@ -846,7 +846,7 @@ export default function DashboardPage() {
                   <div className="flex flex-col items-center gap-3 py-4 text-center">
                     <span className="text-4xl">🏖️</span>
                     <p className="text-white font-bold">오늘은 장이 열리지 않아요</p>
-                    <p className="text-sm text-gray-400">주말·공휴일엔 설문이 발송되지 않습니다</p>
+                    <p className="text-sm text-white">주말·공휴일엔 설문이 발송되지 않습니다</p>
                   </div>
                 )}
               </>
@@ -862,43 +862,43 @@ export default function DashboardPage() {
               <div className="grid grid-cols-4 gap-1.5">
                 {/* 고수예측 */}
                 <div className="bg-yellow-500/5 border border-yellow-500/20 rounded-xl py-3 px-1 flex flex-col items-center gap-1 text-center">
-                  <p className="text-[10px] text-yellow-400/80 leading-tight">⭐고수</p>
+                  <p className="text-sm text-yellow-400/80 leading-tight">⭐고수</p>
                   {today.kospi_weighted_pct !== null ? (
                     <>
-                      <p className={`text-xs font-black ${today.kospi_weighted_pct >= 50 ? "text-red-400" : "text-blue-400"}`}>
+                      <p className={`text-sm font-black ${today.kospi_weighted_pct >= 50 ? "text-red-400" : "text-blue-400"}`}>
                         {today.kospi_weighted_pct >= 50 ? "📈상승" : "📉하락"}
                       </p>
-                      <p className="text-[10px] text-gray-400">{today.kospi_weighted_pct}%</p>
+                      <p className="text-sm text-white">{today.kospi_weighted_pct}%</p>
                     </>
                   ) : (
-                    <p className="text-xs text-gray-500">-</p>
+                    <p className="text-sm text-white">-</p>
                   )}
                 </div>
 
                 {/* 단순통계 */}
                 <div className="bg-[#111] border border-[#2A2A2A] rounded-xl py-3 px-1 flex flex-col items-center gap-1 text-center">
-                  <p className="text-[10px] text-gray-500 leading-tight">단순</p>
+                  <p className="text-sm text-white leading-tight">단순</p>
                   {today.kospi_yes_pct !== null ? (
                     <>
-                      <p className={`text-xs font-black ${today.kospi_yes_pct >= 50 ? "text-red-400" : "text-blue-400"}`}>
+                      <p className={`text-sm font-black ${today.kospi_yes_pct >= 50 ? "text-red-400" : "text-blue-400"}`}>
                         {today.kospi_yes_pct >= 50 ? "📈상승" : "📉하락"}
                       </p>
-                      <p className="text-[10px] text-gray-400">{today.kospi_yes_pct}%</p>
+                      <p className="text-sm text-white">{today.kospi_yes_pct}%</p>
                     </>
                   ) : (
-                    <p className="text-xs text-gray-500">-</p>
+                    <p className="text-sm text-white">-</p>
                   )}
                 </div>
 
                 {/* 내 선택 */}
                 <div className="bg-[#111] border border-[#2A2A2A] rounded-xl py-3 px-1 flex flex-col items-center gap-1 text-center">
-                  <p className="text-[10px] text-gray-500 leading-tight">내선택</p>
+                  <p className="text-sm text-white leading-tight">내선택</p>
                   {myEntry ? (
                     <>
-                      <p className={`text-xs font-black ${myEntry.kospi_answer ? "text-red-400" : "text-blue-400"}`}>
+                      <p className={`text-sm font-black ${myEntry.kospi_answer ? "text-red-400" : "text-blue-400"}`}>
                         {myEntry.kospi_answer ? "📈상승" : "📉하락"}
                       </p>
-                      <p className="text-[10px]">
+                      <p className="text-sm">
                         {myPickVerdict === null
                           ? "대기중"
                           : myPickVerdict
@@ -907,33 +907,33 @@ export default function DashboardPage() {
                       </p>
                     </>
                   ) : (
-                    <p className="text-xs text-gray-500">미참여</p>
+                    <p className="text-sm text-white">미참여</p>
                   )}
                 </div>
 
                 {/* 실적 */}
                 <div className="bg-[#111] border border-[#2A2A2A] rounded-xl py-3 px-1 flex flex-col items-center gap-1 text-center">
-                  <p className="text-[10px] text-gray-500 leading-tight">실적</p>
+                  <p className="text-sm text-white leading-tight">실적</p>
                   {effectiveMarketDir !== null ? (
                     <>
-                      <p className={`text-xs font-black ${effectiveMarketDir ? "text-red-400" : "text-blue-400"}`}>
+                      <p className={`text-sm font-black ${effectiveMarketDir ? "text-red-400" : "text-blue-400"}`}>
                         {effectiveMarketDir ? "📈상승" : "📉하락"}
                       </p>
                       <p
-                        className={`text-[10px] ${today.kospi_change_pct == null ? "text-gray-500" : today.kospi_change_pct >= 0 ? "text-red-400/70" : "text-blue-400/70"}`}
+                        className={`text-sm ${today.kospi_change_pct == null ? "text-white" : today.kospi_change_pct >= 0 ? "text-red-400/70" : "text-blue-400/70"}`}
                       >
                         {today.kospi_change_pct == null ? "변동율 확인중" : `${today.kospi_change_pct >= 0 ? "+" : ""}${today.kospi_change_pct.toFixed(2)}%`}
                       </p>
                     </>
                   ) : (
-                    <p className="text-xs text-gray-500">장마감전</p>
+                    <p className="text-sm text-white">장마감전</p>
                   )}
                 </div>
               </div>
 
               <Link
                 href="/expert-chat"
-                className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl border border-amber-500/35 bg-gradient-to-r from-amber-500/12 to-orange-900/15 px-3 py-2.5 text-[11px] font-bold text-amber-100/95 transition-colors hover:border-amber-400/50 active:scale-[0.99]"
+                className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl border border-amber-500/35 bg-gradient-to-r from-amber-500/12 to-orange-900/15 px-3 py-2.5 text-base font-bold text-amber-100/95 transition-colors hover:border-amber-400/50 active:scale-[0.99]"
               >
                 <span aria-hidden>💬</span>
                 <span>순위권 고수에게 질문 보내기</span>
@@ -945,7 +945,7 @@ export default function DashboardPage() {
                 const dn = Math.max(0, Math.min(100, 100 - up));
                 return (
                   <div className="mt-4 space-y-2">
-                    <p className="text-center text-[11px] font-bold text-gray-400 tracking-wide">집단 예측</p>
+                    <p className="text-center text-base font-bold text-white tracking-wide">집단 예측</p>
                     <div className="flex items-stretch gap-2 min-h-[100px]">
                       <div
                         className={`flex-1 flex flex-col items-center justify-center rounded-2xl border-2 px-2 py-3 ${
@@ -955,14 +955,14 @@ export default function DashboardPage() {
                         }`}
                       >
                         <span className="text-2xl mb-1">📈</span>
-                        <span className="text-[10px] font-black text-red-400/90 uppercase tracking-tighter">상승</span>
+                        <span className="text-sm font-black text-red-400/90 uppercase tracking-tighter">상승</span>
                         <span className="text-2xl font-black text-red-400 tabular-nums leading-tight">{up}<span className="text-sm">%</span></span>
                       </div>
                       <div className="flex flex-col items-center justify-center px-1 shrink-0">
                         <span className="text-lg font-black text-white/90 italic tracking-widest drop-shadow-[0_0_8px_rgba(255,255,255,0.15)]">
                           VS
                         </span>
-                        <span className="text-[9px] text-gray-600 mt-0.5 whitespace-nowrap">대결</span>
+                        <span className="text-sm text-white/90 mt-0.5 whitespace-nowrap">대결</span>
                       </div>
                       <div
                         className={`flex-1 flex flex-col items-center justify-center rounded-2xl border-2 px-2 py-3 ${
@@ -972,7 +972,7 @@ export default function DashboardPage() {
                         }`}
                       >
                         <span className="text-2xl mb-1">📉</span>
-                        <span className="text-[10px] font-black text-blue-400/90 uppercase tracking-tighter">하락</span>
+                        <span className="text-sm font-black text-blue-400/90 uppercase tracking-tighter">하락</span>
                         <span className="text-2xl font-black text-blue-400 tabular-nums leading-tight">{dn}<span className="text-sm">%</span></span>
                       </div>
                     </div>
@@ -988,24 +988,24 @@ export default function DashboardPage() {
         <div className="bg-[#1A1A1A] rounded-2xl p-5 border border-[#2A2A2A] fade-up-3">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
-              <p className="font-bold text-sm">내 통계</p>
+              <p className="font-bold text-base">내 통계</p>
               {/* 결과 공유카드 재호출 버튼 */}
               {today?.status === "result" && isCorrectToday !== null && (
                 <button
                   onClick={() => setShowResultCard(true)}
-                  className="text-[10px] text-gray-500 hover:text-white border border-[#333] hover:border-[#555] px-2 py-0.5 rounded-full transition-colors"
+                  className="text-sm text-white hover:text-white border border-[#333] hover:border-[#555] px-2 py-0.5 rounded-full transition-colors"
                 >
                   결과 공유
                 </button>
               )}
             </div>
             {streak >= 2 && (
-              <span className="flex items-center gap-1 text-xs font-black text-orange-400 bg-orange-400/10 border border-orange-400/30 px-2.5 py-1 rounded-full fire-glow badge-pop">
+              <span className="flex items-center gap-1 text-sm font-black text-orange-400 bg-orange-400/10 border border-orange-400/30 px-2.5 py-1 rounded-full fire-glow badge-pop">
                 🔥 {streak}연속 적중
               </span>
             )}
             {streak === 1 && (
-              <span className="flex items-center gap-1 text-xs font-bold text-orange-300/70 bg-orange-400/5 px-2 py-0.5 rounded-full badge-pop">
+              <span className="flex items-center gap-1 text-sm font-bold text-orange-300/70 bg-orange-400/5 px-2 py-0.5 rounded-full badge-pop">
                 🔥 1연속 적중
               </span>
             )}
@@ -1014,7 +1014,7 @@ export default function DashboardPage() {
           {dash && dash.total_predictions === 0 ? (
             <div className="text-center py-4 space-y-2">
               <p className="text-3xl">📭</p>
-              <p className="text-sm text-gray-400">
+              <p className="text-sm text-white">
                 아직 예측 이력이 없어요.<br />
                 설문에 응답해보세요!
               </p>
@@ -1029,14 +1029,14 @@ export default function DashboardPage() {
                 {dash.accuracy.kospi != null && (
                   <p className="text-xl font-black text-green-400/70 pb-0.5">%</p>
                 )}
-                <p className="text-xs text-gray-500 pb-1 ml-1">적중률 · {dash.total_predictions}일 참여</p>
+                <p className="text-sm text-white pb-1 ml-1">적중률 · {dash.total_predictions}일 참여</p>
               </div>
 
               {/* 토큰 + 스트릭 */}
               {dash.tokens != null && (
                 <div className="grid grid-cols-2 gap-3">
                   <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-xl px-4 py-3">
-                    <p className="text-[10px] text-gray-500 mb-1">보유 토큰</p>
+                    <p className="text-sm text-white mb-1">보유 토큰</p>
                     <p className="text-xl font-black text-yellow-400 tabular-nums">
                       💰 {dash.tokens.toLocaleString()}
                     </p>
@@ -1048,7 +1048,7 @@ export default function DashboardPage() {
                         ? "bg-orange-500/10 border-orange-500/30"
                         : "bg-[#1A1A1A] border-[#2A2A2A]"
                   }`}>
-                    <p className="text-[10px] text-gray-500 mb-1">연속 적중</p>
+                    <p className="text-sm text-white mb-1">연속 적중</p>
                     <p className={`text-xl font-black tabular-nums ${
                       streak >= 5 ? "text-yellow-400" :
                       streak >= 3 ? "text-orange-400" : "text-white"
@@ -1056,7 +1056,7 @@ export default function DashboardPage() {
                       {streak >= 5 ? "🏆 " : streak >= 3 ? "🔥 " : ""}
                       {streak}일
                     </p>
-                    <p className="text-[9px] text-gray-600 mt-1 leading-snug">
+                    <p className="text-sm text-white/90 mt-1 leading-snug">
                       예측 이력 기준 (배팅 배율과 별개)
                     </p>
                   </div>
@@ -1066,39 +1066,39 @@ export default function DashboardPage() {
               {/* 최근 이력 */}
               {dash.history.length > 0 && (
                 <div className="space-y-2">
-                  <p className="text-xs text-gray-500">최근 이력 (화면에는 최대 5거래일)</p>
+                  <p className="text-sm text-white font-bold">최근 이력 (최대 5거래일)</p>
                   <div className="rounded-xl border border-[#2A2A2A] bg-[#141414]/60 overflow-hidden">
-                    <table className="w-full border-collapse text-[10px]">
+                    <table className="w-full border-collapse text-sm">
                       <thead>
-                        <tr className="text-left text-gray-500 border-b border-[#2A2A2A] bg-[#1A1A1A]/90">
-                          <th rowSpan={2} className="py-1.5 pl-2 pr-1 font-bold align-middle text-[9px] leading-tight whitespace-nowrap">
+                        <tr className="text-left text-white border-b border-[#2A2A2A] bg-[#1A1A1A]/90">
+                          <th rowSpan={2} className="py-2 pl-2 pr-1 font-bold align-middle text-sm leading-tight whitespace-nowrap">
                             거래일
                           </th>
-                          <th rowSpan={2} className="py-1.5 px-1 font-bold align-middle text-[9px] leading-tight border-l border-[#2a2a2a]/80">
+                          <th rowSpan={2} className="py-2 px-1 font-bold align-middle text-sm leading-tight border-l border-[#2a2a2a]/80">
                             예측
                           </th>
                           <th
                             colSpan={5}
-                            className="py-1.5 px-1 font-bold align-middle text-center text-[9px] leading-tight border-l border-amber-500/30 text-amber-200/90"
+                            className="py-2 px-1 font-bold align-middle text-center text-sm leading-tight border-l border-amber-500/30 text-amber-200"
                           >
                             결과
                           </th>
                         </tr>
-                        <tr className="text-left text-gray-500 border-b border-[#2A2A2A] bg-[#1A1A1A]/95">
+                        <tr className="text-left text-white border-b border-[#2A2A2A] bg-[#1A1A1A]/95">
                           <th
                             title="코스피 종가 방향·등락률"
-                            className="py-1.5 px-0.5 font-bold border-l border-amber-500/25 text-[9px] leading-tight whitespace-nowrap"
+                            className="py-2 px-0.5 font-bold border-l border-amber-500/25 text-sm leading-tight whitespace-nowrap"
                           >
                             코스피
                           </th>
-                          <th className="py-1.5 px-0.5 font-bold text-center text-[9px] leading-tight whitespace-nowrap">판정</th>
-                          <th className="py-1.5 px-0.5 font-bold text-right text-[9px] leading-tight whitespace-nowrap">배팅토큰</th>
-                          <th title="집단배율" className="py-1.5 px-0.5 font-bold text-right text-[9px] leading-tight whitespace-nowrap">
+                          <th className="py-2 px-0.5 font-bold text-center text-sm leading-tight whitespace-nowrap">판정</th>
+                          <th className="py-2 px-0.5 font-bold text-right text-sm leading-tight whitespace-nowrap">배팅토큰</th>
+                          <th title="집단배율" className="py-2 px-0.5 font-bold text-right text-sm leading-tight whitespace-nowrap">
                             배율
                           </th>
                           <th
                             title="적중 시 획득·실패 시 손실"
-                            className="py-1.5 pl-0.5 pr-2 font-bold text-right text-[9px] leading-tight whitespace-nowrap"
+                            className="py-2 pl-0.5 pr-2 font-bold text-right text-sm leading-tight whitespace-nowrap"
                           >
                             획득/손실
                           </th>
@@ -1111,9 +1111,8 @@ export default function DashboardPage() {
                       </tbody>
                     </table>
                   </div>
-                  <p className="text-[9px] text-gray-600 leading-snug">
-                    코스피 등락률은 DB 이력에 있으면 그대로 쓰고, <strong className="text-gray-500">이력 행의 거래일이 오늘 설문과 같은 날</strong>이면
-                    설문 탭 결과에 나오는 등락률과 동일하게 맞춥니다. 획득/손실은 정산이며 적중 시 연승 등으로 배팅토큰×배율과 다를 수 있어요.
+                  <p className="text-sm text-white leading-relaxed">
+                    등락률과 획득·손실 토큰은 거래일별로 표시됩니다.
                   </p>
                 </div>
               )}
@@ -1148,10 +1147,10 @@ export default function DashboardPage() {
               {/* 헤더 */}
               <div className="flex items-center justify-between px-5 pt-5 pb-3">
                 <div>
-                  <p className="font-black text-sm text-white">🏆 전국대결</p>
-                  <p className="text-[10px] text-gray-500 mt-0.5">적중률 기준 순위</p>
+                  <p className="font-black text-base text-white">🏆 전국대결</p>
+                  <p className="text-sm text-white mt-0.5">적중률 기준 순위</p>
                 </div>
-                {!tooFew && <span className="text-xs text-gray-500 bg-[#252525] px-2.5 py-1 rounded-full">
+                {!tooFew && <span className="text-sm text-white bg-[#252525] px-2.5 py-1 rounded-full">
                   {sorted.length}명 참여
                 </span>}
               </div>
@@ -1162,9 +1161,9 @@ export default function DashboardPage() {
                   {/* 블러 배경 (가짜 순위 실루엣) */}
                   <div className="blur-sm pointer-events-none select-none space-y-2 py-2">
                     {["한**", "이**", "박**", "김**"].map((name, i) => (
-                      <div key={i} className="flex items-center justify-between text-[11px] text-gray-400 px-1">
+                      <div key={i} className="flex items-center justify-between text-base text-white px-1">
                         <span>{medals[i] ?? `${i+1}`} {name}</span>
-                        <span className="text-gray-500">상승 · 67%</span>
+                        <span className="text-white">상승 · 67%</span>
                       </div>
                     ))}
                   </div>
@@ -1172,7 +1171,7 @@ export default function DashboardPage() {
                   <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/60 backdrop-blur-sm rounded-b-2xl gap-2">
                     <p className="text-lg">🔒</p>
                     <p className="text-sm font-black text-white">전국대결 준비중</p>
-                    <p className="text-[11px] text-gray-400">참여자가 모이면 자동으로 열려요</p>
+                    <p className="text-base text-white">참여자가 모이면 자동으로 열려요</p>
                     <button
                       onClick={() => {
                         if (navigator.share) {
@@ -1186,7 +1185,7 @@ export default function DashboardPage() {
                           alert("링크가 복사됐어요!");
                         }
                       }}
-                      className="mt-1 bg-yellow-500 hover:bg-yellow-400 text-black text-[11px] font-black px-4 py-1.5 rounded-full transition-colors"
+                      className="mt-1 bg-yellow-500 hover:bg-yellow-400 text-black text-base font-black px-4 py-1.5 rounded-full transition-colors"
                     >
                       친구 초대하기 🔗
                     </button>
@@ -1209,13 +1208,13 @@ export default function DashboardPage() {
                     const bc      = borderColors[rankIdx];
                     return (
                       <div key={rankIdx} className="flex-1 flex flex-col items-center gap-1">
-                        {isMe && <span className="text-[9px] text-blue-400 font-bold">나</span>}
+                        {isMe && <span className="text-sm text-blue-400 font-bold">나</span>}
                         <span className="text-lg">{medals[rankIdx]}</span>
-                        <p className="text-[10px] text-gray-300 font-bold truncate max-w-full px-1">{p.masked_name}</p>
+                        <p className="text-sm text-white font-bold truncate max-w-full px-1">{p.masked_name}</p>
                         <div className={`w-full ${podiumH} rounded-t-lg border ${bc} flex items-end justify-center pb-2 ${
                           isMe ? "bg-blue-500/20" : "bg-[#252525]"
                         }`}>
-                          <span className="text-xs font-black text-white">
+                          <span className="text-sm font-black text-white">
                             {p.accuracy !== null ? `${p.accuracy}%` : "신규"}
                           </span>
                         </div>
@@ -1227,7 +1226,7 @@ export default function DashboardPage() {
 
                 {/* Top 5 순위 리스트 */}
               {!tooFew && <div className="border-t border-[#2A2A2A]">
-                <div className="grid grid-cols-[28px_1fr_56px_44px_60px] text-[10px] text-gray-600 px-4 py-2">
+                <div className="grid grid-cols-[28px_1fr_56px_44px_60px] text-sm text-white/90 px-4 py-2">
                   <span>#</span><span>닉네임</span><span className="text-center">예측</span><span className="text-right">적중률</span><span></span>
                 </div>
                 <div className="divide-y divide-[#222]">
@@ -1250,25 +1249,25 @@ export default function DashboardPage() {
                       >
                         {/* 순위 */}
                         <span className="text-sm">
-                          {i < 3 ? medals[i] : <span className="text-gray-500 text-xs">{i + 1}</span>}
+                          {i < 3 ? medals[i] : <span className="text-white text-sm">{i + 1}</span>}
                         </span>
                         {/* 이름 */}
                         <span className="text-sm font-bold text-white flex items-center gap-1.5 truncate">
                           {p.masked_name}
                           {isMe && (
-                            <span className="text-[9px] bg-blue-500 text-white px-1.5 py-0.5 rounded-full font-black flex-shrink-0">나</span>
+                            <span className="text-sm bg-blue-500 text-white px-1.5 py-0.5 rounded-full font-black flex-shrink-0">나</span>
                           )}
                         </span>
                         {/* 예측 + 결과 */}
-                        <span className={`text-[11px] font-bold text-center flex items-center justify-center gap-0.5 ${
+                        <span className={`text-base font-bold text-center flex items-center justify-center gap-0.5 ${
                           p.kospi_answer ? "text-red-400" : "text-blue-400"
                         }`}>
                           {p.kospi_answer ? "📈" : "📉"}
-                          {result && <span className="text-xs">{result}</span>}
+                          {result && <span className="text-sm">{result}</span>}
                         </span>
                         {/* 적중률 */}
-                        <span className={`text-xs text-right font-bold ${
-                          i === 0 ? "text-yellow-400" : i === 1 ? "text-gray-300" : i === 2 ? "text-amber-600" : "text-gray-400"
+                        <span className={`text-sm text-right font-bold ${
+                          i === 0 ? "text-yellow-400" : i === 1 ? "text-white" : i === 2 ? "text-amber-600" : "text-white"
                         }`}>
                           {p.accuracy !== null ? `${p.accuracy}%` : "신규"}
                         </span>
@@ -1276,12 +1275,12 @@ export default function DashboardPage() {
                         <div className="flex justify-end">
                           {!isMe && (
                             alreadyChallenged ? (
-                              <span className="text-[10px] text-gray-600 font-bold">신청됨</span>
+                              <span className="text-sm text-white/90 font-bold">신청됨</span>
                             ) : (
                               <button
                                 onClick={() => p.user_id && handleChallenge(p.user_id, today.survey_date)}
                                 disabled={challengeLoading === p.user_id || !p.user_id}
-                                className="text-[10px] font-black px-2 py-1 rounded-lg bg-orange-500/20 text-orange-400 border border-orange-500/30 hover:bg-orange-500/40 active:scale-95 transition-all disabled:opacity-40 whitespace-nowrap"
+                                className="text-sm font-black px-2 py-1 rounded-lg bg-orange-500/20 text-orange-400 border border-orange-500/30 hover:bg-orange-500/40 active:scale-95 transition-all disabled:opacity-40 whitespace-nowrap"
                               >
                                 {challengeLoading === p.user_id ? "..." : "⚔️ 대결"}
                               </button>
@@ -1300,15 +1299,15 @@ export default function DashboardPage() {
                 return (
                   <div className="border-t border-[#2A2A2A]">
                     <div className="grid grid-cols-[28px_1fr_56px_44px_60px] items-center px-4 py-3 bg-blue-500/10 border-l-2 border-blue-500">
-                      <span className="text-gray-500 text-xs">{myIdx + 1}</span>
+                      <span className="text-white text-sm">{myIdx + 1}</span>
                       <span className="text-sm font-bold text-white flex items-center gap-1.5">
                         {me.masked_name}
-                        <span className="text-[9px] bg-blue-500 text-white px-1.5 py-0.5 rounded-full font-black">나</span>
+                        <span className="text-sm bg-blue-500 text-white px-1.5 py-0.5 rounded-full font-black">나</span>
                       </span>
-                      <span className={`text-[11px] font-bold text-center ${me.kospi_answer ? "text-red-400" : "text-blue-400"}`}>
+                      <span className={`text-base font-bold text-center ${me.kospi_answer ? "text-red-400" : "text-blue-400"}`}>
                         {me.kospi_answer ? "📈" : "📉"}
                       </span>
-                      <span className="text-xs text-right font-bold text-gray-400">
+                      <span className="text-sm text-right font-bold text-white">
                         {me.accuracy !== null ? `${me.accuracy}%` : "신규"}
                       </span>
                       <div />
@@ -1332,11 +1331,11 @@ export default function DashboardPage() {
           const REACTIONS = ["😄", "😢", "😝"] as const;
 
           const outcomeInfo = (c: Challenge) => {
-            if (c.accepted === false) return { text: "거절됨",  color: "text-gray-600",   icon: "✖" };
+            if (c.accepted === false) return { text: "거절됨",  color: "text-white/90",   icon: "✖" };
             if (c.accepted === null && !c.is_sent) return { text: "수락 대기",  color: "text-orange-400", icon: "⏳" };
-            if (c.accepted === null &&  c.is_sent) return { text: "수락 대기",  color: "text-gray-500",   icon: "⏳" };
+            if (c.accepted === null &&  c.is_sent) return { text: "수락 대기",  color: "text-white",   icon: "⏳" };
             if (c.outcome === "pending")   return { text: "대결 중",  color: "text-blue-400",   icon: "⚔️" };
-            if (c.outcome === "no_result") return { text: "미참여",  color: "text-gray-600",   icon: "➖" };
+            if (c.outcome === "no_result") return { text: "미참여",  color: "text-white/90",   icon: "➖" };
             if (c.outcome === "tie")       return { text: "비김",    color: "text-blue-400",   icon: "🤝" };
             const iWon = c.is_sent ? c.outcome === "challenger_wins" : c.outcome === "challenged_wins";
             return iWon
@@ -1347,8 +1346,8 @@ export default function DashboardPage() {
           return (
             <div className="bg-[#1A1A1A] rounded-2xl border border-[#2A2A2A] overflow-hidden fade-up-5">
               <div className="px-5 pt-4 pb-3 flex items-center justify-between">
-                <p className="font-black text-sm text-white">⚔️ 내 대결 현황</p>
-                <span className="text-[10px] text-gray-500 bg-[#252525] px-2 py-0.5 rounded-full">
+                <p className="font-black text-base text-white">⚔️ 내 대결 현황</p>
+                <span className="text-sm text-white bg-[#252525] px-2 py-0.5 rounded-full">
                   {allChallenges.length}건
                 </span>
               </div>
@@ -1365,7 +1364,7 @@ export default function DashboardPage() {
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
                           <span className="text-sm font-bold text-white">{c.opponent_masked_name}</span>
-                          <span className="text-[10px] text-gray-600">
+                          <span className="text-sm text-white/90">
                             {c.is_sent ? "내가 신청" : "받은 신청"}
                           </span>
                         </div>
@@ -1380,7 +1379,7 @@ export default function DashboardPage() {
                           <button
                             onClick={() => handleAccept(c.id)}
                             disabled={acceptLoading === c.id}
-                            className="flex-1 py-2.5 bg-green-500 hover:bg-green-400 active:scale-95 text-white text-xs font-black rounded-xl transition-all disabled:opacity-40 flex items-center justify-center gap-1.5"
+                            className="flex-1 py-2.5 bg-green-500 hover:bg-green-400 active:scale-95 text-white text-sm font-black rounded-xl transition-all disabled:opacity-40 flex items-center justify-center gap-1.5"
                           >
                             {acceptLoading === c.id
                               ? <span className="w-3.5 h-3.5 border border-white/40 border-t-white rounded-full animate-spin" />
@@ -1390,7 +1389,7 @@ export default function DashboardPage() {
                           <button
                             onClick={() => handleDecline(c.id)}
                             disabled={acceptLoading === c.id}
-                            className="flex-1 py-2.5 bg-[#252525] hover:bg-[#2A2A2A] border border-[#333] active:scale-95 text-gray-400 hover:text-white text-xs font-black rounded-xl transition-all"
+                            className="flex-1 py-2.5 bg-[#252525] hover:bg-[#2A2A2A] border border-[#333] active:scale-95 text-white hover:text-white text-sm font-black rounded-xl transition-all"
                           >
                             거절
                           </button>
@@ -1401,7 +1400,7 @@ export default function DashboardPage() {
                       {c.accepted === true && c.duel_group_id && (
                         <button
                           onClick={() => router.push("/groups")}
-                          className="flex items-center gap-1.5 text-[11px] text-blue-400/80 hover:text-blue-400 transition-colors"
+                          className="flex items-center gap-1.5 text-base text-blue-400/80 hover:text-blue-400 transition-colors"
                         >
                           <span>👥</span>
                           <span>전용 대결 그룹 보기 →</span>
@@ -1415,7 +1414,7 @@ export default function DashboardPage() {
                           {c.opp_reaction && (
                             <div className="flex items-center gap-1 bg-[#252525] rounded-full px-2.5 py-1">
                               <span className="text-sm">{c.opp_reaction}</span>
-                              <span className="text-[10px] text-gray-500">상대</span>
+                              <span className="text-sm text-white">상대</span>
                             </div>
                           )}
 
@@ -1423,13 +1422,13 @@ export default function DashboardPage() {
                           {c.my_reaction ? (
                             <div className="flex items-center gap-1 bg-blue-500/20 border border-blue-500/30 rounded-full px-2.5 py-1">
                               <span className="text-sm">{c.my_reaction}</span>
-                              <span className="text-[10px] text-blue-400">나</span>
+                              <span className="text-sm text-blue-400">나</span>
                             </div>
                           ) : (
                             <>
                               <button
                                 onClick={() => setReactingId(isPickerOpen ? null : c.id)}
-                                className="text-[11px] text-gray-400 bg-[#252525] hover:bg-[#2A2A2A] border border-[#333] rounded-full px-2.5 py-1 transition-colors"
+                                className="text-base text-white bg-[#252525] hover:bg-[#2A2A2A] border border-[#333] rounded-full px-2.5 py-1 transition-colors"
                               >
                                 {isPickerOpen ? "닫기" : "😄 반응하기"}
                               </button>
@@ -1453,7 +1452,7 @@ export default function DashboardPage() {
                           <button
                             onClick={() => handleRematch(c.id, c.survey_date)}
                             disabled={rematchLoading === c.id}
-                            className="ml-auto text-[11px] font-black px-2.5 py-1 rounded-full bg-red-500/15 text-red-400 border border-red-500/30 hover:bg-red-500/30 active:scale-95 transition-all disabled:opacity-40 whitespace-nowrap"
+                            className="ml-auto text-base font-black px-2.5 py-1 rounded-full bg-red-500/15 text-red-400 border border-red-500/30 hover:bg-red-500/30 active:scale-95 transition-all disabled:opacity-40 whitespace-nowrap"
                           >
                             {rematchLoading === c.id ? "..." : "🔥 재대결"}
                           </button>
