@@ -628,12 +628,7 @@ function SurveyPageInner() {
             {(() => {
               const { shortLabel } = getSurveyDayLabel(nextSurvey.survey_date);
               return (
-                <>
-                  <p className="text-center text-base text-gray-500 mb-2">{shortLabel} 사전 예측</p>
-                  <p className="text-center font-black text-white text-lg sm:text-xl mb-2">
-                    📅 {nextSurvey.survey_date.slice(5).replace("-","/")} 코스피 — 상승·하락 + 확신도
-                  </p>
-                </>
+                <p className="text-center text-base text-gray-500 mb-5">{shortLabel} 사전 예측</p>
               );
             })()}
             {nextMyResponseLoading ? (
@@ -913,17 +908,7 @@ function SurveyPageInner() {
             </div>
           )}
 
-          {/* 코스피 방향 + 확신도 */}
-          <div className="w-full min-w-0 space-y-3">
-            <p className="font-black text-white text-lg sm:text-xl leading-snug">
-              {(() => {
-                const kst = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Seoul" }));
-                const todayStr = `${kst.getFullYear()}-${String(kst.getMonth()+1).padStart(2,"0")}-${String(kst.getDate()).padStart(2,"0")}`;
-                const sd = today?.survey_date ?? todayStr;
-                const { shortLabel } = getSurveyDayLabel(sd);
-                return `📈 코스피 (${shortLabel}) — 상승·하락 + 확신도`;
-              })()}
-            </p>
+          <div className="w-full min-w-0">
             <SurveyGaugeWithPreview
               phase={todayGaugePhase}
               setPhase={setTodayGaugePhase}
@@ -1071,12 +1056,7 @@ function SurveyPageInner() {
                 {(() => {
                   const { shortLabel } = getSurveyDayLabel(nextSurvey.survey_date);
                   return (
-                    <>
-                      <p className="text-center text-base text-gray-500 mb-2">{shortLabel} 사전 예측</p>
-                      <p className="text-center font-black text-white text-lg sm:text-xl mb-5">
-                        📅 {nextSurvey.survey_date.slice(5).replace("-","/")} 코스피 — 상승·하락 + 확신도
-                      </p>
-                    </>
+                    <p className="text-center text-base text-gray-500 mb-5">{shortLabel} 사전 예측</p>
                   );
                 })()}
 
