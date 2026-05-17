@@ -21,12 +21,19 @@ function riseToPercent(v: number): number {
 /** 대결 구도 막대: 한쪽 0%여도 양쪽 색이 보이도록 최소 비중 */
 const DUEL_BAR_MIN_PCT = 3;
 
+/** 하락·상승 박스플롯 x축 정렬: 정답 라벨 높이를 양쪽에 동일하게 확보 */
 function AnswerLabelWrap({ highlight, children }: { highlight: boolean; children: ReactNode }) {
-  if (!highlight) return <>{children}</>;
   return (
-    <div className="flex flex-col gap-1">
-      {children}
-      <p className="text-center text-sm font-black text-amber-400">정답</p>
+    <div className="flex h-full flex-col gap-1">
+      <div className="min-h-0 flex-1">{children}</div>
+      <p
+        className={`shrink-0 text-center text-sm font-black leading-5 min-h-5 ${
+          highlight ? "text-amber-400" : "invisible select-none"
+        }`}
+        aria-hidden={!highlight}
+      >
+        정답
+      </p>
     </div>
   );
 }
@@ -239,7 +246,7 @@ function DayCard({ day }: { day: CrowdGaugeBoxplotDay }) {
 
       <DirectionShareRibbon pctRise={pctRise} pctFall={pctFall} nRise={nRise} nFall={nFall} />
 
-      <div className="grid grid-cols-2 gap-2 sm:gap-3">
+      <div className="grid grid-cols-2 items-stretch gap-2 sm:gap-3">
         <HorizontalSignedBox
           stats={day.fall}
           highlight={hiFall}
