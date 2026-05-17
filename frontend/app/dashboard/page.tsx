@@ -932,7 +932,7 @@ export default function DashboardPage() {
               </div>
 
               {(() => {
-                const expertMin = 200;
+                const expertMin = 210;
                 const tokens = dash?.tokens;
                 const expertUnlocked = tokens != null && tokens >= expertMin;
                 return (

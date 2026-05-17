@@ -17,7 +17,8 @@ from token_wallet import grant_tokens_with_ledger, spend_tokens_idempotent
 logger = logging.getLogger(__name__)
 
 TIP_TOKENS = int(os.getenv("EXPERT_CHAT_TIP_TOKENS", "25"))
-MIN_TAB_BALANCE = int(os.getenv("EXPERT_CHAT_MIN_TAB_BALANCE", "200"))
+# 시작 100토큰 대비 약 3회 적중·참여 분량(기본 100 + ~110) — 한 번만 100% 맞춰 열리는 것 방지
+MIN_TAB_BALANCE = int(os.getenv("EXPERT_CHAT_MIN_TAB_BALANCE", "210"))
 TOP_N = int(os.getenv("EXPERT_CHAT_TOP_N", "20"))
 MAX_BODY_LEN = int(os.getenv("EXPERT_CHAT_MAX_BODY", "1200"))
 MAX_MESSAGES_PER_PARTICIPANT_SURVEY = int(os.getenv("EXPERT_CHAT_MAX_MSG_PER_SURVEY", "30"))

@@ -48,7 +48,8 @@ export default function ExpertChatTabGate({
         ) : null}
       </div>
       <p className="mt-4 text-sm text-white/80 leading-relaxed">
-        설문에 참여해 예측하고, 적중하면 토큰이 쌓입니다.
+        시작 토큰 100개에 더해, 설문 참여와 적중으로 토큰을 모으면 됩니다. 보통{" "}
+        <span className="font-bold text-white">적중을 3번 정도</span> 쌓으면 열립니다.
       </p>
       <div className="mt-6 flex w-full flex-col gap-2">
         <Link

@@ -134,7 +134,7 @@ export default function AppTabNav() {
                   type="button"
                   onClick={() => setGateOpen(true)}
                   className="relative flex min-h-[52px] flex-1 flex-col items-center justify-center gap-0.5 rounded-xl py-1.5 text-gray-500 transition-colors active:scale-[0.97]"
-                  aria-label="고수 탭 잠금 — 토큰 200개 이상 필요"
+                  aria-label="고수 탭 잠금 — 토큰 210개 이상 필요"
                 >
                   {inner}
                 </button>
