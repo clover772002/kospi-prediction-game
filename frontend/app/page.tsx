@@ -48,11 +48,11 @@ const FEATURES = [
   },
   {
     icon: "🎫",
-    title: "토큰으로 고수 선택픽 열람",
-    desc: "모은 토큰으로 고수 진영을 펼치고, 토큰으로 고수와 소통해요",
+    title: "얻은 토큰으로 고수와 소통",
+    desc: "고수 선택픽 열람부터 순위권 고수와 메시지까지",
     detail: {
       summary:
-        "설문·적중으로 모은 토큰으로 고수 선택·강화 집계를 열고, 같은 재화로 고수에게 토큰을 주며 소통하는 흐름을 생각하고 있어요. 고수는 답장할 때 토큰을 쓰지 않는 쪽이 목표예요. 세부 규칙은 정책에 따라 달라질 수 있어요.",
+        "예측·적중으로 모은 토큰으로 고수 선택픽 같은 열람형 콘텐츠를 열거나, 순위권 고수에게 메시지를 보내며 소통할 수 있어요. 고수에게 보내는 팁은 수락 시 정산되는 흐름이에요. 세부 규칙은 정책에 따라 달라질 수 있어요.",
       steps: null,
       mockup: (() => {
         const Bar = ({ yes, no }: { yes: number; no: number }) => (
@@ -253,27 +253,30 @@ export default function LoginPage() {
       <div className="text-center mb-10">
         <div className="text-6xl mb-4">📊</div>
         <h1 className="text-2xl font-black text-white mb-1">오늘 코스피, 함께 맞춰요</h1>
-        <p className="text-amber-200/90 text-xs font-bold mb-3 tracking-wide">예측으로 토큰을 모아 · 고수에게 주고 소통해요</p>
+        <p className="text-amber-200/90 text-xs font-bold mb-3 tracking-wide">예측으로 토큰 받고 · 그걸로 고수와 소통해요</p>
         <p className="text-gray-400 text-sm leading-relaxed">
-          방향을 맞히면 토큰이 쌓이고, 고수 선택픽을 열람하거나 <strong className="text-gray-300">토큰으로 고수와 소통</strong>할 수 있어요. 고수에게 토큰을 주고 소통하는 그림이에요.
+          코스피 방향을 맞히며 토큰을 모으고, 그 토큰으로 <strong className="text-gray-300">고수 선택픽·메시지</strong>처럼
+          고수 쪽 기능을 즐길 수 있어요.
         </p>
       </div>
 
-      {/* ── 큰 틀: 예측·토큰 → 고수픽 → 토큰 → 고수 소통 ───────────────── */}
+      {/* ── 큰 틀: 코스피 예측·토큰 → 토큰으로 고수와 소통 ───────────────── */}
       <div className="w-full mb-2 min-w-0">
         <div className="h-px w-full bg-gradient-to-r from-transparent via-amber-500/30 to-transparent mb-6" aria-hidden />
         <p className="text-[10px] text-gray-600 font-black tracking-[0.18em] mb-3 uppercase">어떻게 즐기나요</p>
         <div className="flex flex-wrap justify-center gap-2 mb-4 text-[10px] text-gray-400">
-          <span className="rounded-full border border-amber-500/25 bg-amber-500/[0.07] px-2.5 py-1 font-bold text-amber-100/95">① 예측·토큰</span>
-          <span className="rounded-full border border-yellow-500/20 bg-yellow-500/[0.06] px-2.5 py-1 font-bold text-yellow-100/85">② 고수픽</span>
-          <span className="rounded-full border border-sky-500/25 bg-sky-500/[0.08] px-2.5 py-1 font-bold text-sky-200/90">③ 토큰 → 고수 소통</span>
+          <span className="rounded-full border border-amber-500/25 bg-amber-500/[0.07] px-2.5 py-1 font-bold text-amber-100/95">
+            ① 코스피 예측하고 토큰 받기
+          </span>
+          <span className="rounded-full border border-sky-500/25 bg-sky-500/[0.08] px-2.5 py-1 font-bold text-sky-200/90">
+            ② 얻은 토큰으로 고수와 소통하기
+          </span>
         </div>
       </div>
 
       <div className="w-full mb-8 min-w-0 space-y-8">
         <section className="min-w-0">
-          <p className="text-[11px] text-amber-200/95 font-black tracking-[0.12em] mb-2">① 코스피 예측 → 토큰</p>
-          <h2 className="text-base font-black text-white mb-1">코스피를 예측하고 토큰을 받아요</h2>
+          <h2 className="text-base font-black text-white mb-1">코스피 예측하고 토큰 받기</h2>
           <p className="text-[11px] text-gray-600 mb-3 leading-relaxed">
             확신 게이지·집단배율까지 실제 설문과 같은 패턴입니다
           </p>
@@ -281,18 +284,21 @@ export default function LoginPage() {
         </section>
 
         <section className="min-w-0">
-          <p className="text-[11px] text-yellow-400/95 font-black tracking-[0.12em] mb-2">② 토큰 → 고수 선택픽</p>
-          <h2 className="text-base font-black text-white mb-1">토큰으로 고수의 선택을 열람해요</h2>
-          <p className="text-[11px] text-gray-600 mb-3 leading-relaxed">
-            참고용 예시 화면이에요
+          <h2 className="text-base font-black text-white mb-1">얻은 토큰으로 고수와 소통하기</h2>
+          <p className="text-[11px] text-gray-600 mb-6 leading-relaxed">
+            같은 토큰으로 선택픽을 열람하거나 순위권 고수에게 질문을 보낼 수 있어요. 아래는 참고 예시예요.
           </p>
-          <ExpertPickRevealPlayground />
-        </section>
 
-        <section className="min-w-0">
-          <p className="text-[11px] text-sky-300/95 font-black tracking-[0.12em] mb-2">③ 토큰 → 고수 소통</p>
-          <h2 className="text-base font-black text-white mb-4">고수에게 토큰을 주고 소통해요</h2>
-          <ExpertMessageConceptPlayground />
+          <div className="space-y-8">
+            <div>
+              <p className="text-[11px] text-yellow-400/90 font-bold mb-2">고수 선택픽</p>
+              <ExpertPickRevealPlayground />
+            </div>
+            <div>
+              <p className="text-[11px] text-sky-300/90 font-bold mb-2">고수 소통</p>
+              <ExpertMessageConceptPlayground />
+            </div>
+          </div>
         </section>
       </div>
 
