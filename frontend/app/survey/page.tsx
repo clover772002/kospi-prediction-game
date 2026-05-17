@@ -637,7 +637,6 @@ function SurveyPageInner() {
                     submitBtnClass="bg-amber-500 hover:bg-amber-400 disabled:bg-[#333] disabled:text-gray-500 text-white"
                     submitLabel="재투표 제출하기"
                     onSubmit={handleNextSubmit}
-                    kospiYesPct={null}
                   />
                   {error ? (
                     <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4 text-red-400 text-base text-center">
@@ -655,7 +654,6 @@ function SurveyPageInner() {
                     tokens={userTokens}
                     disabled
                     beginnerTips
-                    kospiYesPct={null}
                   />
                 </div>
               </div>
@@ -674,7 +672,6 @@ function SurveyPageInner() {
                   submitBtnClass="bg-amber-500 hover:bg-amber-400 disabled:bg-[#333] disabled:text-gray-500 text-white"
                   submitLabel="사전 예측 제출하기"
                   onSubmit={handleNextSubmit}
-                  kospiYesPct={null}
                 />
               </>
             )}
@@ -760,7 +757,6 @@ function SurveyPageInner() {
                     submitBtnClass="bg-emerald-600 hover:bg-emerald-500 disabled:bg-[#333] disabled:text-gray-500 text-white"
                     submitLabel="재투표 제출하기"
                     onSubmit={handleSubmit}
-                    kospiYesPct={today?.kospi_yes_pct ?? null}
                   />
                   {error ? (
                     <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4 text-red-400 text-base text-center">
@@ -776,7 +772,6 @@ function SurveyPageInner() {
                     tokens={userTokens}
                     disabled
                     beginnerTips
-                    kospiYesPct={today?.kospi_yes_pct ?? null}
                   />
               {token && today?.survey_date ? (
                 <div className="rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 space-y-2 mt-2">
@@ -882,7 +877,6 @@ function SurveyPageInner() {
               submitBtnClass="bg-blue-600 hover:bg-blue-500 disabled:bg-[#333] disabled:text-gray-500 text-white"
               submitLabel="예측 제출하기"
               onSubmit={handleSubmit}
-              kospiYesPct={today?.kospi_yes_pct ?? null}
             />
           </div>
 
@@ -927,7 +921,6 @@ function SurveyPageInner() {
                     submitBtnClass="bg-emerald-600 hover:bg-emerald-500 disabled:bg-[#333] disabled:text-gray-500 text-white"
                     submitLabel="재투표 제출하기"
                     onSubmit={handleSubmit}
-                    kospiYesPct={today?.kospi_yes_pct ?? null}
                   />
                   {error ? (
                     <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4 text-red-400 text-base text-center">
@@ -943,7 +936,6 @@ function SurveyPageInner() {
                     tokens={userTokens}
                     disabled
                     beginnerTips
-                    kospiYesPct={today?.kospi_yes_pct ?? null}
                   />
                   <p className="text-base text-gray-600">15:35 결과 공개 예정</p>
                 </>
@@ -978,7 +970,6 @@ function SurveyPageInner() {
                   tokens={userTokens}
                   disabled
                   beginnerTips
-                  kospiYesPct={today?.kospi_yes_pct ?? null}
                 />
                 <div className="mt-0.5">
                   {status === "result" && today?.kospi_result != null ? (
@@ -1036,7 +1027,6 @@ function SurveyPageInner() {
                         submitBtnClass="bg-amber-500 hover:bg-amber-400 disabled:bg-[#333] disabled:text-gray-500 text-white"
                         submitLabel="재투표 제출하기"
                         onSubmit={handleNextSubmit}
-                        kospiYesPct={null}
                       />
                       {error ? (
                         <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4 text-red-400 text-base text-center mt-2">
@@ -1054,7 +1044,6 @@ function SurveyPageInner() {
                         tokens={userTokens}
                         disabled
                         beginnerTips
-                        kospiYesPct={null}
                       />
                     </div>
                   </div>
@@ -1073,7 +1062,6 @@ function SurveyPageInner() {
                       submitBtnClass="bg-amber-500 hover:bg-amber-400 disabled:bg-[#333] disabled:text-gray-500 text-white"
                       submitLabel="사전 예측 제출하기"
                       onSubmit={handleNextSubmit}
-                      kospiYesPct={null}
                     />
                     {error && (
                       <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4 text-red-400 text-base text-center mt-2">
