@@ -124,25 +124,10 @@ function HistoryRow({ item, todaySurvey }: { item: DashboardData["history"][0]; 
   const gauge = item.gauge_position;
   const directionUp = gauge !== null && gauge !== undefined ? gauge > 0 : item.kospi_answer;
 
-  const tokensWon = item.tokens_won;
   const tokensBet = item.tokens_bet;
 
   const hitLabel =
     verdict === true ? "적중" : verdict === false ? "미적중" : "대기중";
-
-  const tokensCell = (() => {
-    if (!hasResult) return "—";
-    if (tokensWon !== null && tokensWon !== undefined) {
-      if (tokensWon > 0) return `+${tokensWon} 얻음`;
-      if (tokensWon === 0) return "0";
-      return `${Math.abs(tokensWon)} 잃음`;
-    }
-    if (tokensBet != null && tokensBet !== undefined && verdict !== null) {
-      if (verdict) return `+${tokensBet} 얻음`;
-      return `${tokensBet} 잃음`;
-    }
-    return "—";
-  })();
 
   const mk = marketDirectionRow(item, todaySurvey);
   const pctStr = formatKospiChangePct(effectiveHistoryKospiChangePct(item, todaySurvey));
@@ -195,20 +180,8 @@ function HistoryRow({ item, todaySurvey }: { item: DashboardData["history"][0]; 
       >
         {hitLabel}
       </td>
-      <td className={`${HISTORY_TD} min-w-[5.5rem] text-right tabular-nums text-white`}>
+      <td className={`${HISTORY_TD} min-w-[5.5rem] pr-4 text-right tabular-nums text-white`}>
         {tokensBet != null && tokensBet !== undefined ? `${tokensBet}` : "—"}
-      </td>
-      <td className={`${HISTORY_TD} min-w-[6.75rem] pr-4 text-right font-bold tabular-nums ${
-        !hasResult
-          ? "text-white/90"
-          : (tokensWon != null && tokensWon > 0) || (tokensWon == null && verdict === true)
-            ? "text-green-400"
-            : (tokensWon != null && tokensWon < 0) || (tokensWon == null && verdict === false)
-              ? "text-red-400"
-              : "text-white"
-      }`}
-      >
-        {tokensCell}
       </td>
     </tr>
   );
@@ -1103,7 +1076,7 @@ export default function DashboardPage() {
                             <span className="block text-xs font-normal text-white/75 mt-0.5">(확신도)</span>
                           </th>
                           <th
-                            colSpan={4}
+                            colSpan={3}
                             className={`${HISTORY_TH} text-center border-l border-amber-500/30 text-amber-200`}
                           >
                             결과
@@ -1118,12 +1091,11 @@ export default function DashboardPage() {
                             <span className="block text-xs font-normal text-amber-100/75 mt-0.5">(등락률)</span>
                           </th>
                           <th className={`${HISTORY_TH} min-w-[5rem] text-center`}>판정</th>
-                          <th className={`${HISTORY_TH} min-w-[5.5rem] text-right`}>배팅토큰</th>
                           <th
-                            title="적중 시 획득·실패 시 손실"
-                            className={`${HISTORY_TH} min-w-[6.75rem] pr-4 text-right`}
+                            title="해당일 배팅한 토큰 (적중 시 같은 만큼 획득, 미적중 시 같은 만큼 손실)"
+                            className={`${HISTORY_TH} min-w-[5.5rem] pr-4 text-right`}
                           >
-                            획득/손실
+                            배팅토큰
                           </th>
                         </tr>
                       </thead>
