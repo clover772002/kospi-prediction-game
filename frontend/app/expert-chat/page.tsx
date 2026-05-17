@@ -21,6 +21,7 @@ import {
 } from "@/lib/api";
 import AppAmbientBackground from "@/components/AppAmbientBackground";
 import AppTabNav from "@/components/AppTabNav";
+import ExpertChatTabGate from "@/components/ExpertChatTabGate";
 import PageLoadProgress from "@/components/PageLoadProgress";
 
 function newIdempotencyKey(): string {
@@ -117,8 +118,12 @@ export default function ExpertChatPage() {
         const sd = today.survey_date?.slice(0, 10) ?? null;
         setSurveyDate(sd);
         if (sd) {
-          await refreshEligibility(token, sd);
-          await refreshThreads(token);
+          const e = await getExpertChatEligibility(token, sd);
+          if (cancelled) return;
+          setEligibility(e);
+          if (e.can_access_expert_chat) {
+            await refreshThreads(token);
+          }
         }
       } catch (e) {
         if (!cancelled) setErr(e instanceof Error ? e.message : String(e));
@@ -129,7 +134,7 @@ export default function ExpertChatPage() {
     return () => {
       cancelled = true;
     };
-  }, [token, refreshEligibility, refreshThreads]);
+  }, [token, refreshThreads]);
 
   useEffect(() => {
     if (!pickerRecipients.length) {
@@ -242,7 +247,27 @@ export default function ExpertChatPage() {
         <PageLoadProgress />
         <AppAmbientBackground />
         <main className="relative z-10 mx-auto min-h-screen max-w-md px-4 pb-24 pt-6">
-          <p className="text-center text-sm text-gray-400">불러오는 중…</p>
+          <p className="text-center text-base text-white">불러오는 중…</p>
+        </main>
+        <AppTabNav />
+      </>
+    );
+  }
+
+  const tabLocked = eligibility != null && !eligibility.can_access_expert_chat;
+
+  if (tabLocked && eligibility) {
+    return (
+      <>
+        <AppAmbientBackground />
+        <main className="relative z-10 mx-auto min-h-screen max-w-md px-4 pb-28 pt-6">
+          <h1 className="mb-4 text-center text-2xl font-black text-white">고수 소통</h1>
+          <ExpertChatTabGate
+            myBalance={eligibility.my_balance}
+            minBalance={eligibility.min_balance_for_tab}
+            tipPerMessage={eligibility.tip_tokens_per_message}
+            reason={eligibility.tab_blocked_reason}
+          />
         </main>
         <AppTabNav />
       </>
@@ -264,12 +289,11 @@ export default function ExpertChatPage() {
           ) : null}
         </div>
 
-        <h1 className="mb-1 text-xl font-black text-white">고수 소통</h1>
-        <p className="mb-4 text-xs leading-relaxed text-gray-500">
-          오늘 설문 거래일 기준 코스피 리더보드 상위 참가자에게만 메시지를 보낼 수 있어요. 보낼 때마다 내 토큰{" "}
-          <span className="text-amber-200/90">{eligibility?.tip_tokens_per_message ?? "—"}</span>이 차감되고,
-          받는 고수가 <strong className="text-gray-400">그 메시지의 팁을 수락할 때</strong> 해당 토큰이 고수에게
-          정산됩니다.
+        <h1 className="mb-1 text-2xl font-black text-white">고수 소통</h1>
+        <p className="mb-4 text-sm leading-relaxed text-white/90">
+          오늘 설문 거래일 기준 코스피 리더보드 상위 참가자에게 메시지를 보낼 수 있습니다. 질문 1통당{" "}
+          <span className="font-bold text-amber-200">{eligibility?.tip_tokens_per_message ?? "—"}토큰</span>이
+          차감되며, 고수가 <strong className="text-white">팁을 수락할 때</strong> 해당 토큰이 전달됩니다.
         </p>
 
         {err ? (

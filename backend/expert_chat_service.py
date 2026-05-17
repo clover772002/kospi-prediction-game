@@ -16,10 +16,26 @@ from token_wallet import grant_tokens_with_ledger, spend_tokens_idempotent
 
 logger = logging.getLogger(__name__)
 
-TIP_TOKENS = int(os.getenv("EXPERT_CHAT_TIP_TOKENS", "3"))
+TIP_TOKENS = int(os.getenv("EXPERT_CHAT_TIP_TOKENS", "25"))
+MIN_TAB_BALANCE = int(os.getenv("EXPERT_CHAT_MIN_TAB_BALANCE", "200"))
 TOP_N = int(os.getenv("EXPERT_CHAT_TOP_N", "20"))
 MAX_BODY_LEN = int(os.getenv("EXPERT_CHAT_MAX_BODY", "1200"))
 MAX_MESSAGES_PER_PARTICIPANT_SURVEY = int(os.getenv("EXPERT_CHAT_MAX_MSG_PER_SURVEY", "30"))
+
+TAB_BLOCKED_REASON = f"고수 소통은 토큰 {MIN_TAB_BALANCE}개 이상부터 이용할 수 있습니다."
+
+
+def user_token_balance(supabase: Client, user_id: str) -> int:
+    bal_row = supabase.table("users").select("tokens").eq("id", user_id).execute()
+    return int(bal_row.data[0].get("tokens") or 100) if bal_row.data else 100
+
+
+def assert_expert_chat_tab_access(supabase: Client, user_id: str) -> int:
+    """고수 탭·API 전체 잠금(현재 잔액 기준)."""
+    balance = user_token_balance(supabase, user_id)
+    if balance < MIN_TAB_BALANCE:
+        raise HTTPException(status_code=403, detail=TAB_BLOCKED_REASON)
+    return balance
 
 
 def _resolve_recipient_id(entries: list[dict], recipient_user_id: str | None, top_n: int) -> str | None:
@@ -133,27 +149,36 @@ def build_eligibility_payload(
     me_entry = next((e for e in entries if e["user_id"] == current_user_id), None)
     my_rank = me_entry["rank"] if me_entry else None
 
-    bal_row = supabase.table("users").select("tokens").eq("id", current_user_id).execute()
-    my_balance = int(bal_row.data[0].get("tokens") or 100) if bal_row.data else 100
+    my_balance = user_token_balance(supabase, current_user_id)
+    can_access_tab = my_balance >= MIN_TAB_BALANCE
 
     default_expert = rank1["user_id"] if rank1 else None
     allowed_others = [uid for uid in allowed_ids if uid != current_user_id]
-    can_send = bool(len(entries) >= 2 and allowed_others and my_balance >= TIP_TOKENS)
+    can_send = bool(
+        can_access_tab
+        and len(entries) >= 2
+        and allowed_others
+        and my_balance >= TIP_TOKENS
+    )
 
     def _blocked() -> str:
+        if not can_access_tab:
+            return TAB_BLOCKED_REASON
         if len(entries) < 2:
             return "참가자가 부족해요"
         if not allowed_others:
             return "보낼 수 있는 고수(다른 참가자)가 없어요"
         if my_balance < TIP_TOKENS:
-            return "토큰이 부족해요"
+            return f"질문 보내기에 토큰이 부족해요. (필요 {TIP_TOKENS}개)"
         return "고수(수신자)를 정할 수 없어요"
 
     send_blocked_reason: str | None = None if can_send else _blocked()
+    tab_blocked_reason: str | None = None if can_access_tab else TAB_BLOCKED_REASON
 
     return {
         "survey_date": survey_date,
         "tip_tokens_per_message": TIP_TOKENS,
+        "min_balance_for_tab": MIN_TAB_BALANCE,
         "top_n": TOP_N,
         "my_balance": my_balance,
         "my_rank": my_rank,
@@ -161,6 +186,8 @@ def build_eligibility_payload(
         "top_recipients": top_slice,
         "allowed_recipient_ids": allowed_ids,
         "default_recipient_id": default_expert,
+        "can_access_expert_chat": can_access_tab,
+        "tab_blocked_reason": tab_blocked_reason,
         "can_send_message": can_send,
         "send_blocked_reason": send_blocked_reason,
     }
@@ -180,6 +207,8 @@ def send_participant_message(
         raise HTTPException(status_code=422, detail="메시지 내용이 비어 있습니다.")
     if len(body) > MAX_BODY_LEN:
         raise HTTPException(status_code=422, detail=f"메시지는 {MAX_BODY_LEN}자 이하로 보내 주세요.")
+
+    assert_expert_chat_tab_access(supabase, participant_id)
 
     key = (idempotency_key or "").strip() or str(uuid.uuid4())
 
@@ -329,6 +358,8 @@ def accept_participant_tip(
     if not mid:
         raise HTTPException(status_code=400, detail="message_id가 필요합니다.")
 
+    assert_expert_chat_tab_access(supabase, expert_id)
+
     m = (
         supabase.table("expert_messages")
         .select("id, thread_id, sender_id, tip_tokens, tip_accepted_at")
@@ -451,6 +482,8 @@ def post_expert_reply(
     if len(body) > MAX_BODY_LEN:
         raise HTTPException(status_code=422, detail=f"답장은 {MAX_BODY_LEN}자 이하로 보내 주세요.")
 
+    assert_expert_chat_tab_access(supabase, expert_id)
+
     th = (
         supabase.table("expert_message_threads")
         .select("id, expert_user_id, participant_id, survey_date")
@@ -488,6 +521,7 @@ def post_expert_reply(
 
 def list_threads_for_user(supabase: Client, user_id: str) -> list[dict[str, Any]]:
     """내가 participant 이거나 expert 인 스레드 요약."""
+    assert_expert_chat_tab_access(supabase, user_id)
     as_p = (
         supabase.table("expert_message_threads")
         .select("id, survey_date, participant_id, expert_user_id, updated_at")
@@ -525,6 +559,7 @@ def list_threads_for_user(supabase: Client, user_id: str) -> list[dict[str, Any]
 
 
 def list_messages(supabase: Client, thread_id: str, user_id: str) -> list[dict[str, Any]]:
+    assert_expert_chat_tab_access(supabase, user_id)
     th = (
         supabase.table("expert_message_threads")
         .select("id, participant_id, expert_user_id")

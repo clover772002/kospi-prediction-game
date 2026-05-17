@@ -931,13 +931,31 @@ export default function DashboardPage() {
                 </div>
               </div>
 
-              <Link
-                href="/expert-chat"
-                className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl border border-amber-500/35 bg-gradient-to-r from-amber-500/12 to-orange-900/15 px-3 py-2.5 text-base font-bold text-amber-100/95 transition-colors hover:border-amber-400/50 active:scale-[0.99]"
-              >
-                <span aria-hidden>💬</span>
-                <span>순위권 고수에게 질문 보내기</span>
-              </Link>
+              {(() => {
+                const expertMin = 200;
+                const tokens = dash?.tokens;
+                const expertUnlocked = tokens != null && tokens >= expertMin;
+                return (
+                  <Link
+                    href="/expert-chat"
+                    className={`mt-3 flex w-full flex-col items-center justify-center gap-1 rounded-xl border px-3 py-2.5 text-base font-bold transition-colors active:scale-[0.99] ${
+                      expertUnlocked
+                        ? "border-amber-500/35 bg-gradient-to-r from-amber-500/12 to-orange-900/15 text-amber-100/95 hover:border-amber-400/50"
+                        : "border-[#444] bg-[#252525] text-white/80 hover:border-[#555]"
+                    }`}
+                  >
+                    <span className="flex items-center gap-2">
+                      <span aria-hidden>{expertUnlocked ? "💬" : "🔒"}</span>
+                      <span>순위권 고수에게 질문 보내기</span>
+                    </span>
+                    {!expertUnlocked && tokens != null ? (
+                      <span className="text-sm font-normal text-white/70">
+                        토큰 {expertMin}개 이상이면 고수 탭이 열립니다 (현재 {tokens}개)
+                      </span>
+                    ) : null}
+                  </Link>
+                );
+              })()}
 
               {/* 📊 집단 예측 VS (상승 vs 하락) */}
               {today.kospi_yes_pct !== null && (() => {

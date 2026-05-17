@@ -785,6 +785,7 @@ export interface ExpertChatLeaderboardEntry {
 export interface ExpertChatEligibility {
   survey_date: string;
   tip_tokens_per_message: number;
+  min_balance_for_tab: number;
   top_n: number;
   my_balance: number;
   my_rank: number | null;
@@ -792,6 +793,8 @@ export interface ExpertChatEligibility {
   top_recipients: ExpertChatLeaderboardEntry[];
   allowed_recipient_ids: string[];
   default_recipient_id: string | null;
+  can_access_expert_chat: boolean;
+  tab_blocked_reason: string | null;
   can_send_message: boolean;
   send_blocked_reason: string | null;
 }
