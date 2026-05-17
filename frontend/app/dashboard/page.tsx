@@ -1056,9 +1056,6 @@ export default function DashboardPage() {
                       {streak >= 5 ? "🏆 " : streak >= 3 ? "🔥 " : ""}
                       {streak}일
                     </p>
-                    <p className="text-sm text-white/90 mt-1 leading-snug">
-                      예측 이력 기준 (배팅 배율과 별개)
-                    </p>
                   </div>
                 </div>
               )}
@@ -1066,7 +1063,7 @@ export default function DashboardPage() {
               {/* 최근 이력 */}
               {dash.history.length > 0 && (
                 <div className="space-y-2">
-                  <p className="text-sm text-white font-bold">최근 이력 (최대 5거래일)</p>
+                  <p className="text-sm text-white font-bold">최근이력(5거래일)</p>
                   <div className="rounded-xl border border-[#2A2A2A] bg-[#141414]/60 overflow-hidden">
                     <table className="w-full border-collapse text-sm">
                       <thead>
@@ -1111,9 +1108,6 @@ export default function DashboardPage() {
                       </tbody>
                     </table>
                   </div>
-                  <p className="text-sm text-white leading-relaxed">
-                    등락률과 획득·손실 토큰은 거래일별로 표시됩니다.
-                  </p>
                 </div>
               )}
             </div>
@@ -1468,12 +1462,17 @@ export default function DashboardPage() {
 
         {/* ── 아이템 섹션 · 잠금 해제 후 열람 ── */}
         {token && (
-          <Suspense fallback={<DashboardInsightSectionSkeleton />}>
-            <DashboardInsightSection
-              accessToken={token}
-              onBalanceUpdated={() => void refreshDashboard()}
-            />
-          </Suspense>
+          <div className="space-y-4 pt-2">
+            <h2 className="font-black text-base text-white leading-snug">
+              토큰을 더 빨리 모으고 싶다면?
+            </h2>
+            <Suspense fallback={<DashboardInsightSectionSkeleton />}>
+              <DashboardInsightSection
+                accessToken={token}
+                onBalanceUpdated={() => void refreshDashboard()}
+              />
+            </Suspense>
+          </div>
         )}
 
       </div>

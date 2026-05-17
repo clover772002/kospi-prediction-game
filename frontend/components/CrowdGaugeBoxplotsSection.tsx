@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import {
   getCrowdGaugeBoxplots,
   type CrowdGaugeBoxplotDay,
@@ -18,6 +18,19 @@ function riseToPercent(v: number): number {
   return Math.max(0, Math.min(100, v));
 }
 
+/** 대결 구도 막대: 한쪽 0%여도 양쪽 색이 보이도록 최소 비중 */
+const DUEL_BAR_MIN_PCT = 3;
+
+function AnswerLabelWrap({ highlight, children }: { highlight: boolean; children: ReactNode }) {
+  if (!highlight) return <>{children}</>;
+  return (
+    <div className="flex flex-col gap-1">
+      {children}
+      <p className="text-center text-sm font-black text-amber-400">정답</p>
+    </div>
+  );
+}
+
 function HorizontalSignedBox({
   stats,
   highlight,
@@ -30,7 +43,9 @@ function HorizontalSignedBox({
   subtitle: string;
 }) {
   const isEmpty = !stats || stats.n === 0;
-  const ring = highlight ? "ring-2 ring-amber-400/90 ring-offset-2 ring-offset-[#1A1A1A] shadow-[0_0_20px_rgba(251,191,36,0.15)]" : "";
+  const ring = highlight
+    ? "ring-2 ring-amber-400/90 ring-offset-2 ring-offset-[#1A1A1A] shadow-[0_0_20px_rgba(251,191,36,0.15)]"
+    : "";
 
   const palette =
     variant === "rise"
@@ -53,12 +68,14 @@ function HorizontalSignedBox({
 
   if (isEmpty) {
     return (
-      <div
-        className={`rounded-xl border border-dashed border-[#333] bg-[#101010]/80 px-2 py-2 text-sm text-white min-h-[80px] flex flex-col justify-center ${ring}`}
-      >
-        <span className={palette.label}>{subtitle}</span>
-        <p className="mt-1 leading-snug">이 날 해당 방향 응답이 없어요.</p>
-      </div>
+      <AnswerLabelWrap highlight={highlight}>
+        <div
+          className={`rounded-xl border border-dashed border-[#333] bg-[#101010]/80 px-2 py-2 text-sm text-white min-h-[80px] flex flex-col justify-center ${ring}`}
+        >
+          <span className={palette.label}>{subtitle}</span>
+          <p className="mt-1 leading-snug">이 날 해당 방향 응답이 없어요.</p>
+        </div>
+      </AnswerLabelWrap>
     );
   }
 
@@ -72,57 +89,56 @@ function HorizontalSignedBox({
   const boxW = Math.max(0.35, Math.abs(pQ3 - pQ1));
 
   return (
-    <div className={`rounded-xl border ${palette.border} bg-[#141414]/90 px-2 py-2 min-h-[80px] flex flex-col ${ring}`}>
-      <div className="flex items-center justify-between gap-1 mb-1.5">
-        <span className={`text-sm font-black uppercase tracking-tight leading-tight ${palette.label}`}>{subtitle}</span>
-        <span className="text-sm text-white tabular-nums shrink-0">n={stats.n}</span>
-      </div>
-      <div className="relative h-8 w-full flex-1 min-h-[32px]">
-        <div className="absolute bottom-0.5 left-0 right-0 h-px bg-gray-700/90" />
-        <div
-          className={`absolute bottom-1.5 h-2 w-px ${palette.whisker}`}
-          style={{ left: `${pMin}%`, transform: "translateX(-50%)" }}
-        />
-        <div
-          className={`absolute bottom-1.5 h-2 w-px ${palette.whisker}`}
-          style={{ left: `${pMax}%`, transform: "translateX(-50%)" }}
-        />
-        <div
-          className={`absolute bottom-2 h-0.5 ${palette.whisker} rounded-full opacity-80`}
-          style={{
-            left: `${Math.min(pMin, pMax)}%`,
-            width: `${Math.abs(pMax - pMin)}%`,
-          }}
-        />
-        <div
-          className={`absolute bottom-2 h-4 rounded-md border ${palette.box}`}
-          style={{
-            left: `${boxLeft}%`,
-            width: `${boxW}%`,
-          }}
-        />
-        <div
-          className={`absolute bottom-1.5 w-0.5 h-5 ${palette.med} z-[1]`}
-          style={{ left: `${pMed}%`, transform: "translateX(-50%)" }}
-        />
-      </div>
-      {variant === "fall" ? (
-        <div className="flex justify-between text-xs text-white/90 tabular-nums mt-1 px-0.5">
-          <span>-100</span>
-          <span>-50</span>
-          <span>0</span>
+    <AnswerLabelWrap highlight={highlight}>
+      <div className={`rounded-xl border ${palette.border} bg-[#141414]/90 px-2 py-2 min-h-[80px] flex flex-col ${ring}`}>
+        <div className="flex items-center justify-between gap-1 mb-1.5">
+          <span className={`text-sm font-black uppercase tracking-tight leading-tight ${palette.label}`}>{subtitle}</span>
+          <span className="text-sm text-white tabular-nums shrink-0">n={stats.n}</span>
         </div>
-      ) : (
-        <div className="flex justify-between text-xs text-white/90 tabular-nums mt-1 px-0.5">
-          <span>0</span>
-          <span>50</span>
-          <span>100</span>
+        <div className="relative h-8 w-full flex-1 min-h-[32px]">
+          <div className="absolute bottom-0.5 left-0 right-0 h-px bg-gray-700/90" />
+          <div
+            className={`absolute bottom-1.5 h-2 w-px ${palette.whisker}`}
+            style={{ left: `${pMin}%`, transform: "translateX(-50%)" }}
+          />
+          <div
+            className={`absolute bottom-1.5 h-2 w-px ${palette.whisker}`}
+            style={{ left: `${pMax}%`, transform: "translateX(-50%)" }}
+          />
+          <div
+            className={`absolute bottom-2 h-0.5 ${palette.whisker} rounded-full opacity-80`}
+            style={{
+              left: `${Math.min(pMin, pMax)}%`,
+              width: `${Math.abs(pMax - pMin)}%`,
+            }}
+          />
+          <div
+            className={`absolute bottom-2 h-4 rounded-md border ${palette.box}`}
+            style={{
+              left: `${boxLeft}%`,
+              width: `${boxW}%`,
+            }}
+          />
+          <div
+            className={`absolute bottom-1.5 w-0.5 h-5 ${palette.med} z-[1]`}
+            style={{ left: `${pMed}%`, transform: "translateX(-50%)" }}
+          />
         </div>
-      )}
-      <p className="text-xs text-white/90 mt-0.5 tabular-nums leading-snug">
-        min {min} · Q1 {q1} · 중앙 {median} · Q3 {q3} · max {max}
-      </p>
-    </div>
+        {variant === "fall" ? (
+          <div className="flex justify-between text-xs text-white/90 tabular-nums mt-1 px-0.5">
+            <span>-100</span>
+            <span>-50</span>
+            <span>0</span>
+          </div>
+        ) : (
+          <div className="flex justify-between text-xs text-white/90 tabular-nums mt-1 px-0.5">
+            <span>0</span>
+            <span>50</span>
+            <span>100</span>
+          </div>
+        )}
+      </div>
+    </AnswerLabelWrap>
   );
 }
 
@@ -139,6 +155,10 @@ function DirectionShareRibbon({
 }) {
   const r = Number.isFinite(pctRise) ? Math.max(0, pctRise) : 0;
   const f = Number.isFinite(pctFall) ? Math.max(0, pctFall) : 0;
+  const total = nRise + nFall;
+  const showBar = total > 0 || r > 0 || f > 0;
+  const riseFlex = showBar ? Math.max(r, DUEL_BAR_MIN_PCT) : 0;
+  const fallFlex = showBar ? Math.max(f, DUEL_BAR_MIN_PCT) : 0;
 
   return (
     <div className="rounded-xl border border-[#333] bg-gradient-to-br from-[#151515] to-[#101010] px-3 py-2.5 mb-3 ring-1 ring-white/[0.04]">
@@ -153,20 +173,20 @@ function DirectionShareRibbon({
         </div>
       </div>
       <div
-        className="flex h-4 w-full rounded-lg overflow-hidden border border-[#2a2a2a] shadow-[inset_0_1px_3px_rgba(0,0,0,.4)]"
-        title={`예측 상승 ${r}% · 하락 ${f}% (유효 응답 ${nRise + nFall}명)`}
+        className="flex h-8 w-full rounded-lg overflow-hidden border border-[#2a2a2a] shadow-[inset_0_1px_3px_rgba(0,0,0,.4)]"
+        title={`예측 상승 ${r}% · 하락 ${f}% (유효 응답 ${total}명)`}
       >
-        {(r > 0 || nRise > 0) && (
-          <div
-            className="h-full min-w-[6px] bg-gradient-to-b from-red-400/95 via-red-500/90 to-red-800/80"
-            style={{ flex: `${Math.max(r, 0.1)} 1 0%` }}
-          />
-        )}
-        {(f > 0 || nFall > 0) && (
-          <div
-            className="h-full min-w-[6px] bg-gradient-to-b from-blue-400/95 via-blue-500/90 to-blue-800/85"
-            style={{ flex: `${Math.max(f, 0.1)} 1 0%` }}
-          />
+        {showBar && (
+          <>
+            <div
+              className="h-full min-w-[8px] shrink-0 bg-gradient-to-b from-red-400/95 via-red-500/90 to-red-800/80"
+              style={{ flex: `${riseFlex} 1 0%` }}
+            />
+            <div
+              className="h-full min-w-[8px] shrink-0 bg-gradient-to-b from-blue-400/95 via-blue-500/90 to-blue-800/85"
+              style={{ flex: `${fallFlex} 1 0%` }}
+            />
+          </>
         )}
       </div>
     </div>
@@ -259,21 +279,7 @@ export default function CrowdGaugeBoxplotsSection() {
 
   return (
     <div className="bg-[#1A1A1A] rounded-2xl p-5 border border-[#2A2A2A] fade-up-3 space-y-4">
-      <div>
-        <p className="font-bold text-base text-white">전체 예측 방향·확신도</p>
-        <p className="text-sm text-white mt-2 leading-relaxed">
-          거래일마다 숫자 줄로{" "}
-          <strong className="text-red-400">상승</strong>
-          ·
-          <strong className="text-blue-400">하락</strong>
-          선택 <strong className="text-white">비율(%)</strong>과 인원을 먼저 보여 주고,
-          아래 두 막대는 각각 확신 게이지 분포예요.{" "}
-          <strong className="text-white">하락</strong>은{" "}
-          <strong className="text-white">−100~0</strong>(왼쪽), <strong className="text-white">상승</strong>은{" "}
-          <strong className="text-white">0~100</strong>(오른쪽). 코스피 종가 방향 확정 후 맞은 쪽에{" "}
-          <strong className="text-amber-200/90">골드 링</strong>입니다.
-        </p>
-      </div>
+      <p className="font-bold text-base text-white">전체 예측 방향·확신도</p>
 
       {err ? (
         <p className="text-sm text-red-400 rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-2">{err}</p>
