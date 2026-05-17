@@ -137,11 +137,6 @@ function HistoryRow({ item, todaySurvey }: { item: DashboardData["history"][0]; 
 
   const tokensWon = item.tokens_won;
   const tokensBet = item.tokens_bet;
-  const rawMult = item.payout_multiplier;
-  const mult =
-    rawMult !== null && rawMult !== undefined && Number.isFinite(Number(rawMult))
-      ? Number(rawMult)
-      : null;
 
   const hitLabel =
     verdict === true ? "적중" : verdict === false ? "미적중" : "대기중";
@@ -206,9 +201,6 @@ function HistoryRow({ item, todaySurvey }: { item: DashboardData["history"][0]; 
       </td>
       <td className={`${HISTORY_TD} min-w-[5.5rem] text-right tabular-nums text-white`}>
         {tokensBet != null && tokensBet !== undefined ? `${tokensBet}` : "—"}
-      </td>
-      <td className={`${HISTORY_TD} min-w-[4.75rem] text-right tabular-nums text-cyan-300`}>
-        {mult != null ? `×${mult.toFixed(2)}` : "—"}
       </td>
       <td className={`${HISTORY_TD} min-w-[6.75rem] pr-4 text-right font-bold tabular-nums ${
         !hasResult
@@ -1157,7 +1149,7 @@ export default function DashboardPage() {
                             <span className="block text-xs font-normal text-white/75 mt-0.5">(확신도)</span>
                           </th>
                           <th
-                            colSpan={5}
+                            colSpan={4}
                             className={`${HISTORY_TH} text-center border-l border-amber-500/30 text-amber-200`}
                           >
                             결과
@@ -1173,9 +1165,6 @@ export default function DashboardPage() {
                           </th>
                           <th className={`${HISTORY_TH} min-w-[5rem] text-center`}>판정</th>
                           <th className={`${HISTORY_TH} min-w-[5.5rem] text-right`}>배팅토큰</th>
-                          <th title="집단배율" className={`${HISTORY_TH} min-w-[4.75rem] text-right`}>
-                            배율
-                          </th>
                           <th
                             title="적중 시 획득·실패 시 손실"
                             className={`${HISTORY_TH} min-w-[6.75rem] pr-4 text-right`}
