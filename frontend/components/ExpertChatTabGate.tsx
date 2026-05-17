@@ -1,8 +1,6 @@
 "use client";
 
-import Link from "next/link";
-
-/** 고수 탭·페이지: 토큰 200 미만일 때 전체 화면 안내 */
+/** 고수 탭·페이지: 최소 토큰 미만일 때 전체 화면 안내 */
 export default function ExpertChatTabGate({
   myBalance,
   minBalance,
@@ -51,20 +49,6 @@ export default function ExpertChatTabGate({
         시작 토큰 100개에 더해, 설문 참여와 적중으로 토큰을 모으면 됩니다. 보통{" "}
         <span className="font-bold text-white">적중을 3번 정도</span> 쌓으면 열립니다.
       </p>
-      <div className="mt-6 flex w-full flex-col gap-2">
-        <Link
-          href="/survey"
-          className="w-full rounded-2xl bg-amber-500 py-3.5 text-base font-black text-white transition-colors hover:bg-amber-400 active:scale-[0.99]"
-        >
-          설문하러 가기
-        </Link>
-        <Link
-          href="/dashboard"
-          className="w-full rounded-2xl border border-[#333] bg-[#252525] py-3 text-base font-bold text-white transition-colors hover:bg-[#2A2A2A]"
-        >
-          대시보드에서 내 토큰 보기
-        </Link>
-      </div>
     </div>
   );
 }
