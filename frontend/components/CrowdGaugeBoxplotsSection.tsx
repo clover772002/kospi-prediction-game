@@ -21,19 +21,13 @@ function riseToPercent(v: number): number {
 /** 대결 구도 막대: 한쪽 0%여도 양쪽 색이 보이도록 최소 비중 */
 const DUEL_BAR_MIN_PCT = 3;
 
-/** 하락·상승 박스플롯 x축 정렬: 정답 라벨 높이를 양쪽에 동일하게 확보 */
-function AnswerLabelWrap({ highlight, children }: { highlight: boolean; children: ReactNode }) {
+function BoxplotCardWrap({ highlight, children }: { highlight: boolean; children: ReactNode }) {
   return (
-    <div className="flex h-full flex-col gap-1">
-      <div className="min-h-0 flex-1">{children}</div>
-      <p
-        className={`shrink-0 text-center text-sm font-black leading-5 min-h-5 ${
-          highlight ? "text-amber-400" : "invisible select-none"
-        }`}
-        aria-hidden={!highlight}
-      >
-        정답
-      </p>
+    <div className="relative h-full min-w-0">
+      {highlight ? (
+        <span className="absolute top-1.5 right-2 z-[2] text-xs font-black text-amber-400">정답</span>
+      ) : null}
+      {children}
     </div>
   );
 }
@@ -75,14 +69,14 @@ function HorizontalSignedBox({
 
   if (isEmpty) {
     return (
-      <AnswerLabelWrap highlight={highlight}>
+      <BoxplotCardWrap highlight={highlight}>
         <div
-          className={`rounded-xl border border-dashed border-[#333] bg-[#101010]/80 px-2 py-2 text-sm text-white min-h-[80px] flex flex-col justify-center ${ring}`}
+          className={`rounded-xl border border-dashed border-[#333] bg-[#101010]/80 px-2 py-2 text-sm text-white min-h-[72px] flex flex-col justify-center ${ring}`}
         >
           <span className={palette.label}>{subtitle}</span>
           <p className="mt-1 leading-snug">이 날 해당 방향 응답이 없어요.</p>
         </div>
-      </AnswerLabelWrap>
+      </BoxplotCardWrap>
     );
   }
 
@@ -96,10 +90,10 @@ function HorizontalSignedBox({
   const boxW = Math.max(0.35, Math.abs(pQ3 - pQ1));
 
   return (
-    <AnswerLabelWrap highlight={highlight}>
-      <div className={`rounded-xl border ${palette.border} bg-[#141414]/90 px-2 py-2 min-h-[80px] flex flex-col ${ring}`}>
-        <div className="flex items-center justify-between gap-1 mb-1.5">
-          <span className={`text-sm font-black uppercase tracking-tight leading-tight ${palette.label}`}>{subtitle}</span>
+    <BoxplotCardWrap highlight={highlight}>
+      <div className={`rounded-xl border ${palette.border} bg-[#141414]/90 px-2 py-2 min-h-[72px] flex flex-col h-full ${ring}`}>
+        <div className="flex items-center justify-between gap-1 mb-1.5 pr-8">
+          <span className={`text-sm font-black leading-tight ${palette.label}`}>{subtitle}</span>
           <span className="text-sm text-white tabular-nums shrink-0">n={stats.n}</span>
         </div>
         <div className="relative h-8 w-full flex-1 min-h-[32px]">
@@ -131,21 +125,8 @@ function HorizontalSignedBox({
             style={{ left: `${pMed}%`, transform: "translateX(-50%)" }}
           />
         </div>
-        {variant === "fall" ? (
-          <div className="flex justify-between text-xs text-white/90 tabular-nums mt-1 px-0.5">
-            <span>-100</span>
-            <span>-50</span>
-            <span>0</span>
-          </div>
-        ) : (
-          <div className="flex justify-between text-xs text-white/90 tabular-nums mt-1 px-0.5">
-            <span>0</span>
-            <span>50</span>
-            <span>100</span>
-          </div>
-        )}
       </div>
-    </AnswerLabelWrap>
+    </BoxplotCardWrap>
   );
 }
 
@@ -246,18 +227,18 @@ function DayCard({ day }: { day: CrowdGaugeBoxplotDay }) {
 
       <DirectionShareRibbon pctRise={pctRise} pctFall={pctFall} nRise={nRise} nFall={nFall} />
 
-      <div className="grid grid-cols-2 items-stretch gap-2 sm:gap-3">
+      <div className="grid grid-cols-2 items-start gap-2 sm:gap-3">
         <HorizontalSignedBox
           stats={day.fall}
           highlight={hiFall}
           variant="fall"
-          subtitle="📉 하락 선택 (−100~0)"
+          subtitle="📉 하락 선택"
         />
         <HorizontalSignedBox
           stats={day.rise}
           highlight={hiRise}
           variant="rise"
-          subtitle="📈 상승 선택 (0~100)"
+          subtitle="📈 상승 선택"
         />
       </div>
     </div>
