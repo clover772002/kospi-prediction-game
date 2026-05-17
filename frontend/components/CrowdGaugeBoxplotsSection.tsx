@@ -36,12 +36,10 @@ function HorizontalSignedBox({
   stats,
   highlight,
   variant,
-  subtitle,
 }: {
   stats: CrowdGaugeBoxplotStats | null;
   highlight: boolean;
   variant: "rise" | "fall";
-  subtitle: string;
 }) {
   const isEmpty = !stats || stats.n === 0;
   const ring = highlight
@@ -55,14 +53,12 @@ function HorizontalSignedBox({
           box: "border-red-400/50 bg-red-500/15",
           whisker: "bg-red-600/70",
           med: "bg-red-200",
-          label: "text-red-400",
         }
       : {
           border: "border-blue-500/45",
           box: "border-blue-400/50 bg-blue-500/15",
           whisker: "bg-blue-600/70",
           med: "bg-blue-200",
-          label: "text-blue-400",
         };
 
   const toPct = variant === "rise" ? riseToPercent : fallToPercent;
@@ -71,10 +67,9 @@ function HorizontalSignedBox({
     return (
       <BoxplotCardWrap highlight={highlight}>
         <div
-          className={`rounded-xl border border-dashed border-[#333] bg-[#101010]/80 px-2 py-2 text-sm text-white min-h-[72px] flex flex-col justify-center ${ring}`}
+          className={`rounded-xl border border-dashed border-[#333] bg-[#101010]/80 px-2.5 py-3 text-sm text-white min-h-[100px] flex flex-col justify-center ${ring}`}
         >
-          <span className={palette.label}>{subtitle}</span>
-          <p className="mt-1 leading-snug">이 날 해당 방향 응답이 없어요.</p>
+          <p className="leading-snug text-center text-white/80">이 날 해당 방향 응답이 없어요.</p>
         </div>
       </BoxplotCardWrap>
     );
@@ -91,48 +86,44 @@ function HorizontalSignedBox({
 
   return (
     <BoxplotCardWrap highlight={highlight}>
-      <div className={`rounded-xl border ${palette.border} bg-[#141414]/90 px-2 py-2 min-h-[72px] flex flex-col h-full ${ring}`}>
-        <div className="flex items-center justify-between gap-1 mb-1.5 pr-8">
-          <span className={`text-sm font-black leading-tight ${palette.label}`}>{subtitle}</span>
-          <span className="text-sm text-white tabular-nums shrink-0">n={stats.n}</span>
-        </div>
-        <div className="relative h-8 w-full flex-1 min-h-[32px]">
+      <div className={`rounded-xl border ${palette.border} bg-[#141414]/90 px-2.5 py-2.5 min-h-[100px] flex flex-col h-full ${ring}`}>
+        <div className="relative h-12 w-full flex-1 min-h-[48px]">
           <div className="absolute bottom-0.5 left-0 right-0 h-px bg-gray-700/90" />
           <div
-            className={`absolute bottom-1.5 h-2 w-px ${palette.whisker}`}
+            className={`absolute bottom-2 h-2.5 w-px ${palette.whisker}`}
             style={{ left: `${pMin}%`, transform: "translateX(-50%)" }}
           />
           <div
-            className={`absolute bottom-1.5 h-2 w-px ${palette.whisker}`}
+            className={`absolute bottom-2 h-2.5 w-px ${palette.whisker}`}
             style={{ left: `${pMax}%`, transform: "translateX(-50%)" }}
           />
           <div
-            className={`absolute bottom-2 h-0.5 ${palette.whisker} rounded-full opacity-80`}
+            className={`absolute bottom-2.5 h-0.5 ${palette.whisker} rounded-full opacity-80`}
             style={{
               left: `${Math.min(pMin, pMax)}%`,
               width: `${Math.abs(pMax - pMin)}%`,
             }}
           />
           <div
-            className={`absolute bottom-2 h-4 rounded-md border ${palette.box}`}
+            className={`absolute bottom-2.5 h-6 rounded-md border ${palette.box}`}
             style={{
               left: `${boxLeft}%`,
               width: `${boxW}%`,
             }}
           />
           <div
-            className={`absolute bottom-1.5 w-0.5 h-5 ${palette.med} z-[1]`}
+            className={`absolute bottom-2 w-0.5 h-7 ${palette.med} z-[1]`}
             style={{ left: `${pMed}%`, transform: "translateX(-50%)" }}
           />
         </div>
         {variant === "fall" ? (
-          <div className="flex justify-between text-xs text-white/90 tabular-nums mt-1 px-0.5">
+          <div className="flex justify-between text-xs text-white/90 tabular-nums mt-1.5 px-0.5">
             <span>-100</span>
             <span>-50</span>
             <span>0</span>
           </div>
         ) : (
-          <div className="flex justify-between text-xs text-white/90 tabular-nums mt-1 px-0.5">
+          <div className="flex justify-between text-xs text-white/90 tabular-nums mt-1.5 px-0.5">
             <span>0</span>
             <span>50</span>
             <span>100</span>
@@ -240,19 +231,16 @@ function DayCard({ day }: { day: CrowdGaugeBoxplotDay }) {
 
       <DirectionShareRibbon pctRise={pctRise} pctFall={pctFall} nRise={nRise} nFall={nFall} />
 
-      <div className="grid grid-cols-2 items-start gap-2 sm:gap-3">
-        <HorizontalSignedBox
-          stats={day.fall}
-          highlight={hiFall}
-          variant="fall"
-          subtitle="📉 하락 선택"
-        />
-        <HorizontalSignedBox
-          stats={day.rise}
-          highlight={hiRise}
-          variant="rise"
-          subtitle="📈 상승 선택"
-        />
+      <div className="grid grid-cols-2 gap-x-3 sm:gap-x-4 gap-y-1 mb-1.5">
+        <p className="text-sm font-black text-blue-400 text-center">하락선택</p>
+        <p className="text-sm font-black text-red-400 text-center">상승선택</p>
+        <p className="text-sm text-white/90 tabular-nums text-center">n={nFall}</p>
+        <p className="text-sm text-white/90 tabular-nums text-center">n={nRise}</p>
+      </div>
+
+      <div className="grid grid-cols-2 items-stretch gap-x-3 sm:gap-x-4 gap-y-0">
+        <HorizontalSignedBox stats={day.fall} highlight={hiFall} variant="fall" />
+        <HorizontalSignedBox stats={day.rise} highlight={hiRise} variant="rise" />
       </div>
     </div>
   );
@@ -287,9 +275,9 @@ export default function CrowdGaugeBoxplotsSection() {
       ) : null}
 
       {!err && days === null ? (
-        <div className="grid grid-cols-2 gap-2 animate-pulse">
-          <div className="h-20 rounded-xl bg-[#252525]" />
-          <div className="h-20 rounded-xl bg-[#252525]" />
+        <div className="grid grid-cols-2 gap-3 animate-pulse">
+          <div className="h-24 rounded-xl bg-[#252525]" />
+          <div className="h-24 rounded-xl bg-[#252525]" />
         </div>
       ) : null}
 
