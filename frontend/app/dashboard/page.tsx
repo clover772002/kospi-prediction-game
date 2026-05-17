@@ -116,6 +116,14 @@ function formatKospiChangePct(pct: unknown): string | null {
   return `${body}%`;
 }
 
+/** 설문 게이지 확신도(코스피 등락률 아님) */
+function formatConfidenceGauge(gauge: number | null | undefined): string {
+  if (gauge === null || gauge === undefined) return "—";
+  const n = Number(gauge);
+  if (!Number.isFinite(n)) return "—";
+  return `${n > 0 ? "+" : ""}${Math.round(n)}`;
+}
+
 function HistoryRow({ item, todaySurvey }: { item: DashboardData["history"][0]; todaySurvey: TodaySurvey | null }) {
   const verdict = effectiveKospiCorrect(item);
   const hasResult = verdict !== null;
@@ -152,13 +160,14 @@ function HistoryRow({ item, todaySurvey }: { item: DashboardData["history"][0]; 
     ) : (
       <div className="leading-tight">
         <span className={`font-bold ${mk ? "text-red-400" : "text-blue-400"}`}>{mk ? "상승" : "하락"}</span>
-        <span className="block tabular-nums text-white text-sm mt-0.5">{pctStr ?? "—"}</span>
+        <span className="block tabular-nums text-amber-100/90 text-xs mt-0.5">
+          등락률 {pctStr ?? "—"}
+        </span>
       </div>
     );
 
   const predictCls = directionUp ? "text-red-400" : "text-blue-400";
-  const gaugeLine =
-    gauge !== null && gauge !== undefined ? `${gauge > 0 ? "+" : ""}${gauge}%` : "—";
+  const confidenceLine = formatConfidenceGauge(gauge);
 
   return (
     <tr
@@ -176,7 +185,9 @@ function HistoryRow({ item, todaySurvey }: { item: DashboardData["history"][0]; 
       <td className="py-2 px-1 align-middle text-sm border-l border-[#2a2a2a]/80 bg-[#0f0f0f]/35">
         <div className="leading-tight">
           <span className={`font-bold ${predictCls}`}>{directionUp ? "상승" : "하락"}</span>
-          <span className="block tabular-nums text-white text-sm mt-0.5">{gaugeLine}</span>
+          <span className="block tabular-nums text-white/90 text-xs mt-0.5">
+            확신도 {confidenceLine}
+          </span>
         </div>
       </td>
       <td className="py-2 px-0.5 align-middle text-sm border-l border-amber-500/25 bg-[#0f0f0f]/35">
@@ -872,16 +883,22 @@ export default function DashboardPage() {
             const effectiveMarketDir = resolvedMarketDirection(today, myEntry);
             return (
               <>
+              <p className="text-xs text-white/80 text-center leading-snug mb-1.5 px-1">
+                예측 칸 숫자는 <span className="text-white">확신도</span>·
+                <span className="text-white">무리 선택 비율</span>입니다.
+                <span className="text-amber-200/95"> 실적</span>만 코스피 등락률이에요.
+              </p>
               <div className="grid grid-cols-4 gap-1.5">
                 {/* 고수강화예측 */}
-                <div className="bg-yellow-500/5 border border-yellow-500/20 rounded-xl py-3 px-1 flex flex-col items-center gap-1 text-center">
+                <div className="bg-yellow-500/5 border border-yellow-500/20 rounded-xl py-3 px-1 flex flex-col items-center gap-0.5 text-center">
                   <p className="text-sm text-yellow-400/80 leading-tight">고수강화예측</p>
                   {today.kospi_weighted_pct !== null ? (
                     <>
                       <p className={`text-sm font-black ${today.kospi_weighted_pct >= 50 ? "text-red-400" : "text-blue-400"}`}>
                         {today.kospi_weighted_pct >= 50 ? "📈상승" : "📉하락"}
                       </p>
-                      <p className="text-sm text-white">{today.kospi_weighted_pct}%</p>
+                      <p className="text-sm text-white tabular-nums">{today.kospi_weighted_pct}%</p>
+                      <p className="text-[10px] text-white/70 leading-tight">상승 선택 비율</p>
                     </>
                   ) : (
                     <p className="text-sm text-white">-</p>
@@ -889,14 +906,15 @@ export default function DashboardPage() {
                 </div>
 
                 {/* 단순통계 */}
-                <div className="bg-[#111] border border-[#2A2A2A] rounded-xl py-3 px-1 flex flex-col items-center gap-1 text-center">
+                <div className="bg-[#111] border border-[#2A2A2A] rounded-xl py-3 px-1 flex flex-col items-center gap-0.5 text-center">
                   <p className="text-sm text-white leading-tight">단순</p>
                   {today.kospi_yes_pct !== null ? (
                     <>
                       <p className={`text-sm font-black ${today.kospi_yes_pct >= 50 ? "text-red-400" : "text-blue-400"}`}>
                         {today.kospi_yes_pct >= 50 ? "📈상승" : "📉하락"}
                       </p>
-                      <p className="text-sm text-white">{today.kospi_yes_pct}%</p>
+                      <p className="text-sm text-white tabular-nums">{today.kospi_yes_pct}%</p>
+                      <p className="text-[10px] text-white/70 leading-tight">상승 선택 비율</p>
                     </>
                   ) : (
                     <p className="text-sm text-white">-</p>
@@ -904,13 +922,18 @@ export default function DashboardPage() {
                 </div>
 
                 {/* 내 선택 */}
-                <div className="bg-[#111] border border-[#2A2A2A] rounded-xl py-3 px-1 flex flex-col items-center gap-1 text-center">
+                <div className="bg-[#111] border border-[#2A2A2A] rounded-xl py-3 px-1 flex flex-col items-center gap-0.5 text-center">
                   <p className="text-sm text-white leading-tight">내선택</p>
                   {myEntry ? (
                     <>
                       <p className={`text-sm font-black ${myEntry.kospi_answer ? "text-red-400" : "text-blue-400"}`}>
                         {myEntry.kospi_answer ? "📈상승" : "📉하락"}
                       </p>
+                      {myEntry.gauge_position != null && myEntry.gauge_position !== undefined ? (
+                        <p className="text-xs text-white/85 tabular-nums">
+                          확신도 {formatConfidenceGauge(myEntry.gauge_position)}
+                        </p>
+                      ) : null}
                       <p className="text-sm">
                         {myPickVerdict === null
                           ? "대기중"
@@ -925,17 +948,18 @@ export default function DashboardPage() {
                 </div>
 
                 {/* 실적 */}
-                <div className="bg-[#111] border border-[#2A2A2A] rounded-xl py-3 px-1 flex flex-col items-center gap-1 text-center">
-                  <p className="text-sm text-white leading-tight">실적</p>
+                <div className="bg-amber-500/5 border border-amber-500/25 rounded-xl py-3 px-1 flex flex-col items-center gap-0.5 text-center">
+                  <p className="text-sm text-amber-200/90 leading-tight">실적</p>
                   {effectiveMarketDir !== null ? (
                     <>
                       <p className={`text-sm font-black ${effectiveMarketDir ? "text-red-400" : "text-blue-400"}`}>
                         {effectiveMarketDir ? "📈상승" : "📉하락"}
                       </p>
+                      <p className="text-[10px] text-amber-200/80 leading-tight">등락률</p>
                       <p
-                        className={`text-sm ${today.kospi_change_pct == null ? "text-white" : today.kospi_change_pct >= 0 ? "text-red-400/70" : "text-blue-400/70"}`}
+                        className={`text-sm tabular-nums ${today.kospi_change_pct == null ? "text-white" : today.kospi_change_pct >= 0 ? "text-red-400/80" : "text-blue-400/80"}`}
                       >
-                        {today.kospi_change_pct == null ? "변동율 확인중" : `${today.kospi_change_pct >= 0 ? "+" : ""}${today.kospi_change_pct.toFixed(2)}%`}
+                        {today.kospi_change_pct == null ? "확인중" : `${today.kospi_change_pct >= 0 ? "+" : ""}${today.kospi_change_pct.toFixed(2)}%`}
                       </p>
                     </>
                   ) : (
@@ -987,7 +1011,10 @@ export default function DashboardPage() {
                 const dn = Math.max(0, Math.min(100, 100 - up));
                 return (
                   <div className="mt-4 space-y-2">
-                    <p className="text-center text-base font-bold text-white tracking-wide">집단 예측</p>
+                    <div className="text-center">
+                      <p className="text-base font-bold text-white tracking-wide">집단 예측</p>
+                      <p className="text-xs text-white/75 mt-0.5">참여자 중 상승·하락 선택 비율 (등락률 아님)</p>
+                    </div>
                     <div className="flex items-stretch gap-2 min-h-[100px]">
                       <div
                         className={`flex-1 flex flex-col items-center justify-center rounded-2xl border-2 px-2 py-3 ${
@@ -1113,8 +1140,13 @@ export default function DashboardPage() {
                           <th rowSpan={2} className="py-2 pl-2 pr-1 font-bold align-middle text-sm leading-tight whitespace-nowrap">
                             거래일
                           </th>
-                          <th rowSpan={2} className="py-2 px-1 font-bold align-middle text-sm leading-tight border-l border-[#2a2a2a]/80">
-                            예측
+                          <th
+                            rowSpan={2}
+                            title="내가 고른 방향과 확신도(게이지). 코스피 등락률이 아닙니다."
+                            className="py-2 px-1 font-bold align-middle text-sm leading-tight border-l border-[#2a2a2a]/80"
+                          >
+                            <span className="block">예측</span>
+                            <span className="block text-xs font-normal text-white/75">(확신도)</span>
                           </th>
                           <th
                             colSpan={5}
@@ -1125,10 +1157,11 @@ export default function DashboardPage() {
                         </tr>
                         <tr className="text-left text-white border-b border-[#2A2A2A] bg-[#1A1A1A]/95">
                           <th
-                            title="코스피 종가 방향·등락률"
+                            title="코스피 종가 방향·실제 등락률"
                             className="py-2 px-0.5 font-bold border-l border-amber-500/25 text-sm leading-tight whitespace-nowrap"
                           >
-                            코스피
+                            <span className="block">코스피</span>
+                            <span className="block text-xs font-normal text-amber-100/75">(등락률)</span>
                           </th>
                           <th className="py-2 px-0.5 font-bold text-center text-sm leading-tight whitespace-nowrap">판정</th>
                           <th className="py-2 px-0.5 font-bold text-right text-sm leading-tight whitespace-nowrap">배팅토큰</th>
