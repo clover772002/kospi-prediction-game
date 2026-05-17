@@ -135,10 +135,8 @@ export default function GaugeBar({
       {tipsInteractive && (
         <div className="space-y-2 pb-2 border-b border-[#2A2A2A] w-full min-w-0">
           <p id={helpId} className="text-base text-gray-300 leading-snug">
-            <strong className="text-amber-200 font-bold">얼마나 확신하세요?</strong> 막대{" "}
-            <strong className="text-blue-400">왼쪽</strong>=하락·<strong className="text-red-400">오른쪽</strong>
-            =상승, 멀수록 그 방향 확신이 큽니다. 숫자는{" "}
-            <strong className="text-white">등락률이 아닙니다</strong> (예: −5 ≠ 코스피 5% 하락 예측).
+            막대 <strong className="text-blue-400">왼쪽</strong>=하락·<strong className="text-red-400">오른쪽</strong>
+            =상승, 멀수록 그 방향 확신이 큽니다.
           </p>
           <details className="group rounded-xl bg-[#111]/90 border border-[#2a2a2a] px-4 py-2.5">
             <summary className="text-base text-cyan-400 font-bold cursor-pointer list-none [&::-webkit-details-marker]:hidden flex items-center gap-1">
@@ -179,6 +177,10 @@ export default function GaugeBar({
           </span>
         </div>
       </div>
+
+      <p className="text-center text-lg sm:text-xl font-black text-amber-100 leading-snug">
+        얼마나 확신하나요?
+      </p>
 
       {/* 드래그 게이지 */}
       <div
