@@ -17,6 +17,16 @@ logger = logging.getLogger(__name__)
 _acc_cache: dict = {"map": {}, "count": {}, "scores": {}, "ts": 0.0}
 _ACC_CACHE_TTL = 300  # 5분 캐시 (main.py 와 동일 정책)
 
+# main._calc_weighted_pct 와 동일 — 표본 적을 때 50% 쪽으로 수렴
+BAYES_ALPHA = 5
+
+
+def bayesian_accuracy(correct: int, total: int, *, alpha: int = BAYES_ALPHA) -> float:
+    """(맞힌 수 + α) / (전체 + 2α). total=0 이면 0.5."""
+    if total <= 0:
+        return 0.5
+    return (correct + alpha) / (total + 2 * alpha)
+
 
 def clear_accuracy_cache() -> None:
     """accuracy_records 가 바뀐 뒤(정산·15:35 등) 캐시 무효화."""

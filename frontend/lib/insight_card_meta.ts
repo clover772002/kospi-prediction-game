@@ -34,7 +34,7 @@ export const INSIGHT_CARD_META = {
     priceTokens: 95,
     instantExample: "예: 전역 최고 고수 — 그날 방향 + 확신도(게이지)",
     hint:
-      "지금까지 기준 누적 적중 1순위(최고 고수)가 그날 설문에 참여했을 때, 초성 이름과 함께 선택한 코스피 방향과 설문 게이지(확신도)를 보여 줍니다.",
+      "베이지안 보정·최근 활동 규격을 통과한 최고 고수가 그날 설문에 참여했을 때, 초성 이름과 함께 방향·확신도(게이지)를 보여 줍니다.",
   },
   novice_leader_pick: {
     priceTokens: 85,

@@ -81,7 +81,13 @@ from expert_chat_service import (
     send_participant_message,
 )
 from accuracy_aggregate import clear_accuracy_cache, get_accuracy_data
-from expert_tier import SEGMENT_PRED_COUNT_MIN, global_top_expert_ids_on_day, global_top_expert_uid
+from expert_tier import (
+    RECENT_TRADING_DAYS_FOR_EXPERT,
+    SEGMENT_PRED_COUNT_MIN,
+    global_top_expert_ids_on_day,
+    global_top_expert_uid,
+    leader_display_accuracy_pct,
+)
 
 KST = pytz.timezone("Asia/Seoul")
 
@@ -897,7 +903,11 @@ def _build_rolling_crowd_summary_payload(supabase: Client, end_date_str: str) ->
             "window_trading_days": _ROLLING_CROWD_WINDOW_TRADING_DAYS,
             "series": series,
             "bullets": bullets,
-            "computed_note": "최고 고수는 예측 횟수 규격 통과 후 누적 적중률 1순위(동률 시 id순) 한 명입니다.",
+            "computed_note": (
+                f"최고 고수는 예측 {SEGMENT_PRED_COUNT_MIN}회 이상·"
+                f"최근 {RECENT_TRADING_DAYS_FOR_EXPERT}거래일 내 활동·"
+                f"베이지안 보정 적중(α=5) 1순위(동률 시 id순)입니다."
+            ),
         },
         None,
     )
@@ -1016,7 +1026,7 @@ def _build_leader_pick_payload(
     if not rows:
         return None, "no_survey_data"
 
-    acc_map, pred_count, _ = get_accuracy_data(supabase)
+    acc_map, pred_count, user_scores = get_accuracy_data(supabase)
     day_uids = {str(r["user_id"]) for r in rows if r.get("user_id") is not None}
 
     def acc_of(uid: str) -> float:
@@ -1061,14 +1071,19 @@ def _build_leader_pick_payload(
     name = (urow.data[0].get("name") or "").strip() if urow.data else ""
     masked = (name[0] + "**") if name else "익명"
 
-    pct = round(acc_of(leader) * 100)
+    pct = (
+        leader_display_accuracy_pct(user_scores, leader)
+        if cohort == "expert"
+        else round(acc_of(leader) * 100)
+    )
     direction_label_ko = "📈 코스피 상승" if pick else "📉 코스피 하락"
 
     cohort_title = "최고 고수" if cohort == "expert" else "하수층"
     frac_pct = int(round(_EXPERT_NOVICE_FRAC * 100))
     expert_bullet = (
-        f"※ {rank_label_ko}: 예측 횟수 ≥ {SEGMENT_PRED_COUNT_MIN}인 전체 무리에서 "
-        "누적 적중률 1순위(동률 시 id순) 한 명이며, 그날 설문에 참여했을 때만 표시합니다."
+        f"※ {rank_label_ko}: 예측 ≥ {SEGMENT_PRED_COUNT_MIN}회, "
+        f"최근 {RECENT_TRADING_DAYS_FOR_EXPERT}거래일 내 활동, "
+        "베이지안 보정 적중 1순위(동률 시 id순)이며, 그날 설문에 참여했을 때만 표시합니다."
     )
     novice_bullet = (
         f"※ {rank_label_ko}: 그날 설문 응답자 중 예측 횟수 ≥ {SEGMENT_PRED_COUNT_MIN}, "
@@ -1083,7 +1098,11 @@ def _build_leader_pick_payload(
         "투자·매매 의사결정이 아니며 수익을 보장하지 않습니다.",
     ]
 
-    computed_note = "적중률은 원시 적중 비율(accuracy_records 분모)입니다."
+    computed_note = (
+        "고수 픽 적중률은 베이지안 보정 값입니다(하수 픽은 원시 적중률)."
+        if cohort == "expert"
+        else "적중률은 원시 적중 비율(accuracy_records 분모)입니다."
+    )
 
     payload = {
         "survey_date": survey_date_str,
@@ -1165,8 +1184,8 @@ def _build_time_slice_accuracy_payload(
     for b in timed_buckets:
         counts[b] += 1
 
-    acc_map, _, _ = get_accuracy_data(supabase)
-    pct_leader = round(float(acc_map.get(leader, 0.5)) * 100)
+    _, _, user_scores = get_accuracy_data(supabase)
+    pct_leader = leader_display_accuracy_pct(user_scores, leader)
     urow = supabase.table("users").select("name").eq("id", leader).limit(1).execute()
     name = (urow.data[0].get("name") or "").strip() if urow.data else ""
     masked = (name[0] + "**") if name else "익명"
@@ -1187,7 +1206,8 @@ def _build_time_slice_accuracy_payload(
         )
 
     bullets = [
-        f"전체 무리에서 예측 횟수 규격을 통과한 사람 중 누적 적중률 1순위(동률 시 id순) 한 명을 골랐습니다.",
+        f"전체 무리에서 예측 ≥ {SEGMENT_PRED_COUNT_MIN}회·최근 {RECENT_TRADING_DAYS_FOR_EXPERT}거래일 활동·"
+        "베이지안 보정 적중 1순위(동률 시 id순) 한 명을 골랐습니다.",
         f"그 참가자의 최근 {_ROLLING_CROWD_WINDOW_TRADING_DAYS}거래일({date_strs[0]} ~ {date_strs[-1]}) 구간에서 제출 시각이 기록된 응답 {total_ts}건을 버킷에 담았습니다.",
         "이름은 초성만 표시합니다.",
         "투자·매매 의사결정이 아니며 수익을 보장하지 않습니다.",
