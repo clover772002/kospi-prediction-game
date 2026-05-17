@@ -22,9 +22,9 @@ export default function ExpertMessageConceptPlayground() {
   const legendStrong = phase === 6 || phase === 0;
 
   return (
-    <div className="w-full rounded-2xl border border-sky-500/35 bg-gradient-to-b from-[#0c1218]/95 to-[#0e0e10] overflow-hidden shadow-[inset_0_1px_0_rgba(56,189,248,0.08)]">
-      <div className="flex items-center justify-center px-3 py-2 bg-sky-500/10 border-b border-sky-500/20">
-        <span className="text-[10px] font-black text-sky-200/95 tracking-wide">토큰 → 고수 소통</span>
+    <div className="w-full rounded-3xl border-2 border-sky-500/35 bg-gradient-to-b from-[#0c1218]/95 to-[#0e0e10] overflow-hidden shadow-[inset_0_1px_0_rgba(56,189,248,0.08)]">
+      <div className="flex items-center justify-center px-4 py-2.5 bg-sky-500/10 border-b border-sky-500/20">
+        <span className="text-sm sm:text-base font-black text-sky-200/95 tracking-wide">토큰 → 고수 채팅</span>
       </div>
 
       <div className="relative px-3 py-3 min-h-[11rem]">
@@ -36,7 +36,7 @@ export default function ExpertMessageConceptPlayground() {
         />
 
         <div className="relative z-[1] flex flex-col gap-2">
-          <p className="text-[11px] text-gray-400 text-center font-bold px-2">고수에게 토큰을 주고 소통해요</p>
+          <p className="text-base sm:text-lg text-gray-400 text-center font-black px-2">토큰 주면 질문 · 답 채팅</p>
 
           {/* 내 메시지 (우측) */}
           <div
@@ -45,15 +45,15 @@ export default function ExpertMessageConceptPlayground() {
             }`}
           >
             <div className="inline-flex items-center gap-1.5 max-w-[92%]">
-              <span className="text-[9px] font-black uppercase tracking-wide text-gray-600">나</span>
-              <div className="rounded-2xl rounded-tr-md border border-sky-500/35 bg-sky-950/40 px-3 py-2 text-left shadow-sm">
-                <p className="text-[11px] text-gray-100 leading-snug font-medium">
+              <span className="text-xs font-black uppercase tracking-wide text-gray-500">나</span>
+              <div className="rounded-2xl rounded-tr-md border border-sky-500/35 bg-sky-950/40 px-3 py-2.5 text-left shadow-sm">
+                <p className="text-sm sm:text-base text-gray-100 leading-snug font-medium">
                   내일 변동 크게 보나요? 한 줄만요.
                 </p>
               </div>
             </div>
             {showGiftHint ? (
-              <span className="text-[10px] font-black text-amber-300 tabular-nums drop-shadow-[0_0_8px_rgba(251,191,36,.25)] animate-pulse mr-10">
+              <span className="text-sm font-black text-amber-300 tabular-nums drop-shadow-[0_0_8px_rgba(251,191,36,.25)] animate-pulse mr-10">
                 고수에게 +3 💰
               </span>
             ) : null}
@@ -64,7 +64,7 @@ export default function ExpertMessageConceptPlayground() {
             {showExpertTyping && !showExpertBubble ? (
               <div className="flex items-center gap-2 px-2">
                 <span className="text-lg">⭐</span>
-                <span className="text-[11px] text-gray-500 font-bold tracking-tight animate-pulse">고수가 답장을 작성 중…</span>
+                <span className="text-sm sm:text-base text-gray-400 font-black tracking-tight animate-pulse">고수 작성 중…</span>
               </div>
             ) : null}
 
@@ -74,13 +74,13 @@ export default function ExpertMessageConceptPlayground() {
               }`}
             >
               <div className="flex items-center gap-1.5 flex-wrap">
-                <span className="text-[9px] font-black text-yellow-400/95 uppercase tracking-wide">⭐ 고수</span>
-                <span className="text-[9px] font-black rounded-full border border-emerald-500/35 bg-emerald-500/10 px-2 py-0.5 text-emerald-300/95">
+                <span className="text-xs sm:text-sm font-black text-yellow-400/95 uppercase tracking-wide">⭐ 고수</span>
+                <span className="text-xs font-black rounded-full border border-emerald-500/35 bg-emerald-500/10 px-2.5 py-1 text-emerald-300/95">
                   답장 무료
                 </span>
               </div>
               <div className="rounded-2xl rounded-tl-md border border-white/[0.1] bg-[#151518]/95 px-3 py-2 max-w-[92%]">
-                <p className="text-[11px] text-gray-300 leading-snug">
+                <p className="text-sm sm:text-base text-gray-300 leading-snug">
                   큰 레인지만 조심. 나머지는 장 흐름 보고 판단하세요.
                 </p>
               </div>

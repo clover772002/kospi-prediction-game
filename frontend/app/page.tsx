@@ -1,45 +1,54 @@
 ﻿"use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import SurveyConfidencePlayground from "@/components/SurveyConfidencePlayground";
 import ExpertMessageConceptPlayground from "@/components/ExpertMessageConceptPlayground";
 import ExpertPickRevealPlayground from "@/components/ExpertPickRevealPlayground";
+import LandingFlowDiagram from "@/components/LandingFlowDiagram";
 
-const FEATURES = [
+type LandingFeatureDetail = {
+  summary: string;
+  steps: string[] | null;
+  mockup: ReactNode;
+};
+
+type LandingFeature = {
+  icon: string;
+  title: string;
+  desc: string;
+  detail: LandingFeatureDetail;
+};
+
+const FEATURES: LandingFeature[] = [
   {
-    icon: "📱",
-    title: "설문",
-    desc: "매일 밤 22:00 알림이 오면 웹앱에서 클릭 한 번",
+    icon: "🔔",
+    title: "알림으로 설문",
+    desc: "한 번 안내 · 한 번 탭",
     detail: {
-      summary: "브라우저 알림을 허용하면 매일 밤 알림이 와요. 알림을 탭하면 바로 설문 페이지로 이동하고, O/X 클릭 한 번으로 참여 완료입니다.",
-      steps: [
-        "① 로그인 후 설정 → 브라우저 알림 허용",
-        "② 매일 밤 22:00 알림 수신",
-        "③ 알림 탭 → 설문 페이지에서 클릭 한 번",
-        "💡 매번 접속이 귀찮다면? 텔레그램 봇 연결 시 메시지로 바로 참여 가능",
-      ],
+      summary: "",
+      steps: null,
       mockup: (
-        <div className="mt-3 space-y-2 text-sm">
-          {/* 브라우저 알림 mockup */}
-          <div className="bg-[#1A1A1A] border border-[#333] rounded-2xl p-4">
-            <div className="flex items-start gap-3">
-              <div className="w-9 h-9 rounded-xl bg-purple-600 flex items-center justify-center text-base flex-shrink-0">📊</div>
-              <div className="flex-1 min-w-0">
-                <p className="text-xs font-bold text-white">오늘 코스피 예측 설문</p>
-                <p className="text-[11px] text-gray-400">오늘 코스피 어떻게 될까요? 지금 참여하세요</p>
-                <p className="text-[10px] text-gray-600 mt-0.5">오늘 코스피, 함께 맞춰요 · 지금</p>
+        <div className="mt-4 space-y-4">
+          <div className="rounded-2xl border-2 border-[#444] bg-[#1A1A1A] p-5 sm:p-6">
+            <div className="flex items-start gap-4">
+              <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-purple-600 text-3xl">📊</div>
+              <div className="min-w-0 flex-1 pt-1">
+                <p className="text-lg font-black leading-tight text-white sm:text-xl">오늘 코스피 설문</p>
+                <p className="mt-2 text-base font-bold text-gray-400">🔔 안내 받고 → 📱 알림 탭하면 됩니다</p>
               </div>
             </div>
           </div>
-          {/* 설문 UI mockup */}
-          <div className="bg-[#111] border border-[#2A2A2A] rounded-2xl p-4">
-            <p className="text-[11px] text-gray-400 mb-2">알림 탭 → 바로 설문 참여</p>
-              <div className="flex gap-2">
-              <div className="flex-1 bg-red-500/20 border border-red-500/40 rounded-xl py-3 text-center text-red-400 text-xs font-bold">📈 상승</div>
-              <div className="flex-1 bg-blue-500/20 border border-blue-500/40 rounded-xl py-3 text-center text-blue-400 text-xs font-bold">📉 하락</div>
+          <div className="rounded-2xl border-2 border-[#444] bg-[#111] p-5 sm:p-6">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="rounded-xl border-2 border-red-500/55 bg-red-500/20 py-4 text-center text-lg font-black text-red-100">
+                📈 상승
+              </div>
+              <div className="rounded-xl border-2 border-blue-500/55 bg-blue-500/25 py-4 text-center text-lg font-black text-blue-100">
+                📉 하락
+              </div>
             </div>
           </div>
         </div>
@@ -47,100 +56,44 @@ const FEATURES = [
     },
   },
   {
-    icon: "🎫",
-    title: "얻은 토큰으로 고수와 소통",
-    desc: "고수 선택픽 열람부터 순위권 고수와 메시지까지",
+    icon: "📊",
+    title: "집단 에너지",
+    desc: "많은 사람이 참여하면",
     detail: {
-      summary:
-        "예측·적중으로 모은 토큰으로 고수 선택픽 같은 열람형 콘텐츠를 열거나, 순위권 고수에게 메시지를 보내며 소통할 수 있어요. 고수에게 보내는 팁은 수락 시 정산되는 흐름이에요. 세부 규칙은 정책에 따라 달라질 수 있어요.",
+      summary: "",
       steps: null,
       mockup: (() => {
         const Bar = ({ yes, no }: { yes: number; no: number }) => (
           <div>
-            <div className="flex rounded-full overflow-hidden h-5 text-xs font-bold">
-              <div className="bg-red-500 flex items-center justify-center text-white" style={{ width: `${yes}%` }}>{yes}%</div>
-              <div className="bg-blue-500 flex items-center justify-center text-white" style={{ width: `${no}%` }}>{no}%</div>
+            <div className="flex h-10 overflow-hidden rounded-full text-lg font-black">
+              <div className="flex items-center justify-center bg-red-500 text-white" style={{ width: `${yes}%` }}>
+                {yes}%
+              </div>
+              <div className="flex items-center justify-center bg-blue-500 text-white" style={{ width: `${no}%` }}>
+                {no}%
+              </div>
             </div>
-            <div className="flex justify-between text-xs text-gray-500 mt-1">
-              <span>📈 오른다</span><span>📉 내린다</span>
+            <div className="mt-2 flex justify-between px-2 text-base font-bold text-gray-400">
+              <span>📈 업</span>
+              <span>📉 다운</span>
             </div>
           </div>
         );
         return (
-          <div className="mt-3 space-y-3">
-            <div className="bg-[#1A1A1A] rounded-2xl p-4 border border-[#2A2A2A]">
-              <div className="text-white text-xs font-bold mb-3">📊 단순 집계 <span className="text-gray-500 font-normal">총 128명</span></div>
-              <div className="space-y-3">
-                <div><p className="text-xs text-gray-400 mb-1">KOSPI</p><Bar yes={72} no={28} /></div>
-              </div>
+          <div className="mt-4 space-y-5">
+            <div className="rounded-2xl border-2 border-[#383838] bg-[#1A1A1A] p-5 sm:p-6">
+              <p className="mb-5 text-xl font-black text-white">📊 참여 결과</p>
+              <Bar yes={72} no={28} />
             </div>
-            <div className="bg-[#1A1A1A] rounded-2xl p-4 border border-yellow-500/30">
-              <div className="text-yellow-400 text-xs font-bold mb-1">⭐ 고수 강화예측 <span className="text-gray-500 font-normal">누적 정확도 반영</span></div>
-              <p className="text-gray-600 text-xs mb-3">다수결과 다를 때가 진짜 신호</p>
-              <div className="space-y-3">
-                <div><p className="text-xs text-gray-400 mb-1">KOSPI</p><Bar yes={61} no={39} /></div>
+            <div className="rounded-2xl border-2 border-amber-500/45 bg-[#1A1A1A] p-5 sm:p-6">
+              <p className="text-xl font-black text-yellow-200">⭐ 반영 버전 예시</p>
+              <div className="mt-5">
+                <Bar yes={61} no={39} />
               </div>
             </div>
           </div>
         );
       })(),
-    },
-  },
-  {
-    icon: "🤡",
-    title: "맨날 틀린다면, 당신도 고수입니다",
-    desc: "항상 틀리는 사람의 예측도 역방향 신호로 정확도에 기여해요",
-    detail: {
-      summary: "잘 맞추는 사람만큼, 항상 틀리는 사람도 소중한 데이터입니다. 틀린 예측은 반대 방향 신호로 자동 변환되어 가중예측의 정확도를 높여줘요. 주변에 맨날 틀리는 친구가 있다면 얼른 초대해서 적중률을 올려주세요 🙏",
-      steps: null,
-      mockup: (
-        <div className="mt-3 space-y-3">
-          {/* 적중률 비교 */}
-          <div className="bg-[#1A1A1A] rounded-2xl p-4 border border-[#2A2A2A]">
-            <p className="text-xs text-gray-400 font-bold mb-3">📊 누적 방향 예측 적중률 비교</p>
-            {[
-              { label: "단순 다수결", pct: 54, color: "bg-gray-500" },
-              { label: "⭐ 고수 강화예측", pct: 67, color: "bg-yellow-400" },
-            ].map((item) => (
-              <div key={item.label} className="mb-3">
-                <div className="flex justify-between text-xs mb-1">
-                  <span className="text-gray-400">{item.label}</span>
-                  <span className="text-white font-bold">{item.pct}%</span>
-                </div>
-                <div className="bg-[#111] rounded-full h-4 overflow-hidden">
-                  <div className={`h-full ${item.color} rounded-full`} style={{ width: `${item.pct}%` }} />
-                </div>
-              </div>
-            ))}
-            <p className="text-xs text-gray-600">* 예시 수치 — 실제 적중률은 서비스 내 데이터로 누적됩니다</p>
-          </div>
-
-          {/* 역방향 신호 알고리즘 설명 */}
-          <div className="bg-[#1A1A1A] rounded-2xl p-4 border border-purple-500/20">
-            <p className="text-purple-400 text-xs font-bold mb-3">🔬 틀려도 신호가 되는 알고리즘</p>
-            <div className="space-y-2">
-              {[
-                { emoji: "🟢", label: "고수 (정확도 70%+)", effect: "예측 그대로 반영", weight: "+강하게" },
-                { emoji: "🟡", label: "평균 (정확도 ~50%)", effect: "노이즈로 제외", weight: "0" },
-                { emoji: "🔴", label: "역신호 (정확도 30%↓)", effect: "예측 반대로 반영", weight: "−역방향" },
-              ].map((row) => (
-                <div key={row.label} className="flex items-center gap-2 text-xs">
-                  <span>{row.emoji}</span>
-                  <span className="text-gray-400 flex-1">{row.label}</span>
-                  <span className="text-gray-500">{row.effect}</span>
-                </div>
-              ))}
-            </div>
-            <p className="text-xs text-gray-500 mt-3">
-              항상 틀리는 친구가 "오른다"고 하면 → 시스템은 <span className="text-red-400 font-bold">내린다</span> 신호로 해석합니다
-            </p>
-            <div className="mt-3 bg-purple-500/10 rounded-xl p-3 border border-purple-500/20">
-              <p className="text-xs text-purple-300 font-bold">💡 친구 초대 꿀팁</p>
-              <p className="text-xs text-gray-400 mt-1">주변에 주식 예측 맨날 틀리는 친구 있으신가요?<br />얼른 초대해서 우리 적중률 올려주세요 😂</p>
-            </div>
-          </div>
-        </div>
-      ),
     },
   },
 ];
@@ -214,33 +167,38 @@ export default function LoginPage() {
 
   if (browserType === "inapp") {
     return (
-      <main className="max-w-md mx-auto min-h-screen flex flex-col items-center justify-center px-6 text-center">
-        <div className="text-5xl mb-6">🌐</div>
-        <h1 className="text-xl font-black text-white mb-3">외부 브라우저에서 열어주세요</h1>
-        <p className="text-gray-400 text-sm leading-relaxed mb-6">
-          앱 내 브라우저에서는 Google 로그인이 차단됩니다.<br />
-          아래 버튼을 눌러 Chrome/Safari로 여세요.
+      <main className="max-w-lg mx-auto min-h-screen flex flex-col items-center justify-center px-5 sm:px-6 text-center pb-12">
+        <div className="text-7xl mb-8" aria-hidden>🌐</div>
+        <h1 className="text-2xl sm:text-3xl font-black text-white mb-4 leading-tight">
+          크롬·사파리로 열어주세요
+        </h1>
+        <p className="text-gray-300 text-lg sm:text-xl leading-relaxed mb-8 px-1">
+          앱 속 브라우저에서는 <span className="text-white font-bold">구글 로그인 막힘</span>
+          <br />
+          <span className="text-gray-400 text-base font-medium">버튼 한 번 또는 주소 입력</span>
         </p>
         <button
           onClick={openInExternalBrowser}
-          className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-4 rounded-2xl mb-4 transition-all active:scale-95"
+          type="button"
+          className="w-full bg-blue-600 hover:bg-blue-500 text-white text-lg font-black py-5 rounded-2xl mb-6 transition-all active:scale-[0.98] shadow-lg"
         >
           🌐 Chrome / Safari로 열기
         </button>
-        <div className="w-full bg-[#1A1A1A] rounded-2xl border border-[#2A2A2A] p-4 text-left space-y-3">
-          <p className="text-gray-400 text-xs font-bold">버튼이 안 되면 직접 입력해 주세요</p>
-          <div className="flex items-center gap-2">
-            <p className="text-blue-400 text-xs font-mono flex-1">kospi-prediction-game.vercel.app</p>
+        <div className="w-full bg-[#1A1A1A] rounded-3xl border-2 border-[#2A2A2A] p-5 sm:p-6 text-left space-y-4">
+          <p className="text-gray-300 text-base font-bold">버튼이 안 되면 주소 입력</p>
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+            <p className="text-sky-300 text-base font-mono flex-1 break-all">kospi-prediction-game.vercel.app</p>
             <button
+              type="button"
               onClick={() => navigator.clipboard?.writeText("https://kospi-prediction-game.vercel.app")}
-              className="text-xs text-gray-500 bg-[#2A2A2A] px-2 py-1 rounded"
+              className="text-base text-white font-bold bg-[#333] px-4 py-2.5 rounded-xl shrink-0"
             >
               복사
             </button>
           </div>
-          <div className="space-y-2 pt-1 border-t border-[#2A2A2A]">
-            <p className="text-gray-500 text-xs">📱 iPhone: 공유 버튼 → Safari에서 열기</p>
-            <p className="text-gray-500 text-xs">🤖 Android: 메뉴(⋮) → Chrome에서 열기</p>
+          <div className="space-y-3 pt-2 border-t border-[#333] text-gray-400 text-base">
+            <p>📱 아이폰 · 공유 → Safari</p>
+            <p>🤖 안드로이드 · ⋮ 메뉴 → Chrome</p>
           </div>
         </div>
       </main>
@@ -248,54 +206,38 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="w-full max-w-xl mx-auto min-h-screen flex flex-col items-center justify-center px-4 sm:px-5 py-12 pb-24">
-      {/* 로고 */}
-      <div className="text-center mb-10">
-        <div className="text-6xl mb-4">📊</div>
-        <h1 className="text-2xl font-black text-white mb-1">오늘 코스피, 함께 맞춰요</h1>
-        <p className="text-amber-200/90 text-xs font-bold mb-3 tracking-wide">예측으로 토큰 받고 · 그걸로 고수와 소통해요</p>
-        <p className="text-gray-400 text-sm leading-relaxed">
-          코스피 방향을 맞히며 토큰을 모으고, 그 토큰으로 <strong className="text-gray-300">고수 선택픽·메시지</strong>처럼
-          고수 쪽 기능을 즐길 수 있어요.
-        </p>
-      </div>
-
-      {/* ── 큰 틀: 코스피 예측·토큰 → 토큰으로 고수와 소통 ───────────────── */}
-      <div className="w-full mb-2 min-w-0">
-        <div className="h-px w-full bg-gradient-to-r from-transparent via-amber-500/30 to-transparent mb-6" aria-hidden />
-        <p className="text-[10px] text-gray-600 font-black tracking-[0.18em] mb-3 uppercase">어떻게 즐기나요</p>
-        <div className="flex flex-wrap justify-center gap-2 mb-4 text-[10px] text-gray-400">
-          <span className="rounded-full border border-amber-500/25 bg-amber-500/[0.07] px-2.5 py-1 font-bold text-amber-100/95">
-            ① 코스피 예측하고 토큰 받기
-          </span>
-          <span className="rounded-full border border-sky-500/25 bg-sky-500/[0.08] px-2.5 py-1 font-bold text-sky-200/90">
-            ② 얻은 토큰으로 고수와 소통하기
-          </span>
+    <main className="w-full max-w-2xl mx-auto min-h-screen flex flex-col items-center justify-center px-4 sm:px-6 py-10 sm:py-14 pb-28 text-[17px] sm:text-lg">
+      <div className="text-center mb-8">
+        <div className="text-7xl sm:text-8xl mb-5 drop-shadow-lg" aria-hidden>
+          📊
         </div>
+        <h1 className="text-3xl sm:text-[2rem] font-black text-white mb-3 leading-snug px-1">
+          오늘 코스피, 같이 맞혀요
+        </h1>
+        <p className="text-amber-200 text-lg sm:text-xl font-black mb-1">예측 → 토큰 → 고수</p>
+        <p className="text-gray-400 font-bold text-base sm:text-lg">아래 그림처럼 두 단계예요</p>
       </div>
 
-      <div className="w-full mb-8 min-w-0 space-y-8">
-        <section className="min-w-0">
-          <h2 className="text-base font-black text-white mb-1">코스피 예측하고 토큰 받기</h2>
-          <p className="text-[11px] text-gray-600 mb-3 leading-relaxed">
-            확신 게이지·집단배율까지 실제 설문과 같은 패턴입니다
-          </p>
+      <LandingFlowDiagram />
+
+      <div className="w-full mb-10 min-w-0 space-y-10">
+        <section className="min-w-0 rounded-3xl border-2 border-[#333] bg-[#121212]/50 p-5 sm:p-7">
+          <h2 className="text-xl sm:text-2xl font-black text-white mb-2">① 예측 · 토큰</h2>
+          <p className="text-gray-400 font-bold text-base mb-5">확신 · 상승/하락 (예시 화면)</p>
           <SurveyConfidencePlayground />
         </section>
 
-        <section className="min-w-0">
-          <h2 className="text-base font-black text-white mb-1">얻은 토큰으로 고수와 소통하기</h2>
-          <p className="text-[11px] text-gray-600 mb-6 leading-relaxed">
-            같은 토큰으로 선택픽을 열람하거나 순위권 고수에게 질문을 보낼 수 있어요. 아래는 참고 예시예요.
-          </p>
+        <section className="min-w-0 rounded-3xl border-2 border-[#333] bg-[#121212]/50 p-5 sm:p-7">
+          <h2 className="text-xl sm:text-2xl font-black text-white mb-2">② 고수</h2>
+          <p className="text-gray-400 font-bold text-base mb-6">선택픽 · 질문 (예시)</p>
 
           <div className="space-y-8">
             <div>
-              <p className="text-[11px] text-yellow-400/90 font-bold mb-2">고수 선택픽</p>
+              <p className="text-lg text-amber-200 font-black mb-3">토큰 → 선택픽</p>
               <ExpertPickRevealPlayground />
             </div>
             <div>
-              <p className="text-[11px] text-sky-300/90 font-bold mb-2">고수 소통</p>
+              <p className="text-lg text-sky-300 font-black mb-3">토큰 → 메시지</p>
               <ExpertMessageConceptPlayground />
             </div>
           </div>
@@ -303,39 +245,50 @@ export default function LoginPage() {
       </div>
 
       {/* 아코디언 설명 카드 */}
-      <div className="w-full space-y-2 mb-10">
+      <div className="w-full space-y-3 mb-10">
         {FEATURES.map((item, idx) => {
           const isOpen = openIdx === idx;
+          const summary = item.detail.summary?.trim();
           return (
             <div
               key={item.title}
-              className="bg-[#1A1A1A] rounded-2xl border border-[#2A2A2A] overflow-hidden transition-all"
+              className="bg-[#1A1A1A] rounded-3xl border-2 border-[#2A2A2A] overflow-hidden transition-all"
             >
               <button
-                className="w-full flex items-center gap-4 px-4 py-3 text-left"
+                type="button"
+                className="w-full flex items-center gap-4 px-5 py-4 sm:py-5 text-left"
                 onClick={() => setOpenIdx(isOpen ? null : idx)}
               >
-                <span className="text-2xl flex-shrink-0">{item.icon}</span>
-                <div className="flex-1">
-                  <p className="font-bold text-sm text-white">{item.title}</p>
-                  <p className="text-xs text-gray-400">{item.desc}</p>
+                <span className="text-4xl sm:text-5xl flex-shrink-0 leading-none">{item.icon}</span>
+                <div className="flex-1 min-w-0">
+                  <p className="font-black text-lg sm:text-xl text-white">{item.title}</p>
+                  <p className="text-gray-400 font-bold text-base mt-0.5">{item.desc}</p>
                 </div>
-                <span className={`text-gray-500 text-lg transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`}>
+                <span className={`text-gray-500 text-2xl flex-shrink-0 transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`}>
                   ▾
                 </span>
               </button>
 
               {isOpen && (
-                <div className="px-4 pb-4">
-                  <div className="border-t border-[#2A2A2A] pt-3">
-                    <p className="text-gray-300 text-xs leading-relaxed mb-2">{item.detail.summary}</p>
-                    {item.detail.steps && (
-                      <div className="space-y-1 mb-2">
+                <div className="px-5 pb-5">
+                  <div className="border-t border-[#333] pt-4">
+                    {summary ? (
+                      <p className="text-gray-200 text-base sm:text-lg leading-relaxed mb-3">{summary}</p>
+                    ) : null}
+                    {item.detail.steps && item.detail.steps.length > 0 ? (
+                      <div className="space-y-2 mb-4">
                         {item.detail.steps.map((s, i) => (
-                          <p key={s} className={`text-xs ${i === item.detail.steps!.length - 1 && s.startsWith("💡") ? "text-yellow-400/80" : "text-blue-400"}`}>{s}</p>
+                          <p
+                            key={s}
+                            className={`text-base ${
+                              i === item.detail.steps!.length - 1 && s.startsWith("💡") ? "text-yellow-300 font-bold" : "text-sky-300 font-bold"
+                            }`}
+                          >
+                            {s}
+                          </p>
                         ))}
                       </div>
-                    )}
+                    ) : null}
                     {item.detail.mockup}
                   </div>
                 </div>
@@ -346,103 +299,103 @@ export default function LoginPage() {
       </div>
 
       {/* 로그인 버튼 그룹 */}
-      <div className="w-full space-y-3">
+      <div className="w-full space-y-4">
         {browserType === "kakao" && (
-          <p className="text-center text-xs text-yellow-400 mb-1">
-            카카오톡에서는 카카오 로그인을 이용해 주세요
-          </p>
+          <p className="text-center text-lg font-black text-yellow-400 mb-1">카톡 → 카카오 로그인</p>
         )}
         <button
+          type="button"
           onClick={() => handleLogin("google")}
           disabled={signing !== null || browserType === "kakao"}
-          className={`w-full flex items-center justify-center gap-3 bg-white hover:bg-gray-100 disabled:opacity-30 text-gray-800 font-bold py-4 rounded-2xl transition-all active:scale-95 ${browserType === "kakao" ? "hidden" : ""}`}
+          className={`w-full flex items-center justify-center gap-3 bg-white hover:bg-gray-100 disabled:opacity-30 text-gray-900 text-lg font-black py-5 rounded-2xl transition-all active:scale-[0.98] shadow-md ${browserType === "kakao" ? "hidden" : ""}`}
         >
           {signing === "google" ? (
-            <div className="w-5 h-5 border-2 border-gray-400/30 border-t-gray-600 rounded-full animate-spin" />
+            <div className="w-6 h-6 border-2 border-gray-400/30 border-t-gray-600 rounded-full animate-spin" />
           ) : (
-            <svg width="20" height="20" viewBox="0 0 48 48">
+            <svg width="26" height="26" viewBox="0 0 48 48" aria-hidden>
               <path fill="#4285F4" d="M47.5 24.5c0-1.6-.1-3.1-.4-4.5H24v8.5h13.1c-.6 3-2.3 5.5-4.9 7.2v6h7.9c4.6-4.3 7.4-10.6 7.4-17.2z"/>
               <path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.8-5.8l-7.9-6c-2.1 1.4-4.8 2.3-7.9 2.3-6.1 0-11.2-4.1-13-9.6H2.9v6.2C6.8 42.5 14.8 48 24 48z"/>
               <path fill="#FBBC05" d="M11 28.9c-.5-1.4-.7-2.9-.7-4.4s.2-3 .7-4.4v-6.2H2.9C1.1 17.1 0 20.4 0 24s1.1 6.9 2.9 9.9l8.1-5z"/>
               <path fill="#EA4335" d="M24 9.5c3.4 0 6.5 1.2 8.9 3.5l6.6-6.6C35.9 2.4 30.5 0 24 0 14.8 0 6.8 5.5 2.9 14.1l8.1 6.2c1.8-5.5 6.9-10.8 13-10.8z"/>
             </svg>
           )}
-          {signing === "google" ? "로그인 중..." : "Google로 시작하기"}
+          {signing === "google" ? "연결 중…" : "Google로 시작"}
         </button>
 
         <button
+          type="button"
           onClick={() => handleLogin("kakao")}
           disabled={signing !== null}
-          className="w-full flex items-center justify-center gap-3 disabled:opacity-60 font-bold py-4 rounded-2xl transition-all active:scale-95"
+          className="w-full flex items-center justify-center gap-3 disabled:opacity-60 text-lg font-black py-5 rounded-2xl transition-all active:scale-[0.98] shadow-md"
           style={{ backgroundColor: "#FEE500", color: "#191919" }}
         >
           {signing === "kakao" ? (
-            <div className="w-5 h-5 border-2 border-yellow-700/30 border-t-yellow-800 rounded-full animate-spin" />
+            <div className="w-6 h-6 border-2 border-yellow-700/30 border-t-yellow-800 rounded-full animate-spin" />
           ) : (
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="#191919">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="#191919" aria-hidden>
               <path d="M12 3C6.477 3 2 6.477 2 10.8c0 2.74 1.612 5.155 4.07 6.638l-.9 3.358c-.08.296.247.535.503.37L9.93 18.8c.676.1 1.37.15 2.07.15 5.523 0 10-3.477 10-7.8S17.523 3 12 3z"/>
             </svg>
           )}
-          {signing === "kakao" ? "로그인 중..." : "카카오로 시작하기"}
+          {signing === "kakao" ? "연결 중…" : "카카오로 시작"}
         </button>
       </div>
 
-      <p className="text-xs text-gray-600 text-center mt-4">
-        시작하면{" "}
-        <Link href="/privacy" className="underline text-gray-500 hover:text-gray-300">
+      <p className="text-base text-gray-500 text-center mt-5 px-2">
+        시작 ={" "}
+        <Link href="/privacy" className="underline text-gray-400 hover:text-gray-200 font-bold">
           개인정보처리방침
-        </Link>
-        에 동의한 것으로 간주됩니다
+        </Link>{" "}
+        동의
       </p>
 
       {/* FAQ */}
-      <div className="w-full mt-10">
-        <p className="text-xs text-gray-500 font-bold mb-3 tracking-widest uppercase">자주 묻는 질문</p>
-        <div className="space-y-2">
+      <div className="w-full mt-12">
+        <p className="text-gray-400 font-black text-xl sm:text-2xl mb-4">자주 묻는 질문</p>
+        <div className="space-y-3">
           {[
             {
               q: "완전 무료인가요?",
-              a: "시작하고 설문 참여 같은 기본 흐름은 무료로 시작해요. 토큰은 적중 등으로 쌓이고, 고수 선택픽이나 고수와의 소통에 쓰일 수 있어요. 유료 과금이 생기면 사전 공지합니다.",
+              a: "기본 참여 무료 · 토큰은 참여로 쌓임 · 유료 생기면 먼저 공지",
             },
             {
-              q: "매일 해야 하나요? 빠지면 불이익이 있나요?",
-              a: "전혀요. 빠진 날은 그냥 기록이 없는 것뿐이에요. 가능한 날만 참여해도 되고, 참여할수록 내 누적 정확도가 쌓이는 구조라 부담 없이 시작할 수 있어요.",
+              q: "매일 해야 하나요?",
+              a: "아니요 · 빠져도 패널티 없음",
             },
             {
-              q: "정확도가 낮으면 어떻게 되나요?",
-              a: "서비스 이용에는 아무 제한이 없어요. 다만 정확도가 낮으면 고수 강화예측에 반영되는 내 가중치가 낮아지고, 높으면 커뮤니티 예측에 내 의견이 더 많이 반영됩니다. 잘 못 맞춰도 계속 참여하는 것 자체가 의미 있어요.",
+              q: "정확도가 낮으면?",
+              a: "이용 제한 없음 · 높을수록 반영 많음",
             },
             {
-              q: "이걸로 실제 투자 결정을 해도 되나요?",
-              a: "본 서비스는 투자 조언이 아닙니다. 집단 예측 데이터를 재미로 확인하는 서비스예요. 실제 투자 결정은 반드시 본인의 판단과 책임 하에 하세요.",
+              q: "투자 참고 삼아도 되나요?",
+              a: "투자 조언 아님 · 참고만 · 본인 책임",
             },
             {
-              q: "고수 강화예측은 언제부터 믿을 수 있나요?",
-              a: "참여자가 많고 누적 데이터가 쌓일수록 신뢰도가 올라갑니다. 잘 맞추는 사람의 의견은 더 크게, 항상 틀리는 사람의 의견은 반대 방향으로 반영되기 때문에 단순 다수결보다 정교해요.",
+              q: "고수 예측은?",
+              a: "참여·데이터 많을수록 신뢰 ↑",
             },
             {
-              q: "고수랑 어떻게 소통하나요?",
-              a: '로그인 후 하단 「고수」 탭 또는 대시보드의 "순위권 고수에게 질문 보내기"에서 메시지를 보낼 수 있어요. 보낼 때에는 토큰이 차감되고, 고수가 해당 팁을 수락할 때까지 정산 전(에스크로) 상태였다가 고수 수락 시 전달됩니다. 고수의 답장 자체에는 토큰이 들지 않아요.',
+              q: "고수랑 어떻게?",
+              a: '「고수」탭 · 토큰 차감 → 고수 수락 시 전달 · 답장 받기 무료',
             },
             {
-              q: "예측 결과가 조작될 수 있나요?",
-              a: "장 마감 후 코스피 등락은 외부 금융 데이터(yfinance)에서 자동으로 가져옵니다. 운영자가 임의로 결과를 수정할 수 없는 구조예요.",
+              q: "결과 조작?",
+              a: "장 마감 후 외부 데이터로 자동 · 수동 수정 없음",
             },
             {
-              q: "개인정보가 수집되나요?",
-              a: "소셜 로그인 시 이름·이메일이 저장됩니다. 고수 소통을 사용하면 메시지 내용도 서버에 저장돼요. 자세한 항목·보관은 개인정보처리방침을 확인해 주세요. 위치정보 등은 수집하지 않아요.",
+              q: "개인정보?",
+              a: "로그인 시 이름·이메일 · 메시지(사용 시) 저장 · 자세히는 처리방침",
             },
             {
-              q: "알림은 어떻게 받나요?",
-              a: "로그인 후 설정 페이지에서 '브라우저 알림 허용'을 탭하면 바로 연결돼요. 매일 밤 22:00에 알림이 오고, 탭하면 설문 페이지로 이동해요. 앱 설치 없이 바로 사용 가능합니다.",
+              q: "알림?",
+              a: "설정 → 브라우저 알림 · 앱 없이 가능",
             },
             {
-              q: "텔레그램이 꼭 필요한가요?",
-              a: "아니에요! 브라우저 알림만으로 충분해요. 텔레그램은 선택 사항이에요. 매번 앱을 열기 귀찮다면 텔레그램 봇을 연결하면 메시지에서 바로 참여할 수 있어서 더 편리하긴 해요.",
+              q: "텔레그램?",
+              a: "필수 아님 · 알림만으로 OK · 텔레그램은 편하면 선택",
             },
             {
-              q: "알림이 안 와요",
-              a: "① 설정 → 브라우저 알림이 '연동됨'인지 확인해주세요. ② 기기 설정에서 브라우저 알림이 허용돼 있는지 확인해주세요. ③ iPhone은 Safari에서 홈 화면에 추가 후 알림이 작동해요. 해결이 안 되면 forsmartonly@gmail.com으로 문의해 주세요.",
+              q: "알림 안 옴",
+              a: "설정 허용 확인 · 아이폰은 Safari 추가 권장 · 문의 forsmartonly@gmail.com",
             },
           ].map((item, i) => (
             <FaqItem key={i} q={item.q} a={item.a} />
@@ -450,7 +403,7 @@ export default function LoginPage() {
         </div>
       </div>
 
-      <p className="text-xs text-gray-700 text-center mt-10 pb-6">
+      <p className="text-sm text-gray-600 text-center mt-10 pb-8">
         © 2026 오늘 장 예측
       </p>
     </main>
@@ -460,17 +413,18 @@ export default function LoginPage() {
 function FaqItem({ q, a }: { q: string; a: string }) {
   const [open, setOpen] = useState(false);
   return (
-    <div className="bg-[#1A1A1A] rounded-2xl border border-[#2A2A2A] overflow-hidden">
+    <div className="bg-[#1A1A1A] rounded-3xl border-2 border-[#2A2A2A] overflow-hidden">
       <button
-        className="w-full flex items-center justify-between gap-3 px-4 py-3 text-left"
+        type="button"
+        className="w-full flex items-center justify-between gap-3 px-5 py-4 sm:py-5 text-left"
         onClick={() => setOpen(!open)}
       >
-        <span className="text-sm text-white font-medium">{q}</span>
-        <span className={`text-gray-500 text-lg flex-shrink-0 transition-transform duration-200 ${open ? "rotate-180" : ""}`}>▾</span>
+        <span className="text-lg sm:text-xl text-white font-black pr-2 leading-snug">{q}</span>
+        <span className={`text-gray-500 text-2xl flex-shrink-0 transition-transform duration-200 ${open ? "rotate-180" : ""}`}>▾</span>
       </button>
       {open && (
-        <div className="px-4 pb-4 border-t border-[#2A2A2A] pt-3">
-          <p className="text-xs text-gray-400 leading-relaxed">{a}</p>
+        <div className="px-5 pb-5 border-t border-[#333] pt-4">
+          <p className="text-base sm:text-lg text-gray-300 leading-relaxed font-bold">{a}</p>
         </div>
       )}
     </div>

@@ -54,15 +54,15 @@ export default function SurveyConfidencePlayground() {
   const dirColor = isUp ? "text-red-400" : "text-blue-400";
 
   return (
-    <div className="rounded-2xl border border-dashed border-amber-500/35 bg-[#141414]/80 overflow-hidden" aria-hidden>
-      <div className="flex items-center justify-between gap-2 px-3 py-1.5 bg-amber-500/10 border-b border-amber-500/20">
-        <span className="text-[13px] font-black text-amber-200 w-8 text-center">예시</span>
+    <div className="rounded-3xl border-2 border-dashed border-amber-500/35 bg-[#141414]/80 overflow-hidden" aria-hidden>
+      <div className="flex items-center justify-between gap-2 px-4 py-2 bg-amber-500/10 border-b border-amber-500/20">
+        <span className="text-base font-black text-amber-200 w-12 text-center">예시</span>
       </div>
 
       <div className="relative px-3 py-3 space-y-3">
         <div className="grid grid-cols-2 gap-2">
           <div className="rounded-xl border border-red-500/25 bg-[#0d0d0d] px-2 py-2 flex flex-col items-center min-h-[7rem]">
-            <span className="text-[10px] font-black text-red-400 mb-2">상승</span>
+            <span className="text-sm sm:text-base font-black text-red-400 mb-2">상승</span>
             <div className="flex-1 w-full flex items-end justify-center min-h-[4.25rem] rounded-lg bg-[#111] border border-[#2a2a2a] overflow-hidden px-2 pb-1">
               <div
                 className="w-full rounded-md bg-red-500/85 transition-all duration-100 ease-out"
@@ -71,7 +71,7 @@ export default function SurveyConfidencePlayground() {
             </div>
           </div>
           <div className="rounded-xl border border-blue-500/25 bg-[#0d0d0d] px-2 py-2 flex flex-col items-center min-h-[7rem]">
-            <span className="text-[10px] font-black text-blue-400 mb-2">하락</span>
+            <span className="text-sm sm:text-base font-black text-blue-400 mb-2">하락</span>
             <div className="flex-1 w-full flex items-end justify-center min-h-[4.25rem] rounded-lg bg-[#111] border border-[#2a2a2a] overflow-hidden px-2 pb-1">
               <div
                 className="w-full rounded-md bg-blue-500/85 transition-all duration-100 ease-out"
@@ -120,7 +120,7 @@ export default function SurveyConfidencePlayground() {
           </div>
         </div>
 
-        <div className="flex justify-between text-[11px] border border-[#2A2A2A] rounded-xl px-3 py-2 bg-[#111]/90">
+        <div className="flex justify-between text-sm sm:text-base border border-[#2A2A2A] rounded-xl px-3 py-3 bg-[#111]/90">
           <span className="text-gray-500 shrink-0">보유</span>
           <span className="text-white font-bold tabular-nums">{DEMO_HOLDING.toLocaleString()}</span>
           <span className="text-gray-600 px-1">→</span>
@@ -129,17 +129,17 @@ export default function SurveyConfidencePlayground() {
         </div>
 
         <div className="rounded-lg border border-emerald-500/20 bg-[#0d1210]/90 px-2 py-2 space-y-1">
-          <p className="text-[9px] text-emerald-400/95 font-bold text-center">적중 시 (예시 숫자)</p>
-          <p className="text-[11px] text-center tabular-nums text-white leading-relaxed">
+          <p className="text-sm text-emerald-400/95 font-bold text-center">적중 예시 숫자</p>
+          <p className="text-base sm:text-lg text-center tabular-nums text-white leading-relaxed">
             <span className="text-gray-400 font-bold">{bet.toLocaleString()}</span>
             <span className="text-gray-600 mx-0.5">×</span>
             <span className="text-cyan-300/95 font-black">{mult.toFixed(2)}</span>
-            <span className="text-[9px] text-gray-500 ml-1">집단배율</span>
+            <span className="text-xs sm:text-sm text-gray-500 ml-1 font-bold">집단비율</span>
             <span className="text-gray-600 mx-1">≈</span>
             <span className="text-emerald-300 font-black">+{grossHit}</span>
-            <span className="text-[9px] text-gray-500">토큰</span>
+            <span className="text-xs sm:text-sm text-gray-500 ml-1 font-bold">토큰</span>
           </p>
-          <p className="text-[8px] text-gray-600 text-center">실패 시 배팅 토큰만큼 차감되는 흐름이에요</p>
+          <p className="text-sm text-gray-500 text-center font-medium">틀리면 배팅만큼 빠짐 (예시)</p>
         </div>
       </div>
     </div>

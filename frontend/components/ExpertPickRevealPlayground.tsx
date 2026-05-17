@@ -28,9 +28,9 @@ export default function ExpertPickRevealPlayground() {
   const ribbonActive = phase >= 4 && phase <= 7;
 
   return (
-    <div className="w-full rounded-2xl border border-amber-500/35 bg-gradient-to-b from-[#1a1510]/95 to-[#101010] overflow-hidden expert-pick-card-glow">
-      <div className="flex items-center justify-center px-3 py-2 bg-amber-500/10 border-b border-amber-500/20">
-        <span className="text-[10px] font-black text-amber-200 tracking-wide">토큰 · 고수 선택픽</span>
+    <div className="w-full rounded-3xl border-2 border-amber-500/35 bg-gradient-to-b from-[#1a1510]/95 to-[#101010] overflow-hidden expert-pick-card-glow">
+      <div className="flex items-center justify-center px-4 py-2.5 bg-amber-500/10 border-b border-amber-500/20">
+        <span className="text-sm sm:text-base font-black text-amber-200 tracking-wide">토큰 → 선택픽</span>
       </div>
 
       <div className="relative px-3 py-4 min-h-[11.5rem]">
@@ -42,7 +42,7 @@ export default function ExpertPickRevealPlayground() {
         />
 
         <div className="relative z-[1] flex flex-col items-center text-center">
-          <p className="text-[9px] text-gray-500 font-bold mb-2">오늘 코스피 · 고수 진영</p>
+          <p className="text-sm text-gray-500 font-bold mb-2">오늘 예측 · 고수 선택</p>
 
           <div className="relative w-full max-w-[15rem] mx-auto">
             {phase === 3 ? (
@@ -74,14 +74,14 @@ export default function ExpertPickRevealPlayground() {
                   <span className={`text-xl transition-transform duration-300 ${pickLive ? "scale-110" : ""}`}>
                     {pickLive ? "✨" : "🔒"}
                   </span>
-                  <span className="text-[10px] font-black text-gray-400">
-                    {pickLive ? "열람 완료" : "열람 전 · 토큰 필요"}
+                  <span className="text-sm font-black text-gray-400">
+                    {pickLive ? "열람 완료" : "토큰이면 열람"}
                   </span>
                 </div>
 
                 <div className="space-y-1">
-                  <p className="text-xs font-black text-white">KOSPI 방향</p>
-                  <p className="text-[10px] text-gray-600">누적 적중률 높은 고수들의 오늘 선택</p>
+                  <p className="text-sm sm:text-base font-black text-white">방향 요약</p>
+                  <p className="text-sm text-gray-500 font-medium">잘 맞춘 사람들 선택 (예시)</p>
                 </div>
 
                 <div
@@ -91,7 +91,7 @@ export default function ExpertPickRevealPlayground() {
                       : "border-[#2a2a2e] bg-[#111]/80"
                   }`}
                 >
-                  <p className="text-[9px] text-gray-500 font-bold mb-1">고수 선택픽</p>
+                  <p className="text-sm text-gray-500 font-bold mb-1">표시되는 내용</p>
                   <p
                     className={`text-2xl font-black tracking-tight transition-all duration-500 ${
                       pickLive
@@ -102,9 +102,9 @@ export default function ExpertPickRevealPlayground() {
                     {pickLive ? "📈 상승" : "••••"}
                   </p>
                   {pickLive ? (
-                    <p className="text-[9px] text-amber-200/80 font-bold mt-1">실제 앱에선 코인·날짜마다 달라져요</p>
+                    <p className="text-xs sm:text-sm text-amber-200/90 font-bold mt-1">실제 화면은 날짜마다 달라져요</p>
                   ) : (
-                    <p className="text-[9px] text-gray-600 mt-1">토큰으로 해제하면 표시</p>
+                    <p className="text-xs sm:text-sm text-gray-500 mt-1 font-medium">토큰 쓰면 표시</p>
                   )}
                 </div>
               </div>
@@ -116,7 +116,7 @@ export default function ExpertPickRevealPlayground() {
               }`}
             >
               <span
-                className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[10px] font-black tabular-nums transition-all duration-300 ${
+                className={`inline-flex items-center gap-1.5 rounded-full border px-4 py-2 text-sm font-black tabular-nums transition-all duration-300 ${
                   emphasizePrice
                     ? "border-amber-400/60 bg-amber-500/20 text-amber-100 shadow-[0_0_16px_rgba(251,191,36,.25)] expert-pick-price-tag"
                     : "border-white/10 bg-[#1a1a1a] text-gray-400"
@@ -126,7 +126,7 @@ export default function ExpertPickRevealPlayground() {
                 해제 비용 예시 · 80
               </span>
               {ribbonActive ? (
-                <span className="text-[9px] font-black text-emerald-400/90 expert-pick-ribbon">적중 분배 재미에 쓰이는 재화</span>
+                <span className="text-xs sm:text-sm font-black text-emerald-400/90 expert-pick-ribbon">적중 재미 재화</span>
               ) : null}
             </div>
           </div>
