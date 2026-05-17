@@ -56,13 +56,13 @@ export default function SurveyConfidencePlayground() {
   return (
     <div className="rounded-3xl border-2 border-dashed border-amber-500/35 bg-[#141414]/80 overflow-hidden" aria-hidden>
       <div className="flex items-center justify-between gap-2 px-4 py-2 bg-amber-500/10 border-b border-amber-500/20">
-        <span className="text-base font-black text-amber-200 w-12 text-center">예시</span>
+        <span className="text-lg font-black text-amber-200 w-14 text-center">예시</span>
       </div>
 
       <div className="relative px-3 py-3 space-y-3">
         <div className="grid grid-cols-2 gap-2">
           <div className="rounded-xl border border-red-500/25 bg-[#0d0d0d] px-2 py-2 flex flex-col items-center min-h-[7rem]">
-            <span className="text-sm sm:text-base font-black text-red-400 mb-2">상승</span>
+            <span className="text-base sm:text-lg font-black text-red-400 mb-2">상승</span>
             <div className="flex-1 w-full flex items-end justify-center min-h-[4.25rem] rounded-lg bg-[#111] border border-[#2a2a2a] overflow-hidden px-2 pb-1">
               <div
                 className="w-full rounded-md bg-red-500/85 transition-all duration-100 ease-out"
@@ -71,7 +71,7 @@ export default function SurveyConfidencePlayground() {
             </div>
           </div>
           <div className="rounded-xl border border-blue-500/25 bg-[#0d0d0d] px-2 py-2 flex flex-col items-center min-h-[7rem]">
-            <span className="text-sm sm:text-base font-black text-blue-400 mb-2">하락</span>
+            <span className="text-base sm:text-lg font-black text-blue-400 mb-2">하락</span>
             <div className="flex-1 w-full flex items-end justify-center min-h-[4.25rem] rounded-lg bg-[#111] border border-[#2a2a2a] overflow-hidden px-2 pb-1">
               <div
                 className="w-full rounded-md bg-blue-500/85 transition-all duration-100 ease-out"
@@ -83,7 +83,7 @@ export default function SurveyConfidencePlayground() {
         <div className="relative pt-5">
           <div className="pointer-events-none absolute z-30 left-0 right-0 top-0 h-14 transition-all duration-100 ease-out">
             <div
-              className="absolute text-xl drop-shadow-[0_2px_4px_rgba(0,0,0,.8)]"
+              className="absolute text-2xl drop-shadow-[0_2px_4px_rgba(0,0,0,.8)]"
               style={{
                 left: `calc(${50 + gauge / 2}%)`,
                 top: `${2 + bob}px`,
@@ -95,14 +95,14 @@ export default function SurveyConfidencePlayground() {
           </div>
 
           <div className="flex justify-between items-baseline px-0.5">
-            <span className={`text-sm font-black tabular-nums ${dirColor}`}>{isUp ? "상승 확신 쪽" : "하락 확신 쪽"}</span>
-            <span className={`text-lg font-black tabular-nums ${dirColor}`}>
+            <span className={`text-base font-black tabular-nums ${dirColor}`}>{isUp ? "상승 확신 쪽" : "하락 확신 쪽"}</span>
+            <span className={`text-xl font-black tabular-nums ${dirColor}`}>
               {isUp ? "+" : ""}
               {gauge}%
             </span>
           </div>
 
-          <div className="relative h-8 w-full rounded-full bg-[#1A1A1A] border border-[#2A2A2A] overflow-visible mt-1">
+          <div className="relative h-9 w-full rounded-full bg-[#1A1A1A] border border-[#2A2A2A] overflow-visible mt-1">
             {isUp ? (
               <div className="absolute top-0 left-1/2 h-full bg-red-500 transition-all duration-100 ease-out" style={{ width: `${halfSpanPct}%` }} />
             ) : (
@@ -110,17 +110,17 @@ export default function SurveyConfidencePlayground() {
             )}
             <div className="absolute left-1/2 top-0 z-10 h-full w-0.5 bg-[#333] -translate-x-1/2" />
             <div
-              className={`absolute top-1/2 z-10 -translate-y-1/2 w-5 h-5 rounded-full border-2 shadow-lg transition-all duration-100 ease-out ${
+              className={`absolute top-1/2 z-10 -translate-y-1/2 w-6 h-6 rounded-full border-2 shadow-lg transition-all duration-100 ease-out ${
                 isUp ? "bg-red-400 border-red-300" : "bg-blue-400 border-blue-300"
               }`}
               style={{
-                left: `calc(${50 + gauge / 2}% - 10px)`,
+                left: `calc(${50 + gauge / 2}% - 12px)`,
               }}
             />
           </div>
         </div>
 
-        <div className="flex justify-between text-sm sm:text-base border border-[#2A2A2A] rounded-xl px-3 py-3 bg-[#111]/90">
+        <div className="flex justify-between gap-1 text-base sm:text-lg border border-[#2A2A2A] rounded-xl px-3 py-3.5 bg-[#111]/90">
           <span className="text-gray-500 shrink-0">보유</span>
           <span className="text-white font-bold tabular-nums">{DEMO_HOLDING.toLocaleString()}</span>
           <span className="text-gray-600 px-1">→</span>
@@ -128,18 +128,18 @@ export default function SurveyConfidencePlayground() {
           <span className={`font-black tabular-nums shrink-0 ${dirColor}`}>{bet.toLocaleString()}</span>
         </div>
 
-        <div className="rounded-lg border border-emerald-500/20 bg-[#0d1210]/90 px-2 py-2 space-y-1">
-          <p className="text-sm text-emerald-400/95 font-bold text-center">적중 예시 숫자</p>
-          <p className="text-base sm:text-lg text-center tabular-nums text-white leading-relaxed">
+        <div className="rounded-lg border border-emerald-500/20 bg-[#0d1210]/90 px-3 py-3 space-y-2">
+          <p className="text-base text-emerald-400/95 font-bold text-center">적중 예시 숫자</p>
+          <p className="text-lg sm:text-xl text-center tabular-nums text-white leading-relaxed">
             <span className="text-gray-400 font-bold">{bet.toLocaleString()}</span>
             <span className="text-gray-600 mx-0.5">×</span>
             <span className="text-cyan-300/95 font-black">{mult.toFixed(2)}</span>
-            <span className="text-xs sm:text-sm text-gray-500 ml-1 font-bold">집단비율</span>
+            <span className="text-sm text-gray-500 ml-1 font-bold">집단비율</span>
             <span className="text-gray-600 mx-1">≈</span>
             <span className="text-emerald-300 font-black">+{grossHit}</span>
-            <span className="text-xs sm:text-sm text-gray-500 ml-1 font-bold">토큰</span>
+            <span className="text-sm text-gray-500 ml-1 font-bold">토큰</span>
           </p>
-          <p className="text-sm text-gray-500 text-center font-medium">틀리면 배팅만큼 빠짐 (예시)</p>
+          <p className="text-base text-gray-500 text-center font-medium">틀리면 배팅만큼 빠짐 (예시)</p>
         </div>
       </div>
     </div>
