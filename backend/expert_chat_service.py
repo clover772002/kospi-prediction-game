@@ -179,6 +179,9 @@ def build_eligibility_payload(
     send_blocked_reason: str | None = None if can_send else _blocked()
     tab_blocked_reason: str | None = None if can_access_tab else TAB_BLOCKED_REASON
 
+    is_global_top_expert = bool(leader_uid and not leader_err and leader_uid == current_user_id)
+    receives_expert_questions_today = bool(is_global_top_expert and top_entry)
+
     return {
         "survey_date": survey_date,
         "tip_tokens_per_message": TIP_TOKENS,
@@ -194,6 +197,8 @@ def build_eligibility_payload(
         "tab_blocked_reason": tab_blocked_reason,
         "can_send_message": can_send,
         "send_blocked_reason": send_blocked_reason,
+        "is_global_top_expert": is_global_top_expert,
+        "receives_expert_questions_today": receives_expert_questions_today,
     }
 
 

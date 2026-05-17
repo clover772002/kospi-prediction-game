@@ -797,6 +797,8 @@ export interface ExpertChatEligibility {
   tab_blocked_reason: string | null;
   can_send_message: boolean;
   send_blocked_reason: string | null;
+  is_global_top_expert: boolean;
+  receives_expert_questions_today: boolean;
 }
 
 export interface ExpertChatThreadSummary {

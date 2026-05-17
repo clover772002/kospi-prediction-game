@@ -4,7 +4,8 @@ import { Suspense, useEffect, useState, useCallback, useRef, useLayoutEffect } f
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
-import { getMe, getToday, getDashboard, createChallenge, getMyChallenges, reactToChallenge, requestRematch, acceptChallenge, declineChallenge, getMyGroups, UserProfile, TodaySurvey, DashboardData, Challenge, Group } from "@/lib/api";
+import { getMe, getToday, getDashboard, getExpertChatEligibility, createChallenge, getMyChallenges, reactToChallenge, requestRematch, acceptChallenge, declineChallenge, getMyGroups, UserProfile, TodaySurvey, DashboardData, Challenge, Group, type ExpertChatEligibility } from "@/lib/api";
+import GlobalTopExpertBanner from "@/components/GlobalTopExpertBanner";
 import ShareSheet from "@/components/ShareSheet";
 import AppAmbientBackground from "@/components/AppAmbientBackground";
 import AppTabNav from "@/components/AppTabNav";
@@ -225,6 +226,7 @@ export default function DashboardPage() {
   const [rematchLoading, setRematchLoading]        = useState<string | null>(null);
   const [acceptLoading, setAcceptLoading]          = useState<string | null>(null); // challenge_id
   const [revalidating, setRevalidating]            = useState(false);
+  const [expertEligibility, setExpertEligibility] = useState<ExpertChatEligibility | null>(null);
   const dashboardFetchSeq = useRef(0);
 
   useLayoutEffect(() => {
@@ -266,6 +268,17 @@ export default function DashboardPage() {
         setToday(todayData);
         setDash(dashData);
         setChallenges(chResult);
+        const sd = todayData.survey_date?.slice(0, 10);
+        if (sd) {
+          try {
+            const expertEl = await getExpertChatEligibility(accessToken, sd);
+            if (seq === dashboardFetchSeq.current) setExpertEligibility(expertEl);
+          } catch {
+            if (seq === dashboardFetchSeq.current) setExpertEligibility(null);
+          }
+        } else if (seq === dashboardFetchSeq.current) {
+          setExpertEligibility(null);
+        }
         saveDashboardSnapshot({
           user: profile,
           today: todayData,
@@ -930,6 +943,15 @@ export default function DashboardPage() {
                   )}
                 </div>
               </div>
+
+              {expertEligibility?.is_global_top_expert ? (
+                <div className="mt-3">
+                  <GlobalTopExpertBanner
+                    receivesToday={expertEligibility.receives_expert_questions_today}
+                    expertChatUnlocked={expertEligibility.can_access_expert_chat}
+                  />
+                </div>
+              ) : null}
 
               {(() => {
                 const expertMin = 210;

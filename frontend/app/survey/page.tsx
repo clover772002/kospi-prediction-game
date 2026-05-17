@@ -3,7 +3,8 @@
 import { useEffect, useState, useCallback, useRef, Suspense, useLayoutEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
-import { getToday, getTodaySummary, resolveApiBase, TodaySurvey } from "@/lib/api";
+import { getToday, getTodaySummary, getExpertChatEligibility, resolveApiBase, TodaySurvey } from "@/lib/api";
+import GlobalTopExpertBanner from "@/components/GlobalTopExpertBanner";
 import { formatApiErrorMessage } from "@/lib/format-api-error";
 import FlipClock from "@/components/FlipClock";
 import KospiChart from "@/components/KospiChart";
@@ -159,6 +160,7 @@ function SurveyPageInner() {
   const [revalidating, setRevalidating] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [showTopExpertNotice, setShowTopExpertNotice] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const [kospiAnswer, setKospiAnswer] = useState<boolean | null>(null);
@@ -322,6 +324,21 @@ function SurveyPageInner() {
     };
   }, [token, nextSurvey?.survey_date, nextSurvey?.is_open]);
 
+  useEffect(() => {
+    if (!token || !today?.survey_date) return;
+    if (!alreadyAnswered && !submitted) return;
+    const sd = today.survey_date.slice(0, 10);
+    let cancelled = false;
+    void getExpertChatEligibility(token, sd)
+      .then((e) => {
+        if (!cancelled && e.is_global_top_expert) setShowTopExpertNotice(true);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [token, today?.survey_date, alreadyAnswered, submitted]);
+
   useLayoutEffect(() => {
     const s = peekSurveyTodaySnapshot();
     if (s) {
@@ -454,8 +471,12 @@ function SurveyPageInner() {
         const text = await res.text();
         throw new Error(formatApiErrorMessage(res.status, text));
       }
-      const data = (await res.json().catch(() => ({}))) as { current_tokens?: number };
+      const data = (await res.json().catch(() => ({}))) as {
+        current_tokens?: number;
+        is_global_top_expert?: boolean;
+      };
       if (typeof data.current_tokens === "number") setUserTokens(data.current_tokens);
+      if (data.is_global_top_expert) setShowTopExpertNotice(true);
       setSubmitted(true);
       setAlreadyAnswered(true);
       setPreviousAnswer(kospiAnswer);
@@ -486,8 +507,12 @@ function SurveyPageInner() {
         const text = await res.text();
         throw new Error(formatApiErrorMessage(res.status, text));
       }
-      const data = (await res.json().catch(() => ({}))) as { current_tokens?: number };
+      const data = (await res.json().catch(() => ({}))) as {
+        current_tokens?: number;
+        is_global_top_expert?: boolean;
+      };
       if (typeof data.current_tokens === "number") setUserTokens(data.current_tokens);
+      if (data.is_global_top_expert) setShowTopExpertNotice(true);
       setNextSubmitted(true);
       setNextAlreadyAnswered(true);
       setNextPreviousAnswer(nextKospiAnswer);
@@ -717,6 +742,13 @@ function SurveyPageInner() {
       {/* 설문 진행 중 — 이미 완료됨(세션 제출 전, 서버에서 불러온 응답) */}
       {status === "open" && !isWeekendKST && alreadyAnswered && !submitted && (
         <div className="flex flex-col gap-4 mt-6 fade-up">
+          {showTopExpertNotice ? (
+            <GlobalTopExpertBanner
+              receivesToday
+              compact
+              expertChatUnlocked={userTokens >= 210}
+            />
+          ) : null}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 w-full min-w-0">
             <div className="bg-[#1A1A1A] border border-green-500/30 rounded-2xl p-4 min-w-0 flex flex-col gap-2 w-full">
               {pendingGrantToday === "redo_full" ? (
@@ -902,6 +934,13 @@ function SurveyPageInner() {
       {/* 제출 완료 — 읽기 전용 게이지 + 코스피 차트 (재투표 grant 시 편집 가능) */}
       {status === "open" && !isWeekendKST && submitted && (
         <div className="flex flex-col gap-4 mt-6 fade-up">
+          {showTopExpertNotice ? (
+            <GlobalTopExpertBanner
+              receivesToday
+              compact
+              expertChatUnlocked={userTokens >= 210}
+            />
+          ) : null}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 w-full min-w-0">
             <div className="bg-[#1A1A1A] border border-green-500/30 rounded-2xl p-4 min-w-0 flex flex-col gap-2 w-full">
               {pendingGrantToday === "redo_full" ? (

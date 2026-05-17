@@ -2503,11 +2503,17 @@ async def web_survey_respond(
         logger.exception("survey_responses 저장 오류")
         raise HTTPException(status_code=500, detail=f"응답 저장 중 오류: {e}") from e
 
+    leader_uid, leader_err = global_top_expert_uid(supabase)
+    is_global_top_expert = bool(leader_uid == user_id and not leader_err)
+    receives_expert_questions_today = is_global_top_expert
+
     return {
         "success": True,
         "survey_date": out["survey_date"],
         "tokens_bet": out["tokens_bet"],
         "current_tokens": out["current_tokens"],
+        "is_global_top_expert": is_global_top_expert,
+        "receives_expert_questions_today": receives_expert_questions_today,
     }
 
 
