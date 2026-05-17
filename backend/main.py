@@ -82,11 +82,10 @@ from expert_chat_service import (
 )
 from accuracy_aggregate import clear_accuracy_cache, get_accuracy_data
 from expert_tier import (
-    RECENT_TRADING_DAYS_FOR_EXPERT,
     SEGMENT_PRED_COUNT_MIN,
     global_top_expert_ids_on_day,
     global_top_expert_uid,
-    leader_display_accuracy_pct,
+    leader_token_balance,
 )
 
 KST = pytz.timezone("Asia/Seoul")
@@ -891,7 +890,7 @@ def _build_rolling_crowd_summary_payload(supabase: Client, end_date_str: str) ->
     last_s = series[-1]["survey_date"]
     bullets = [
         f"종료 거래일 {end_date_str} 기준, 직전 포함 {_ROLLING_CROWD_WINDOW_TRADING_DAYS}거래일({first_s} ~ {last_s})입니다.",
-        "각 날짜는 지금까지 기준 누적 적중 1순위(최고 고수)가 그날 설문에 참여했을 때만, 코스피 결과가 확정된 날의 적중 여부(0%·100%)를 셉니다.",
+        "각 날짜는 토큰 1위(고수)가 그날 설문에 참여했을 때만, 코스피 결과가 확정된 날의 적중 여부(0%·100%)를 셉니다.",
         "최고 고수가 그날 미참여이거나 아직 결과가 없는 날은 수치를 숨깁니다.",
         f"적중률을 채운 칸은 {ok_cells}개입니다.",
         "투자·매매 의사결정이 아니며 수익을 보장하지 않습니다.",
@@ -903,11 +902,7 @@ def _build_rolling_crowd_summary_payload(supabase: Client, end_date_str: str) ->
             "window_trading_days": _ROLLING_CROWD_WINDOW_TRADING_DAYS,
             "series": series,
             "bullets": bullets,
-            "computed_note": (
-                f"최고 고수는 예측 {SEGMENT_PRED_COUNT_MIN}회 이상·"
-                f"최근 {RECENT_TRADING_DAYS_FOR_EXPERT}거래일 내 활동·"
-                f"베이지안 보정 적중(α=5) 1순위(동률 시 id순)입니다."
-            ),
+            "computed_note": "고수는 전체 참가자 중 현재 보유 토큰이 가장 많은 1명(동률 시 id순)입니다.",
         },
         None,
     )
@@ -1038,7 +1033,7 @@ def _build_leader_pick_payload(
             return None, tier_err
         if not leader or leader not in day_uids:
             return None, "segment_empty"
-        rank_label_ko = "전역 최고 고수"
+        rank_label_ko = "토큰 1위 고수"
         segment_n = 1
     else:
         _experts, novices = _wave_b_expert_and_novice_ids(day_uids, acc_map, pred_count)
@@ -1071,19 +1066,15 @@ def _build_leader_pick_payload(
     name = (urow.data[0].get("name") or "").strip() if urow.data else ""
     masked = (name[0] + "**") if name else "익명"
 
-    pct = (
-        leader_display_accuracy_pct(user_scores, leader)
-        if cohort == "expert"
-        else round(acc_of(leader) * 100)
-    )
+    pct = round(acc_of(leader) * 100)
+    leader_tokens = leader_token_balance(supabase, leader) if cohort == "expert" else None
     direction_label_ko = "📈 코스피 상승" if pick else "📉 코스피 하락"
 
     cohort_title = "최고 고수" if cohort == "expert" else "하수층"
     frac_pct = int(round(_EXPERT_NOVICE_FRAC * 100))
     expert_bullet = (
-        f"※ {rank_label_ko}: 예측 ≥ {SEGMENT_PRED_COUNT_MIN}회, "
-        f"최근 {RECENT_TRADING_DAYS_FOR_EXPERT}거래일 내 활동, "
-        "베이지안 보정 적중 1순위(동률 시 id순)이며, 그날 설문에 참여했을 때만 표시합니다."
+        f"※ {rank_label_ko}: 전체 참가자 중 현재 보유 토큰 1위(동률 시 id순)이며, "
+        "그날 설문에 참여했을 때만 표시합니다."
     )
     novice_bullet = (
         f"※ {rank_label_ko}: 그날 설문 응답자 중 예측 횟수 ≥ {SEGMENT_PRED_COUNT_MIN}, "
@@ -1099,7 +1090,7 @@ def _build_leader_pick_payload(
     ]
 
     computed_note = (
-        "고수 픽 적중률은 베이지안 보정 값입니다(하수 픽은 원시 적중률)."
+        "숫자는 해당 고수의 현재 토큰 잔액입니다."
         if cohort == "expert"
         else "적중률은 원시 적중 비율(accuracy_records 분모)입니다."
     )
@@ -1110,7 +1101,8 @@ def _build_leader_pick_payload(
         "cohort_label_ko": cohort_title,
         "rank_label_ko": rank_label_ko,
         "leader_masked_name": masked,
-        "leader_accuracy_pct": pct,
+        "leader_accuracy_pct": pct if cohort != "expert" else None,
+        "leader_token_balance": leader_tokens,
         "kospi_answer": pick,
         "direction_label_ko": direction_label_ko,
         "leader_gauge_position": gauge_v,
@@ -1140,7 +1132,7 @@ def _timed_user_bucket_records(rows: list[dict]) -> list[tuple[str, bool, int]]:
 def _build_time_slice_accuracy_payload(
     supabase: Client, survey_date_str: str
 ) -> tuple[dict | None, str | None]:
-    """전체 무리에서 적중 1순위 1명이, 종료 거래일까지 직전 7거래일 구간에서 남긴 제출 시각 버킷 분포."""
+    """토큰 1위 고수가 종료 거래일까지 직전 7거래일 구간에서 남긴 제출 시각 버킷 분포."""
     leader, tier_err = global_top_expert_uid(supabase)
     if tier_err:
         return None, tier_err
@@ -1184,8 +1176,7 @@ def _build_time_slice_accuracy_payload(
     for b in timed_buckets:
         counts[b] += 1
 
-    _, _, user_scores = get_accuracy_data(supabase)
-    pct_leader = leader_display_accuracy_pct(user_scores, leader)
+    tokens_leader = leader_token_balance(supabase, leader)
     urow = supabase.table("users").select("name").eq("id", leader).limit(1).execute()
     name = (urow.data[0].get("name") or "").strip() if urow.data else ""
     masked = (name[0] + "**") if name else "익명"
@@ -1206,8 +1197,7 @@ def _build_time_slice_accuracy_payload(
         )
 
     bullets = [
-        f"전체 무리에서 예측 ≥ {SEGMENT_PRED_COUNT_MIN}회·최근 {RECENT_TRADING_DAYS_FOR_EXPERT}거래일 활동·"
-        "베이지안 보정 적중 1순위(동률 시 id순) 한 명을 골랐습니다.",
+        "전체 참가자 중 현재 보유 토큰이 가장 많은 고수 1명(동률 시 id순)을 골랐습니다.",
         f"그 참가자의 최근 {_ROLLING_CROWD_WINDOW_TRADING_DAYS}거래일({date_strs[0]} ~ {date_strs[-1]}) 구간에서 제출 시각이 기록된 응답 {total_ts}건을 버킷에 담았습니다.",
         "이름은 초성만 표시합니다.",
         "투자·매매 의사결정이 아니며 수익을 보장하지 않습니다.",
@@ -1219,7 +1209,8 @@ def _build_time_slice_accuracy_payload(
             "end_date": survey_date_str,
             "window_trading_days": _ROLLING_CROWD_WINDOW_TRADING_DAYS,
             "leader_masked_name": masked,
-            "leader_accuracy_pct": pct_leader,
+            "leader_accuracy_pct": tokens_leader,
+            "leader_token_balance": tokens_leader,
             "total_with_timestamp": total_ts,
             "kospi_result_known": False,
             "buckets": bucket_rows,

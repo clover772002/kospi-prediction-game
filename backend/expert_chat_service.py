@@ -167,7 +167,7 @@ def build_eligibility_payload(
         if not can_access_tab:
             return TAB_BLOCKED_REASON
         if leader_err == "segment_empty":
-            return "아직 최고 고수를 정할 표본이 부족해요"
+            return "아직 토큰 1위 고수를 정할 참가자가 없어요"
         if not top_entry:
             return "오늘 설문에 참여한 최고 고수가 없어요"
         if leader_uid == current_user_id:

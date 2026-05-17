@@ -194,10 +194,13 @@ export default function TimeSliceAccuracyInsightCard({
           {data.data?.leader_masked_name != null ? (
             <p className={`${d.computed} text-gray-400 tabular-nums`}>
               대상: <span className="text-gray-300 font-bold">{data.data.leader_masked_name}</span>
-              {data.data.leader_accuracy_pct != null ? (
+              {(data.data.leader_token_balance ?? data.data.leader_accuracy_pct) != null ? (
                 <>
                   {" "}
-                  · 누적 적중률 약 <span className="text-gray-300">{data.data.leader_accuracy_pct}%</span>
+                  · 보유 토큰{" "}
+                  <span className="text-gray-300 tabular-nums">
+                    {data.data.leader_token_balance ?? data.data.leader_accuracy_pct}개
+                  </span>
                 </>
               ) : null}
               {" "}

@@ -313,7 +313,7 @@ export default function ExpertChatPage() {
         ) : null}
         {eligibility && !eligibility.is_global_top_expert ? (
           <p className="mb-4 text-sm leading-relaxed text-white/90">
-            오늘 설문에 참여한 <strong className="text-white">최고 고수 1명</strong>에게 질문을 보낼 수 있습니다. 질문 1통당{" "}
+            오늘 설문에 참여한 <strong className="text-white">토큰 1위 고수</strong>에게 질문을 보낼 수 있습니다. 질문 1통당{" "}
             <span className="font-bold text-amber-200">{eligibility.tip_tokens_per_message}토큰</span>이
             차감되며, 고수가 <strong className="text-white">팁을 수락할 때</strong> 해당 토큰이 전달됩니다.
           </p>
@@ -476,7 +476,7 @@ export default function ExpertChatPage() {
               {pickerRecipients.map((r) => (
                 <p key={r.user_id}>
                   {r.masked_name}
-                  {r.accuracy != null ? ` · 누적 적중 ${r.accuracy}%` : ""}
+                  {r.accuracy != null ? ` · 적중 ${r.accuracy}%` : ""}
                 </p>
               ))}
             </div>

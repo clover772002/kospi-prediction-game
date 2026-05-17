@@ -26,10 +26,10 @@ export default function GlobalTopExpertBanner({
         <span className="mr-1" aria-hidden>
           ⭐
         </span>
-        최고 고수로 지정됐어요
+        토큰 1위 — 고수로 지정됐어요
       </p>
       <p className={`mt-1 leading-relaxed text-violet-200/90 ${compact ? "text-xs" : "text-sm"}`}>
-        다른 사람에게 질문을 받으면 토큰을 받을 수 있어요.
+        보유 토큰이 가장 많습니다. 다른 사람에게 질문을 받으면 토큰을 받을 수 있어요.
       </p>
       {receivesToday && expertChatUnlocked ? (
         <Link
@@ -68,7 +68,7 @@ export function GlobalTopExpertDethronedBanner({ compact = false }: { compact?: 
         고수의 자리를 빼앗겼어요
       </p>
       <p className={`mt-1 leading-relaxed text-zinc-400 ${compact ? "text-xs" : "text-sm"}`}>
-        누적 적중 1순위가 바뀌었습니다. 적중을 더 쌓으면 다시 최고 고수가 될 수 있어요.
+        다른 참가자가 토큰을 더 많이 보유하게 되었습니다. 적중·참여로 토큰을 모으면 다시 1위가 될 수 있어요.
       </p>
     </div>
   );

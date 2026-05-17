@@ -241,7 +241,11 @@ export default function CohortLeaderPickInsightCard({
             <p className={`${ix.c ? "text-xs" : "text-sm"} font-black text-white`}>
               <span className="text-gray-500 font-normal">{pick.leader_masked_name}</span>
               <span className="mx-2 text-gray-600">·</span>
-              <span className="tabular-nums">{pick.leader_accuracy_pct}%</span>
+              <span className="tabular-nums">
+                {cohort === "expert" && pick.leader_token_balance != null
+                  ? `${pick.leader_token_balance} 토큰`
+                  : `${pick.leader_accuracy_pct ?? "—"}%`}
+              </span>
             </p>
             <p className={`${ix.c ? "text-[11px]" : "text-base"} font-black text-white tracking-tight`}>{pick.direction_label_ko}</p>
             <p className={`${ix.c ? "text-[10px]" : "text-sm"} text-gray-300 mt-0.5`}>{pick.conviction_label_ko}</p>

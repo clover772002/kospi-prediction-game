@@ -507,6 +507,7 @@ export interface TimeSliceAccuracyInsightResponse {
     window_trading_days?: number;
     leader_masked_name?: string;
     leader_accuracy_pct?: number;
+    leader_token_balance?: number;
     total_with_timestamp: number;
     kospi_result_known: boolean;
     buckets: Array<{
@@ -603,7 +604,8 @@ export interface LeaderPickInsightResponse {
     cohort_label_ko: string;
     rank_label_ko: string;
     leader_masked_name: string;
-    leader_accuracy_pct: number;
+    leader_accuracy_pct?: number | null;
+    leader_token_balance?: number | null;
     kospi_answer: boolean;
     direction_label_ko: string;
     leader_gauge_position: number | null;
