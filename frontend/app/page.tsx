@@ -7,7 +7,6 @@ import { supabase } from "@/lib/supabase";
 import SurveyConfidencePlayground from "@/components/SurveyConfidencePlayground";
 import ExpertMessageConceptPlayground from "@/components/ExpertMessageConceptPlayground";
 import ExpertPickRevealPlayground from "@/components/ExpertPickRevealPlayground";
-import LandingFlowDiagram from "@/components/LandingFlowDiagram";
 
 type LandingFeatureDetail = {
   summary: string;
@@ -207,95 +206,87 @@ export default function LoginPage() {
 
   return (
     <main className="w-full max-w-2xl mx-auto min-h-screen flex flex-col items-center justify-center px-4 sm:px-6 py-10 sm:py-14 pb-28 text-[17px] sm:text-lg">
-      <div className="text-center mb-8">
+      <div className="text-center mb-10">
         <div className="text-7xl sm:text-8xl mb-5 drop-shadow-lg" aria-hidden>
           📊
         </div>
-        <h1 className="text-3xl sm:text-[2rem] font-black text-white mb-3 leading-snug px-1">
+        <h1 className="text-3xl sm:text-[2.15rem] font-black text-white leading-snug px-1">
           오늘 코스피, 같이 맞혀요
         </h1>
-        <p className="text-amber-200 text-lg sm:text-xl font-black mb-1">예측 → 토큰 → 고수</p>
-        <p className="text-gray-400 font-bold text-base sm:text-lg">아래 그림처럼 두 단계예요</p>
       </div>
 
-      <LandingFlowDiagram />
-
-      <div className="w-full mb-10 min-w-0 space-y-10">
-        <section className="min-w-0 rounded-3xl border-2 border-[#333] bg-[#121212]/50 p-5 sm:p-7">
-          <h2 className="text-xl sm:text-2xl font-black text-white mb-2">① 예측 · 토큰</h2>
-          <p className="text-gray-400 font-bold text-base mb-5">확신 · 상승/하락 (예시 화면)</p>
+      <div className="w-full mb-12 min-w-0 space-y-12">
+        <section className="min-w-0 rounded-3xl border-2 border-amber-500/35 bg-gradient-to-b from-[#161008]/95 to-[#121212]/90 p-5 sm:p-8">
+          <h2 className="text-[1.5rem] sm:text-[2rem] font-black text-white leading-tight mb-6 sm:mb-8 pb-4 border-b border-amber-500/25">
+            코스피를 예측하고 토큰을 얻어요
+          </h2>
           <SurveyConfidencePlayground />
-        </section>
+          <div className="w-full space-y-3 mt-8">
+            {FEATURES.map((item, idx) => {
+              const isOpen = openIdx === idx;
+              const summary = item.detail.summary?.trim();
+              return (
+                <div
+                  key={item.title}
+                  className="bg-[#151515]/90 rounded-3xl border-2 border-[#2f2f2f] overflow-hidden transition-all"
+                >
+                  <button
+                    type="button"
+                    className="w-full flex items-center gap-4 px-5 py-4 sm:py-5 text-left"
+                    onClick={() => setOpenIdx(isOpen ? null : idx)}
+                  >
+                    <span className="text-4xl sm:text-5xl flex-shrink-0 leading-none">{item.icon}</span>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-black text-lg sm:text-xl text-white">{item.title}</p>
+                      <p className="text-gray-400 font-bold text-base mt-0.5">{item.desc}</p>
+                    </div>
+                    <span className={`text-gray-500 text-2xl flex-shrink-0 transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`}>
+                      ▾
+                    </span>
+                  </button>
 
-        <section className="min-w-0 rounded-3xl border-2 border-[#333] bg-[#121212]/50 p-5 sm:p-7">
-          <h2 className="text-xl sm:text-2xl font-black text-white mb-2">② 고수</h2>
-          <p className="text-gray-400 font-bold text-base mb-6">선택픽 · 질문 (예시)</p>
-
-          <div className="space-y-8">
-            <div>
-              <p className="text-lg text-amber-200 font-black mb-3">토큰 → 선택픽</p>
-              <ExpertPickRevealPlayground />
-            </div>
-            <div>
-              <p className="text-lg text-sky-300 font-black mb-3">토큰 → 메시지</p>
-              <ExpertMessageConceptPlayground />
-            </div>
+                  {isOpen && (
+                    <div className="px-5 pb-5">
+                      <div className="border-t border-[#333] pt-4">
+                        {summary ? (
+                          <p className="text-gray-200 text-base sm:text-lg leading-relaxed mb-3">{summary}</p>
+                        ) : null}
+                        {item.detail.steps && item.detail.steps.length > 0 ? (
+                          <div className="space-y-2 mb-4">
+                            {item.detail.steps.map((s, i) => (
+                              <p
+                                key={s}
+                                className={`text-base ${
+                                  i === item.detail.steps!.length - 1 && s.startsWith("💡")
+                                    ? "text-yellow-300 font-bold"
+                                    : "text-sky-300 font-bold"
+                                }`}
+                              >
+                                {s}
+                              </p>
+                            ))}
+                          </div>
+                        ) : null}
+                        {item.detail.mockup}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </section>
-      </div>
 
-      {/* 아코디언 설명 카드 */}
-      <div className="w-full space-y-3 mb-10">
-        {FEATURES.map((item, idx) => {
-          const isOpen = openIdx === idx;
-          const summary = item.detail.summary?.trim();
-          return (
-            <div
-              key={item.title}
-              className="bg-[#1A1A1A] rounded-3xl border-2 border-[#2A2A2A] overflow-hidden transition-all"
-            >
-              <button
-                type="button"
-                className="w-full flex items-center gap-4 px-5 py-4 sm:py-5 text-left"
-                onClick={() => setOpenIdx(isOpen ? null : idx)}
-              >
-                <span className="text-4xl sm:text-5xl flex-shrink-0 leading-none">{item.icon}</span>
-                <div className="flex-1 min-w-0">
-                  <p className="font-black text-lg sm:text-xl text-white">{item.title}</p>
-                  <p className="text-gray-400 font-bold text-base mt-0.5">{item.desc}</p>
-                </div>
-                <span className={`text-gray-500 text-2xl flex-shrink-0 transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`}>
-                  ▾
-                </span>
-              </button>
+        <section className="min-w-0 rounded-3xl border-2 border-sky-500/35 bg-gradient-to-b from-[#081018]/95 to-[#121212]/90 p-5 sm:p-8">
+          <h2 className="text-[1.5rem] sm:text-[2rem] font-black text-white leading-tight mb-6 sm:mb-8 pb-4 border-b border-sky-500/25">
+            토큰으로 고수랑 소통해요
+          </h2>
 
-              {isOpen && (
-                <div className="px-5 pb-5">
-                  <div className="border-t border-[#333] pt-4">
-                    {summary ? (
-                      <p className="text-gray-200 text-base sm:text-lg leading-relaxed mb-3">{summary}</p>
-                    ) : null}
-                    {item.detail.steps && item.detail.steps.length > 0 ? (
-                      <div className="space-y-2 mb-4">
-                        {item.detail.steps.map((s, i) => (
-                          <p
-                            key={s}
-                            className={`text-base ${
-                              i === item.detail.steps!.length - 1 && s.startsWith("💡") ? "text-yellow-300 font-bold" : "text-sky-300 font-bold"
-                            }`}
-                          >
-                            {s}
-                          </p>
-                        ))}
-                      </div>
-                    ) : null}
-                    {item.detail.mockup}
-                  </div>
-                </div>
-              )}
-            </div>
-          );
-        })}
+          <div className="space-y-10">
+            <ExpertPickRevealPlayground />
+            <ExpertMessageConceptPlayground />
+          </div>
+        </section>
       </div>
 
       {/* 로그인 버튼 그룹 */}
@@ -355,47 +346,47 @@ export default function LoginPage() {
           {[
             {
               q: "완전 무료인가요?",
-              a: "기본 참여 무료 · 토큰은 참여로 쌓임 · 유료 생기면 먼저 공지",
+              a: "시작하고 설문 참여 같은 기본 흐름은 무료로 시작해요. 토큰은 적중 등으로 쌓이고, 고수 선택픽이나 고수와의 소통에 쓰일 수 있어요. 유료 과금이 생기면 사전 공지합니다.",
             },
             {
-              q: "매일 해야 하나요?",
-              a: "아니요 · 빠져도 패널티 없음",
+              q: "매일 해야 하나요? 빠지면 불이익이 있나요?",
+              a: "전혀요. 빠진 날은 그냥 기록이 없는 것뿐이에요. 가능한 날만 참여해도 되고, 참여할수록 내 누적 정확도가 쌓이는 구조라 부담 없이 시작할 수 있어요.",
             },
             {
-              q: "정확도가 낮으면?",
-              a: "이용 제한 없음 · 높을수록 반영 많음",
+              q: "정확도가 낮으면 어떻게 되나요?",
+              a: "서비스 이용에는 아무 제한이 없어요. 다만 정확도가 낮으면 고수 강화예측에 반영되는 내 가중치가 낮아지고, 높으면 커뮤니티 예측에 내 의견이 더 많이 반영됩니다. 잘 못 맞춰도 계속 참여하는 것 자체가 의미 있어요.",
             },
             {
-              q: "투자 참고 삼아도 되나요?",
-              a: "투자 조언 아님 · 참고만 · 본인 책임",
+              q: "이걸로 실제 투자 결정을 해도 되나요?",
+              a: "본 서비스는 투자 조언이 아닙니다. 집단 예측 데이터를 재미로 확인하는 서비스예요. 실제 투자 결정은 반드시 본인의 판단과 책임 하에 하세요.",
             },
             {
-              q: "고수 예측은?",
-              a: "참여·데이터 많을수록 신뢰 ↑",
+              q: "고수 강화예측은 언제부터 믿을 수 있나요?",
+              a: "참여자가 많고 누적 데이터가 쌓일수록 신뢰도가 올라갑니다. 잘 맞추는 사람의 의견은 더 크게, 항상 틀리는 사람의 의견은 반대 방향으로 반영되기 때문에 단순 다수결보다 정교해요.",
             },
             {
-              q: "고수랑 어떻게?",
-              a: '「고수」탭 · 토큰 차감 → 고수 수락 시 전달 · 답장 받기 무료',
+              q: "고수랑 어떻게 소통하나요?",
+              a: '로그인 후 하단 「고수」 탭 또는 대시보드의 "순위권 고수에게 질문 보내기"에서 메시지를 보낼 수 있어요. 보낼 때에는 토큰이 차감되고, 고수가 해당 팁을 수락할 때까지 정산 전(에스크로) 상태였다가 고수 수락 시 전달됩니다. 고수의 답장 자체에는 토큰이 들지 않아요.',
             },
             {
-              q: "결과 조작?",
-              a: "장 마감 후 외부 데이터로 자동 · 수동 수정 없음",
+              q: "예측 결과가 조작될 수 있나요?",
+              a: "장 마감 후 코스피 등락은 외부 금융 데이터(yfinance)에서 자동으로 가져옵니다. 운영자가 임의로 결과를 수정할 수 없는 구조예요.",
             },
             {
-              q: "개인정보?",
-              a: "로그인 시 이름·이메일 · 메시지(사용 시) 저장 · 자세히는 처리방침",
+              q: "개인정보가 수집되나요?",
+              a: "소셜 로그인 시 이름·이메일이 저장됩니다. 고수 소통을 사용하면 메시지 내용도 서버에 저장돼요. 자세한 항목·보관은 개인정보처리방침을 확인해 주세요. 위치정보 등은 수집하지 않아요.",
             },
             {
-              q: "알림?",
-              a: "설정 → 브라우저 알림 · 앱 없이 가능",
+              q: "알림은 어떻게 받나요?",
+              a: "로그인 후 설정 페이지에서 '브라우저 알림 허용'을 탭하면 바로 연결돼요. 매일 밤 22:00에 알림이 오고, 탭하면 설문 페이지로 이동해요. 앱 설치 없이 바로 사용 가능합니다.",
             },
             {
-              q: "텔레그램?",
-              a: "필수 아님 · 알림만으로 OK · 텔레그램은 편하면 선택",
+              q: "텔레그램이 꼭 필요한가요?",
+              a: "아니에요! 브라우저 알림만으로 충분해요. 텔레그램은 선택 사항이에요. 매번 앱을 열기 귀찮다면 텔레그램 봇을 연결하면 메시지에서 바로 참여할 수 있어서 더 편리하긴 해요.",
             },
             {
-              q: "알림 안 옴",
-              a: "설정 허용 확인 · 아이폰은 Safari 추가 권장 · 문의 forsmartonly@gmail.com",
+              q: "알림이 안 와요",
+              a: "① 설정 → 브라우저 알림이 '연동됨'인지 확인해주세요. ② 기기 설정에서 브라우저 알림이 허용돼 있는지 확인해주세요. ③ iPhone은 Safari에서 홈 화면에 추가 후 알림이 작동해요. 해결이 안 되면 forsmartonly@gmail.com으로 문의해 주세요.",
             },
           ].map((item, i) => (
             <FaqItem key={i} q={item.q} a={item.a} />
@@ -424,7 +415,7 @@ function FaqItem({ q, a }: { q: string; a: string }) {
       </button>
       {open && (
         <div className="px-5 pb-5 border-t border-[#333] pt-4">
-          <p className="text-base sm:text-lg text-gray-300 leading-relaxed font-bold">{a}</p>
+          <p className="text-base sm:text-lg text-gray-300 leading-relaxed font-medium">{a}</p>
         </div>
       )}
     </div>
