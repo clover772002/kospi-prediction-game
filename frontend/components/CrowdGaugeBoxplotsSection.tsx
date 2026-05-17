@@ -286,7 +286,7 @@ export default function CrowdGaugeBoxplotsSection() {
 
   return (
     <div className="bg-[#1A1A1A] rounded-2xl p-5 border border-[#2A2A2A] fade-up-3 space-y-4">
-      <p className="font-bold text-base text-white">전체 예측 방향·확신도</p>
+      <p className="font-bold text-base text-white">전체 예측 방향/확신분포</p>
 
       {err ? (
         <p className="text-sm text-red-400 rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-2">{err}</p>
