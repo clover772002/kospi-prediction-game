@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""일일 방향 단톡방: 상승팀(up) / 하락팀(down), 설문 참여자만, 장 마감 후 종료."""
+"""일일 단톡방: 상승·하락 한 방, 설문 참여자만, 장 마감 후 종료."""
 from __future__ import annotations
 
 import logging
@@ -30,7 +30,7 @@ def _team_label(side: str) -> str:
 
 
 def _display_label(masked: str, side: str) -> str:
-    """채팅에 보이는 이름: 초성 닉 + 팀 표시."""
+    """채팅에 보이는 이름: 초성 닉 + 예측 방향."""
     tag = "↑상승" if side == "up" else "↓하락"
     return f"{masked}[{tag}]"
 
@@ -65,7 +65,7 @@ def _user_response_side(supabase: Client, user_id: str, survey_date: str) -> str
     return _side_from_kospi_answer(bool(ka))
 
 
-def _count_side_members(supabase: Client, survey_date: str) -> dict[str, int]:
+def _count_members(supabase: Client, survey_date: str) -> dict[str, int]:
     res = (
         supabase.table("survey_responses")
         .select("kospi_answer")
@@ -78,16 +78,15 @@ def _count_side_members(supabase: Client, survey_date: str) -> dict[str, int]:
             up += 1
         elif r.get("kospi_answer") is False:
             down += 1
-    return {"up": up, "down": down}
+    return {"up": up, "down": down, "total": len(res.data or [])}
 
 
-def _user_message_count(supabase: Client, user_id: str, survey_date: str, side: str) -> int:
+def _user_message_count(supabase: Client, user_id: str, survey_date: str) -> int:
     try:
         r = (
             supabase.table("direction_room_messages")
             .select("id", count="exact", head=True)
             .eq("survey_date", survey_date)
-            .eq("side", side)
             .eq("user_id", user_id)
             .execute()
         )
@@ -104,7 +103,7 @@ def build_status_payload(
 ) -> dict[str, Any]:
     side = _user_response_side(supabase, user_id, survey_date)
     closed = _room_closed(supabase, survey_date)
-    counts = _count_side_members(supabase, survey_date)
+    counts = _count_members(supabase, survey_date)
     my_name_row = supabase.table("users").select("name").eq("id", user_id).limit(1).execute()
     my_name = my_name_row.data[0].get("name") if my_name_row.data else None
     my_masked = _masked_name(my_name)
@@ -127,7 +126,7 @@ def build_status_payload(
         "can_read": can_access,
         "can_send": can_send,
         "send_blocked_reason": (
-            "이 거래일 설문에 참여한 뒤 이용할 수 있습니다."
+            "오늘 설문에 참여하면 단톡방을 이용할 수 있습니다."
             if not can_access
             else ("장 마감 후에는 새 메시지를 보낼 수 없습니다." if closed else None)
         ),
@@ -141,20 +140,18 @@ def list_room_messages(
     *,
     limit: int = 80,
 ) -> list[dict[str, Any]]:
-    side = _user_response_side(supabase, user_id, survey_date)
-    if not side:
-        raise HTTPException(status_code=403, detail="이 날짜 설문에 참여한 사용자만 단톡방을 볼 수 있습니다.")
+    if not _user_response_side(supabase, user_id, survey_date):
+        raise HTTPException(status_code=403, detail="오늘 설문에 참여한 사용자만 단톡방을 볼 수 있습니다.")
 
     try:
-        q = (
+        rows = (
             supabase.table("direction_room_messages")
-            .select("id, user_id, body, created_at")
+            .select("id, user_id, body, side, created_at")
             .eq("survey_date", survey_date)
-            .eq("side", side)
             .order("created_at", desc=True)
             .limit(min(limit, 120))
+            .execute()
         )
-        rows = q.execute()
     except Exception as e:
         logger.exception("direction_room_messages 조회 실패: %s", e)
         raise HTTPException(
@@ -176,6 +173,9 @@ def list_room_messages(
     out: list[dict[str, Any]] = []
     for r in data:
         uid = str(r["user_id"])
+        msg_side = str(r.get("side") or "up")
+        if msg_side not in ("up", "down"):
+            msg_side = "up"
         masked = names.get(uid, "익명")
         out.append({
             "id": str(r["id"]),
@@ -183,9 +183,9 @@ def list_room_messages(
             "body": r["body"],
             "created_at": r["created_at"],
             "masked_name": masked,
-            "display_label": _display_label(masked, side),
+            "display_label": _display_label(masked, msg_side),
             "is_mine": uid == user_id,
-            "side": side,
+            "side": msg_side,
         })
     return out
 
@@ -204,12 +204,12 @@ def post_room_message(
 
     side = _user_response_side(supabase, user_id, survey_date)
     if not side:
-        raise HTTPException(status_code=403, detail="이 날짜 설문에 참여한 뒤 메시지를 보낼 수 있습니다.")
+        raise HTTPException(status_code=403, detail="오늘 설문에 참여한 뒤 메시지를 보낼 수 있습니다.")
 
     if _room_closed(supabase, survey_date):
         raise HTTPException(status_code=403, detail="장이 마감되어 이 단톡방은 종료되었습니다.")
 
-    if _user_message_count(supabase, user_id, survey_date, side) >= MAX_MSG_PER_USER_DAY:
+    if _user_message_count(supabase, user_id, survey_date) >= MAX_MSG_PER_USER_DAY:
         raise HTTPException(status_code=429, detail="오늘 보낼 수 있는 메시지 한도에 도달했습니다.")
 
     my_row = supabase.table("users").select("name").eq("id", user_id).limit(1).execute()

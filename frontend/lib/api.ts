@@ -912,7 +912,7 @@ export interface DirectionChatStatus {
   my_team_label: string | null;
   my_masked_name: string;
   my_display_label: string;
-  member_counts: { up: number; down: number };
+  member_counts: { up: number; down: number; total: number };
   max_body_len: number;
   can_read: boolean;
   can_send: boolean;

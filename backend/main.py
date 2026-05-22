@@ -2901,7 +2901,7 @@ async def expert_chat_reply(
     return out
 
 
-# ─── 방향 단톡방 (거래일·상승/하락 팀, 설문 참여자만, 장 마감 후 종료) ───
+# ─── 일일 단톡방 (상승·하락 한 방, 설문 참여자만, 장 마감 후 종료) ───
 
 
 class DirectionChatMessageBody(BaseModel):
@@ -2934,7 +2934,7 @@ async def direction_chat_messages(
     current_user=Depends(get_current_user),
     supabase: Client = Depends(get_supabase),
 ):
-    """내 팀(상승/하락) 단톡 메시지 — 해당일 설문 참여자만."""
+    """오늘 단톡 메시지(한 방) — 해당일 설문 참여자만."""
     user_id = str(current_user.id)
     sd = survey_date.strip() if survey_date and survey_date.strip() else today_kst()
     if len(sd) != 10:
