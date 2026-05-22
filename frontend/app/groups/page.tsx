@@ -165,7 +165,7 @@ export default function GroupsPage() {
   }
 
   return (
-    <main className="relative max-w-md mx-auto min-h-screen pb-28 px-5 text-white">
+    <main className="relative max-w-md mx-auto min-h-screen app-page-tab-pad px-5 text-white">
       <StaleRefreshIndicator show={revalidating && groups !== null} tone="emerald" />
       <AppAmbientBackground />
       <div className="relative z-10">

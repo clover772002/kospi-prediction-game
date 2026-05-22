@@ -634,7 +634,7 @@ export default function DashboardPage() {
   };
 
   return (
-    <main className="max-w-md mx-auto min-h-screen pb-36 px-5 relative text-[1.0625rem] sm:text-lg">
+    <main className="max-w-md mx-auto min-h-screen app-page-tab-pad px-5 relative text-[1.0625rem] sm:text-lg">
       <StaleRefreshIndicator show={revalidating && !!dash && !!user} tone="sky" />
       <AppAmbientBackground />
       <div className="relative z-10">

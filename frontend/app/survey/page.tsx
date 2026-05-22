@@ -605,7 +605,7 @@ function SurveyPageInner() {
     !!nextSurvey?.is_open && (status !== "open" || alreadyAnswered || submitted);
 
   return (
-    <main className="relative w-full min-h-screen pb-36 min-w-0 box-border text-[1.0625rem] sm:text-lg px-4 sm:px-5">
+    <main className="relative w-full min-h-screen app-page-tab-pad min-w-0 box-border text-[1.0625rem] sm:text-lg px-4 sm:px-5">
       <StaleRefreshIndicator show={revalidating && !!today} tone="violet" />
       <AppAmbientBackground />
       <div className="relative z-10">

@@ -435,6 +435,11 @@ body {
   box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.42);
 }
 
+/* 2단 탭(설문·단톡 + 보조 메뉴) 하단 여백 */
+.app-page-tab-pad {
+  padding-bottom: calc(6.25rem + env(safe-area-inset-bottom, 0px));
+}
+
 @keyframes appNavTopGlow {
   0%, 100% { opacity: 0.55; transform: scaleX(0.92); }
   50% { opacity: 1; transform: scaleX(1); }

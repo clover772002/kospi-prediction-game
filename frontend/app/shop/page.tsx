@@ -158,7 +158,7 @@ function ShopInner() {
   }
 
   return (
-    <main className="relative max-w-md mx-auto min-h-screen pb-36 px-5">
+    <main className="relative max-w-md mx-auto min-h-screen app-page-tab-pad px-5">
       <StaleRefreshIndicator show={revalidating && !!catalog} tone="amber" />
       <AppAmbientBackground />
       <div className="relative z-10 space-y-6 pt-8">

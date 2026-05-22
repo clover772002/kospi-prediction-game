@@ -158,7 +158,7 @@ export default function TeamChatPage() {
 
   return (
     <div
-      className={`relative flex min-h-[100dvh] flex-col pb-[calc(4.5rem+env(safe-area-inset-bottom))] text-white ${
+      className={`relative flex min-h-[100dvh] flex-col app-page-tab-pad text-white ${
         crownFx.screenZoom ? "team-chat-room-zoom" : ""
       }`}
     >

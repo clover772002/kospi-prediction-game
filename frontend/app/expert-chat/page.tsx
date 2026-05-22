@@ -252,7 +252,7 @@ export default function ExpertChatPage() {
     return (
       <>
         <AppAmbientBackground />
-        <main className="relative z-10 mx-auto min-h-screen max-w-md px-4 pb-28 pt-6">
+        <main className="relative z-10 mx-auto min-h-screen max-w-md px-4 app-page-tab-pad pt-6">
           <h1 className="mb-4 text-center text-2xl font-black text-white">고수 소통</h1>
           {me && eligibility ? (
             <div className="mb-4">
@@ -279,7 +279,7 @@ export default function ExpertChatPage() {
   return (
     <>
       <AppAmbientBackground />
-      <main className="relative z-10 mx-auto min-h-screen max-w-md px-4 pb-28 pt-5">
+      <main className="relative z-10 mx-auto min-h-screen max-w-md px-4 app-page-tab-pad pt-5">
         <div className="mb-4 flex items-center justify-between gap-2">
           <Link href="/dashboard" className="text-xs text-gray-500 hover:text-gray-300">
             ← 대시보드

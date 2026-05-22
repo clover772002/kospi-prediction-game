@@ -245,7 +245,7 @@ export default function SetupPage() {
   };
 
   return (
-    <main className="relative max-w-md mx-auto min-h-screen pb-36 px-5">
+    <main className="relative max-w-md mx-auto min-h-screen app-page-tab-pad px-5">
       <AppAmbientBackground />
       <div className="relative z-10">
       {loading && !user ? (
