@@ -49,12 +49,50 @@ def _accuracy_pct_for_user(acc_map: dict, pred_count: dict, uid: str) -> int | N
     return round(float(rate) * 100)
 
 
-def _display_label(masked: str, side: str, accuracy_pct: int | None = None) -> str:
-    """채팅에 보이는 이름: 초성 닉 + 방향 + 누적 적중률."""
+def _display_label(
+    masked: str,
+    side: str,
+    accuracy_pct: int | None = None,
+    *,
+    is_accuracy_leader: bool = False,
+) -> str:
+    """채팅에 보이는 이름: (왕관) 초성 닉 + 방향 + 누적 적중률."""
+    crown = "👑 " if is_accuracy_leader else ""
     tag = "↑상승" if side == "up" else "↓하락"
     if accuracy_pct is not None:
-        return f"{masked}[{tag}·적중{accuracy_pct}%]"
-    return f"{masked}[{tag}]"
+        return f"{crown}{masked}[{tag}·적중{accuracy_pct}%]"
+    return f"{crown}{masked}[{tag}]"
+
+
+def _room_participant_user_ids(supabase: Client, survey_date: str) -> list[str]:
+    """해당 거래일 설문 참여자(이 방 인원)."""
+    res = (
+        supabase.table("survey_responses")
+        .select("user_id")
+        .eq("survey_date", survey_date)
+        .execute()
+    )
+    return list({str(r["user_id"]) for r in (res.data or []) if r.get("user_id")})
+
+
+def _room_accuracy_leader_uid(
+    supabase: Client,
+    survey_date: str,
+    acc_map: dict,
+    pred_count: dict,
+) -> str | None:
+    """방 참여자 중 누적 적중률 1위(동률 시 참여 일수 많은 순). 매 조회마다 재계산."""
+    participants = _room_participant_user_ids(supabase, survey_date)
+    best: tuple[int, int, str] | None = None
+    for uid in participants:
+        pct = _accuracy_pct_for_user(acc_map, pred_count, uid)
+        if pct is None:
+            continue
+        total = int(pred_count.get(uid) or 0)
+        key = (pct, total, uid)
+        if best is None or key > best:
+            best = key
+    return best[2] if best else None
 
 
 def _room_closed(supabase: Client, survey_date: str) -> bool:
@@ -181,13 +219,24 @@ def build_status_payload(
     my_name = my_name_row.data[0].get("name") if my_name_row.data else None
     my_masked = _masked_name(my_name)
     my_accuracy_pct: int | None = None
+    leader_uid: str | None = None
     if side:
         try:
             acc_map, pred_count, _ = get_accuracy_data(supabase)
             my_accuracy_pct = _accuracy_pct_for_user(acc_map, pred_count, user_id)
+            leader_uid = _room_accuracy_leader_uid(supabase, survey_date, acc_map, pred_count)
         except Exception as ex:
             logger.warning("단톡: 적중률 조회 스킵 — %s", ex)
-    my_display = _display_label(my_masked, side, my_accuracy_pct) if side else my_masked
+    my_display = (
+        _display_label(
+            my_masked,
+            side,
+            my_accuracy_pct,
+            is_accuracy_leader=leader_uid is not None and str(user_id) == leader_uid,
+        )
+        if side
+        else my_masked
+    )
 
     can_access = side is not None
     can_send = can_access and not closed
@@ -207,6 +256,7 @@ def build_status_payload(
         "my_masked_name": my_masked,
         "my_display_label": my_display,
         "my_accuracy_pct": my_accuracy_pct,
+        "accuracy_leader_user_id": leader_uid,
         "member_counts": counts,
         "max_body_len": MAX_BODY_LEN,
         "can_read": can_access,
@@ -252,16 +302,20 @@ def list_room_messages(
     if not data:
         return []
 
-    uids = list({str(r["user_id"]) for r in data})
+    msg_uids = list({str(r["user_id"]) for r in data})
+    participant_uids = _room_participant_user_ids(supabase, survey_date)
+    lookup_uids = list({*msg_uids, *participant_uids})
     names: dict[str, str] = {}
     acc_map: dict = {}
     pred_count: dict = {}
-    if uids:
-        urows = supabase.table("users").select("id, name").in_("id", uids).execute()
+    leader_uid: str | None = None
+    if lookup_uids:
+        urows = supabase.table("users").select("id, name").in_("id", lookup_uids).execute()
         for u in urows.data or []:
             names[str(u["id"])] = _masked_name(u.get("name"))
         try:
             acc_map, pred_count, _ = get_accuracy_data(supabase)
+            leader_uid = _room_accuracy_leader_uid(supabase, survey_date, acc_map, pred_count)
         except Exception as ex:
             logger.warning("단톡 메시지: 적중률 집계 스킵 — %s", ex)
 
@@ -273,14 +327,18 @@ def list_room_messages(
             msg_side = "up"
         masked = names.get(uid, "익명")
         acc_pct = _accuracy_pct_for_user(acc_map, pred_count, uid)
+        is_leader = leader_uid is not None and uid == leader_uid
         out.append({
             "id": str(r["id"]),
             "user_id": uid,
             "body": r["body"],
             "created_at": r["created_at"],
             "masked_name": masked,
-            "display_label": _display_label(masked, msg_side, acc_pct),
+            "display_label": _display_label(
+                masked, msg_side, acc_pct, is_accuracy_leader=is_leader,
+            ),
             "accuracy_pct": acc_pct,
+            "is_accuracy_leader": is_leader,
             "is_mine": uid == user_id,
             "side": msg_side,
         })
@@ -315,9 +373,11 @@ def post_room_message(
     my_row = supabase.table("users").select("name").eq("id", user_id).limit(1).execute()
     my_masked = _masked_name(my_row.data[0].get("name") if my_row.data else None)
     my_acc_pct: int | None = None
+    leader_uid: str | None = None
     try:
         acc_map, pred_count, _ = get_accuracy_data(supabase)
         my_acc_pct = _accuracy_pct_for_user(acc_map, pred_count, user_id)
+        leader_uid = _room_accuracy_leader_uid(supabase, survey_date, acc_map, pred_count)
     except Exception as ex:
         logger.warning("단톡 전송: 적중률 조회 스킵 — %s", ex)
 
@@ -351,8 +411,14 @@ def post_room_message(
             "body": text,
             "created_at": row.get("created_at") or datetime.now(timezone.utc).isoformat(),
             "masked_name": my_masked,
-            "display_label": _display_label(my_masked, side, my_acc_pct),
+            "display_label": _display_label(
+                my_masked,
+                side,
+                my_acc_pct,
+                is_accuracy_leader=leader_uid is not None and str(user_id) == leader_uid,
+            ),
             "accuracy_pct": my_acc_pct,
+            "is_accuracy_leader": leader_uid is not None and str(user_id) == leader_uid,
             "is_mine": True,
             "side": side,
         },

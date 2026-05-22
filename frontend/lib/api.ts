@@ -927,6 +927,7 @@ export interface DirectionChatStatus {
   my_masked_name: string;
   my_display_label: string;
   my_accuracy_pct?: number | null;
+  accuracy_leader_user_id?: string | null;
   member_counts: { up: number; down: number; total: number };
   max_body_len: number;
   can_read: boolean;
@@ -942,6 +943,7 @@ export interface DirectionChatMessageRow {
   masked_name: string;
   display_label: string;
   accuracy_pct?: number | null;
+  is_accuracy_leader?: boolean;
   is_mine: boolean;
   side: "up" | "down";
 }
