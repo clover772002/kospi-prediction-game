@@ -80,6 +80,11 @@ from expert_chat_service import (
     post_expert_reply,
     send_participant_message,
 )
+from direction_chat_service import (
+    build_status_payload as build_direction_chat_status,
+    list_room_messages as list_direction_chat_messages,
+    post_room_message as post_direction_chat_message,
+)
 from accuracy_aggregate import clear_accuracy_cache, get_accuracy_data
 from expert_tier import (
     SEGMENT_PRED_COUNT_MIN,
@@ -2894,6 +2899,62 @@ async def expert_chat_reply(
         "expert_chat",
     )
     return out
+
+
+# ─── 방향 단톡방 (거래일·상승/하락 팀, 설문 참여자만, 장 마감 후 종료) ───
+
+
+class DirectionChatMessageBody(BaseModel):
+    body: str
+    survey_date: str | None = None
+
+
+@app.get("/api/direction-chat/status")
+async def direction_chat_status(
+    survey_date: str | None = None,
+    current_user=Depends(get_current_user),
+    supabase: Client = Depends(get_supabase),
+):
+    """단톡방 상태: 내 팀·인원·개방 여부(장 마감 전)."""
+    user_id = str(current_user.id)
+    sd = survey_date.strip() if survey_date and survey_date.strip() else today_kst()
+    if len(sd) != 10:
+        raise HTTPException(status_code=400, detail="survey_date 형식 오류 (YYYY-MM-DD)")
+    try:
+        apply_pending_presubmits(supabase, user_id)
+    except Exception as ex:
+        logger.warning("direction-chat status: 예약 설문 적용 스킵 — %s", ex)
+    return build_direction_chat_status(supabase, user_id, sd)
+
+
+@app.get("/api/direction-chat/messages")
+async def direction_chat_messages(
+    survey_date: str | None = None,
+    limit: int = 80,
+    current_user=Depends(get_current_user),
+    supabase: Client = Depends(get_supabase),
+):
+    """내 팀(상승/하락) 단톡 메시지 — 해당일 설문 참여자만."""
+    user_id = str(current_user.id)
+    sd = survey_date.strip() if survey_date and survey_date.strip() else today_kst()
+    if len(sd) != 10:
+        raise HTTPException(status_code=400, detail="survey_date 형식 오류 (YYYY-MM-DD)")
+    msgs = list_direction_chat_messages(supabase, user_id, sd, limit=limit)
+    return {"messages": msgs, "survey_date": sd}
+
+
+@app.post("/api/direction-chat/message")
+async def direction_chat_post_message(
+    body: DirectionChatMessageBody,
+    current_user=Depends(get_current_user),
+    supabase: Client = Depends(get_supabase),
+):
+    """내 팀 단톡에 메시지 전송(장 마감 전·설문 참여자만)."""
+    user_id = str(current_user.id)
+    sd = (body.survey_date or "").strip() or today_kst()
+    if len(sd) != 10:
+        raise HTTPException(status_code=400, detail="survey_date 형식 오류 (YYYY-MM-DD)")
+    return post_direction_chat_message(supabase, user_id, sd, body.body)
 
 
 @app.get("/api/next-survey")

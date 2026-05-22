@@ -901,3 +901,57 @@ export async function postExpertChatAcceptTip(
     body: JSON.stringify(body),
   });
 }
+
+/** 방향 단톡방: 상승팀 / 하락팀 (거래일·설문 참여자만) */
+export interface DirectionChatStatus {
+  survey_date: string;
+  room_open: boolean;
+  room_closed_reason: string | null;
+  answered: boolean;
+  my_side: "up" | "down" | null;
+  my_team_label: string | null;
+  my_masked_name: string;
+  my_display_label: string;
+  member_counts: { up: number; down: number };
+  max_body_len: number;
+  can_read: boolean;
+  can_send: boolean;
+  send_blocked_reason: string | null;
+}
+
+export interface DirectionChatMessageRow {
+  id: string;
+  user_id: string;
+  body: string;
+  created_at: string;
+  masked_name: string;
+  display_label: string;
+  is_mine: boolean;
+  side: "up" | "down";
+}
+
+export async function getDirectionChatStatus(
+  accessToken: string,
+  surveyDate?: string,
+): Promise<DirectionChatStatus> {
+  const q = surveyDate?.trim() ? `?survey_date=${encodeURIComponent(surveyDate.trim())}` : "";
+  return authFetch<DirectionChatStatus>(`/api/direction-chat/status${q}`, accessToken);
+}
+
+export async function getDirectionChatMessages(
+  accessToken: string,
+  surveyDate?: string,
+): Promise<{ messages: DirectionChatMessageRow[]; survey_date: string }> {
+  const q = surveyDate?.trim() ? `?survey_date=${encodeURIComponent(surveyDate.trim())}` : "";
+  return authFetch(`/api/direction-chat/messages${q}`, accessToken);
+}
+
+export async function postDirectionChatMessage(
+  accessToken: string,
+  body: { body: string; survey_date?: string | null },
+): Promise<{ ok: boolean; message: DirectionChatMessageRow }> {
+  return authFetch("/api/direction-chat/message", accessToken, {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}

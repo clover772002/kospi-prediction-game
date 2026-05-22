@@ -1,6 +1,7 @@
 ﻿"use client";
 
 import { useEffect, useState, useCallback, useRef, Suspense, useLayoutEffect } from "react";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { getToday, getTodaySummary, getExpertChatEligibility, resolveApiBase, TodaySurvey } from "@/lib/api";
@@ -1057,6 +1058,13 @@ function SurveyPageInner() {
             <p className="text-base sm:text-lg text-gray-500 px-4 pt-4 pb-2">📈 KODEX200 (코스피200 추종)</p>
             <KospiChart />
           </div>
+
+          <Link
+            href="/team-chat"
+            className="block rounded-2xl border border-violet-500/35 bg-violet-500/10 px-4 py-3.5 text-center text-sm font-bold text-violet-200 hover:bg-violet-500/15"
+          >
+            같은 방향 팀 단톡방 들어가기 →
+          </Link>
         </div>
       )}
 

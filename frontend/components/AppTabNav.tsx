@@ -9,6 +9,7 @@ import ExpertChatTabGate from "@/components/ExpertChatTabGate";
 
 const TABS = [
   { href: "/survey", label: "설문", icon: "📝", activeClass: "app-tab-survey" },
+  { href: "/team-chat", label: "단톡", icon: "🗨️", activeClass: "app-tab-team-chat" },
   { href: "/dashboard", label: "대시보드", icon: "📊", activeClass: "app-tab-dashboard" },
   { href: "/expert-chat", label: "고수", icon: "💬", activeClass: "app-tab-expert-chat", expertGate: true },
   { href: "/shop", label: "아이템", icon: "💎", activeClass: "app-tab-shop" },
