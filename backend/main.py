@@ -2591,7 +2591,13 @@ async def get_my_response(
 ):
     """특정 날짜(기본=오늘) 내 응답 조회"""
     user_id = str(current_user.id)
-    target_date = survey_date or today_kst()
+    target_date = _survey_date_key(survey_date) if survey_date else today_kst()
+    if not target_date:
+        target_date = today_kst()
+    try:
+        apply_pending_presubmits(supabase, user_id)
+    except Exception as ex:
+        logger.warning("my-response: 예약 설문 적용 스킵 — %s", ex)
     res = supabase.table("survey_responses") \
         .select("kospi_answer, gauge_position, tokens_bet") \
         .eq("user_id", user_id) \
@@ -3621,6 +3627,10 @@ async def get_dashboard(
     user_id = str(current_user.id)
 
     try:
+        try:
+            apply_pending_presubmits(supabase, user_id)
+        except Exception as ex:
+            logger.warning("대시보드: 예약 설문 적용 스킵 — %s", ex)
         try:
             await _persist_kospi_survey_close_if_needed(supabase, today_kst())
         except Exception as ex:

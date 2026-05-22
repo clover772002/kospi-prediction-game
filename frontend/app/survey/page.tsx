@@ -241,34 +241,36 @@ function SurveyPageInner() {
     return () => { if (priceTimerRef.current) clearInterval(priceTimerRef.current); };
   }, [fetchKospiPrice]);
 
-  const checkMyResponse = useCallback(async (tok: string) => {
+  const checkMyResponse = useCallback(async (tok: string, surveyDate?: string) => {
+    const q = surveyDate ? `?survey_date=${encodeURIComponent(surveyDate)}` : "";
     try {
-      const res = await fetch("/api/survey/my-response", {
+      const res = await fetch(`/api/survey/my-response${q}`, {
         cache: "no-store",
         headers: { Authorization: `Bearer ${tok}` },
       });
-      if (res.ok) {
-        const data = await res.json();
-        if (data.answered) {
-          setAlreadyAnswered(true);
-          setPreviousAnswer(data.kospi_answer);
-          const gp =
-            typeof data.gauge_position === "number"
-              ? data.gauge_position
-              : data.kospi_answer
-                ? 50
-                : -50;
-          setKospiAnswer(data.kospi_answer);
-          setGaugePosition(gp);
-        } else {
-          setAlreadyAnswered(false);
-          setPreviousAnswer(null);
-          setKospiAnswer(null);
-          setGaugePosition(10);
-        }
+      if (!res.ok) return false;
+      const data = await res.json();
+      if (surveyDate) return Boolean(data.answered);
+      if (data.answered) {
+        setAlreadyAnswered(true);
+        setPreviousAnswer(data.kospi_answer);
+        const gp =
+          typeof data.gauge_position === "number"
+            ? data.gauge_position
+            : data.kospi_answer
+              ? 50
+              : -50;
+        setKospiAnswer(data.kospi_answer);
+        setGaugePosition(gp);
+      } else {
+        setAlreadyAnswered(false);
+        setPreviousAnswer(null);
+        setKospiAnswer(null);
+        setGaugePosition(10);
       }
+      return Boolean(data.answered);
     } catch {
-      // 조회 실패는 무시 — 일반 설문 화면 표시
+      return false;
     }
   }, []);
 
@@ -313,6 +315,11 @@ function SurveyPageInner() {
       cancelled = true;
     };
   }, [token, nextSurvey?.survey_date, nextSurvey?.is_open]);
+
+  useEffect(() => {
+    if (!token || !today?.survey_date) return;
+    void checkMyResponse(token, today.survey_date.slice(0, 10));
+  }, [token, today?.survey_date, checkMyResponse]);
 
   useEffect(() => {
     if (!token || !today?.survey_date) return;
@@ -477,6 +484,8 @@ function SurveyPageInner() {
       setSubmitted(true);
       setAlreadyAnswered(true);
       setPreviousAnswer(kospiAnswer);
+      const sd = today?.survey_date?.slice(0, 10);
+      if (sd) void checkMyResponse(token, sd);
       void refreshPendingGrants();
     } catch (e: unknown) {
       const raw = e instanceof Error ? e.message : String(e);
@@ -520,6 +529,26 @@ function SurveyPageInner() {
       setNextSubmitted(true);
       setNextAlreadyAnswered(true);
       setNextPreviousAnswer(nextKospiAnswer);
+      if (nextSurvey.survey_date) {
+        const res = await fetch(
+          `/api/survey/my-response?survey_date=${encodeURIComponent(nextSurvey.survey_date)}`,
+          { cache: "no-store", headers: { Authorization: `Bearer ${token}` } },
+        );
+        if (res.ok) {
+          const data = await res.json();
+          if (data.answered) {
+            setNextAlreadyAnswered(true);
+            setNextPreviousAnswer(data.kospi_answer);
+            const gp =
+              typeof data.gauge_position === "number"
+                ? data.gauge_position
+                : data.kospi_answer
+                  ? 50
+                  : -50;
+            setNextGaugePosition(gp);
+          }
+        }
+      }
       void refreshPendingGrants();
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "오류가 발생했습니다.");
@@ -538,6 +567,9 @@ function SurveyPageInner() {
   const _kstNow = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Seoul" }));
   const _kstDay = _kstNow.getDay();
   const isWeekendKST = _kstDay === 0 || _kstDay === 6;
+  /** 당일 설문 제출 전에는 사전설문 UI를 가리고, 마감·결과·휴장·당일 완료 후에만 표시 */
+  const showNextPreSurvey =
+    !!nextSurvey?.is_open && (status !== "open" || alreadyAnswered || submitted);
 
   return (
     <main className="relative w-full min-h-screen pb-36 min-w-0 box-border text-[1.0625rem] sm:text-lg px-4 sm:px-5">
@@ -609,7 +641,7 @@ function SurveyPageInner() {
 
       {/* 설문 없음 — 대기중 vs 휴장일 구분 */}
       {/* 주말·no_survey 상태에서 다음 거래일 예측 섹션 */}
-      {(status === "no_survey" || isWeekendKST) && nextSurvey?.is_open && (
+      {(status === "no_survey" || isWeekendKST) && showNextPreSurvey && (
         <div className="mt-4 space-y-4">
           <div className="border-t border-[#2A2A2A] pt-5">
             {nextMyResponseLoading ? (
@@ -855,6 +887,45 @@ function SurveyPageInner() {
             <p className="text-base sm:text-lg text-gray-500 px-4 pt-4 pb-2">📈 KODEX200 (코스피200 추종)</p>
             <KospiChart />
           </div>
+
+          {showNextPreSurvey && (
+            <div className="mt-4 space-y-4 border-t border-[#2A2A2A] pt-5">
+              <p className="text-center text-base text-amber-200/90 font-bold">
+                {getSurveyDayLabel(nextSurvey!.survey_date).label} · 사전 참여
+              </p>
+              {nextMyResponseLoading ? (
+                <div className="flex flex-col items-center py-6 gap-2">
+                  <div className="w-8 h-8 border-2 border-white/20 border-t-amber-400 rounded-full animate-spin" />
+                  <p className="text-base text-gray-500">사전 참여 여부 확인 중…</p>
+                </div>
+              ) : nextSubmitted || nextAlreadyAnswered ? (
+                <div className="flex flex-col gap-3 w-full items-stretch">
+                  <p className="text-center text-base text-emerald-400 font-bold">사전 예측 제출 완료</p>
+                  <GaugeBar value={nextGaugePosition} onChange={() => {}} tokens={userTokens} disabled beginnerTips />
+                </div>
+              ) : (
+                <>
+                  <SurveyGaugeWithPreview
+                    phase={nextGaugePhase}
+                    setPhase={setNextGaugePhase}
+                    gaugeValue={nextGaugePosition}
+                    onGaugeChange={(v) => { setNextGaugePosition(v); setNextKospiAnswer(v > 0); }}
+                    userTokens={userTokens}
+                    submitting={nextSubmitting}
+                    lockBtnClass="bg-amber-500 hover:bg-amber-400 disabled:bg-[#333] disabled:text-gray-500 text-white"
+                    submitBtnClass="bg-amber-500 hover:bg-amber-400 disabled:bg-[#333] disabled:text-gray-500 text-white"
+                    submitLabel="사전 예측 제출하기"
+                    onSubmit={handleNextSubmit}
+                  />
+                  {error ? (
+                    <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4 text-red-400 text-base text-center">
+                      {error}
+                    </div>
+                  ) : null}
+                </>
+              )}
+            </div>
+          )}
         </div>
       )}
 
@@ -954,6 +1025,24 @@ function SurveyPageInner() {
       {/* 설문 마감 후 — 읽기 전용 게이지 + 코스피 차트 */}
       {(status === "closed" || status === "result") && !isWeekendKST && (
         <div className="flex flex-col gap-4 mt-6 fade-up">
+          {!alreadyAnswered && previousAnswer === null && (
+            <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 px-4 py-4 text-center space-y-2">
+              <p className="text-amber-200 font-bold text-base">이 거래일 설문에 참여하지 않았습니다</p>
+              <p className="text-sm text-gray-400 leading-snug">
+                09:00 마감 전에 제출했거나, 전날 「사전 예측」으로 미리 넣었어야 합니다.
+                아래에서 참여 여부를 다시 확인해 주세요.
+              </p>
+              {token && today?.survey_date ? (
+                <button
+                  type="button"
+                  className="text-sm font-bold px-4 py-2 rounded-lg bg-white/10 hover:bg-white/15"
+                  onClick={() => void checkMyResponse(token, today.survey_date.slice(0, 10))}
+                >
+                  내 응답 다시 확인
+                </button>
+              ) : null}
+            </div>
+          )}
           {/* 예측 게이지 + 오늘 장 */}
           {(previousAnswer !== null || alreadyAnswered) && (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 w-full min-w-0">
@@ -999,7 +1088,7 @@ function SurveyPageInner() {
           </div>
 
           {/* 다음 거래일 미리 예측하기 (결과 공개 후) */}
-          {status === "result" && nextSurvey?.is_open && (
+          {showNextPreSurvey && (
             <div className="mt-2 space-y-4">
               <div className="border-t border-[#2A2A2A] pt-5">
                 {nextMyResponseLoading ? (
