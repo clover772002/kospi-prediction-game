@@ -25,11 +25,11 @@ function formatTime(iso: string): string {
 
 function bubbleClass(isMine: boolean, side: "up" | "down"): string {
   if (isMine) {
-    return side === "up"
-      ? "bg-emerald-600/85 text-white"
-      : "bg-rose-600/85 text-white";
+    return "bg-amber-400 text-gray-900";
   }
-  return "bg-[#2a2a2a] text-gray-100";
+  return side === "up"
+    ? "bg-red-600/90 text-white"
+    : "bg-blue-600/90 text-white";
 }
 
 export default function TeamChatPage() {
@@ -152,7 +152,7 @@ export default function TeamChatPage() {
           {status?.my_team_label ? (
             <span className="ml-2 text-gray-500">
               · 내 예측{" "}
-              <span className={mySide === "up" ? "text-emerald-400" : "text-rose-400"}>
+              <span className={mySide === "up" ? "text-red-400" : "text-blue-400"}>
                 {status.my_team_label}
               </span>
             </span>
