@@ -29,7 +29,7 @@ export default function PushConnectBanner({
 
   const title =
     context === "team-chat"
-      ? "단톡 알림이 안 올 수 있어요"
+      ? "소통방 알림이 안 올 수 있어요"
       : "알림이 이 기기에 안 올 수 있어요";
 
   let body: string;

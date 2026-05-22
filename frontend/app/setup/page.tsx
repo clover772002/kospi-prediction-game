@@ -383,7 +383,7 @@ export default function SetupPage() {
               { key: "challenge",      icon: "⚔️", label: "대결 신청·결과 알림", desc: "수시" },
               { key: "group_nudge",    icon: "📣", label: "그룹 독촉 알림",    desc: "수시" },
               { key: "expert_chat",    icon: "💬", label: "고수 소통 알림",    desc: "새 질문·답장" },
-              { key: "direction_chat", icon: "🗨️", label: "단톡 메시지 알림",  desc: "같은 방 새 메시지 · iPhone은 홈 화면 앱 또는 텔레그램" },
+              { key: "direction_chat", icon: "🗨️", label: "소통방 메시지 알림",  desc: "같은 방 새 메시지 · iPhone은 홈 화면 앱 또는 텔레그램" },
             ] as { key: keyof PushPreferences; icon: string; label: string; desc: string }[]).map(({ key, icon, label, desc }) => (
               <label key={key} className="flex items-center gap-3 cursor-pointer group">
                 <div className={`w-11 h-6 rounded-full transition-all flex-shrink-0 relative ${prefs[key] ? "bg-purple-600" : "bg-[#333]"}`}

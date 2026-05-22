@@ -1052,7 +1052,7 @@ function SurveyPageInner() {
             href="/team-chat"
             className="block rounded-2xl border border-violet-500/35 bg-violet-500/10 px-4 py-3.5 text-center text-sm font-bold text-violet-200 hover:bg-violet-500/15"
           >
-            오늘 단톡방 들어가기 →
+            오늘 소통방 들어가기 →
           </Link>
         </div>
       )}

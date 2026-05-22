@@ -153,7 +153,7 @@ export default function TeamChatPage() {
   const crownFx = useTeamChatCrownFx(status?.accuracy_leader_user_id, boot, messages);
 
   if (boot) {
-    return <PageLoadProgress label="단톡 불러오는 중…" accent="blue" />;
+    return <PageLoadProgress label="소통방 불러오는 중…" accent="blue" />;
   }
 
   return (
@@ -166,7 +166,7 @@ export default function TeamChatPage() {
       <TeamChatCrownFxLayer fx={crownFx} />
 
       <header className="relative z-10 shrink-0 border-b border-white/10 bg-black/40 px-4 py-3 backdrop-blur-sm">
-        <h1 className="text-base font-black">{status?.room_title ?? "단톡"}</h1>
+        <h1 className="text-base font-black">{status?.room_title ?? "소통방"}</h1>
         <p className="mt-0.5 text-xs text-gray-400">
           {surveyDate ? `${surveyDate} · 참여 ${total}명` : "불러오는 중…"}
           {status?.my_team_label ? (
@@ -279,7 +279,7 @@ export default function TeamChatPage() {
             </div>
           ) : status?.answered && !status.room_open ? (
             <p className="relative z-10 shrink-0 py-3 text-center text-xs text-gray-500">
-              이 거래일 방이 종료되었습니다. 다음 거래일 설문·사전 예측 후 새 단톡방이 열립니다.
+              이 거래일 방이 종료되었습니다. 다음 거래일 설문·사전 예측 후 새 소통방이 열립니다.
             </p>
           ) : status?.send_blocked_reason ? (
             <p className="relative z-10 shrink-0 py-3 text-center text-xs text-gray-500">

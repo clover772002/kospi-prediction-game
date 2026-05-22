@@ -241,7 +241,7 @@ def build_status_payload(
     can_access = side is not None
     can_send = can_access and not closed
     today = _today_str()
-    room_title = "오늘 단톡" if survey_date == today else "다음 거래일 단톡"
+    room_title = "오늘 소통방" if survey_date == today else "다음 거래일 소통방"
 
     return {
         "survey_date": survey_date,
@@ -262,7 +262,7 @@ def build_status_payload(
         "can_read": can_access,
         "can_send": can_send,
         "send_blocked_reason": (
-            "오늘 설문 또는 다음 거래일 사전 예측에 참여하면 단톡방을 이용할 수 있습니다."
+            "오늘 설문 또는 다음 거래일 사전 예측에 참여하면 소통방을 이용할 수 있습니다."
             if not can_access
             else ("장 마감 후에는 새 메시지를 보낼 수 없습니다." if closed else None)
         ),
@@ -295,7 +295,7 @@ def list_room_messages(
         logger.exception("direction_room_messages 조회 실패: %s", e)
         raise HTTPException(
             status_code=503,
-            detail="단톡방이 아직 준비되지 않았습니다. schema_direction_chat.sql을 적용해 주세요.",
+            detail="소통방이 아직 준비되지 않았습니다. schema_direction_chat.sql을 적용해 주세요.",
         ) from e
 
     data = list(reversed(rows.data or []))
@@ -375,7 +375,7 @@ def _send_direction_chat_telegram(
         if not chat_id:
             return False
         base = (os.getenv("PUBLIC_APP_URL") or "https://kospi-prediction-game.vercel.app").rstrip("/")
-        text = f"<b>{title}</b>\n{body}\n\n<a href=\"{base}/team-chat\">단톡 열기</a>"
+        text = f"<b>{title}</b>\n{body}\n\n<a href=\"{base}/team-chat\">소통방 열기</a>"
         with httpx.Client(timeout=10) as client:
             resp = client.post(
                 f"https://api.telegram.org/bot{token}/sendMessage",
@@ -411,7 +411,7 @@ def _notify_direction_chat_push(
     push_body = f"{sender_masked}[{tag}] {snippet}" if snippet else f"{sender_masked}[{tag}] 새 메시지"
     if len(push_body) > 180:
         push_body = push_body[:177] + "…"
-    title = "💬 단톡 새 메시지"
+    title = "💬 소통방 새 메시지"
 
     for uid in _room_participant_user_ids(supabase, survey_date):
         if uid == str(sender_id):
@@ -451,7 +451,7 @@ def post_room_message(
         )
 
     if _room_closed(supabase, survey_date):
-        raise HTTPException(status_code=403, detail="장이 마감되어 이 단톡방은 종료되었습니다.")
+        raise HTTPException(status_code=403, detail="장이 마감되어 이 소통방은 종료되었습니다.")
 
     if _user_message_count(supabase, user_id, survey_date) >= MAX_MSG_PER_USER_DAY:
         raise HTTPException(status_code=429, detail="오늘 보낼 수 있는 메시지 한도에 도달했습니다.")

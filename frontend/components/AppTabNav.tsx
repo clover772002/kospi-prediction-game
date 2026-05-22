@@ -18,7 +18,7 @@ type TabDef = {
 /** 메인: 오늘 할 일 */
 const PRIMARY_TABS: TabDef[] = [
   { href: "/survey", label: "설문", icon: "📝", activeClass: "app-tab-survey" },
-  { href: "/team-chat", label: "단톡", icon: "🗨️", activeClass: "app-tab-team-chat" },
+  { href: "/team-chat", label: "소통방", icon: "🗨️", activeClass: "app-tab-team-chat" },
 ];
 
 /** 보조: 기록·도구·설정 */
@@ -184,7 +184,7 @@ export default function AppTabNav() {
             aria-hidden
           />
 
-          {/* 메인: 설문 · 단톡 */}
+          {/* 메인: 설문 · 소통방 */}
           <div className="flex gap-1.5 px-2 pt-2 pb-1">
             {PRIMARY_TABS.map((tab) => (
               <TabButton

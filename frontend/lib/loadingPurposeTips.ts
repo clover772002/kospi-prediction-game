@@ -13,7 +13,7 @@ export const LOADING_PURPOSE_TIPS: LoadingPurposeTip[] = [
   { id: "expert", emoji: "⭐", text: "토큰으로 고수에게 질문을 보낼 수 있어요" },
   { id: "expert_reply", emoji: "💬", text: "고수 답장으로 시장 인사이트를 얻어요" },
   { id: "dashboard", emoji: "📊", text: "대시보드에서 적중률·순위를 확인해요" },
-  { id: "team_chat", emoji: "🗨️", text: "단톡에서 상승·하락 팀끼리 오늘 이야기를 나눠요" },
+  { id: "team_chat", emoji: "🗨️", text: "소통방에서 상승·하락 팀끼리 오늘 이야기를 나눠요" },
   { id: "gauge", emoji: "📈", text: "집단지성 게이지로 오늘 시장 분위기를 봐요" },
   { id: "expert_tab", emoji: "🔓", text: "토큰 210개 이상이면 고수 탭이 열려요" },
   { id: "group", emoji: "👥", text: "그룹을 만들고 친구와 함께 예측해요" },
