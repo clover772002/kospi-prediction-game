@@ -440,7 +440,6 @@ function SurveyPageInner() {
       };
       if (typeof data.current_tokens === "number") setUserTokens(data.current_tokens);
       if (data.is_global_top_expert) {
-        setIsGlobalTopExpert(true);
         const uid = userId ?? (await supabase.auth.getUser()).data.user?.id ?? null;
         if (uid) {
           setUserId(uid);
@@ -485,7 +484,6 @@ function SurveyPageInner() {
       };
       if (typeof data.current_tokens === "number") setUserTokens(data.current_tokens);
       if (data.is_global_top_expert) {
-        setIsGlobalTopExpert(true);
         const uid = userId ?? (await supabase.auth.getUser()).data.user?.id ?? null;
         if (uid) {
           setUserId(uid);
