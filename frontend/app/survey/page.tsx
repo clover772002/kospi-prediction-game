@@ -9,7 +9,6 @@ import { peekDashboardSnapshot } from "@/lib/tab-session-cache";
 import TopExpertNoticeBlock from "@/components/TopExpertNoticeBlock";
 import { markWasTopExpert } from "@/lib/top-expert-notice";
 import { formatApiErrorMessage } from "@/lib/format-api-error";
-import FlipClock from "@/components/FlipClock";
 import KospiChart from "@/components/KospiChart";
 import GaugeBar from "@/components/GaugeBar";
 import AppAmbientBackground from "@/components/AppAmbientBackground";
@@ -638,7 +637,7 @@ function SurveyPageInner() {
         );
       })()}
 
-      <div className="pt-4 pb-6 flex items-center justify-between gap-3">
+      <div className="pt-4 pb-6">
         <div>
           {(() => {
             if (isWeekendKST) {
@@ -673,9 +672,6 @@ function SurveyPageInner() {
               </>
             );
           })()}
-        </div>
-        <div className="shrink-0">
-          <FlipClock compact />
         </div>
       </div>
 
