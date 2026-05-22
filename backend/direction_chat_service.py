@@ -11,6 +11,7 @@ from fastapi import HTTPException
 from krx_calendar import next_trading_day_str, today_date_kst
 from supabase import Client
 
+from accuracy_aggregate import get_accuracy_data
 from survey_writes import apply_pending_presubmits
 
 logger = logging.getLogger(__name__)
@@ -36,9 +37,23 @@ def _team_label(side: str) -> str:
     return "상승" if side == "up" else "하락"
 
 
-def _display_label(masked: str, side: str) -> str:
-    """채팅에 보이는 이름: 초성 닉 + 예측 방향."""
+def _accuracy_pct_for_user(acc_map: dict, pred_count: dict, uid: str) -> int | None:
+    """누적 코스피 적중률(%). 정산·기록 없으면 None."""
+    key = str(uid)
+    total = int(pred_count.get(key) or 0)
+    if total <= 0:
+        return None
+    rate = acc_map.get(key)
+    if rate is None:
+        return None
+    return round(float(rate) * 100)
+
+
+def _display_label(masked: str, side: str, accuracy_pct: int | None = None) -> str:
+    """채팅에 보이는 이름: 초성 닉 + 방향 + 누적 적중률."""
     tag = "↑상승" if side == "up" else "↓하락"
+    if accuracy_pct is not None:
+        return f"{masked}[{tag}·적중{accuracy_pct}%]"
     return f"{masked}[{tag}]"
 
 
@@ -165,7 +180,14 @@ def build_status_payload(
     my_name_row = supabase.table("users").select("name").eq("id", user_id).limit(1).execute()
     my_name = my_name_row.data[0].get("name") if my_name_row.data else None
     my_masked = _masked_name(my_name)
-    my_display = _display_label(my_masked, side) if side else my_masked
+    my_accuracy_pct: int | None = None
+    if side:
+        try:
+            acc_map, pred_count, _ = get_accuracy_data(supabase)
+            my_accuracy_pct = _accuracy_pct_for_user(acc_map, pred_count, user_id)
+        except Exception as ex:
+            logger.warning("단톡: 적중률 조회 스킵 — %s", ex)
+    my_display = _display_label(my_masked, side, my_accuracy_pct) if side else my_masked
 
     can_access = side is not None
     can_send = can_access and not closed
@@ -184,6 +206,7 @@ def build_status_payload(
         "my_team_label": _team_label(side) if side else None,
         "my_masked_name": my_masked,
         "my_display_label": my_display,
+        "my_accuracy_pct": my_accuracy_pct,
         "member_counts": counts,
         "max_body_len": MAX_BODY_LEN,
         "can_read": can_access,
@@ -231,10 +254,16 @@ def list_room_messages(
 
     uids = list({str(r["user_id"]) for r in data})
     names: dict[str, str] = {}
+    acc_map: dict = {}
+    pred_count: dict = {}
     if uids:
         urows = supabase.table("users").select("id, name").in_("id", uids).execute()
         for u in urows.data or []:
             names[str(u["id"])] = _masked_name(u.get("name"))
+        try:
+            acc_map, pred_count, _ = get_accuracy_data(supabase)
+        except Exception as ex:
+            logger.warning("단톡 메시지: 적중률 집계 스킵 — %s", ex)
 
     out: list[dict[str, Any]] = []
     for r in data:
@@ -243,13 +272,15 @@ def list_room_messages(
         if msg_side not in ("up", "down"):
             msg_side = "up"
         masked = names.get(uid, "익명")
+        acc_pct = _accuracy_pct_for_user(acc_map, pred_count, uid)
         out.append({
             "id": str(r["id"]),
             "user_id": uid,
             "body": r["body"],
             "created_at": r["created_at"],
             "masked_name": masked,
-            "display_label": _display_label(masked, msg_side),
+            "display_label": _display_label(masked, msg_side, acc_pct),
+            "accuracy_pct": acc_pct,
             "is_mine": uid == user_id,
             "side": msg_side,
         })
@@ -283,6 +314,12 @@ def post_room_message(
 
     my_row = supabase.table("users").select("name").eq("id", user_id).limit(1).execute()
     my_masked = _masked_name(my_row.data[0].get("name") if my_row.data else None)
+    my_acc_pct: int | None = None
+    try:
+        acc_map, pred_count, _ = get_accuracy_data(supabase)
+        my_acc_pct = _accuracy_pct_for_user(acc_map, pred_count, user_id)
+    except Exception as ex:
+        logger.warning("단톡 전송: 적중률 조회 스킵 — %s", ex)
 
     try:
         ins = (
@@ -314,7 +351,8 @@ def post_room_message(
             "body": text,
             "created_at": row.get("created_at") or datetime.now(timezone.utc).isoformat(),
             "masked_name": my_masked,
-            "display_label": _display_label(my_masked, side),
+            "display_label": _display_label(my_masked, side, my_acc_pct),
+            "accuracy_pct": my_acc_pct,
             "is_mine": True,
             "side": side,
         },
