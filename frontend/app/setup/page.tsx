@@ -7,7 +7,6 @@ import { getMe, unlinkTelegram, deletePushSubscription, savePushPreferences, cre
 import { subscribeWebPush } from "@/lib/webPush";
 import HomeScreenAddGuide from "@/components/HomeScreenAddGuide";
 import AppAmbientBackground from "@/components/AppAmbientBackground";
-import PageLoadProgress from "@/components/PageLoadProgress";
 import AppTabNav from "@/components/AppTabNav";
 import { clearAllTabSnapshots, peekDashboardSnapshot } from "@/lib/tab-session-cache";
 
@@ -29,7 +28,10 @@ export default function SetupPage() {
   const router = useRouter();
   const [user, setUser] = useState<UserProfile | null>(null);
   const [token, setToken] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(() => {
+    if (typeof window === "undefined") return true;
+    return !peekDashboardSnapshot()?.user;
+  });
   const [checking, setChecking] = useState(false);
   const [linked, setLinked] = useState(false);
   const [copyDone, setCopyDone] = useState(false);
@@ -242,15 +244,16 @@ export default function SetupPage() {
     router.replace("/");
   };
 
-  if (loading) {
-    return <PageLoadProgress label="설정 불러오는 중…" accent="blue" />;
-  }
-
   return (
     <main className="relative max-w-md mx-auto min-h-screen pb-36 px-5">
       <AppAmbientBackground />
       <div className="relative z-10">
-      {/* 헤더 */}
+      {loading && !user ? (
+        <p className="py-16 text-center text-sm text-gray-500" aria-busy="true">
+          설정 불러오는 중…
+        </p>
+      ) : (
+      <>
       <div className="pt-8 pb-6 flex items-center justify-between">
         <div>
           <h1 className="text-xl font-black">🔔 알림 설정</h1>
@@ -584,6 +587,9 @@ export default function SetupPage() {
             </>
           )}
         </div>
+      )}
+
+      </>
       )}
 
       </div>
