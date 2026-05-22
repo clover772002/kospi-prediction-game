@@ -4,7 +4,8 @@ import { useEffect, useState, useCallback, useRef, Suspense, useLayoutEffect } f
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
-import { getToday, getTodaySummary, getExpertChatEligibility, resolveApiBase, TodaySurvey } from "@/lib/api";
+import { getToday, getTodaySummary, getMe, getExpertChatEligibility, TodaySurvey } from "@/lib/api";
+import { peekDashboardSnapshot } from "@/lib/tab-session-cache";
 import TopExpertNoticeBlock from "@/components/TopExpertNoticeBlock";
 import { markWasTopExpert } from "@/lib/top-expert-notice";
 import { formatApiErrorMessage } from "@/lib/format-api-error";
@@ -391,14 +392,16 @@ function SurveyPageInner() {
       void loadToday();
       void (async () => {
         await checkMyResponse(session.access_token);
-        fetch(`${resolveApiBase()}/api/dashboard`, {
-          headers: { Authorization: `Bearer ${session.access_token}` },
-        })
-          .then((r) => r.json())
-          .then((d) => {
-            if (typeof d.tokens === "number") setUserTokens(d.tokens);
-          })
-          .catch(() => {});
+        const snap = peekDashboardSnapshot();
+        if (typeof snap?.dash?.tokens === "number") {
+          setUserTokens(snap.dash.tokens);
+        }
+        try {
+          const me = await getMe(session.access_token);
+          if (typeof me.tokens === "number") setUserTokens(me.tokens);
+        } catch {
+          /* 토큰 표시는 기본값 유지 */
+        }
       })();
     };
 

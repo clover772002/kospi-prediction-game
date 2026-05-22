@@ -4,7 +4,7 @@ import { Suspense, useEffect, useState, useCallback, useRef, useLayoutEffect } f
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
-import { getMe, getToday, getDashboard, getExpertChatEligibility, createChallenge, getMyChallenges, reactToChallenge, requestRematch, acceptChallenge, declineChallenge, getMyGroups, UserProfile, TodaySurvey, DashboardData, Challenge, Group, type ExpertChatEligibility } from "@/lib/api";
+import { getMe, getTodaySummary, getDashboard, getExpertChatEligibility, createChallenge, getMyChallenges, reactToChallenge, requestRematch, acceptChallenge, declineChallenge, getMyGroups, UserProfile, TodaySurvey, DashboardData, Challenge, Group, type ExpertChatEligibility } from "@/lib/api";
 import TopExpertNoticeBlock from "@/components/TopExpertNoticeBlock";
 import ShareSheet from "@/components/ShareSheet";
 import AppAmbientBackground from "@/components/AppAmbientBackground";
@@ -220,10 +220,12 @@ export default function DashboardPage() {
   useEffect(() => {
     const loadData = async (accessToken: string) => {
       const seq = ++dashboardFetchSeq.current;
+      const cached = peekDashboardSnapshot();
       setToken(accessToken);
       setRevalidating(true);
+      setError(null);
       try {
-        const withTimeout = <T,>(p: Promise<T>, ms = 20000): Promise<T> =>
+        const withTimeout = <T,>(p: Promise<T>, ms: number): Promise<T> =>
           Promise.race([
             p,
             new Promise<T>((_, reject) =>
@@ -231,19 +233,50 @@ export default function DashboardPage() {
             ),
           ]);
 
-        const [profile, todayData, dashData, chResult, grpResult] = await Promise.all([
-          withTimeout(getMe(accessToken)),
-          withTimeout(getToday()),
-          withTimeout(getDashboard(accessToken), 60000),
-          withTimeout(getMyChallenges(accessToken)).catch(() => ({ sent: [] as Challenge[], received: [] as Challenge[] })),
-          withTimeout(getMyGroups(accessToken)).catch(() => [] as Group[]),
+        const [meR, todayR, dashR, chR, grpR] = await Promise.allSettled([
+          withTimeout(getMe(accessToken), 30_000),
+          withTimeout(getTodaySummary(), 30_000),
+          withTimeout(getDashboard(accessToken), 45_000),
+          withTimeout(getMyChallenges(accessToken), 25_000),
+          withTimeout(getMyGroups(accessToken), 25_000),
         ]);
 
         if (seq !== dashboardFetchSeq.current) return;
 
+        const profile: UserProfile | null =
+          meR.status === "fulfilled" ? meR.value : cached?.user ?? null;
+        const todayData: TodaySurvey | null =
+          todayR.status === "fulfilled" ? todayR.value : cached?.today ?? null;
+        const dashData: DashboardData | null =
+          dashR.status === "fulfilled" ? dashR.value : cached?.dash ?? null;
+        const chResult =
+          chR.status === "fulfilled"
+            ? chR.value
+            : cached?.challenges ?? { sent: [] as Challenge[], received: [] as Challenge[] };
+        const grpResult =
+          grpR.status === "fulfilled" ? grpR.value : cached?.groups ?? ([] as Group[]);
+
+        if (!profile) {
+          throw meR.status === "rejected" && meR.reason instanceof Error
+            ? meR.reason
+            : new Error("프로필을 불러오지 못했습니다.");
+        }
+        if (!todayData) {
+          throw todayR.status === "rejected" && todayR.reason instanceof Error
+            ? todayR.reason
+            : new Error("오늘 설문 정보를 불러오지 못했습니다.");
+        }
+        if (!dashData) {
+          if (!cached?.dash) {
+            throw dashR.status === "rejected" && dashR.reason instanceof Error
+              ? dashR.reason
+              : new Error("대시보드를 불러오지 못했습니다.");
+          }
+        }
+
         setUser(profile);
         setToday(todayData);
-        setDash(dashData);
+        if (dashData) setDash(dashData);
         setChallenges(chResult);
         const sd = todayData.survey_date?.slice(0, 10);
         if (sd) {
@@ -256,15 +289,17 @@ export default function DashboardPage() {
         } else if (seq === dashboardFetchSeq.current) {
           setExpertEligibility(null);
         }
-        saveDashboardSnapshot({
-          user: profile,
-          today: todayData,
-          dash: dashData,
-          challenges: chResult,
-          groups: grpResult,
-        });
+        if (dashData) {
+          saveDashboardSnapshot({
+            user: profile,
+            today: todayData,
+            dash: dashData,
+            challenges: chResult,
+            groups: grpResult,
+          });
+        }
 
-        if (todayData.status === "result" && todayData.survey_date) {
+        if (dashData && todayData.status === "result" && todayData.survey_date) {
           const key = `result_card_${todayData.survey_date}`;
           if (!localStorage.getItem(key)) {
             const participated = dashData.history?.[0]?.date === todayData.survey_date;
@@ -277,7 +312,16 @@ export default function DashboardPage() {
         if (seq !== dashboardFetchSeq.current) return;
         const msg = e instanceof Error ? e.message : String(e);
         console.error("데이터 로딩 오류:", msg);
-        setError(msg);
+        const snap = peekDashboardSnapshot();
+        if (snap?.user && snap?.today && snap?.dash) {
+          setUser(snap.user);
+          setToday(snap.today);
+          setDash(snap.dash);
+          setChallenges(snap.challenges);
+          setError(null);
+        } else {
+          setError(msg);
+        }
       } finally {
         if (seq === dashboardFetchSeq.current) {
           setLoading(false);

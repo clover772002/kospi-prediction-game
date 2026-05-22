@@ -109,10 +109,19 @@ export default function TeamChatPage() {
 
   useEffect(() => {
     if (!token || !surveyDate || boot) return;
-    const id = window.setInterval(() => {
+    const tick = () => {
+      if (typeof document !== "undefined" && document.visibilityState !== "visible") return;
       void refresh(token, surveyDate, true).catch(() => {});
-    }, 4000);
-    return () => window.clearInterval(id);
+    };
+    const id = window.setInterval(tick, 10_000);
+    const onVis = () => {
+      if (document.visibilityState === "visible") void tick();
+    };
+    document.addEventListener("visibilitychange", onVis);
+    return () => {
+      window.clearInterval(id);
+      document.removeEventListener("visibilitychange", onVis);
+    };
   }, [token, surveyDate, boot, refresh]);
 
   useEffect(() => {

@@ -1935,6 +1935,26 @@ async def _persist_kospi_survey_close_if_needed(supabase: Client, survey_date_st
     return True
 
 
+def _spawn_settlement_side_effects(supabase: Client, survey_date_str: str | None = None) -> None:
+    """읽기 API 응답을 막지 않도록 KOSPI 보강·전체 토큰 정산을 백그라운드에서 실행."""
+    sd = (survey_date_str or today_kst()).strip()[:10]
+
+    async def _run() -> None:
+        try:
+            await _persist_kospi_survey_close_if_needed(supabase, sd)
+        except Exception as ex:
+            logger.warning("백그라운드 KOSPI 보강 실패 (%s): %s", sd, ex)
+        try:
+            ensure_kospi_tokens_settled_for_date(supabase, sd)
+        except Exception as ex:
+            logger.warning("백그라운드 토큰 정산 보강 실패 (%s): %s", sd, ex)
+
+    try:
+        asyncio.get_running_loop().create_task(_run())
+    except RuntimeError:
+        pass
+
+
 @app.get("/api/public/kospi-price")
 async def get_kospi_price(supabase: Client = Depends(get_supabase)):
     """오늘 KOSPI 종가/OHLC — Naver basic API (Vercel에서 호출 가능)"""
@@ -2357,16 +2377,7 @@ async def _build_today_payload(supabase: Client, *, detail: bool) -> dict:
             return {"status": "no_survey", "survey_date": today_str}
 
     survey = survey_res.data[0]
-    if survey.get("kospi_result") is None:
-        refreshed = await _persist_kospi_survey_close_if_needed(supabase, today_str)
-        if refreshed:
-            survey_res = supabase.table("daily_surveys").select("*").eq("survey_date", today_str).execute()
-            survey = survey_res.data[0]
-
-    try:
-        ensure_kospi_tokens_settled_for_date(supabase, today_str)
-    except Exception as e:
-        logger.warning(f"get_today 토큰 정산 보강 스킵: {e}")
+    _spawn_settlement_side_effects(supabase, today_str)
 
     if survey.get("kospi_result") is not None:
         status = "result"
@@ -3692,14 +3703,7 @@ async def get_dashboard(
             apply_pending_presubmits(supabase, user_id)
         except Exception as ex:
             logger.warning("대시보드: 예약 설문 적용 스킵 — %s", ex)
-        try:
-            await _persist_kospi_survey_close_if_needed(supabase, today_kst())
-        except Exception as ex:
-            logger.warning("대시보드: KOSPI 종가 보강 스킵 — %s", ex)
-        try:
-            ensure_kospi_tokens_settled_for_date(supabase, today_kst())
-        except Exception as ex:
-            logger.warning("대시보드: 토큰 정산 보강 스킵 — %s", ex)
+        _spawn_settlement_side_effects(supabase, today_kst())
 
         # 유저 토큰 + 스트릭 조회
         user_row = supabase.table("users").select("tokens, current_streak").eq("id", user_id).execute()
@@ -3762,6 +3766,9 @@ async def get_dashboard(
             for d in pending_settle_dates
             if len(d) >= 8 and kospi_result_by_date.get(d) is not None
         ]
+        # 미정산일이 많아도 응답 지연 방지 — 최근 3거래일만 동기 정산
+        if len(pending_settle_dates) > 3:
+            pending_settle_dates = pending_settle_dates[-3:]
         user_tokens_settled = False
         for d in pending_settle_dates:
             if _settle_kospi_tokens_for_user_date(

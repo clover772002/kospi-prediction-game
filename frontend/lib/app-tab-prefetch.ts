@@ -8,7 +8,7 @@ import {
   getMyChallenges,
   getMyGroups,
   getShopCatalog,
-  getToday,
+  getTodaySummary,
 } from "@/lib/api";
 import {
   saveDashboardSnapshot,
@@ -57,8 +57,8 @@ export async function runAppTabPrefetch(
   try {
     const [profile, todayData, dashData, chResult, grpResult, catalog] = await Promise.all([
       withTimeout(getMe(accessToken), 25_000),
-      withTimeout(getToday(), 45_000),
-      withTimeout(getDashboard(accessToken), 60_000),
+      withTimeout(getTodaySummary(), 20_000),
+      withTimeout(getDashboard(accessToken), 45_000),
       withTimeout(getMyChallenges(accessToken)).catch(() => EMPTY_CHALLENGES),
       withTimeout(getMyGroups(accessToken)).catch(() => [] as Group[]),
       withTimeout(getShopCatalog(accessToken)).catch(() => null),

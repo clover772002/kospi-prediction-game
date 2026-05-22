@@ -65,6 +65,8 @@ export interface UserProfile {
   telegram_chat_id: number | null;
   has_push: boolean;
   push_preferences?: PushPreferences;
+  /** users.tokens — 설문 화면 등에서 /api/dashboard 없이 잔액 표시 */
+  tokens?: number;
 }
 
 export interface TopPredictor {
