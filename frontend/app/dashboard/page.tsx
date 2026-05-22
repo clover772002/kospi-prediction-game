@@ -13,6 +13,10 @@ import DashboardInsightSection, { DashboardInsightSectionSkeleton } from "@/comp
 import CrowdGaugeBoxplotsSection from "@/components/CrowdGaugeBoxplotsSection";
 import StaleRefreshIndicator from "@/components/StaleRefreshIndicator";
 import { clearAllTabSnapshots, peekDashboardSnapshot, saveDashboardSnapshot, saveGroupsSnapshot } from "@/lib/tab-session-cache";
+import {
+  isNotificationConnected,
+  mergeNotificationFields,
+} from "@/lib/notificationConnection";
 
 type DashboardHist = DashboardData["history"][number];
 
@@ -274,7 +278,7 @@ export default function DashboardPage() {
           }
         }
 
-        setUser(profile);
+        setUser((prev) => mergeNotificationFields(prev, profile));
         setToday(todayData);
         if (dashData) setDash(dashData);
         setChallenges(chResult);
@@ -385,6 +389,29 @@ export default function DashboardPage() {
 
     return () => subscription.unsubscribe();
   }, [router]);
+
+  /** 캐시는 연동 필드가 낡을 수 있음 — /api/me로 텔레그램·푸시만 최신화 */
+  useEffect(() => {
+    if (!token) return;
+    let cancelled = false;
+    const refreshConnection = () => {
+      void getMe(token)
+        .then((profile) => {
+          if (cancelled) return;
+          setUser((prev) => mergeNotificationFields(prev, profile));
+        })
+        .catch(() => {});
+    };
+    refreshConnection();
+    const onVis = () => {
+      if (document.visibilityState === "visible") refreshConnection();
+    };
+    document.addEventListener("visibilitychange", onVis);
+    return () => {
+      cancelled = true;
+      document.removeEventListener("visibilitychange", onVis);
+    };
+  }, [token]);
 
   const handleLogout = async () => {
     clearAllTabSnapshots();
@@ -521,7 +548,10 @@ export default function DashboardPage() {
   }
 
   // ── 블러 게이트 판정 ─────────────────────────────
-  const isConnected = !!(user?.telegram_chat_id || user?.has_push);
+  const isConnected = isNotificationConnected(user);
+  /** 스냅샷이 옛날이면 잠깐 끊김으로 보일 수 있음 — 갱신 중엔 연동 게이트 숨김 */
+  const pendingConnectionCheck =
+    (loading || revalidating) && !isConnected;
   const surveyDay = today?.status !== "no_survey";
   const respondedToday = !!(
     dash?.history?.length &&
@@ -541,6 +571,7 @@ export default function DashboardPage() {
   // 연동 안 됨 → 최우선 / 장마감·휴장일은 게이트 없음
   const gateType: "not_connected" | "no_survey" | null =
     marketClosed || isHolidayDay ? null :
+    pendingConnectionCheck ? null :
     !isConnected ? "not_connected" :
     !respondedToday ? "no_survey" :
     null;
