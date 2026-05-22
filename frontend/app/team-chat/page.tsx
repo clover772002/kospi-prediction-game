@@ -152,6 +152,10 @@ export default function TeamChatPage() {
   const mySide = status?.my_side;
   const crownFx = useTeamChatCrownFx(status?.accuracy_leader_user_id, boot, messages);
 
+  if (boot) {
+    return <PageLoadProgress label="단톡 불러오는 중…" accent="blue" />;
+  }
+
   return (
     <div
       className={`relative flex min-h-[100dvh] flex-col pb-[calc(4.5rem+env(safe-area-inset-bottom))] text-white ${
@@ -160,7 +164,6 @@ export default function TeamChatPage() {
     >
       <AppAmbientBackground />
       <TeamChatCrownFxLayer fx={crownFx} />
-      {boot ? <PageLoadProgress /> : null}
 
       <header className="relative z-10 shrink-0 border-b border-white/10 bg-black/40 px-4 py-3 backdrop-blur-sm">
         <h1 className="text-base font-black">{status?.room_title ?? "단톡"}</h1>

@@ -243,16 +243,7 @@ export default function ExpertChatPage() {
   }
 
   if (!token || boot) {
-    return (
-      <>
-        <PageLoadProgress />
-        <AppAmbientBackground />
-        <main className="relative z-10 mx-auto min-h-screen max-w-md px-4 pb-24 pt-6">
-          <p className="text-center text-base text-white">불러오는 중…</p>
-        </main>
-        <AppTabNav />
-      </>
-    );
+    return <PageLoadProgress label="고수 소통 불러오는 중…" accent="blue" />;
   }
 
   const tabLocked = eligibility != null && !eligibility.can_access_expert_chat;
