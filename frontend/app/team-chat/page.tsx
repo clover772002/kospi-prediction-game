@@ -13,6 +13,9 @@ import {
 import AppAmbientBackground from "@/components/AppAmbientBackground";
 import AppTabNav from "@/components/AppTabNav";
 import PageLoadProgress from "@/components/PageLoadProgress";
+import TeamChatCrownFxLayer from "@/components/team-chat/TeamChatCrownFxLayer";
+import TeamChatMessageLabel from "@/components/team-chat/TeamChatMessageLabel";
+import { useTeamChatCrownFx } from "@/components/team-chat/useTeamChatCrownFx";
 
 function formatTime(iso: string): string {
   try {
@@ -139,10 +142,16 @@ export default function TeamChatPage() {
 
   const total = status?.member_counts.total ?? 0;
   const mySide = status?.my_side;
+  const crownFx = useTeamChatCrownFx(status?.accuracy_leader_user_id, boot, messages);
 
   return (
-    <div className="relative flex min-h-[100dvh] flex-col pb-[calc(4.5rem+env(safe-area-inset-bottom))] text-white">
+    <div
+      className={`relative flex min-h-[100dvh] flex-col pb-[calc(4.5rem+env(safe-area-inset-bottom))] text-white ${
+        crownFx.screenZoom ? "team-chat-room-zoom" : ""
+      }`}
+    >
       <AppAmbientBackground />
+      <TeamChatCrownFxLayer fx={crownFx} />
       {boot ? <PageLoadProgress /> : null}
 
       <header className="relative z-10 shrink-0 border-b border-white/10 bg-black/40 px-4 py-3 backdrop-blur-sm">
@@ -198,10 +207,13 @@ export default function TeamChatPage() {
                   key={m.id}
                   className={`flex flex-col ${m.is_mine ? "items-end" : "items-start"}`}
                 >
-                  <span className="mb-0.5 max-w-[90%] truncate text-[10px] font-semibold text-gray-500">
-                    {m.display_label}
-                    <span className="ml-1 font-normal text-gray-600">{formatTime(m.created_at)}</span>
-                  </span>
+                  <TeamChatMessageLabel
+                    userId={m.user_id}
+                    displayLabel={m.display_label}
+                    time={formatTime(m.created_at)}
+                    isLeader={Boolean(m.is_accuracy_leader)}
+                    fx={crownFx}
+                  />
                   <div
                     className={`max-w-[88%] rounded-2xl px-3 py-2 text-sm leading-snug ${bubbleClass(
                       m.is_mine,
