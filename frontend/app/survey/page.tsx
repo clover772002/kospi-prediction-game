@@ -30,21 +30,21 @@ function getSurveyDayLabel(surveyDate: string): { isNextDay: boolean; label: str
   const kst = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Seoul" }));
   const todayStr = `${kst.getFullYear()}-${String(kst.getMonth()+1).padStart(2,"0")}-${String(kst.getDate()).padStart(2,"0")}`;
 
-  if (surveyDate <= todayStr) return { isNextDay: false, label: "오늘 장 예측", shortLabel: "오늘" };
+  if (surveyDate <= todayStr) return { isNextDay: false, label: "오늘 예측", shortLabel: "오늘" };
 
   // 진짜 내일인지 확인
   const tom = new Date(kst); tom.setDate(tom.getDate() + 1);
   const tomorrowStr = `${tom.getFullYear()}-${String(tom.getMonth()+1).padStart(2,"0")}-${String(tom.getDate()).padStart(2,"0")}`;
 
   if (surveyDate === tomorrowStr) {
-    return { isNextDay: true, label: "내일 장 예측", shortLabel: "내일" };
+    return { isNextDay: true, label: "내일 예측", shortLabel: "내일" };
   }
   // 주말/연휴 넘어 다음 거래일
   const [, mm, dd] = surveyDate.split("-");
   const days = ["일","월","화","수","목","금","토"];
   const d = new Date(surveyDate + "T00:00:00+09:00");
   const dayKor = days[d.getDay()];
-  return { isNextDay: true, label: `다음 거래일 장 예측 (${mm}/${dd} ${dayKor})`, shortLabel: `${mm}/${dd}(${dayKor})` };
+  return { isNextDay: true, label: `다음 거래일 예측 (${mm}/${dd} ${dayKor})`, shortLabel: `${mm}/${dd}(${dayKor})` };
 }
 
 /** 사전 예측이 적용되는 거래일 표시용 */
@@ -83,13 +83,11 @@ function PreSurveyTargetBanner({ surveyDate }: { surveyDate: string }) {
   );
 }
 
-/** 페이지 제목: 「오늘 장」 / 「예측」 두 줄 — 상단 중앙·크게 */
+/** 페이지 제목 — 상단 중앙·한 줄 (예: 오늘 예측) */
 function SurveyHeadingTitle({ label }: { label: string }) {
-  const head = label.replace(/\s*장\s*예측.*$/, "").trim() || label;
   return (
-    <h1 className="text-3xl sm:text-4xl md:text-[2.75rem] font-black text-white leading-[1.1] tracking-tight">
-      <span className="block">{head}</span>
-      <span className="block mt-1.5 text-[0.92em]">예측</span>
+    <h1 className="text-3xl sm:text-4xl md:text-[2.75rem] font-black text-white leading-[1.15] tracking-tight">
+      {label}
     </h1>
   );
 }
@@ -650,9 +648,8 @@ function SurveyPageInner() {
             const nextDateStr = `${next.getFullYear()}.${mm}.${dd}`;
             return (
               <>
-                <h1 className="text-3xl sm:text-4xl md:text-[2.75rem] font-black text-white leading-[1.1] tracking-tight">
-                  <span className="block">{dayNames[next.getDay()]}요일</span>
-                  <span className="block mt-1.5 text-[0.92em]">예측</span>
+                <h1 className="text-3xl sm:text-4xl md:text-[2.75rem] font-black text-white leading-[1.15] tracking-tight">
+                  {dayNames[next.getDay()]}요일 예측
                 </h1>
                 <p className="text-base sm:text-lg text-gray-500 mt-2 tabular-nums">{nextDateStr} (KST)</p>
               </>
