@@ -46,6 +46,42 @@ function getSurveyDayLabel(surveyDate: string): { isNextDay: boolean; label: str
   return { isNextDay: true, label: `다음 거래일 장 예측 (${mm}/${dd} ${dayKor})`, shortLabel: `${mm}/${dd}(${dayKor})` };
 }
 
+/** 사전 예측이 적용되는 거래일 표시용 */
+function formatPreSurveyTarget(surveyDate: string) {
+  const dateKey = surveyDate.trim().slice(0, 10);
+  const d = new Date(`${dateKey}T12:00:00+09:00`);
+  const weekdays = ["일", "월", "화", "수", "목", "금", "토"];
+  const weekday = weekdays[d.getDay()] ?? "";
+  const parts = dateKey.split("-");
+  const y = parts[0] ?? "";
+  const m = parts[1] ? String(Number(parts[1])) : "";
+  const day = parts[2] ? String(Number(parts[2])) : "";
+  const dayInfo = getSurveyDayLabel(dateKey);
+  return {
+    dateKey,
+    weekday,
+    dateLine: `${y}년 ${m}월 ${day}일 (${weekday})`,
+    dateIso: dateKey,
+    roleLine: dayInfo.label,
+    shortLabel: dayInfo.shortLabel,
+  };
+}
+
+function PreSurveyTargetBanner({ surveyDate }: { surveyDate: string }) {
+  const t = formatPreSurveyTarget(surveyDate);
+  return (
+    <div className="rounded-xl border border-amber-500/40 bg-gradient-to-br from-amber-500/15 to-amber-600/5 px-4 py-3.5 text-center space-y-1.5 mb-4">
+      <p className="text-xs font-bold text-amber-300/90 tracking-wide">사전 예측 대상 거래일</p>
+      <p className="text-xl sm:text-2xl font-black text-amber-50 tabular-nums leading-tight">{t.dateLine}</p>
+      <p className="text-sm font-bold text-amber-200/95">{t.dateIso}</p>
+      <p className="text-sm text-gray-300 leading-snug pt-0.5">
+        {t.roleLine} · <span className="text-amber-100/90">이 날짜 설문에 제출됩니다</span>
+        <span className="block text-xs text-gray-500 mt-1">(지금 보이는 오늘 장 설문과는 다른 날짜입니다)</span>
+      </p>
+    </div>
+  );
+}
+
 /** 페이지 제목: 「월요일」 / 「예측」 두 줄 */
 function SurveyHeadingTitle({ label }: { label: string }) {
   const head = label.replace(/\s*장\s*예측.*$/, "").trim() || label;
@@ -641,9 +677,10 @@ function SurveyPageInner() {
 
       {/* 설문 없음 — 대기중 vs 휴장일 구분 */}
       {/* 주말·no_survey 상태에서 다음 거래일 예측 섹션 */}
-      {(status === "no_survey" || isWeekendKST) && showNextPreSurvey && (
+      {(status === "no_survey" || isWeekendKST) && showNextPreSurvey && nextSurvey?.survey_date && (
         <div className="mt-4 space-y-4">
           <div className="border-t border-[#2A2A2A] pt-5">
+            <PreSurveyTargetBanner surveyDate={nextSurvey.survey_date} />
             {nextMyResponseLoading ? (
               <div className="flex flex-col items-center py-8 gap-2">
                 <div className="w-8 h-8 border-2 border-white/20 border-t-amber-400 rounded-full animate-spin" />
@@ -678,7 +715,9 @@ function SurveyPageInner() {
                 </>
               ) : (
               <div className="flex flex-col gap-3 w-full items-stretch">
-                <p className="text-center text-base text-emerald-400 font-bold mb-1">제출 완료</p>
+                <p className="text-center text-base text-emerald-400 font-bold mb-1">
+                  {formatPreSurveyTarget(nextSurvey.survey_date).dateIso} 거래일 사전 예측 제출 완료
+                </p>
                 <div className="w-full min-w-0 space-y-1">
                   <GaugeBar
                     value={nextGaugePosition}
@@ -692,7 +731,6 @@ function SurveyPageInner() {
               )
             ) : (
               <>
-                <p className="text-center text-base text-gray-500 mb-4">사전 예측</p>
                 <SurveyGaugeWithPreview
                   phase={nextGaugePhase}
                   setPhase={setNextGaugePhase}
@@ -702,7 +740,7 @@ function SurveyPageInner() {
                   submitting={nextSubmitting}
                   lockBtnClass="bg-amber-500 hover:bg-amber-400 disabled:bg-[#333] disabled:text-gray-500 text-white"
                   submitBtnClass="bg-amber-500 hover:bg-amber-400 disabled:bg-[#333] disabled:text-gray-500 text-white"
-                  submitLabel="사전 예측 제출하기"
+                  submitLabel={`${formatPreSurveyTarget(nextSurvey.survey_date).dateIso} 사전 예측 제출`}
                   onSubmit={handleNextSubmit}
                 />
               </>
@@ -746,7 +784,7 @@ function SurveyPageInner() {
                   <p className="text-base text-gray-400 px-2">주말·공휴일에는 거래소가 개장하지 않습니다.</p>
                   {nextSurvey?.is_open && (
                     <p className="text-base text-yellow-400 mt-2 px-2">
-                      💡 {getSurveyDayLabel(nextSurvey.survey_date).shortLabel} 거래일은 사전 참여할 수 있습니다
+                      💡 {formatPreSurveyTarget(nextSurvey.survey_date).dateLine}({formatPreSurveyTarget(nextSurvey.survey_date).dateIso}) 사전 예측 가능
                     </p>
                   )}
                 </>
@@ -888,11 +926,9 @@ function SurveyPageInner() {
             <KospiChart />
           </div>
 
-          {showNextPreSurvey && (
+          {showNextPreSurvey && nextSurvey?.survey_date && (
             <div className="mt-4 space-y-4 border-t border-[#2A2A2A] pt-5">
-              <p className="text-center text-base text-amber-200/90 font-bold">
-                {getSurveyDayLabel(nextSurvey!.survey_date).label} · 사전 참여
-              </p>
+              <PreSurveyTargetBanner surveyDate={nextSurvey.survey_date} />
               {nextMyResponseLoading ? (
                 <div className="flex flex-col items-center py-6 gap-2">
                   <div className="w-8 h-8 border-2 border-white/20 border-t-amber-400 rounded-full animate-spin" />
@@ -900,7 +936,9 @@ function SurveyPageInner() {
                 </div>
               ) : nextSubmitted || nextAlreadyAnswered ? (
                 <div className="flex flex-col gap-3 w-full items-stretch">
-                  <p className="text-center text-base text-emerald-400 font-bold">사전 예측 제출 완료</p>
+                  <p className="text-center text-base text-emerald-400 font-bold">
+                    {formatPreSurveyTarget(nextSurvey.survey_date).dateIso} 거래일 사전 예측 제출 완료
+                  </p>
                   <GaugeBar value={nextGaugePosition} onChange={() => {}} tokens={userTokens} disabled beginnerTips />
                 </div>
               ) : (
@@ -914,7 +952,7 @@ function SurveyPageInner() {
                     submitting={nextSubmitting}
                     lockBtnClass="bg-amber-500 hover:bg-amber-400 disabled:bg-[#333] disabled:text-gray-500 text-white"
                     submitBtnClass="bg-amber-500 hover:bg-amber-400 disabled:bg-[#333] disabled:text-gray-500 text-white"
-                    submitLabel="사전 예측 제출하기"
+                    submitLabel={`${formatPreSurveyTarget(nextSurvey.survey_date).dateIso} 사전 예측 제출`}
                     onSubmit={handleNextSubmit}
                   />
                   {error ? (
@@ -1088,9 +1126,10 @@ function SurveyPageInner() {
           </div>
 
           {/* 다음 거래일 미리 예측하기 (결과 공개 후) */}
-          {showNextPreSurvey && (
+          {showNextPreSurvey && nextSurvey?.survey_date && (
             <div className="mt-2 space-y-4">
               <div className="border-t border-[#2A2A2A] pt-5">
+                <PreSurveyTargetBanner surveyDate={nextSurvey.survey_date} />
                 {nextMyResponseLoading ? (
                   <div className="flex flex-col items-center py-8 gap-2">
                     <div className="w-8 h-8 border-2 border-white/20 border-t-amber-400 rounded-full animate-spin" />
@@ -1125,7 +1164,9 @@ function SurveyPageInner() {
                     </>
                   ) : (
                   <div className="flex flex-col gap-3 w-full items-stretch">
-                    <p className="text-center text-base text-emerald-400 font-bold mb-1">제출 완료</p>
+                    <p className="text-center text-base text-emerald-400 font-bold mb-1">
+                      {formatPreSurveyTarget(nextSurvey.survey_date).dateIso} 거래일 사전 예측 제출 완료
+                    </p>
                     <div className="w-full min-w-0 space-y-1">
                       <GaugeBar
                         value={nextGaugePosition}
@@ -1139,7 +1180,6 @@ function SurveyPageInner() {
                   )
                 ) : (
                   <>
-                    <p className="text-center text-base text-gray-500 mb-4">사전 예측</p>
                     <SurveyGaugeWithPreview
                       phase={nextGaugePhase}
                       setPhase={setNextGaugePhase}
@@ -1149,7 +1189,7 @@ function SurveyPageInner() {
                       submitting={nextSubmitting}
                       lockBtnClass="bg-amber-500 hover:bg-amber-400 disabled:bg-[#333] disabled:text-gray-500 text-white"
                       submitBtnClass="bg-amber-500 hover:bg-amber-400 disabled:bg-[#333] disabled:text-gray-500 text-white"
-                      submitLabel="사전 예측 제출하기"
+                      submitLabel={`${formatPreSurveyTarget(nextSurvey.survey_date).dateIso} 사전 예측 제출`}
                       onSubmit={handleNextSubmit}
                     />
                     {error && (
