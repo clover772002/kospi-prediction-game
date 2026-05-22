@@ -2355,6 +2355,31 @@ async def get_backtest(supabase: Client = Depends(get_supabase)):
         return {"results": {}, "total_days": 0}
 
 
+def _resolve_next_survey_open(supabase: Client) -> dict:
+    """다음 거래일 사전 예측 블록용 — 레코드 없으면 생성 시도."""
+    next_str = next_trading_day_str()
+    res = (
+        supabase.table("daily_surveys")
+        .select("survey_date, is_closed")
+        .eq("survey_date", next_str)
+        .execute()
+    )
+    if res.data:
+        return {
+            "survey_date": next_str,
+            "is_open": not bool(res.data[0]["is_closed"]),
+        }
+    try:
+        supabase.table("daily_surveys").insert({
+            "survey_date": next_str,
+            "is_closed": False,
+        }).execute()
+        logger.info("next-survey: %s 설문 레코드 자동 생성", next_str)
+    except Exception as e:
+        logger.warning("next-survey: 레코드 생성 실패 (무시): %s", e)
+    return {"survey_date": next_str, "is_open": True}
+
+
 async def _build_today_payload(supabase: Client, *, detail: bool) -> dict:
     """
     detail=True: 전체 응답 행·정확도 맵·참여자 목록(대시보드용).
@@ -2376,7 +2401,12 @@ async def _build_today_payload(supabase: Client, *, detail: bool) -> dict:
             except Exception as e:
                 logger.error(f"get_today fallback 생성 오류: {e}")
         if not survey_res.data:
-            return {"status": "no_survey", "survey_date": today_str}
+            out = {"status": "no_survey", "survey_date": today_str}
+            try:
+                out["next_survey"] = _resolve_next_survey_open(supabase)
+            except Exception as e:
+                logger.warning("no_survey next_survey 실패: %s", e)
+            return out
 
     survey = survey_res.data[0]
     _spawn_settlement_side_effects(supabase, today_str)
@@ -2413,7 +2443,7 @@ async def _build_today_payload(supabase: Client, *, detail: bool) -> dict:
             except Exception:
                 total = 0
 
-        return {
+        payload = {
             "status": status,
             "survey_date": today_str,
             "total_responses": total,
@@ -2422,6 +2452,11 @@ async def _build_today_payload(supabase: Client, *, detail: bool) -> dict:
             "kospi_result": survey.get("kospi_result"),
             "kospi_change_pct": survey.get("kospi_change_pct"),
         }
+        try:
+            payload["next_survey"] = _resolve_next_survey_open(supabase)
+        except Exception as e:
+            logger.warning("today summary next_survey 실패: %s", e)
+        return payload
 
     responses = (
         supabase.table("survey_responses")
@@ -2987,24 +3022,8 @@ async def direction_chat_post_message(
 
 @app.get("/api/next-survey")
 async def get_next_survey(supabase: Client = Depends(get_supabase)):
-    """다음 거래일 설문 상태 반환 (장마감 후 미리 예측 참여용)
-    레코드가 없으면 자동 생성 후 is_open: true 반환"""
-    next_str = next_trading_day_str()
-    res = supabase.table("daily_surveys").select("survey_date, is_closed").eq("survey_date", next_str).execute()
-    if res.data:
-        if not res.data[0]["is_closed"]:
-            return {"survey_date": next_str, "is_open": True}
-        return {"survey_date": next_str, "is_open": False}
-    # 레코드 없으면 자동 생성
-    try:
-        supabase.table("daily_surveys").insert({
-            "survey_date": next_str,
-            "is_closed": False,
-        }).execute()
-        logger.info(f"next-survey: {next_str} 설문 레코드 자동 생성")
-    except Exception as e:
-        logger.warning(f"next-survey: 레코드 생성 실패 (무시): {e}")
-    return {"survey_date": next_str, "is_open": True}
+    """다음 거래일 설문 상태 반환 (장마감 후 미리 예측 참여용)"""
+    return _resolve_next_survey_open(supabase)
 
 
 # ─────────────────────────────────────────────────────────────────────────────

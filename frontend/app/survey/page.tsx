@@ -14,7 +14,13 @@ import AppAmbientBackground from "@/components/AppAmbientBackground";
 import PageLoadProgress from "@/components/PageLoadProgress";
 import AppTabNav from "@/components/AppTabNav";
 import StaleRefreshIndicator from "@/components/StaleRefreshIndicator";
-import { clearAllTabSnapshots, peekSurveyTodaySnapshot, saveSurveyTodaySnapshot } from "@/lib/tab-session-cache";
+import {
+  clearAllTabSnapshots,
+  peekSurveyNextSnapshot,
+  peekSurveyTodaySnapshot,
+  saveSurveyNextSnapshot,
+  saveSurveyTodaySnapshot,
+} from "@/lib/tab-session-cache";
 
 interface KospiPrice {
   price: number | null;
@@ -82,6 +88,101 @@ function SurveyHeadingTitle({ label }: { label: string }) {
     <h1 className="text-3xl sm:text-4xl md:text-[2.75rem] font-black text-white leading-[1.15] tracking-tight">
       {label}
     </h1>
+  );
+}
+
+async function fetchNextSurveyApi(): Promise<{ survey_date: string; is_open: boolean } | null> {
+  try {
+    const res = await fetch("/api/next-survey", { cache: "no-store" });
+    if (!res.ok) return null;
+    return (await res.json()) as { survey_date: string; is_open: boolean };
+  } catch {
+    return null;
+  }
+}
+
+/** 사전 예측 — 참여 여부 확인 중에도 게이지를 바로 보여 줌 */
+function NextPreSurveyPanel({
+  surveyDate,
+  responseKnown,
+  submitted,
+  alreadyAnswered,
+  pendingGrantRedo,
+  gaugeValue,
+  onGaugeChange,
+  userTokens,
+  submitting,
+  onSubmit,
+  error,
+}: {
+  surveyDate: string;
+  responseKnown: boolean;
+  submitted: boolean;
+  alreadyAnswered: boolean;
+  pendingGrantRedo: boolean;
+  gaugeValue: number;
+  onGaugeChange: (v: number) => void;
+  userTokens: number;
+  submitting: boolean;
+  onSubmit: () => void | Promise<void>;
+  error: string | null;
+}) {
+  const target = formatPreSurveyTarget(surveyDate);
+  if (submitted || alreadyAnswered) {
+    if (pendingGrantRedo) {
+      return (
+        <>
+          <PreSurveyTargetBanner surveyDate={surveyDate} />
+          <p className="text-center text-sm text-amber-300 mb-2">재투표 1회 가능</p>
+          <SurveyGaugeSubmit
+            gaugeValue={gaugeValue}
+            onGaugeChange={onGaugeChange}
+            userTokens={userTokens}
+            submitting={submitting}
+            submitBtnClass="bg-amber-500 hover:bg-amber-400 disabled:bg-[#333] disabled:text-gray-500 text-white"
+            submitLabel="재투표 제출하기"
+            onSubmit={onSubmit}
+          />
+          {error ? (
+            <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4 text-red-400 text-base text-center mt-2">
+              {error}
+            </div>
+          ) : null}
+        </>
+      );
+    }
+    return (
+      <>
+        <PreSurveyTargetBanner surveyDate={surveyDate} />
+        <p className="text-center text-base text-emerald-400 font-bold mb-2">
+          {target.dateIso} 거래일 사전 예측 제출 완료
+        </p>
+        <GaugeBar value={gaugeValue} onChange={() => {}} tokens={userTokens} disabled beginnerTips />
+      </>
+    );
+  }
+
+  return (
+    <>
+      <PreSurveyTargetBanner surveyDate={surveyDate} />
+      {!responseKnown ? (
+        <p className="text-center text-xs text-gray-500 mb-2">참여 여부 확인 중… (아래에서 바로 넣을 수 있어요)</p>
+      ) : null}
+      <SurveyGaugeSubmit
+        gaugeValue={gaugeValue}
+        onGaugeChange={onGaugeChange}
+        userTokens={userTokens}
+        submitting={submitting || !responseKnown}
+        submitBtnClass="bg-amber-500 hover:bg-amber-400 disabled:bg-[#333] disabled:text-gray-500 text-white"
+        submitLabel={`${target.dateIso} 사전 예측 제출`}
+        onSubmit={onSubmit}
+      />
+      {error ? (
+        <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4 text-red-400 text-base text-center mt-2">
+          {error}
+        </div>
+      ) : null}
+    </>
   );
 }
 
@@ -160,31 +261,40 @@ function SurveyPageInner() {
   const [nextPreviousAnswer, setNextPreviousAnswer] = useState<boolean | null>(null);
   const [nextSubmitted, setNextSubmitted] = useState(false);
   const [nextSubmitting, setNextSubmitting] = useState(false);
-  const [nextMyResponseLoading, setNextMyResponseLoading] = useState(false);
+  const [nextMyResponseKnown, setNextMyResponseKnown] = useState(false);
   /** 상점 소모품 grant 조회용 */
   const [pendingGrantToday, setPendingGrantToday] = useState<string | null>(null);
   const [pendingGrantNext, setPendingGrantNext] = useState<string | null>(null);
 
+  const applyNextSurvey = useCallback(
+    (d: { survey_date: string; is_open: boolean } | null | undefined) => {
+      if (d?.survey_date) {
+        setNextSurvey(d);
+        saveSurveyNextSnapshot(d);
+      }
+    },
+    [],
+  );
+
   const loadToday = useCallback(async () => {
     setRevalidating(true);
     try {
-      const summary = await getTodaySummary();
+      const [summary, nextFallback] = await Promise.all([
+        getTodaySummary(),
+        fetchNextSurveyApi(),
+      ]);
       setToday(summary);
       saveSurveyTodaySnapshot(summary);
+      applyNextSurvey(summary.next_survey ?? nextFallback);
       setError(null);
       setLoading(false);
-
-      fetch("/api/next-survey", { cache: "no-store" })
-        .then((r) => r.json())
-        .then((d) => setNextSurvey(d))
-        .catch(() => {});
     } catch {
       setError("설문 정보를 불러오지 못했습니다.");
       setLoading(false);
     } finally {
       setRevalidating(false);
     }
-  }, []);
+  }, [applyNextSurvey]);
 
   const fetchKospiPrice = useCallback(async () => {
     try {
@@ -267,13 +377,18 @@ function SurveyPageInner() {
   // 다음 거래일 미리설문 내 응답 조회 — nextSurvey를 의존성에 넣지 않고 분리해야
   // 인증 리스너가 반복 재구독되며 잘못된 순서로 상태가 바뀌지 않도록 함.
   useEffect(() => {
+    if (!token) return;
+    void fetchNextSurveyApi().then((d) => applyNextSurvey(d));
+  }, [token, applyNextSurvey]);
+
+  useEffect(() => {
     if (!token || !nextSurvey?.is_open || !nextSurvey.survey_date) {
-      setNextMyResponseLoading(false);
+      setNextMyResponseKnown(false);
       return;
     }
     const surveyDate = nextSurvey.survey_date;
     let cancelled = false;
-    setNextMyResponseLoading(true);
+    setNextMyResponseKnown(false);
     (async () => {
       try {
         const res = await fetch(
@@ -297,7 +412,7 @@ function SurveyPageInner() {
           setNextKospiAnswer(true);
         }
       } finally {
-        if (!cancelled) setNextMyResponseLoading(false);
+        if (!cancelled) setNextMyResponseKnown(true);
       }
     })();
     return () => {
@@ -315,7 +430,13 @@ function SurveyPageInner() {
     if (s) {
       setToday(s.today);
       setLoading(false);
+      if (s.today.next_survey?.survey_date) {
+        setNextSurvey(s.today.next_survey);
+        saveSurveyNextSnapshot(s.today.next_survey);
+      }
     }
+    const n = peekSurveyNextSnapshot();
+    if (n?.survey_date) setNextSurvey(n);
   }, []);
 
   useEffect(() => {
@@ -610,65 +731,22 @@ function SurveyPageInner() {
       {(status === "no_survey" || isWeekendKST) && showNextPreSurvey && nextSurvey?.survey_date && (
         <div className="mt-4 space-y-4">
           <div className="border-t border-[#2A2A2A] pt-5">
-            <PreSurveyTargetBanner surveyDate={nextSurvey.survey_date} />
-            {nextMyResponseLoading ? (
-              <div className="flex flex-col items-center py-8 gap-2">
-                <div className="w-8 h-8 border-2 border-white/20 border-t-amber-400 rounded-full animate-spin" />
-                <p className="text-base text-gray-500">사전 참여 여부 확인 중…</p>
-              </div>
-            ) : nextSubmitted || nextAlreadyAnswered ? (
-              pendingGrantNext === "redo_full" ? (
-                <>
-                  <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-center">
-                    <p className="text-amber-300 text-base font-bold leading-snug">재투표 1회: 게이지를 재설정한 뒤 제출합니다</p>
-                  </div>
-                  <SurveyGaugeSubmit
-                    gaugeValue={nextGaugePosition}
-                    onGaugeChange={(v) => {
-                      setNextGaugePosition(v);
-                      setNextKospiAnswer(v > 0);
-                    }}
-                    userTokens={userTokens}
-                    submitting={nextSubmitting}
-                    submitBtnClass="bg-amber-500 hover:bg-amber-400 disabled:bg-[#333] disabled:text-gray-500 text-white"
-                    submitLabel="재투표 제출하기"
-                    onSubmit={handleNextSubmit}
-                  />
-                  {error ? (
-                    <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4 text-red-400 text-base text-center">
-                      {error}
-                    </div>
-                  ) : null}
-                </>
-              ) : (
-              <div className="flex flex-col gap-3 w-full items-stretch">
-                <p className="text-center text-base text-emerald-400 font-bold mb-1">
-                  {formatPreSurveyTarget(nextSurvey.survey_date).dateIso} 거래일 사전 예측 제출 완료
-                </p>
-                <div className="w-full min-w-0 space-y-1">
-                  <GaugeBar
-                    value={nextGaugePosition}
-                    onChange={() => {}}
-                    tokens={userTokens}
-                    disabled
-                    beginnerTips
-                  />
-                </div>
-              </div>
-              )
-            ) : (
-              <>
-                  <SurveyGaugeSubmit
-                    gaugeValue={nextGaugePosition}
-                  onGaugeChange={(v) => { setNextGaugePosition(v); setNextKospiAnswer(v > 0); }}
-                  userTokens={userTokens}
-                  submitting={nextSubmitting}
-                    submitBtnClass="bg-amber-500 hover:bg-amber-400 disabled:bg-[#333] disabled:text-gray-500 text-white"
-                  submitLabel={`${formatPreSurveyTarget(nextSurvey.survey_date).dateIso} 사전 예측 제출`}
-                  onSubmit={handleNextSubmit}
-                />
-              </>
-            )}
+            <NextPreSurveyPanel
+              surveyDate={nextSurvey.survey_date}
+              responseKnown={nextMyResponseKnown}
+              submitted={nextSubmitted}
+              alreadyAnswered={nextAlreadyAnswered}
+              pendingGrantRedo={pendingGrantNext === "redo_full"}
+              gaugeValue={nextGaugePosition}
+              onGaugeChange={(v) => {
+                setNextGaugePosition(v);
+                setNextKospiAnswer(v > 0);
+              }}
+              userTokens={userTokens}
+              submitting={nextSubmitting}
+              onSubmit={handleNextSubmit}
+              error={error}
+            />
           </div>
         </div>
       )}
@@ -753,38 +831,23 @@ function SurveyPageInner() {
             />
           )}
           {showNextPreSurvey && nextSurvey?.survey_date && (
-            <div className="mt-4 space-y-4 border-t border-[#2A2A2A] pt-5">
-              <PreSurveyTargetBanner surveyDate={nextSurvey.survey_date} />
-              {nextMyResponseLoading ? (
-                <div className="flex flex-col items-center py-6 gap-2">
-                  <div className="w-8 h-8 border-2 border-white/20 border-t-amber-400 rounded-full animate-spin" />
-                  <p className="text-base text-gray-500">사전 참여 여부 확인 중…</p>
-                </div>
-              ) : nextSubmitted || nextAlreadyAnswered ? (
-                <div className="flex flex-col gap-3 w-full items-stretch">
-                  <p className="text-center text-base text-emerald-400 font-bold">
-                    {formatPreSurveyTarget(nextSurvey.survey_date).dateIso} 거래일 사전 예측 제출 완료
-                  </p>
-                  <GaugeBar value={nextGaugePosition} onChange={() => {}} tokens={userTokens} disabled beginnerTips />
-                </div>
-              ) : (
-                <>
-                  <SurveyGaugeSubmit
-                    gaugeValue={nextGaugePosition}
-                    onGaugeChange={(v) => { setNextGaugePosition(v); setNextKospiAnswer(v > 0); }}
-                    userTokens={userTokens}
-                    submitting={nextSubmitting}
-                    submitBtnClass="bg-amber-500 hover:bg-amber-400 disabled:bg-[#333] disabled:text-gray-500 text-white"
-                    submitLabel={`${formatPreSurveyTarget(nextSurvey.survey_date).dateIso} 사전 예측 제출`}
-                    onSubmit={handleNextSubmit}
-                  />
-                  {error ? (
-                    <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4 text-red-400 text-base text-center">
-                      {error}
-                    </div>
-                  ) : null}
-                </>
-              )}
+            <div className="mt-4 border-t border-[#2A2A2A] pt-5">
+              <NextPreSurveyPanel
+                surveyDate={nextSurvey.survey_date}
+                responseKnown={nextMyResponseKnown}
+                submitted={nextSubmitted}
+                alreadyAnswered={nextAlreadyAnswered}
+                pendingGrantRedo={pendingGrantNext === "redo_full"}
+                gaugeValue={nextGaugePosition}
+                onGaugeChange={(v) => {
+                  setNextGaugePosition(v);
+                  setNextKospiAnswer(v > 0);
+                }}
+                userTokens={userTokens}
+                submitting={nextSubmitting}
+                onSubmit={handleNextSubmit}
+                error={error}
+              />
             </div>
           )}
         </div>
@@ -889,70 +952,22 @@ function SurveyPageInner() {
           {showNextPreSurvey && nextSurvey?.survey_date && (
             <div className="mt-2 space-y-4">
               <div className="border-t border-[#2A2A2A] pt-5">
-                <PreSurveyTargetBanner surveyDate={nextSurvey.survey_date} />
-                {nextMyResponseLoading ? (
-                  <div className="flex flex-col items-center py-8 gap-2">
-                    <div className="w-8 h-8 border-2 border-white/20 border-t-amber-400 rounded-full animate-spin" />
-                    <p className="text-base text-gray-500">사전 참여 여부 확인 중…</p>
-                  </div>
-                ) : nextSubmitted || nextAlreadyAnswered ? (
-                  pendingGrantNext === "redo_full" ? (
-                    <>
-                      <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-center">
-                        <p className="text-amber-300 text-base font-bold leading-snug">재투표 1회: 게이지를 재설정한 뒤 제출합니다</p>
-                      </div>
-                  <SurveyGaugeSubmit
-                    gaugeValue={nextGaugePosition}
-                        onGaugeChange={(v) => {
-                          setNextGaugePosition(v);
-                          setNextKospiAnswer(v > 0);
-                        }}
-                        userTokens={userTokens}
-                        submitting={nextSubmitting}
-                        submitBtnClass="bg-amber-500 hover:bg-amber-400 disabled:bg-[#333] disabled:text-gray-500 text-white"
-                        submitLabel="재투표 제출하기"
-                        onSubmit={handleNextSubmit}
-                      />
-                      {error ? (
-                        <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4 text-red-400 text-base text-center mt-2">
-                          {error}
-                        </div>
-                      ) : null}
-                    </>
-                  ) : (
-                  <div className="flex flex-col gap-3 w-full items-stretch">
-                    <p className="text-center text-base text-emerald-400 font-bold mb-1">
-                      {formatPreSurveyTarget(nextSurvey.survey_date).dateIso} 거래일 사전 예측 제출 완료
-                    </p>
-                    <div className="w-full min-w-0 space-y-1">
-                      <GaugeBar
-                        value={nextGaugePosition}
-                        onChange={() => {}}
-                        tokens={userTokens}
-                        disabled
-                        beginnerTips
-                      />
-                    </div>
-                  </div>
-                  )
-                ) : (
-                  <>
-                  <SurveyGaugeSubmit
-                    gaugeValue={nextGaugePosition}
-                      onGaugeChange={(v) => { setNextGaugePosition(v); setNextKospiAnswer(v > 0); }}
-                      userTokens={userTokens}
-                      submitting={nextSubmitting}
-                      submitBtnClass="bg-amber-500 hover:bg-amber-400 disabled:bg-[#333] disabled:text-gray-500 text-white"
-                      submitLabel={`${formatPreSurveyTarget(nextSurvey.survey_date).dateIso} 사전 예측 제출`}
-                      onSubmit={handleNextSubmit}
-                    />
-                    {error && (
-                      <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4 text-red-400 text-base text-center mt-2">
-                        {error}
-                      </div>
-                    )}
-                  </>
-                )}
+                <NextPreSurveyPanel
+                  surveyDate={nextSurvey.survey_date}
+                  responseKnown={nextMyResponseKnown}
+                  submitted={nextSubmitted}
+                  alreadyAnswered={nextAlreadyAnswered}
+                  pendingGrantRedo={pendingGrantNext === "redo_full"}
+                  gaugeValue={nextGaugePosition}
+                  onGaugeChange={(v) => {
+                    setNextGaugePosition(v);
+                    setNextKospiAnswer(v > 0);
+                  }}
+                  userTokens={userTokens}
+                  submitting={nextSubmitting}
+                  onSubmit={handleNextSubmit}
+                  error={error}
+                />
               </div>
             </div>
           )}

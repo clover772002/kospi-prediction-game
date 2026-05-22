@@ -15,6 +15,7 @@ import {
   saveDashboardSnapshot,
   saveGroupsSnapshot,
   saveShopSnapshot,
+  saveSurveyNextSnapshot,
   saveSurveyTodaySnapshot,
 } from "@/lib/tab-session-cache";
 
@@ -90,6 +91,9 @@ export async function runAppTabPrefetch(
     });
     // full dashboard는 위 .then 에서 스냅샷 갱신
     saveSurveyTodaySnapshot(todayData);
+    if (todayData.next_survey?.survey_date) {
+      saveSurveyNextSnapshot(todayData.next_survey);
+    }
     saveGroupsSnapshot(grpResult);
 
     if (catalog) {

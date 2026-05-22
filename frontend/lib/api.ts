@@ -128,6 +128,11 @@ export interface Challenge {
   duel_group_id: string | null;
 }
 
+export interface NextSurveyInfo {
+  survey_date: string;
+  is_open: boolean;
+}
+
 export interface TodaySurvey {
   status: "no_survey" | "open" | "closed" | "result";
   survey_date: string;
@@ -136,6 +141,8 @@ export interface TodaySurvey {
   kospi_weighted_pct: number | null;
   kospi_result: boolean | null;
   kospi_change_pct: number | null;
+  /** 설문 요약과 함께 내려오면 별도 next-survey 호출 없이 사전 예측 UI 표시 */
+  next_survey?: NextSurveyInfo | null;
   top_predictor?: TopPredictor;
   worst_predictor?: TopPredictor;
   participants?: Participant[];

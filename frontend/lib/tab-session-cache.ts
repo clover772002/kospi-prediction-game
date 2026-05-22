@@ -223,6 +223,61 @@ export function clearSurveyTodaySnapshot(): void {
   }
 }
 
+// ── 다음 거래일 사전 예측 ────────────────────────────────────
+
+export type SurveyNextSnapshot = {
+  survey_date: string;
+  is_open: boolean;
+  savedAt: number;
+};
+
+const SURVEY_NEXT_KEY = "tab_survey_next_v1";
+let surveyNextMemory: SurveyNextSnapshot | null = null;
+
+export function peekSurveyNextSnapshot(): Pick<SurveyNextSnapshot, "survey_date" | "is_open"> | null {
+  if (surveyNextMemory && Date.now() - surveyNextMemory.savedAt <= DASHBOARD_SNAPSHOT_TTL_MS) {
+    return { survey_date: surveyNextMemory.survey_date, is_open: surveyNextMemory.is_open };
+  }
+  surveyNextMemory = null;
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = sessionStorage.getItem(SURVEY_NEXT_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as SurveyNextSnapshot;
+    if (!parsed?.savedAt || Date.now() - parsed.savedAt > DASHBOARD_SNAPSHOT_TTL_MS) {
+      sessionStorage.removeItem(SURVEY_NEXT_KEY);
+      return null;
+    }
+    surveyNextMemory = parsed;
+    return { survey_date: parsed.survey_date, is_open: parsed.is_open };
+  } catch {
+    return null;
+  }
+}
+
+export function saveSurveyNextSnapshot(next: { survey_date: string; is_open: boolean }): void {
+  const full: SurveyNextSnapshot = { ...next, savedAt: Date.now() };
+  surveyNextMemory = full;
+  if (typeof window !== "undefined") {
+    try {
+      sessionStorage.setItem(SURVEY_NEXT_KEY, JSON.stringify(full));
+    } catch {
+      /* noop */
+    }
+  }
+}
+
+export function clearSurveyNextSnapshot(): void {
+  surveyNextMemory = null;
+  if (typeof window !== "undefined") {
+    try {
+      sessionStorage.removeItem(SURVEY_NEXT_KEY);
+    } catch {
+      /* noop */
+    }
+  }
+}
+
 // ── 그룹 목록 ────────────────────────────────────────────────
 
 let groupsSnapMemory: GroupsTabSnapshot | null = null;
@@ -289,6 +344,7 @@ export function clearAllTabSnapshots(): void {
   clearDashboardSnapshot();
   clearShopSnapshot();
   clearSurveyTodaySnapshot();
+  clearSurveyNextSnapshot();
   clearGroupsSnapshot();
 }
 
