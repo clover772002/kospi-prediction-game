@@ -160,7 +160,7 @@ function SurveyGaugeWithPreview({
             disabled={submitting}
             className="w-full py-4 bg-[#1A1A1A] border border-[#333] text-gray-300 hover:border-gray-500 text-base font-bold rounded-xl transition-all"
           >
-            미리보기로 다시 조정
+            다시 조정
           </button>
           <button
             type="button"
