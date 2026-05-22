@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { getMe, unlinkTelegram, deletePushSubscription, savePushPreferences, createGroup, joinGroup, getMyGroups, leaveGroup, UserProfile, Group, PushPreferences } from "@/lib/api";
 import { subscribeWebPush } from "@/lib/webPush";
+import HomeScreenAddGuide from "@/components/HomeScreenAddGuide";
 import AppAmbientBackground from "@/components/AppAmbientBackground";
 import PageLoadProgress from "@/components/PageLoadProgress";
 import AppTabNav from "@/components/AppTabNav";
@@ -290,6 +291,8 @@ export default function SetupPage() {
         </div>
       )}
 
+      <HomeScreenAddGuide isIOS={isIOS} isStandalone={isStandalone} isInApp={isInApp} />
+
       {/* 텔레그램 탭은 제거 — 버튼으로만 진입 가능 */}
 
 
@@ -314,6 +317,12 @@ export default function SetupPage() {
               <p>🕒 <span className="text-white">15:35</span> - 실제 결과 + 내 정확도 알림</p>
             </div>
           </div>
+
+          {isIOS && !isStandalone ? (
+            <p className="text-xs text-orange-300/90 leading-relaxed rounded-xl border border-orange-500/25 bg-orange-950/30 px-3 py-2">
+              단톡·브라우저 푸시 알림은 iPhone Safari 탭이 아니라, 위 <span className="font-bold text-orange-200">📲 홈 화면에 추가</span> 후 홈 화면 앱에서 알림을 켜야 해요. 텔레그램만으로도 단톡 알림은 받을 수 있어요.
+            </p>
+          ) : null}
 
           <button
             onClick={async () => {
@@ -359,40 +368,6 @@ export default function SetupPage() {
             </div>
             <span className="text-green-400 text-lg flex-shrink-0">✅</span>
           </div>
-
-          {/* PWA 설치 — 한 줄 버튼 */}
-          {!isStandalone && !isIOS && (
-            <div className="flex items-center justify-between bg-[#1A1A1A] border border-[#2A2A2A] rounded-2xl px-4 py-4">
-              <div className="flex items-center gap-3">
-                <span className="text-xl">📲</span>
-                <span className="font-bold text-sm text-white">홈 화면에 추가</span>
-              </div>
-              <button
-                onClick={async () => {
-                  const p = (window as Window & { __pwaInstallPrompt?: { prompt(): Promise<void> } }).__pwaInstallPrompt;
-                  if (p) {
-                    await p.prompt();
-                    delete (window as Window & { __pwaInstallPrompt?: unknown }).__pwaInstallPrompt;
-                    setCanInstall(false);
-                  } else {
-                    alert("Chrome 주소창 오른쪽 ⋮ 메뉴를 탭한 뒤\n'앱 설치' 또는 '홈 화면에 추가'를 선택해주세요.");
-                  }
-                }}
-                className="bg-blue-600 hover:bg-blue-500 active:scale-95 text-white text-xs font-black px-4 py-2 rounded-xl transition-all"
-              >
-                설치
-              </button>
-            </div>
-          )}
-          {!isStandalone && isIOS && (
-            <div className="flex items-center justify-between bg-[#1A1A1A] border border-[#2A2A2A] rounded-2xl px-4 py-4">
-              <div className="flex items-center gap-3">
-                <span className="text-xl">📲</span>
-                <span className="font-bold text-sm text-white">홈 화면에 추가</span>
-              </div>
-              <span className="text-[11px] text-orange-400 font-bold">Safari 공유 → 홈추가</span>
-            </div>
-          )}
 
           {/* 알림 종류 체크박스 */}
           <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-2xl p-5 space-y-4">
@@ -473,149 +448,12 @@ export default function SetupPage() {
                 </div>
               )}
 
-              {/* iPhone — 아직 홈 화면에 추가 안 된 경우 */}
-              {isIOS && !isStandalone && !isInApp && (
-                <div className="bg-[#1A1A1A] border border-orange-500/40 rounded-2xl overflow-hidden">
-                  {/* 헤더 */}
-                  <div className="bg-orange-500/20 px-4 py-3 flex items-center gap-2 border-b border-orange-500/20">
-                    <span className="text-lg">🍎</span>
-                    <div>
-                      <p className="font-black text-orange-300 text-sm">iPhone 알림 설정 방법</p>
-                      <p className="text-[11px] text-orange-400/70">홈 화면에 추가 후 알림 허용 (1분이면 끝!)</p>
-                    </div>
-                  </div>
-
-                  <div className="p-4 space-y-5">
-
-                    {/* STEP 1 */}
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-2">
-                        <span className="bg-orange-500 text-white text-[11px] font-black px-2 py-0.5 rounded-full">STEP 1</span>
-                        <p className="text-xs font-bold text-white">화면 하단 가운데 공유 버튼 탭</p>
-                      </div>
-                      {/* 시각적 예시 */}
-                      <div className="bg-[#111] rounded-xl p-3 border border-[#2A2A2A]">
-                        <p className="text-[10px] text-gray-500 mb-2 text-center">Safari 하단 바</p>
-                        <div className="flex items-center justify-around bg-[#1C1C1E] rounded-xl px-4 py-2.5">
-                          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#888" strokeWidth="1.8"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
-                          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#888" strokeWidth="1.8"><path d="M5 12h14M12 19l7-7-7-7"/></svg>
-                          {/* 공유 버튼 강조 */}
-                          <div className="relative">
-                            <div className="absolute -inset-2 bg-orange-500/30 rounded-xl animate-pulse" />
-                            <div className="relative bg-orange-500 rounded-lg p-1.5">
-                              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                                <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/>
-                                <polyline points="16 6 12 2 8 6"/>
-                                <line x1="12" y1="2" x2="12" y2="15"/>
-                              </svg>
-                            </div>
-                            <p className="text-[9px] text-orange-400 text-center mt-0.5 font-bold">← 이거!</p>
-                          </div>
-                          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#888" strokeWidth="1.8"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>
-                          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#888" strokeWidth="1.8"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* STEP 2 */}
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-2">
-                        <span className="bg-orange-500 text-white text-[11px] font-black px-2 py-0.5 rounded-full">STEP 2</span>
-                        <p className="text-xs font-bold text-white">팝업에서 &ldquo;홈 화면에 추가&rdquo; 선택</p>
-                      </div>
-                      <div className="bg-[#111] rounded-xl p-3 border border-[#2A2A2A]">
-                        <p className="text-[10px] text-gray-500 mb-2 text-center">공유 팝업 (스크롤해서 찾기)</p>
-                        <div className="space-y-1.5">
-                          {[
-                            { icon: "✉️", label: "메일" },
-                            { icon: "💬", label: "메시지" },
-                          ].map((item) => (
-                            <div key={item.label} className="flex items-center gap-3 bg-[#2C2C2E] rounded-xl px-3 py-2 opacity-40">
-                              <span className="text-base">{item.icon}</span>
-                              <span className="text-xs text-gray-300">{item.label}</span>
-                            </div>
-                          ))}
-                          {/* 홈 화면에 추가 — 강조 */}
-                          <div className="flex items-center gap-3 bg-orange-500/20 border-2 border-orange-500 rounded-xl px-3 py-2.5 relative">
-                            <div className="w-8 h-8 bg-[#2C2C2E] rounded-lg flex items-center justify-center flex-shrink-0">
-                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.2" strokeLinecap="round"><rect x="3" y="3" width="18" height="18" rx="3"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
-                            </div>
-                            <span className="text-xs font-black text-white">홈 화면에 추가</span>
-                            <span className="ml-auto text-orange-400 text-xs font-black">← 탭!</span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* STEP 3 */}
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-2">
-                        <span className="bg-orange-500 text-white text-[11px] font-black px-2 py-0.5 rounded-full">STEP 3</span>
-                        <p className="text-xs font-bold text-white">우측 상단 &ldquo;추가&rdquo; 탭</p>
-                      </div>
-                      <div className="bg-[#111] rounded-xl p-3 border border-[#2A2A2A]">
-                        <p className="text-[10px] text-gray-500 mb-2 text-center">앱 이름 확인 화면</p>
-                        <div className="bg-[#1C1C1E] rounded-xl overflow-hidden">
-                          <div className="flex items-center justify-between px-4 py-2.5 border-b border-[#2A2A2A]">
-                            <span className="text-xs text-blue-400">취소</span>
-                            <span className="text-xs font-bold text-white">홈 화면에 추가</span>
-                            <div className="bg-orange-500 rounded-lg px-3 py-1">
-                              <span className="text-xs font-black text-white">추가 ←</span>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-3 px-4 py-3">
-                            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-600 to-blue-800 flex items-center justify-center text-xl flex-shrink-0">📊</div>
-                            <div>
-                              <p className="text-sm font-bold text-white">코스피 예측</p>
-                              <p className="text-[10px] text-gray-500">kospi-prediction.vercel.app</p>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* STEP 4 */}
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-2">
-                        <span className="bg-orange-500 text-white text-[11px] font-black px-2 py-0.5 rounded-full">STEP 4</span>
-                        <p className="text-xs font-bold text-white">홈 화면 아이콘으로 다시 접속!</p>
-                      </div>
-                      <div className="bg-[#111] rounded-xl p-3 border border-[#2A2A2A]">
-                        <p className="text-[10px] text-gray-500 mb-3 text-center">홈 화면에 생긴 아이콘 클릭</p>
-                        <div className="flex justify-center gap-6">
-                          {/* 다른 앱들 (흐릿) */}
-                          {["🎵","📸","🗺️"].map((e) => (
-                            <div key={e} className="flex flex-col items-center gap-1 opacity-30">
-                              <div className="w-14 h-14 bg-[#2C2C2E] rounded-2xl flex items-center justify-center text-2xl">{e}</div>
-                              <span className="text-[9px] text-gray-600">앱</span>
-                            </div>
-                          ))}
-                          {/* 우리 앱 강조 */}
-                          <div className="flex flex-col items-center gap-1 relative">
-                            <div className="absolute -inset-2 bg-orange-500/20 rounded-2xl animate-pulse" />
-                            <div className="relative w-14 h-14 bg-gradient-to-br from-blue-600 to-blue-800 rounded-2xl flex items-center justify-center text-2xl border-2 border-orange-400">📊</div>
-                            <span className="text-[9px] text-white font-bold">코스피</span>
-                            <span className="text-[9px] text-orange-400 font-black">↑ 클릭!</span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* 주소 복사 버튼 */}
-                    <button
-                      onClick={() => {
-                        navigator.clipboard.writeText(window.location.href).catch(() => {});
-                        alert("주소가 복사됐어요!\nSafari 주소창에 붙여넣기 → 홈 화면에 추가해주세요 📱");
-                      }}
-                      className="w-full py-3 bg-orange-500 hover:bg-orange-400 text-white font-black rounded-xl text-sm active:scale-95 transition-all flex items-center justify-center gap-2"
-                    >
-                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
-                      이 페이지 주소 복사하기
-                    </button>
-                    <p className="text-[10px] text-gray-600 text-center">복사 후 Safari 주소창에 붙여넣기 → 홈 화면에 추가</p>
-                  </div>
-                </div>
-              )}
+              {isIOS && !isStandalone && !isInApp ? (
+                <p className="text-xs text-orange-300/90 rounded-xl border border-orange-500/25 bg-orange-950/25 px-3 py-2 leading-relaxed">
+                  iPhone은 화면 <span className="font-bold text-orange-200">맨 위 📲 홈 화면에 추가</span> 안내를
+                  먼저 따라 주세요. 그다음 아래 「브라우저 알림 허용」을 누르면 돼요.
+                </p>
+              ) : null}
 
               {/* 알림 허용 버튼 — iOS 홈화면 앱이거나 Android/PC */}
               {(!isIOS || isStandalone) && !isInApp && (
