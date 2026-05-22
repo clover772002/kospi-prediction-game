@@ -1,8 +1,10 @@
 {
+  "id": "/",
   "name": "코스피 예측",
   "short_name": "코스피 예측",
   "description": "매일 코스피 방향을 예측하고 집단지성 결과를 확인하세요",
   "start_url": "/survey",
+  "scope": "/",
   "display": "standalone",
   "background_color": "#0D0D0D",
   "theme_color": "#0D0D0D",

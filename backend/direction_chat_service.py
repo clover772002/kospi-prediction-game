@@ -345,6 +345,53 @@ def list_room_messages(
     return out
 
 
+def _send_direction_chat_telegram(
+    supabase: Client,
+    user_id: str,
+    title: str,
+    body: str,
+) -> bool:
+    """웹 푸시 불가(iPhone Safari 등) 시 텔레그램 대체. direction_chat 설정 존중."""
+    import httpx
+    from webpush_helper import _allowed
+
+    token = (os.getenv("TELEGRAM_BOT_TOKEN") or "").strip()
+    if not token:
+        return False
+    try:
+        row = (
+            supabase.table("users")
+            .select("telegram_chat_id, push_preferences")
+            .eq("id", user_id)
+            .limit(1)
+            .execute()
+        )
+        if not row.data:
+            return False
+        prefs = row.data[0].get("push_preferences") or {}
+        if not _allowed(prefs, "direction_chat"):
+            return False
+        chat_id = row.data[0].get("telegram_chat_id")
+        if not chat_id:
+            return False
+        base = (os.getenv("PUBLIC_APP_URL") or "https://kospi-prediction-game.vercel.app").rstrip("/")
+        text = f"<b>{title}</b>\n{body}\n\n<a href=\"{base}/team-chat\">단톡 열기</a>"
+        with httpx.Client(timeout=10) as client:
+            resp = client.post(
+                f"https://api.telegram.org/bot{token}/sendMessage",
+                json={
+                    "chat_id": chat_id,
+                    "text": text,
+                    "parse_mode": "HTML",
+                    "disable_web_page_preview": True,
+                },
+            )
+            return resp.status_code == 200
+    except Exception as ex:
+        logger.warning("direction-chat 텔레그램 실패 recipient=%s: %s", user_id, ex)
+        return False
+
+
 def _notify_direction_chat_push(
     supabase: Client,
     *,
@@ -354,7 +401,7 @@ def _notify_direction_chat_push(
     side: str,
     body: str,
 ) -> None:
-    """같은 거래일 단톡 참여자(발신자 제외)에게 웹 푸시."""
+    """같은 거래일 단톡 참여자(발신자 제외)에게 웹 푸시 → 실패 시 텔레그램."""
     from webpush_helper import send_web_push_to_user
 
     snippet = (body or "").strip()
@@ -364,21 +411,24 @@ def _notify_direction_chat_push(
     push_body = f"{sender_masked}[{tag}] {snippet}" if snippet else f"{sender_masked}[{tag}] 새 메시지"
     if len(push_body) > 180:
         push_body = push_body[:177] + "…"
+    title = "💬 단톡 새 메시지"
 
     for uid in _room_participant_user_ids(supabase, survey_date):
         if uid == str(sender_id):
             continue
         try:
-            send_web_push_to_user(
+            pushed = send_web_push_to_user(
                 supabase,
                 uid,
-                "💬 단톡 새 메시지",
+                title,
                 push_body,
                 "/team-chat",
                 "direction_chat",
             )
+            if not pushed:
+                _send_direction_chat_telegram(supabase, uid, title, push_body)
         except Exception as ex:
-            logger.warning("direction-chat 푸시 실패 recipient=%s: %s", uid, ex)
+            logger.warning("direction-chat 알림 실패 recipient=%s: %s", uid, ex)
 
 
 def post_room_message(

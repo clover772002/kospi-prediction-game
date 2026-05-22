@@ -6,11 +6,13 @@ import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import {
   getDirectionChatRoom,
+  getMe,
   postDirectionChatMessage,
   type DirectionChatMessageRow,
   type DirectionChatStatus,
 } from "@/lib/api";
 import AppAmbientBackground from "@/components/AppAmbientBackground";
+import PushConnectBanner from "@/components/PushConnectBanner";
 import AppTabNav from "@/components/AppTabNav";
 import PageLoadProgress from "@/components/PageLoadProgress";
 import TeamChatCrownFxLayer from "@/components/team-chat/TeamChatCrownFxLayer";
@@ -45,6 +47,8 @@ export default function TeamChatPage() {
   const [err, setErr] = useState<string | null>(null);
   const [boot, setBoot] = useState(true);
   const [sending, setSending] = useState(false);
+  const [hasPush, setHasPush] = useState(false);
+  const [hasTelegram, setHasTelegram] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = useCallback(() => {
@@ -86,7 +90,11 @@ export default function TeamChatPage() {
     void (async () => {
       setBoot(true);
       try {
-        await refresh(token, null);
+        const [me] = await Promise.all([getMe(token), refresh(token, null)]);
+        if (!cancelled) {
+          setHasPush(Boolean(me.has_push));
+          setHasTelegram(me.telegram_chat_id != null);
+        }
       } catch (e) {
         if (!cancelled) setErr(e instanceof Error ? e.message : String(e));
       } finally {
@@ -176,6 +184,15 @@ export default function TeamChatPage() {
         <p className="relative z-10 mx-4 mt-2 shrink-0 rounded-lg border border-rose-500/40 bg-rose-950/40 px-3 py-2 text-sm text-rose-200">
           {err}
         </p>
+      ) : null}
+
+      {!boot && status?.answered ? (
+        <PushConnectBanner
+          accessToken={token}
+          hasPush={hasPush}
+          hasTelegram={hasTelegram}
+          context="team-chat"
+        />
       ) : null}
 
       {!boot && status && !status.answered ? (

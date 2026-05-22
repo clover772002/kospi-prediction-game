@@ -48,8 +48,8 @@ def _allowed(preferences: dict | None, notif_type: str | None) -> bool:
     return preferences.get(notif_type, True)
 
 
-def send_web_push(subscription_info: dict, title: str, body: str, url: str = "/dashboard", notif_type: str | None = None) -> bool:
-    """단일 구독자에게 웹 푸시 전송. 성공 시 True, 실패 시 False 반환."""
+def send_web_push(subscription_info: dict, title: str, body: str, url: str = "/dashboard", notif_type: str | None = None) -> bool | str:
+    """단일 구독자에게 웹 푸시 전송. 성공 True, 만료 'expired', 그 외 False."""
     if not VAPID_PRIVATE_KEY:
         logger.warning("VAPID_PRIVATE_KEY 미설정 — 웹 푸시 생략")
         return False
@@ -67,10 +67,20 @@ def send_web_push(subscription_info: dict, title: str, body: str, url: str = "/d
     except WebPushException as e:
         status = e.response.status_code if e.response else "N/A"
         logger.error(f"웹 푸시 실패 (status={status}): {e}")
+        if e.response is not None and e.response.status_code in (404, 410):
+            return "expired"
         return False
     except Exception as e:
         logger.error(f"웹 푸시 오류: {e}")
         return False
+
+
+def _clear_push_subscription(supabase, user_id: str) -> None:
+    try:
+        supabase.table("users").update({"push_subscription": None}).eq("id", user_id).execute()
+        logger.info("만료된 push_subscription 제거 user=%s", user_id)
+    except Exception as e:
+        logger.error("push_subscription 제거 실패 user=%s: %s", user_id, e)
 
 
 def send_web_push_to_user(
@@ -95,7 +105,11 @@ def send_web_push_to_user(
         sub = row.data[0]["push_subscription"]
         if isinstance(sub, str):
             sub = json.loads(sub)
-        return send_web_push(sub, title, body, url, notif_type)
+        ok = send_web_push(sub, title, body, url, notif_type)
+        if ok == "expired":
+            _clear_push_subscription(supabase, user_id)
+            return False
+        return bool(ok)
     except Exception as e:
         logger.error(f"웹 푸시 단일 발송 오류 (user={user_id}): {e}")
         return False
@@ -138,7 +152,12 @@ async def send_web_push_to_all(
                 logger.error(f"유저 {user.get('id')}: push_subscription JSON 파싱 오류 {e}")
                 continue
         logger.info(f"유저 {user.get('id')} 푸시 발송 시도")
-        if send_web_push(sub, title, body, url, notif_type):
+        result = send_web_push(sub, title, body, url, notif_type)
+        if result == "expired":
+            uid = user.get("id")
+            if uid:
+                _clear_push_subscription(supabase, str(uid))
+        elif result:
             sent += 1
 
     logger.info(f"웹 푸시 발송 완료: {sent}명")

@@ -3,7 +3,8 @@
 import { useEffect, useLayoutEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
-import { getMe, unlinkTelegram, getVapidPublicKey, savePushSubscription, deletePushSubscription, savePushPreferences, createGroup, joinGroup, getMyGroups, leaveGroup, UserProfile, Group, PushPreferences } from "@/lib/api";
+import { getMe, unlinkTelegram, deletePushSubscription, savePushPreferences, createGroup, joinGroup, getMyGroups, leaveGroup, UserProfile, Group, PushPreferences } from "@/lib/api";
+import { subscribeWebPush } from "@/lib/webPush";
 import AppAmbientBackground from "@/components/AppAmbientBackground";
 import PageLoadProgress from "@/components/PageLoadProgress";
 import AppTabNav from "@/components/AppTabNav";
@@ -56,6 +57,8 @@ export default function SetupPage() {
   const [joinCode, setJoinCode]       = useState("");
   const [groupMsg, setGroupMsg]       = useState<{ text: string; ok: boolean } | null>(null);
   const [copiedCode, setCopiedCode]   = useState<string | null>(null);
+
+  const pushDeliveryReady = pushLinked && (!isIOS || isStandalone);
 
   // 클라이언트에서만 실행 — iOS/standalone/인앱브라우저 감지
   useEffect(() => {
@@ -266,9 +269,19 @@ export default function SetupPage() {
           </div>
           {(linked || pushLinked) ? (
             <div className="flex flex-col items-end gap-0.5 flex-shrink-0">
-              <span className="text-xs text-green-400 font-bold">✅ 연동됨</span>
+              <span className={`text-xs font-bold ${pushLinked && isIOS && !isStandalone ? "text-orange-400" : "text-green-400"}`}>
+                {pushLinked && isIOS && !isStandalone ? "⚠️ iPhone 추가 필요" : "✅ 연동됨"}
+              </span>
               <span className="text-xs text-gray-500">
-                {linked && pushLinked ? "텔레그램 · 브라우저" : linked ? "텔레그램" : "브라우저 알림"}
+                {linked && pushDeliveryReady
+                  ? "텔레그램 · 브라우저"
+                  : linked && pushLinked
+                    ? "텔레그램 · 브라우저(다른 기기)"
+                    : linked
+                      ? "텔레그램"
+                      : pushDeliveryReady
+                        ? "브라우저 알림"
+                        : "브라우저(홈 화면 앱 필요)"}
               </span>
             </div>
           ) : (
@@ -329,6 +342,15 @@ export default function SetupPage() {
       ) : pushLinked ? (
         /* 웹 푸시 연동 완료 */
         <div className="space-y-5">
+          {isIOS && !isStandalone ? (
+            <div className="bg-orange-500/10 border border-orange-500/35 rounded-2xl p-4 space-y-2">
+              <p className="text-sm font-black text-orange-300">iPhone Safari 탭에서는 알림이 안 와요</p>
+              <p className="text-xs text-orange-100/85 leading-relaxed">
+                아래 안내대로 <span className="text-white font-bold">홈 화면에 추가</span>한 뒤, 그 아이콘으로 앱을 열고
+                「브라우저 알림 허용」을 다시 눌러 주세요. 또는 <span className="text-white font-bold">텔레그램 봇</span>을 쓰면 단톡 알림도 받을 수 있어요.
+              </p>
+            </div>
+          ) : null}
           <div className="bg-purple-500/10 border border-purple-500/30 rounded-2xl px-4 py-3 flex items-center gap-3">
             <span className="text-2xl flex-shrink-0">🔔</span>
             <div className="flex-1 min-w-0">
@@ -383,7 +405,7 @@ export default function SetupPage() {
               { key: "challenge",      icon: "⚔️", label: "대결 신청·결과 알림", desc: "수시" },
               { key: "group_nudge",    icon: "📣", label: "그룹 독촉 알림",    desc: "수시" },
               { key: "expert_chat",    icon: "💬", label: "고수 소통 알림",    desc: "새 질문·답장" },
-              { key: "direction_chat", icon: "🗨️", label: "단톡 메시지 알림",  desc: "같은 방 새 메시지" },
+              { key: "direction_chat", icon: "🗨️", label: "단톡 메시지 알림",  desc: "같은 방 새 메시지 · iPhone은 홈 화면 앱 또는 텔레그램" },
             ] as { key: keyof PushPreferences; icon: string; label: string; desc: string }[]).map(({ key, icon, label, desc }) => (
               <label key={key} className="flex items-center gap-3 cursor-pointer group">
                 <div className={`w-11 h-6 rounded-full transition-all flex-shrink-0 relative ${prefs[key] ? "bg-purple-600" : "bg-[#333]"}`}
@@ -598,45 +620,20 @@ export default function SetupPage() {
               {/* 알림 허용 버튼 — iOS 홈화면 앱이거나 Android/PC */}
               {(!isIOS || isStandalone) && !isInApp && (
                 <>
+                  {isIOS && isStandalone ? (
+                    <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-xl p-3 text-xs text-gray-400 space-y-1">
+                      <p className="font-bold text-white">STEP 3 · iPhone 알림 허용</p>
+                      <p>설정 → 알림 → <span className="text-white">코스피 예측</span> → 알림 허용</p>
+                    </div>
+                  ) : null}
                   <button
                     onClick={async () => {
                       if (!token) return;
                       setPushLoading(true);
                       setPushError(null);
                       try {
-                        if (typeof window === "undefined" || !("Notification" in window)) {
-                          setPushError("이 브라우저는 알림을 지원하지 않아요. Chrome 또는 Edge를 사용해주세요.");
-                          return;
-                        }
-                        if (!("serviceWorker" in navigator)) {
-                          setPushError("이 브라우저는 Service Worker를 지원하지 않아요.");
-                          return;
-                        }
-                        const permission = await window.Notification.requestPermission();
-                        if (permission !== "granted") {
-                          setPushError("알림 권한이 거부됐어요. 브라우저 설정에서 허용해주세요.");
-                          return;
-                        }
-                        const reg = await navigator.serviceWorker.register("/sw.js", { updateViaCache: "none" });
-                        await reg.update();
-                        await navigator.serviceWorker.ready;
-                        const vapidKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
-                          || await getVapidPublicKey();
-                        if (!vapidKey) {
-                          setPushError("서버 설정 오류입니다. 잠시 후 다시 시도해주세요.");
-                          return;
-                        }
-                        const keyBytes = Uint8Array.from(
-                          atob(vapidKey.replace(/-/g, "+").replace(/_/g, "/")),
-                          (c) => c.charCodeAt(0)
-                        );
-                        const sub = await reg.pushManager.subscribe({
-                          userVisibleOnly: true,
-                          applicationServerKey: keyBytes,
-                        });
-                        await savePushSubscription(token, sub.toJSON());
+                        await subscribeWebPush(token);
                         setPushLinked(true);
-                        // 설치 가능 상태면 버튼 표시
                         if ((window as Window & { __pwaInstallPrompt?: unknown }).__pwaInstallPrompt) {
                           setCanInstall(true);
                         }
