@@ -17,6 +17,7 @@ NOTIF_TYPES = {
     "challenge":      "대결 신청·결과 알림",
     "group_nudge":    "그룹 독촉 알림",
     "expert_chat":    "고수 소통(질문·답장) 알림",
+    "direction_chat": "단톡 새 메시지 알림",
 }
 
 def _load_vapid_private_key() -> str:

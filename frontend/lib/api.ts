@@ -55,6 +55,8 @@ export interface PushPreferences {
   group_nudge:    boolean;
   /** 새 질문·고수 답장 등 고수 소통 알림 */
   expert_chat:    boolean;
+  /** 단톡방 새 메시지 알림 */
+  direction_chat: boolean;
 }
 
 export interface UserProfile {

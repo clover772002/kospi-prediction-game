@@ -345,6 +345,42 @@ def list_room_messages(
     return out
 
 
+def _notify_direction_chat_push(
+    supabase: Client,
+    *,
+    sender_id: str,
+    survey_date: str,
+    sender_masked: str,
+    side: str,
+    body: str,
+) -> None:
+    """같은 거래일 단톡 참여자(발신자 제외)에게 웹 푸시."""
+    from webpush_helper import send_web_push_to_user
+
+    snippet = (body or "").strip()
+    if len(snippet) > 80:
+        snippet = snippet[:77] + "…"
+    tag = "↑상승" if side == "up" else "↓하락"
+    push_body = f"{sender_masked}[{tag}] {snippet}" if snippet else f"{sender_masked}[{tag}] 새 메시지"
+    if len(push_body) > 180:
+        push_body = push_body[:177] + "…"
+
+    for uid in _room_participant_user_ids(supabase, survey_date):
+        if uid == str(sender_id):
+            continue
+        try:
+            send_web_push_to_user(
+                supabase,
+                uid,
+                "💬 단톡 새 메시지",
+                push_body,
+                "/team-chat",
+                "direction_chat",
+            )
+        except Exception as ex:
+            logger.warning("direction-chat 푸시 실패 recipient=%s: %s", uid, ex)
+
+
 def post_room_message(
     supabase: Client,
     user_id: str,
@@ -403,6 +439,18 @@ def post_room_message(
         raise HTTPException(status_code=500, detail="메시지를 저장하지 못했습니다.")
 
     row = ins.data[0]
+    try:
+        _notify_direction_chat_push(
+            supabase,
+            sender_id=user_id,
+            survey_date=survey_date,
+            sender_masked=my_masked,
+            side=side,
+            body=text,
+        )
+    except Exception as ex:
+        logger.warning("direction-chat 푸시 일괄 발송 스킵: %s", ex)
+
     return {
         "ok": True,
         "message": {
