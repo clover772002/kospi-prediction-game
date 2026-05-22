@@ -2949,7 +2949,7 @@ async def direction_chat_post_message(
     current_user=Depends(get_current_user),
     supabase: Client = Depends(get_supabase),
 ):
-    """내 팀 단톡에 메시지 전송(장 마감 전·설문 참여자만)."""
+    """단톡에 메시지 전송(장 마감 전·설문 참여자만)."""
     user_id = str(current_user.id)
     sd = (body.survey_date or "").strip() or today_kst()
     if len(sd) != 10:
