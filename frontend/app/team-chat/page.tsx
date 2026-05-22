@@ -5,9 +5,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import {
-  getDirectionChatMessages,
-  getDirectionChatStatus,
-  getToday,
+  getDirectionChatRoom,
+  getTodaySummary,
   postDirectionChatMessage,
   type DirectionChatMessageRow,
   type DirectionChatStatus,
@@ -52,14 +51,10 @@ export default function TeamChatPage() {
 
   const refresh = useCallback(async (accessToken: string, sd: string, silent = false) => {
     if (!silent) setErr(null);
-    const st = await getDirectionChatStatus(accessToken, sd);
+    const room = await getDirectionChatRoom(accessToken, sd);
+    const { messages: msgs, ...st } = room;
     setStatus(st);
-    if (st.can_read) {
-      const msgRes = await getDirectionChatMessages(accessToken, sd);
-      setMessages(msgRes.messages);
-    } else {
-      setMessages([]);
-    }
+    setMessages(msgs);
   }, []);
 
   useEffect(() => {
@@ -88,7 +83,7 @@ export default function TeamChatPage() {
     void (async () => {
       setBoot(true);
       try {
-        const today = await getToday();
+        const today = await getTodaySummary();
         const sd = today.survey_date?.slice(0, 10) ?? null;
         if (!sd) {
           setErr("오늘 거래일 설문이 없습니다.");
@@ -197,9 +192,7 @@ export default function TeamChatPage() {
         </div>
       ) : (
         <>
-          <div
-            className="relative z-10 min-h-0 flex-1 space-y-2 overflow-y-auto px-3 py-3"
-          >
+          <div className="relative z-10 min-h-0 flex-1 space-y-2 overflow-y-auto px-3 py-3">
             {messages.length === 0 && !boot ? (
               <p className="py-12 text-center text-sm text-gray-500">
                 아직 메시지가 없어요.

@@ -3,6 +3,7 @@
  */
 import type { Challenge, Group } from "@/lib/api";
 import {
+  getDashboardSummary,
   getDashboard,
   getMe,
   getMyChallenges,
@@ -55,14 +56,28 @@ export async function runAppTabPrefetch(
       : (null as unknown as number);
 
   try {
-    const [profile, todayData, dashData, chResult, grpResult, catalog] = await Promise.all([
+    const [profile, todayData, dashSummary, chResult, grpResult, catalog] = await Promise.all([
       withTimeout(getMe(accessToken), 25_000),
       withTimeout(getTodaySummary(), 20_000),
-      withTimeout(getDashboard(accessToken), 45_000),
+      withTimeout(getDashboardSummary(accessToken), 20_000),
       withTimeout(getMyChallenges(accessToken)).catch(() => EMPTY_CHALLENGES),
       withTimeout(getMyGroups(accessToken)).catch(() => [] as Group[]),
       withTimeout(getShopCatalog(accessToken)).catch(() => null),
     ]);
+
+    let dashData = dashSummary;
+    void withTimeout(getDashboard(accessToken), 45_000)
+      .then((full) => {
+        dashData = full;
+        saveDashboardSnapshot({
+          user: profile,
+          today: todayData,
+          dash: full,
+          challenges: chResult,
+          groups: grpResult,
+        });
+      })
+      .catch(() => {});
 
     const walletTokens = typeof dashData.tokens === "number" ? dashData.tokens : null;
 
@@ -73,6 +88,7 @@ export async function runAppTabPrefetch(
       challenges: chResult,
       groups: grpResult,
     });
+    // full dashboard는 위 .then 에서 스냅샷 갱신
     saveSurveyTodaySnapshot(todayData);
     saveGroupsSnapshot(grpResult);
 

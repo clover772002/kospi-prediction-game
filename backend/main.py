@@ -81,10 +81,12 @@ from expert_chat_service import (
     send_participant_message,
 )
 from direction_chat_service import (
+    build_room_payload as build_direction_chat_room,
     build_status_payload as build_direction_chat_status,
     list_room_messages as list_direction_chat_messages,
     post_room_message as post_direction_chat_message,
 )
+from dashboard_service import build_user_dashboard
 from accuracy_aggregate import clear_accuracy_cache, get_accuracy_data
 from expert_tier import (
     SEGMENT_PRED_COUNT_MIN,
@@ -2920,6 +2922,25 @@ class DirectionChatMessageBody(BaseModel):
     survey_date: str | None = None
 
 
+@app.get("/api/direction-chat/room")
+async def direction_chat_room(
+    survey_date: str | None = None,
+    limit: int = 80,
+    current_user=Depends(get_current_user),
+    supabase: Client = Depends(get_supabase),
+):
+    """단톡 탭 1회 호출: 방 상태 + 메시지 목록."""
+    user_id = str(current_user.id)
+    sd = survey_date.strip() if survey_date and survey_date.strip() else today_kst()
+    if len(sd) != 10:
+        raise HTTPException(status_code=400, detail="survey_date 형식 오류 (YYYY-MM-DD)")
+    try:
+        apply_pending_presubmits(supabase, user_id)
+    except Exception as ex:
+        logger.warning("direction-chat room: 예약 설문 적용 스킵 — %s", ex)
+    return build_direction_chat_room(supabase, user_id, sd, limit=min(limit, 120))
+
+
 @app.get("/api/direction-chat/status")
 async def direction_chat_status(
     survey_date: str | None = None,
@@ -3690,172 +3711,52 @@ def _cell_truthy_bool(v) -> bool | None:
     return None
 
 
+@app.get("/api/dashboard/summary")
+async def get_dashboard_summary(
+    current_user=Depends(get_current_user),
+    supabase: Client = Depends(get_supabase),
+):
+    """대시보드 첫 화면용 — 최근 5일 이력·정산/랭킹 집계 생략."""
+    user_id = str(current_user.id)
+    _spawn_settlement_side_effects(supabase, today_kst())
+    try:
+        return build_user_dashboard(
+            supabase,
+            user_id,
+            history_limit=5,
+            include_rank_stats=False,
+            settle_pending=False,
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception("대시보드 summary 조회 실패 user=%s", user_id)
+        raise HTTPException(
+            status_code=500,
+            detail="대시보드 요약을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.",
+        ) from e
+
+
 @app.get("/api/dashboard")
 async def get_dashboard(
     current_user=Depends(get_current_user),
     supabase: Client = Depends(get_supabase),
 ):
-    """내 예측 이력 + 정확도 + 상위 퍼센트"""
+    """내 예측 이력(최대 30일) + 정확도 + 상위 퍼센트 — summary 이후 백그라운드용."""
     user_id = str(current_user.id)
 
     try:
-        try:
-            apply_pending_presubmits(supabase, user_id)
-        except Exception as ex:
-            logger.warning("대시보드: 예약 설문 적용 스킵 — %s", ex)
         _spawn_settlement_side_effects(supabase, today_kst())
-
-        # 유저 토큰 + 스트릭 조회
-        user_row = supabase.table("users").select("tokens, current_streak").eq("id", user_id).execute()
-        user_tokens = user_row.data[0].get("tokens", 100) if user_row.data else 100
-        user_streak = user_row.data[0].get("current_streak", 0) if user_row.data else 0
-
-        my_responses = (
-            supabase.table("survey_responses")
-            .select("survey_date, kospi_answer, gauge_position, tokens_bet, tokens_won, payout_multiplier")
-            .eq("user_id", user_id)
-            .order("survey_date", desc=True)
-            .limit(30)
-            .execute()
+        payload = build_user_dashboard(
+            supabase,
+            user_id,
+            history_limit=30,
+            include_rank_stats=True,
+            settle_pending=True,
+            settle_fn=_settle_kospi_tokens_for_user_date,
         )
-
-        my_accuracy_res = (
-            supabase.table("accuracy_records")
-            .select("survey_date, kospi_correct")
-            .eq("user_id", user_id)
-            .execute()
-        )
-
-        accuracy_map = {_survey_date_key(r["survey_date"]): r for r in (my_accuracy_res.data or [])}
-        responses_rows = my_responses.data or []
-
-        # daily_surveys.in_ 에 넣을 날짜는 문자열 YYYY-MM-DD 로 통일 (date 객체 혼합 방지)
-        unique_dates_raw = list(
-            {_survey_date_key(resp["survey_date"]) for resp in responses_rows if resp.get("survey_date") is not None}
-        )
-        unique_dates_raw = [d for d in unique_dates_raw if len(d) >= 8]
-        kospi_result_by_date: dict = {}
-        kospi_pct_by_date = {}
-        if unique_dates_raw:
-            ds_bulk = (
-                supabase.table("daily_surveys")
-                .select("survey_date, kospi_result, kospi_change_pct")
-                .in_("survey_date", unique_dates_raw)
-                .execute()
-            )
-            for row in ds_bulk.data or []:
-                dk = _survey_date_key(row["survey_date"])
-                raw_kr = row.get("kospi_result")
-                kospi_result_by_date[dk] = _cell_truthy_bool(raw_kr)
-                raw_pct = row.get("kospi_change_pct")
-                pct_val = None
-                if raw_pct is not None:
-                    try:
-                        pct_val = round(float(raw_pct), 4)
-                    except (TypeError, ValueError):
-                        pct_val = None
-                kospi_pct_by_date[dk] = pct_val
-
-        pending_settle_dates = sorted({
-            _survey_date_key(resp["survey_date"])
-            for resp in responses_rows
-            if resp.get("tokens_won") is None and resp.get("survey_date") is not None
-        })
-        pending_settle_dates = [
-            d
-            for d in pending_settle_dates
-            if len(d) >= 8 and kospi_result_by_date.get(d) is not None
-        ]
-        # 미정산일이 많아도 응답 지연 방지 — 최근 3거래일만 동기 정산
-        if len(pending_settle_dates) > 3:
-            pending_settle_dates = pending_settle_dates[-3:]
-        user_tokens_settled = False
-        for d in pending_settle_dates:
-            if _settle_kospi_tokens_for_user_date(
-                supabase, user_id, d, bool(kospi_result_by_date[d]),
-            ):
-                user_tokens_settled = True
-
-        if user_tokens_settled:
-            user_row = supabase.table("users").select("tokens, current_streak").eq("id", user_id).execute()
-            user_tokens = user_row.data[0].get("tokens", 100) if user_row.data else user_tokens
-            user_streak = user_row.data[0].get("current_streak", 0) if user_row.data else user_streak
-            my_responses = (
-                supabase.table("survey_responses")
-                .select("survey_date, kospi_answer, gauge_position, tokens_bet, tokens_won, payout_multiplier")
-                .eq("user_id", user_id)
-                .order("survey_date", desc=True)
-                .limit(30)
-                .execute()
-            )
-            responses_rows = my_responses.data or []
-
-        history = []
-        for resp in responses_rows:
-            d_key = _survey_date_key(resp["survey_date"])
-            acc = accuracy_map.get(d_key, {})
-            kospi_correct = acc.get("kospi_correct")
-            if kospi_correct is not None:
-                kospi_correct = _cell_truthy_bool(kospi_correct)
-            kr = kospi_result_by_date.get(d_key)
-            ka = _cell_truthy_bool(resp.get("kospi_answer"))
-            if kospi_correct is None and ka is not None and kr is not None:
-                kospi_correct = ka == kr
-
-            history.append({
-                "date": d_key or resp["survey_date"],
-                "kospi_answer": resp["kospi_answer"],
-                "kospi_correct": kospi_correct,
-                "kospi_market_result": kr,
-                "kospi_change_pct": kospi_pct_by_date.get(d_key),
-                "gauge_position": resp.get("gauge_position"),
-                "tokens_bet": resp.get("tokens_bet"),
-                "tokens_won": resp.get("tokens_won"),
-                "payout_multiplier": resp.get("payout_multiplier"),
-            })
-
-        total_with_result = sum(1 for h in history if h["kospi_correct"] is not None)
-
-        if total_with_result == 0:
-            return {
-                "accuracy": {"kospi": None, "overall": None},
-                "percentile": None,
-                "contribution": None,
-                "history": history,
-                "total_predictions": len(responses_rows),
-                "tokens": user_tokens,
-                "current_streak": user_streak,
-            }
-
-        kospi_correct_cnt = sum(1 for h in history if h["kospi_correct"])
-        kospi_acc = round(kospi_correct_cnt / total_with_result * 100)
-
-        top_pct = None
-        contribution = None
-        try:
-            _, _, user_scores = get_accuracy_data(supabase)
-            my_rate = kospi_correct_cnt / total_with_result
-            users_with_lower = sum(
-                1 for uid, s in user_scores.items()
-                if s["total"] > 0 and s["correct"] / s["total"] < my_rate
-            )
-            total_users = len(user_scores)
-            top_pct = round((1 - users_with_lower / total_users) * 100) if total_users > 1 else 100
-            all_rates = [s["correct"] / s["total"] for s in user_scores.values() if s["total"] > 0]
-            avg_rate = sum(all_rates) / len(all_rates) if all_rates else 0.5
-            contribution = round(my_rate / avg_rate * 100) if avg_rate > 0 else 100
-        except Exception as ex:
-            logger.warning("대시보드: 상위 퍼센트·기여도 계산 스킵 — %s", ex)
-
-        return {
-            "accuracy": {"kospi": kospi_acc, "overall": kospi_acc},
-            "percentile": top_pct,
-            "contribution": contribution,
-            "history": history,
-            "total_predictions": len(responses_rows),
-            "tokens": user_tokens,
-            "current_streak": user_streak,
-        }
+        payload["history_truncated"] = False
+        return payload
 
     except HTTPException:
         raise

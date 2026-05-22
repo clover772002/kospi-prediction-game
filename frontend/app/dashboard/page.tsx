@@ -4,7 +4,7 @@ import { Suspense, useEffect, useState, useCallback, useRef, useLayoutEffect } f
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
-import { getMe, getTodaySummary, getDashboard, getExpertChatEligibility, createChallenge, getMyChallenges, reactToChallenge, requestRematch, acceptChallenge, declineChallenge, getMyGroups, UserProfile, TodaySurvey, DashboardData, Challenge, Group, type ExpertChatEligibility } from "@/lib/api";
+import { getMe, getTodaySummary, getDashboardSummary, getDashboard, getExpertChatEligibility, createChallenge, getMyChallenges, reactToChallenge, requestRematch, acceptChallenge, declineChallenge, getMyGroups, UserProfile, TodaySurvey, DashboardData, Challenge, Group, type ExpertChatEligibility } from "@/lib/api";
 import TopExpertNoticeBlock from "@/components/TopExpertNoticeBlock";
 import ShareSheet from "@/components/ShareSheet";
 import AppAmbientBackground from "@/components/AppAmbientBackground";
@@ -233,10 +233,10 @@ export default function DashboardPage() {
             ),
           ]);
 
-        const [meR, todayR, dashR, chR, grpR] = await Promise.allSettled([
+        const [meR, todayR, dashSumR, chR, grpR] = await Promise.allSettled([
           withTimeout(getMe(accessToken), 30_000),
-          withTimeout(getTodaySummary(), 30_000),
-          withTimeout(getDashboard(accessToken), 45_000),
+          withTimeout(getTodaySummary(), 25_000),
+          withTimeout(getDashboardSummary(accessToken), 20_000),
           withTimeout(getMyChallenges(accessToken), 25_000),
           withTimeout(getMyGroups(accessToken), 25_000),
         ]);
@@ -247,8 +247,8 @@ export default function DashboardPage() {
           meR.status === "fulfilled" ? meR.value : cached?.user ?? null;
         const todayData: TodaySurvey | null =
           todayR.status === "fulfilled" ? todayR.value : cached?.today ?? null;
-        const dashData: DashboardData | null =
-          dashR.status === "fulfilled" ? dashR.value : cached?.dash ?? null;
+        let dashData: DashboardData | null =
+          dashSumR.status === "fulfilled" ? dashSumR.value : cached?.dash ?? null;
         const chResult =
           chR.status === "fulfilled"
             ? chR.value
@@ -268,8 +268,8 @@ export default function DashboardPage() {
         }
         if (!dashData) {
           if (!cached?.dash) {
-            throw dashR.status === "rejected" && dashR.reason instanceof Error
-              ? dashR.reason
+            throw dashSumR.status === "rejected" && dashSumR.reason instanceof Error
+              ? dashSumR.reason
               : new Error("대시보드를 불러오지 못했습니다.");
           }
         }
@@ -278,17 +278,6 @@ export default function DashboardPage() {
         setToday(todayData);
         if (dashData) setDash(dashData);
         setChallenges(chResult);
-        const sd = todayData.survey_date?.slice(0, 10);
-        if (sd) {
-          try {
-            const expertEl = await getExpertChatEligibility(accessToken, sd);
-            if (seq === dashboardFetchSeq.current) setExpertEligibility(expertEl);
-          } catch {
-            if (seq === dashboardFetchSeq.current) setExpertEligibility(null);
-          }
-        } else if (seq === dashboardFetchSeq.current) {
-          setExpertEligibility(null);
-        }
         if (dashData) {
           saveDashboardSnapshot({
             user: profile,
@@ -299,7 +288,47 @@ export default function DashboardPage() {
           });
         }
 
-        if (dashData && todayData.status === "result" && todayData.survey_date) {
+        const sd = todayData.survey_date?.slice(0, 10);
+        void (async () => {
+          if (sd) {
+            try {
+              const expertEl = await getExpertChatEligibility(accessToken, sd);
+              if (seq === dashboardFetchSeq.current) setExpertEligibility(expertEl);
+            } catch {
+              if (seq === dashboardFetchSeq.current) setExpertEligibility(null);
+            }
+          }
+          try {
+            const fullDash = await withTimeout(getDashboard(accessToken), 45_000);
+            if (seq !== dashboardFetchSeq.current) return;
+            setDash(fullDash);
+            saveDashboardSnapshot({
+              user: profile,
+              today: todayData,
+              dash: fullDash,
+              challenges: chResult,
+              groups: grpResult,
+            });
+            if (todayData.status === "result" && todayData.survey_date) {
+              const key = `result_card_${todayData.survey_date}`;
+              if (!localStorage.getItem(key)) {
+                const participated = fullDash.history?.[0]?.date === todayData.survey_date;
+                if (participated) {
+                  setTimeout(() => setShowResultCard(true), 800);
+                }
+              }
+            }
+          } catch {
+            /* 요약만으로 화면 유지 */
+          }
+        })();
+
+        if (
+          dashData &&
+          todayData.status === "result" &&
+          todayData.survey_date &&
+          !dashData.history_truncated
+        ) {
           const key = `result_card_${todayData.survey_date}`;
           if (!localStorage.getItem(key)) {
             const participated = dashData.history?.[0]?.date === todayData.survey_date;

@@ -164,6 +164,8 @@ export interface DashboardData {
   total_predictions: number;
   tokens?: number;
   current_streak?: number;
+  /** true면 /api/dashboard 로 전체 이력 로드 중 또는 미완료 */
+  history_truncated?: boolean;
 }
 
 /** 전체 응답 일자별 박스플롯용(대시보드) */
@@ -236,6 +238,10 @@ export async function getTodaySummary(): Promise<TodaySurvey> {
   } catch {
     throw new Error("오늘 요약 응답 형식 오류");
   }
+}
+
+export async function getDashboardSummary(token: string): Promise<DashboardData> {
+  return authFetch<DashboardData>("/api/dashboard/summary", token);
 }
 
 export async function getDashboard(token: string): Promise<DashboardData> {
@@ -904,7 +910,12 @@ export async function postExpertChatAcceptTip(
   });
 }
 
-/** 방향 단톡방: 상승팀 / 하락팀 (거래일·설문 참여자만) */
+/** 단톡방 1회 조회 (/api/direction-chat/room) */
+export type DirectionChatRoom = DirectionChatStatus & {
+  messages: DirectionChatMessageRow[];
+};
+
+/** 방향 단톡방: 상승·하락 한 방 (거래일·설문 참여자만) */
 export interface DirectionChatStatus {
   survey_date: string;
   room_open: boolean;
@@ -930,6 +941,14 @@ export interface DirectionChatMessageRow {
   display_label: string;
   is_mine: boolean;
   side: "up" | "down";
+}
+
+export async function getDirectionChatRoom(
+  accessToken: string,
+  surveyDate?: string,
+): Promise<DirectionChatRoom> {
+  const q = surveyDate?.trim() ? `?survey_date=${encodeURIComponent(surveyDate.trim())}` : "";
+  return authFetch<DirectionChatRoom>(`/api/direction-chat/room${q}`, accessToken);
 }
 
 export async function getDirectionChatStatus(

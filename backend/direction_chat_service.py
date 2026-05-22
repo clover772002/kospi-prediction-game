@@ -250,3 +250,18 @@ def post_room_message(
             "side": side,
         },
     }
+
+
+def build_room_payload(
+    supabase: Client,
+    user_id: str,
+    survey_date: str,
+    *,
+    limit: int = 80,
+) -> dict[str, Any]:
+    """단톡 탭 1회 호출용: status + messages."""
+    status = build_status_payload(supabase, user_id, survey_date)
+    messages: list[dict[str, Any]] = []
+    if status.get("can_read"):
+        messages = list_room_messages(supabase, user_id, survey_date, limit=limit)
+    return {**status, "messages": messages, "survey_date": survey_date}
