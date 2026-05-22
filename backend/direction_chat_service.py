@@ -8,9 +8,16 @@ from datetime import datetime, timezone
 from typing import Any
 
 from fastapi import HTTPException
+from krx_calendar import next_trading_day_str, today_date_kst
 from supabase import Client
 
+from survey_writes import apply_pending_presubmits
+
 logger = logging.getLogger(__name__)
+
+
+def _today_str() -> str:
+    return today_date_kst().isoformat()
 
 MAX_BODY_LEN = int(os.getenv("DIRECTION_CHAT_MAX_BODY", "500"))
 MAX_MSG_PER_USER_DAY = int(os.getenv("DIRECTION_CHAT_MAX_MSG_PER_USER", "80"))
@@ -65,6 +72,57 @@ def _user_response_side(supabase: Client, user_id: str, survey_date: str) -> str
     return _side_from_kospi_answer(bool(ka))
 
 
+def _user_chat_side_for_date(supabase: Client, user_id: str, survey_date: str) -> str | None:
+    """응답 행 또는 미적용 사전 예측(presubmit) 기준 팀 방향."""
+    side = _user_response_side(supabase, user_id, survey_date)
+    if side:
+        return side
+    try:
+        pr = (
+            supabase.table("survey_vote_presubmit")
+            .select("gauge_position")
+            .eq("user_id", user_id)
+            .eq("survey_date", survey_date)
+            .is_("canceled_at", "null")
+            .is_("applied_at", "null")
+            .limit(1)
+            .execute()
+        )
+        if pr.data:
+            gp = int(pr.data[0].get("gauge_position") or 0)
+            if gp != 0:
+                return _side_from_kospi_answer(gp > 0)
+    except Exception as e:
+        logger.warning("presubmit 조회 실패(단톡): %s", e)
+    return None
+
+
+def _has_chat_eligibility(supabase: Client, user_id: str, survey_date: str) -> bool:
+    return _user_chat_side_for_date(supabase, user_id, survey_date) is not None
+
+
+def resolve_chat_survey_date(supabase: Client, user_id: str) -> str:
+    """참여한 거래일 기준 활성 단톡방 — 사전 예측(다음 거래일)만 있으면 그날 방."""
+    try:
+        apply_pending_presubmits(supabase, user_id)
+    except Exception as ex:
+        logger.warning("단톡: 예약 설문 적용 스킵 — %s", ex)
+
+    today = _today_str()
+    next_d = next_trading_day_str()
+    has_today = _has_chat_eligibility(supabase, user_id, today)
+    has_next = _has_chat_eligibility(supabase, user_id, next_d)
+    today_closed = _room_closed(supabase, today)
+
+    if has_today and not today_closed:
+        return today
+    if has_next:
+        return next_d
+    if has_today:
+        return today
+    return today
+
+
 def _count_members(supabase: Client, survey_date: str) -> dict[str, int]:
     res = (
         supabase.table("survey_responses")
@@ -101,7 +159,7 @@ def build_status_payload(
     user_id: str,
     survey_date: str,
 ) -> dict[str, Any]:
-    side = _user_response_side(supabase, user_id, survey_date)
+    side = _user_chat_side_for_date(supabase, user_id, survey_date)
     closed = _room_closed(supabase, survey_date)
     counts = _count_members(supabase, survey_date)
     my_name_row = supabase.table("users").select("name").eq("id", user_id).limit(1).execute()
@@ -111,11 +169,16 @@ def build_status_payload(
 
     can_access = side is not None
     can_send = can_access and not closed
+    today = _today_str()
+    room_title = "오늘 단톡" if survey_date == today else "다음 거래일 단톡"
 
     return {
         "survey_date": survey_date,
+        "room_title": room_title,
         "room_open": not closed,
-        "room_closed_reason": "장이 마감되어 오늘 단톡방이 종료되었습니다." if closed else None,
+        "room_closed_reason": (
+            f"장이 마감되어 {room_title}방이 종료되었습니다." if closed else None
+        ),
         "answered": can_access,
         "my_side": side,
         "my_team_label": _team_label(side) if side else None,
@@ -126,7 +189,7 @@ def build_status_payload(
         "can_read": can_access,
         "can_send": can_send,
         "send_blocked_reason": (
-            "오늘 설문에 참여하면 단톡방을 이용할 수 있습니다."
+            "오늘 설문 또는 다음 거래일 사전 예측에 참여하면 단톡방을 이용할 수 있습니다."
             if not can_access
             else ("장 마감 후에는 새 메시지를 보낼 수 없습니다." if closed else None)
         ),
@@ -140,8 +203,11 @@ def list_room_messages(
     *,
     limit: int = 80,
 ) -> list[dict[str, Any]]:
-    if not _user_response_side(supabase, user_id, survey_date):
-        raise HTTPException(status_code=403, detail="오늘 설문에 참여한 사용자만 단톡방을 볼 수 있습니다.")
+    if not _has_chat_eligibility(supabase, user_id, survey_date):
+        raise HTTPException(
+            status_code=403,
+            detail="해당 거래일 설문·사전 예측에 참여한 사용자만 단톡방을 볼 수 있습니다.",
+        )
 
     try:
         rows = (
@@ -202,9 +268,12 @@ def post_room_message(
     if len(text) > MAX_BODY_LEN:
         raise HTTPException(status_code=400, detail=f"메시지는 {MAX_BODY_LEN}자 이하입니다.")
 
-    side = _user_response_side(supabase, user_id, survey_date)
+    side = _user_chat_side_for_date(supabase, user_id, survey_date)
     if not side:
-        raise HTTPException(status_code=403, detail="오늘 설문에 참여한 뒤 메시지를 보낼 수 있습니다.")
+        raise HTTPException(
+            status_code=403,
+            detail="해당 거래일 설문·사전 예측에 참여한 뒤 메시지를 보낼 수 있습니다.",
+        )
 
     if _room_closed(supabase, survey_date):
         raise HTTPException(status_code=403, detail="장이 마감되어 이 단톡방은 종료되었습니다.")
@@ -255,13 +324,16 @@ def post_room_message(
 def build_room_payload(
     supabase: Client,
     user_id: str,
-    survey_date: str,
+    survey_date: str | None = None,
     *,
     limit: int = 80,
 ) -> dict[str, Any]:
-    """단톡 탭 1회 호출용: status + messages."""
-    status = build_status_payload(supabase, user_id, survey_date)
+    """단톡 탭 1회 호출용: status + messages. survey_date 생략 시 참여한 거래일 자동 선택."""
+    sd = (survey_date or "").strip()[:10] if survey_date else ""
+    if len(sd) != 10:
+        sd = resolve_chat_survey_date(supabase, user_id)
+    status = build_status_payload(supabase, user_id, sd)
     messages: list[dict[str, Any]] = []
     if status.get("can_read"):
-        messages = list_room_messages(supabase, user_id, survey_date, limit=limit)
-    return {**status, "messages": messages, "survey_date": survey_date}
+        messages = list_room_messages(supabase, user_id, sd, limit=limit)
+    return {**status, "messages": messages, "survey_date": sd}

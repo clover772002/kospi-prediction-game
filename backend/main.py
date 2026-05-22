@@ -2931,14 +2931,10 @@ async def direction_chat_room(
 ):
     """단톡 탭 1회 호출: 방 상태 + 메시지 목록."""
     user_id = str(current_user.id)
-    sd = survey_date.strip() if survey_date and survey_date.strip() else today_kst()
-    if len(sd) != 10:
+    sd_arg = survey_date.strip() if survey_date and survey_date.strip() else None
+    if sd_arg is not None and len(sd_arg) != 10:
         raise HTTPException(status_code=400, detail="survey_date 형식 오류 (YYYY-MM-DD)")
-    try:
-        apply_pending_presubmits(supabase, user_id)
-    except Exception as ex:
-        logger.warning("direction-chat room: 예약 설문 적용 스킵 — %s", ex)
-    return build_direction_chat_room(supabase, user_id, sd, limit=min(limit, 120))
+    return build_direction_chat_room(supabase, user_id, sd_arg, limit=min(limit, 120))
 
 
 @app.get("/api/direction-chat/status")

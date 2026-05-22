@@ -918,6 +918,7 @@ export type DirectionChatRoom = DirectionChatStatus & {
 /** 방향 단톡방: 상승·하락 한 방 (거래일·설문 참여자만) */
 export interface DirectionChatStatus {
   survey_date: string;
+  room_title?: string;
   room_open: boolean;
   room_closed_reason: string | null;
   answered: boolean;

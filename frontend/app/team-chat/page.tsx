@@ -6,7 +6,6 @@ import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import {
   getDirectionChatRoom,
-  getTodaySummary,
   postDirectionChatMessage,
   type DirectionChatMessageRow,
   type DirectionChatStatus,
@@ -49,12 +48,13 @@ export default function TeamChatPage() {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, []);
 
-  const refresh = useCallback(async (accessToken: string, sd: string, silent = false) => {
+  const refresh = useCallback(async (accessToken: string, sd: string | null, silent = false) => {
     if (!silent) setErr(null);
-    const room = await getDirectionChatRoom(accessToken, sd);
+    const room = await getDirectionChatRoom(accessToken, sd ?? undefined);
     const { messages: msgs, ...st } = room;
     setStatus(st);
     setMessages(msgs);
+    setSurveyDate(room.survey_date);
   }, []);
 
   useEffect(() => {
@@ -83,14 +83,7 @@ export default function TeamChatPage() {
     void (async () => {
       setBoot(true);
       try {
-        const today = await getTodaySummary();
-        const sd = today.survey_date?.slice(0, 10) ?? null;
-        if (!sd) {
-          setErr("오늘 거래일 설문이 없습니다.");
-          return;
-        }
-        if (!cancelled) setSurveyDate(sd);
-        await refresh(token, sd);
+        await refresh(token, null);
       } catch (e) {
         if (!cancelled) setErr(e instanceof Error ? e.message : String(e));
       } finally {
@@ -153,7 +146,7 @@ export default function TeamChatPage() {
       {boot ? <PageLoadProgress /> : null}
 
       <header className="relative z-10 shrink-0 border-b border-white/10 bg-black/40 px-4 py-3 backdrop-blur-sm">
-        <h1 className="text-base font-black">오늘 단톡</h1>
+        <h1 className="text-base font-black">{status?.room_title ?? "단톡"}</h1>
         <p className="mt-0.5 text-xs text-gray-400">
           {surveyDate ? `${surveyDate} · 참여 ${total}명` : "불러오는 중…"}
           {status?.my_team_label ? (
@@ -179,7 +172,7 @@ export default function TeamChatPage() {
       {!boot && status && !status.answered ? (
         <div className="relative z-10 flex flex-1 flex-col items-center justify-center gap-4 px-6 text-center">
           <p className="text-sm text-gray-300 leading-relaxed">
-            오늘 설문에 참여하면
+            오늘 설문 또는 다음 거래일 사전 예측에 참여하면
             <br />
             여기서 바로 소통할 수 있어요.
           </p>
@@ -187,7 +180,7 @@ export default function TeamChatPage() {
             href="/survey"
             className="rounded-xl bg-white px-6 py-3 text-sm font-bold text-black"
           >
-            설문 하고 들어오기
+            설문·사전 예측 하러 가기
           </Link>
         </div>
       ) : (
@@ -254,7 +247,7 @@ export default function TeamChatPage() {
             </div>
           ) : status?.answered && !status.room_open ? (
             <p className="relative z-10 shrink-0 py-3 text-center text-xs text-gray-500">
-              오늘 방이 종료되었습니다. 내일 설문 후 새 단톡방이 열립니다.
+              이 거래일 방이 종료되었습니다. 다음 거래일 설문·사전 예측 후 새 단톡방이 열립니다.
             </p>
           ) : status?.send_blocked_reason ? (
             <p className="relative z-10 shrink-0 py-3 text-center text-xs text-gray-500">
