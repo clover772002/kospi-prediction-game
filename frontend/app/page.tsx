@@ -6,6 +6,7 @@ import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import SurveyConfidencePlayground from "@/components/SurveyConfidencePlayground";
 import ExpertMessageConceptPlayground from "@/components/ExpertMessageConceptPlayground";
+import LoadingPurposeSplash from "@/components/LoadingPurposeSplash";
 import ExpertPickRevealPlayground from "@/components/ExpertPickRevealPlayground";
 
 type LandingFeatureDetail = {
@@ -156,11 +157,13 @@ export default function LoginPage() {
     }
   };
 
-  if (loading) {
+  if (loading || signing) {
     return (
-      <main className="max-w-md mx-auto min-h-screen flex items-center justify-center">
-        <div className="w-8 h-8 border-2 border-blue-500/30 border-t-blue-500 rounded-full animate-spin" />
-      </main>
+      <LoadingPurposeSplash
+        mode="spinner"
+        label={signing ? "로그인 연결 중…" : "잠시만요…"}
+        accent="blue"
+      />
     );
   }
 
