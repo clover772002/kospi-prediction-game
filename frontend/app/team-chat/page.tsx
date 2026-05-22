@@ -32,9 +32,7 @@ function bubbleClass(isMine: boolean, side: "up" | "down"): string {
   if (isMine) {
     return "bg-amber-400 text-gray-900";
   }
-  return side === "up"
-    ? "bg-red-600/90 text-white"
-    : "bg-blue-600/90 text-white";
+  return side === "up" ? "bg-market-up" : "bg-market-down";
 }
 
 export default function TeamChatPage() {
@@ -172,7 +170,7 @@ export default function TeamChatPage() {
           {status?.my_team_label ? (
             <span className="ml-2 text-gray-500">
               · 내 예측{" "}
-              <span className={mySide === "up" ? "text-red-400" : "text-blue-400"}>
+              <span className={mySide === "up" ? "text-market-up" : "text-market-down"}>
                 {status.my_team_label}
               </span>
             </span>

@@ -440,6 +440,26 @@ body {
   padding-bottom: calc(6.25rem + env(safe-area-inset-bottom, 0px));
 }
 
+/* 상승·하락: LG Red / POSCO Blue */
+:root {
+  --market-up: #a50034;
+  --market-down: #004b9c;
+}
+.text-market-up {
+  color: var(--market-up);
+}
+.text-market-down {
+  color: var(--market-down);
+}
+.bg-market-up {
+  background-color: color-mix(in srgb, var(--market-up) 92%, transparent);
+  color: #fff;
+}
+.bg-market-down {
+  background-color: color-mix(in srgb, var(--market-down) 92%, transparent);
+  color: #fff;
+}
+
 @keyframes appNavTopGlow {
   0%, 100% { opacity: 0.55; transform: scaleX(0.92); }
   50% { opacity: 1; transform: scaleX(1); }
