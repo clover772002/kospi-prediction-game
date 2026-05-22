@@ -1069,17 +1069,7 @@ function SurveyPageInner() {
               <p className="text-amber-200 font-bold text-base">이 거래일 설문에 참여하지 않았습니다</p>
               <p className="text-sm text-gray-400 leading-snug">
                 09:00 마감 전에 제출했거나, 전날 「사전 예측」으로 미리 넣었어야 합니다.
-                아래에서 참여 여부를 다시 확인해 주세요.
               </p>
-              {token && today?.survey_date ? (
-                <button
-                  type="button"
-                  className="text-sm font-bold px-4 py-2 rounded-lg bg-white/10 hover:bg-white/15"
-                  onClick={() => void checkMyResponse(token, today.survey_date.slice(0, 10))}
-                >
-                  내 응답 다시 확인
-                </button>
-              ) : null}
             </div>
           )}
           {/* 예측 게이지 + 오늘 장 */}
