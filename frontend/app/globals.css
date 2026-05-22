@@ -829,15 +829,8 @@ body {
   0% { opacity: 0; transform: scale(0.96) translateY(6px); }
   100% { opacity: 1; transform: scale(1) translateY(0); }
 }
-@keyframes loadingPurposeTipIn {
-  0% { opacity: 0; transform: translateY(8px); }
-  100% { opacity: 1; transform: translateY(0); }
-}
 .loading-purpose-hero {
   animation: loadingPurposeHeroIn 0.55s cubic-bezier(0.34, 1.2, 0.64, 1) forwards;
-}
-.loading-purpose-tip {
-  animation: loadingPurposeTipIn 0.5s ease-out forwards;
 }
 
 /* ── 단톡 왕관 이전 연출 ───────────────────────────── */

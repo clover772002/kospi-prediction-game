@@ -24,33 +24,8 @@ export const LOADING_PURPOSE_TIPS: LoadingPurposeTip[] = [
   { id: "challenge", emoji: "⚔️", text: "친구와 1:1 대결로 적중률을 겨뤄 보세요" },
 ];
 
-/** 화면 주변 슬롯 (중앙 UI와 겹치지 않게) */
-export const LOADING_TIP_SLOTS = [
-  "top-[14%] left-[4%] max-w-[42%]",
-  "top-[18%] right-[3%] max-w-[44%] text-right",
-  "top-[38%] left-[2%] max-w-[40%]",
-  "top-[42%] right-[2%] max-w-[42%] text-right",
-  "bottom-[32%] left-[6%] max-w-[44%]",
-  "bottom-[28%] right-[5%] max-w-[42%] text-right",
-] as const;
-
 export function pickRandomTip(excludeIds: string[] = []): LoadingPurposeTip {
   const pool = LOADING_PURPOSE_TIPS.filter((t) => !excludeIds.includes(t.id));
   const list = pool.length > 0 ? pool : LOADING_PURPOSE_TIPS;
   return list[Math.floor(Math.random() * list.length)]!;
-}
-
-export function pickTipsForSlots(count: number): LoadingPurposeTip[] {
-  const out: LoadingPurposeTip[] = [];
-  const used = new Set<string>();
-  for (let i = 0; i < count; i++) {
-    let tip = pickRandomTip([...used]);
-    let guard = 0;
-    while (used.has(tip.id) && guard++ < 12) {
-      tip = pickRandomTip([...used]);
-    }
-    used.add(tip.id);
-    out.push(tip);
-  }
-  return out;
 }

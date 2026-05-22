@@ -2,12 +2,7 @@
 
 import { useEffect, useState } from "react";
 import AppAmbientBackground from "@/components/AppAmbientBackground";
-import {
-  LOADING_TIP_SLOTS,
-  pickRandomTip,
-  pickTipsForSlots,
-  type LoadingPurposeTip,
-} from "@/lib/loadingPurposeTips";
+import { pickRandomTip } from "@/lib/loadingPurposeTips";
 
 type Accent = "blue" | "green" | "amber" | "violet";
 
@@ -19,33 +14,14 @@ const BAR_CLASS: Record<Accent, string> = {
 };
 
 const TIP_ROTATE_MS = 3_200;
-const SLOT_COUNT = LOADING_TIP_SLOTS.length;
 
 type Props = {
-  /** 중앙 보조 문구 (기술 상태) */
   label?: string;
   sublabel?: string;
   accent?: Accent;
-  /** progress = 게이지, spinner = 로그인·부트스트랩 */
   mode?: "progress" | "spinner";
-  /** AppTabBootstrap 오버레이용 */
   fullscreen?: boolean;
 };
-
-function TipBubble({ tip, className }: { tip: LoadingPurposeTip; className: string }) {
-  return (
-    <div
-      className={`loading-purpose-tip pointer-events-none absolute z-[2] rounded-2xl border border-white/10 bg-black/50 px-3 py-2.5 shadow-lg backdrop-blur-md ${className}`}
-    >
-      <p className="text-[13px] sm:text-sm font-bold leading-snug text-white/95">
-        <span className="mr-1.5" aria-hidden>
-          {tip.emoji}
-        </span>
-        {tip.text}
-      </p>
-    </div>
-  );
-}
 
 export default function LoadingPurposeSplash({
   label,
@@ -54,7 +30,6 @@ export default function LoadingPurposeSplash({
   mode = "spinner",
   fullscreen = false,
 }: Props) {
-  const [slotTips, setSlotTips] = useState(() => pickTipsForSlots(SLOT_COUNT));
   const [heroTip, setHeroTip] = useState(() => pickRandomTip());
   const [pct, setPct] = useState(0);
   const [reducedMotion, setReducedMotion] = useState(false);
@@ -66,9 +41,7 @@ export default function LoadingPurposeSplash({
   useEffect(() => {
     if (reducedMotion) return;
     const id = window.setInterval(() => {
-      const nextSlots = pickTipsForSlots(SLOT_COUNT);
-      setSlotTips(nextSlots);
-      setHeroTip(pickRandomTip(nextSlots.map((t) => t.id)));
+      setHeroTip((prev) => pickRandomTip([prev.id]));
     }, TIP_ROTATE_MS);
     return () => window.clearInterval(id);
   }, [reducedMotion]);
@@ -102,12 +75,6 @@ export default function LoadingPurposeSplash({
       aria-label={label ?? heroTip.text}
     >
       <AppAmbientBackground />
-
-      {!reducedMotion
-        ? slotTips.map((tip, i) => (
-            <TipBubble key={`${tip.id}-${i}`} tip={tip} className={LOADING_TIP_SLOTS[i]} />
-          ))
-        : null}
 
       <div className="relative z-10 w-full max-w-[320px] space-y-4 text-center">
         <div
