@@ -71,14 +71,10 @@ function formatPreSurveyTarget(surveyDate: string) {
 function PreSurveyTargetBanner({ surveyDate }: { surveyDate: string }) {
   const t = formatPreSurveyTarget(surveyDate);
   return (
-    <div className="rounded-xl border border-amber-500/40 bg-gradient-to-br from-amber-500/15 to-amber-600/5 px-4 py-3.5 text-center space-y-1.5 mb-4">
-      <p className="text-xs font-bold text-amber-300/90 tracking-wide">사전 예측 대상 거래일</p>
-      <p className="text-xl sm:text-2xl font-black text-amber-50 tabular-nums leading-tight">{t.dateLine}</p>
-      <p className="text-sm font-bold text-amber-200/95">{t.dateIso}</p>
-      <p className="text-sm text-gray-300 leading-snug pt-0.5">
-        {t.roleLine} · <span className="text-amber-100/90">이 날짜 설문에 제출됩니다</span>
-        <span className="block text-xs text-gray-500 mt-1">(지금 보이는 오늘 장 설문과는 다른 날짜입니다)</span>
-      </p>
+    <div className="rounded-xl border border-amber-500/40 bg-gradient-to-br from-amber-500/15 to-amber-600/5 px-4 py-3.5 text-center space-y-2 mb-4">
+      <p className="text-xs font-bold text-amber-300/90 tracking-wide">사전 예측</p>
+      <p className="text-xl sm:text-2xl font-black text-amber-50 leading-tight">{t.dateLine}</p>
+      <p className="text-sm text-gray-400 leading-snug">아래에서 넣은 예측이 이 날짜 설문으로 제출됩니다.</p>
     </div>
   );
 }
@@ -778,7 +774,7 @@ function SurveyPageInner() {
                   <p className="text-base text-gray-400 px-2">주말·공휴일에는 거래소가 개장하지 않습니다.</p>
                   {nextSurvey?.is_open && (
                     <p className="text-base text-yellow-400 mt-2 px-2">
-                      💡 {formatPreSurveyTarget(nextSurvey.survey_date).dateLine}({formatPreSurveyTarget(nextSurvey.survey_date).dateIso}) 사전 예측 가능
+                      💡 {formatPreSurveyTarget(nextSurvey.survey_date).dateLine} 사전 예측 가능
                     </p>
                   )}
                 </>
