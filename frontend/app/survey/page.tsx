@@ -83,13 +83,13 @@ function PreSurveyTargetBanner({ surveyDate }: { surveyDate: string }) {
   );
 }
 
-/** 페이지 제목: 「월요일」 / 「예측」 두 줄 */
+/** 페이지 제목: 「오늘 장」 / 「예측」 두 줄 — 상단 중앙·크게 */
 function SurveyHeadingTitle({ label }: { label: string }) {
   const head = label.replace(/\s*장\s*예측.*$/, "").trim() || label;
   return (
-    <h1 className="text-2xl sm:text-3xl font-black text-white leading-tight">
+    <h1 className="text-3xl sm:text-4xl md:text-[2.75rem] font-black text-white leading-[1.1] tracking-tight">
       <span className="block">{head}</span>
-      <span className="block mt-1">예측</span>
+      <span className="block mt-1.5 text-[0.92em]">예측</span>
     </h1>
   );
 }
@@ -637,42 +637,39 @@ function SurveyPageInner() {
         );
       })()}
 
-      <div className="pt-4 pb-6">
-        <div>
-          {(() => {
-            if (isWeekendKST) {
-              // 주말: 다음 거래일 날짜 계산
-              const next = new Date(_kstNow);
-              next.setDate(next.getDate() + 1);
-              next.setHours(0, 0, 0, 0);
-              while (next.getDay() === 0 || next.getDay() === 6) next.setDate(next.getDate() + 1);
-              const dayNames = ["일","월","화","수","목","금","토"];
-              const mm = String(next.getMonth() + 1).padStart(2, "0");
-              const dd = String(next.getDate()).padStart(2, "0");
-              const nextDateStr = `${next.getFullYear()}.${mm}.${dd}`;
-              return (
-                <>
-                  <h1 className="text-2xl sm:text-3xl font-black text-white leading-tight">
-                    <span className="block">{dayNames[next.getDay()]}요일</span>
-                    <span className="block mt-1">예측</span>
-                  </h1>
-                  <p className="text-base text-gray-500 mt-1">{nextDateStr} (KST)</p>
-                </>
-              );
-            }
-            const kst = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Seoul" }));
-            const todayStr = `${kst.getFullYear()}-${String(kst.getMonth()+1).padStart(2,"0")}-${String(kst.getDate()).padStart(2,"0")}`;
-            const surveyDate = today?.survey_date ?? todayStr;
-            const { label } = getSurveyDayLabel(surveyDate);
-            const displayDate = surveyDate.replace(/-/g, ".");
+      <div className="pt-5 pb-7 w-full text-center px-2">
+        {(() => {
+          if (isWeekendKST) {
+            const next = new Date(_kstNow);
+            next.setDate(next.getDate() + 1);
+            next.setHours(0, 0, 0, 0);
+            while (next.getDay() === 0 || next.getDay() === 6) next.setDate(next.getDate() + 1);
+            const dayNames = ["일", "월", "화", "수", "목", "금", "토"];
+            const mm = String(next.getMonth() + 1).padStart(2, "0");
+            const dd = String(next.getDate()).padStart(2, "0");
+            const nextDateStr = `${next.getFullYear()}.${mm}.${dd}`;
             return (
               <>
-                <SurveyHeadingTitle label={label} />
-                <p className="text-base text-gray-500 mt-1">{displayDate} (KST)</p>
+                <h1 className="text-3xl sm:text-4xl md:text-[2.75rem] font-black text-white leading-[1.1] tracking-tight">
+                  <span className="block">{dayNames[next.getDay()]}요일</span>
+                  <span className="block mt-1.5 text-[0.92em]">예측</span>
+                </h1>
+                <p className="text-base sm:text-lg text-gray-500 mt-2 tabular-nums">{nextDateStr} (KST)</p>
               </>
             );
-          })()}
-        </div>
+          }
+          const kst = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Seoul" }));
+          const todayStr = `${kst.getFullYear()}-${String(kst.getMonth() + 1).padStart(2, "0")}-${String(kst.getDate()).padStart(2, "0")}`;
+          const surveyDate = today?.survey_date ?? todayStr;
+          const { label } = getSurveyDayLabel(surveyDate);
+          const displayDate = surveyDate.replace(/-/g, ".");
+          return (
+            <>
+              <SurveyHeadingTitle label={label} />
+              <p className="text-base sm:text-lg text-gray-500 mt-2 tabular-nums">{displayDate} (KST)</p>
+            </>
+          );
+        })()}
       </div>
 
       {/* 설문 없음 — 대기중 vs 휴장일 구분 */}
