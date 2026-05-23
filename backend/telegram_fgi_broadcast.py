@@ -55,15 +55,43 @@ def _fgi_survey_link_markup() -> dict:
     }
 
 
-def _market_summary_line(r: FgiReading) -> str:
-    """외부 지표 요약 한 줄 + URL (하단 참고용)."""
+def _score_line(r: FgiReading) -> str:
+    """수치 → 출처 → URL (시장 지표 본문)."""
     if r.score is not None:
-        line = f"{r.market}  <b>{_fmt_score(r.score)}</b> {r.zone}  ({r.source})"
+        score_part = f"<b>{_fmt_score(r.score)}</b> · {r.zone}"
     else:
-        line = f"{r.market}  —  ({r.source})"
+        score_part = "—"
+    note = ""
     if r.note == "조회 실패":
-        line += "  <i>조회 실패</i>"
-    return f"{line}\n{r.url}"
+        note = "\n   <i>(조회 실패)</i>"
+    elif r.note and r.note not in ("조회 실패", ""):
+        note = f"\n   <i>({r.note})</i>"
+    return (
+        f"{r.market}\n"
+        f"   {score_part}\n"
+        f"   {r.source}\n"
+        f"   {r.url}{note}"
+    )
+
+
+def _our_indicator_block(human: dict, *, survey_src: str = "telegram_fgi") -> str:
+    """맨 아래 — 우리 설문 집계 (거래일·모집 상태 문구 없음)."""
+    survey_url = f"{_app_base_url()}/survey?src={survey_src}"
+    h = human
+    if h["up_pct"] is not None:
+        result_line = (
+            f"예측 결과  상승 <b>{h['up_pct']}%</b> · "
+            f"하락 <b>{h['down_pct']}%</b> ({h['total']}명)"
+        )
+    else:
+        result_line = f"예측 결과  상승 · 하락 <i>(아직 응답 없음)</i> ({h['total']}명)"
+
+    return (
+        f"\n\n<b>우리만의 지표</b> — 코스피 예측\n"
+        f"{result_line}\n"
+        f"<b>설문 참여</b>\n"
+        f"{survey_url}"
+    )
 
 
 def human_indicator_snapshot(supabase) -> dict:
@@ -172,34 +200,15 @@ def build_fgi_broadcast_html(
     survey_src: str = "telegram_fgi",
 ) -> str:
     now = as_of or datetime.now(KST)
-    survey_url = f"{_app_base_url()}/survey?src={survey_src}"
+    header = f"📊 <b>공포·탐욕 지수</b> ({now.strftime('%Y-%m-%d %H:%M')} KST)\n\n"
 
-    h = human
-    if h["up_pct"] is not None:
-        result_line = (
-            f"예측 결과  상승 <b>{h['up_pct']}%</b> · "
-            f"하락 <b>{h['down_pct']}%</b> ({h['total']}명)"
-        )
-    else:
-        result_line = f"예측 결과  상승 · 하락 <i>(아직 응답 없음)</i> ({h['total']}명)"
+    market = "<b>🤖 시장 지표</b>\n"
+    market += "\n".join(_score_line(r) for r in readings)
+    market += "\n\n<i>※ 코스피 숫자는 출처마다 산식이 달라 다를 수 있습니다.</i>"
 
-    our_block = (
-        f"📊 <b>우리만의 지표</b> — 코스피 예측\n"
-        f"<i>{now.strftime('%Y-%m-%d %H:%M')} KST · 거래일 {h['survey_date']} · {h['phase']}</i>\n\n"
-        f"{result_line}\n\n"
-        f"<b>설문 참여</b>\n"
-        f"{survey_url}"
-    )
+    our = _our_indicator_block(human, survey_src=survey_src)
 
-    market_lines = "\n\n".join(_market_summary_line(r) for r in readings)
-    ref_block = (
-        f"\n\n────────────────\n"
-        f"<i>참고 · 외부 공포·탐욕 지수 요약</i>\n"
-        f"{market_lines}\n\n"
-        f"<i>※ 코스피 수치는 출처마다 산식이 달라 다를 수 있습니다.</i>"
-    )
-
-    return our_block + ref_block
+    return header + market + our
 
 
 def _normalize_telegram_text(text: str) -> str:
@@ -284,7 +293,7 @@ async def handle_telegram_fgi_message(chat_id: int | str, text: str, supabase) -
             chat_id,
             "<b>코스피 예측 · 시장 지수</b>\n\n"
             "· <b>공포</b> · <b>지수</b> · <b>공포지수</b>\n\n"
-            "맨 위는 <b>우리 설문 집계</b>, 아래는 외부 FGI 요약입니다.\n"
+            "위는 시장 FGI, 맨 아래가 <b>우리 코스피 예측</b> 집계입니다.\n"
             "<i>웹 연동 없이 봇만 써도 됩니다.</i>",
         )
         return True
