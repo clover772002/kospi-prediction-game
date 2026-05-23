@@ -265,6 +265,11 @@ async def handle_webhook(update: dict, supabase) -> None:
         if is_admin_chat(chat_id) and await handle_poll_reply(chat_id, text, supabase):
             return
 
+        from telegram_fgi_broadcast import handle_telegram_fgi_message
+
+        if await handle_telegram_fgi_message(chat_id, text, supabase):
+            return
+
         if text.startswith("/start"):
             parts = text.split(" ", 1)
             user_id_param = parts[1].strip() if len(parts) > 1 else ""

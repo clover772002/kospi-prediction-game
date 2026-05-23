@@ -1,18 +1,27 @@
 # -*- coding: utf-8 -*-
-"""공포·탐욕 지수 집계 알림 — 웹 푸시(주) + 텔레그램 DM(연동자만·선택)."""
+"""공포·탐욕 지수 — 웹 푸시(스케줄) + 텔레그램 봇은 물으면 답변(연동 불필요)."""
 from __future__ import annotations
 
 import logging
 import os
+import re
+import time
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
 from fear_greed_fetch import FgiReading, fetch_all_fgi_readings
 from krx_calendar import KST, next_trading_day_str
-from telegram_bot import send_message
 from webpush_helper import send_web_push_to_all
 
 logger = logging.getLogger(__name__)
+
+_FGI_REPLY_CACHE: tuple[float, str] | None = None
+_FGI_CACHE_SEC = 300
+
+_FGI_COMMANDS = frozenset({
+    "/fgi", "/지수", "/공포", "/탐욕", "/fear", "/greed",
+    "/help_fgi", "/fgi_help",
+})
 
 
 def today_kst() -> str:
@@ -184,38 +193,91 @@ def build_fgi_broadcast_html(
     return header + machine + human_block
 
 
-async def _broadcast_fgi_telegram_dm(supabase, text: str, markup: dict) -> dict:
-    users = (
-        supabase.table("users")
-        .select("telegram_chat_id")
-        .not_.is_("telegram_chat_id", "null")
-        .execute()
+def _normalize_telegram_text(text: str) -> str:
+    t = (text or "").strip()
+    if not t:
+        return ""
+    if "@" in t and t.startswith("/"):
+        t = t.split("@", 1)[0]
+    return t
+
+
+def is_fgi_telegram_query(text: str) -> bool:
+    """웹 연동 없이 봇에게 FGI를 요청했는지."""
+    t = _normalize_telegram_text(text)
+    if not t:
+        return False
+    low = t.lower()
+    if low in _FGI_COMMANDS:
+        return True
+    if low.startswith("/fgi") or low.startswith("/지수"):
+        return True
+    phrases = (
+        "공포탐욕",
+        "공포 탐욕",
+        "공포탐욕지수",
+        "공포 지수",
+        "fear and greed",
+        "fear greed",
     )
-    chat_ids = [
-        u["telegram_chat_id"]
-        for u in (users.data or [])
-        if u.get("telegram_chat_id") is not None
-    ]
-    sent = failed = 0
-    for chat_id in chat_ids:
-        try:
-            result = await send_message(chat_id, text, markup)
-            if result.get("ok"):
-                sent += 1
-            else:
-                failed += 1
-                logger.warning("FGI 텔레그램 DM 실패 chat_id=%s: %s", chat_id, result)
-        except Exception as e:
-            failed += 1
-            logger.error("FGI 텔레그램 DM 예외 chat_id=%s: %s", chat_id, e)
-    return {"sent": sent, "failed": failed, "total": len(chat_ids)}
+    if any(p in low for p in phrases):
+        return True
+    if re.fullmatch(r"(fgi|f\s*&\s*g)", low):
+        return True
+    return False
+
+
+async def build_fgi_reply_html(supabase, *, force_refresh: bool = False) -> str:
+    global _FGI_REPLY_CACHE
+    now = time.time()
+    if (
+        not force_refresh
+        and _FGI_REPLY_CACHE
+        and now - _FGI_REPLY_CACHE[0] < _FGI_CACHE_SEC
+    ):
+        return _FGI_REPLY_CACHE[1]
+
+    readings = await fetch_all_fgi_readings()
+    human = human_indicator_snapshot(supabase)
+    html = build_fgi_broadcast_html(readings, human)
+    _FGI_REPLY_CACHE = (now, html)
+    return html
+
+
+async def handle_telegram_fgi_message(chat_id: int | str, text: str, supabase) -> bool:
+    """
+    텔레그램 봇 DM: /fgi · 공포탐욕 등 → 집계 답변. 계정 연동(/start uuid) 불필요.
+    """
+    from telegram_bot import send_message
+
+    t = _normalize_telegram_text(text)
+    if t in ("/help_fgi", "/fgi_help"):
+        await send_message(
+            chat_id,
+            "<b>공포·탐욕 지수 조회</b>\n\n"
+            "명령: <code>/fgi</code> · <code>/지수</code>\n"
+            "또는 채팅에 「공포탐욕」「공포 지수」라고 보내 주세요.\n\n"
+            "<i>웹앱 연동 없이 봇만 써도 됩니다.</i>",
+        )
+        return True
+
+    if not is_fgi_telegram_query(text):
+        return False
+
+    try:
+        html = await build_fgi_reply_html(supabase)
+        await send_message(chat_id, html, _fgi_survey_link_markup())
+    except Exception as e:
+        logger.exception("FGI 텔레그램 답변 실패: %s", e)
+        await send_message(
+            chat_id,
+            "지표를 불러오지 못했어요. 1~2분 뒤 <code>/fgi</code> 로 다시 시도해 주세요.",
+        )
+    return True
 
 
 async def broadcast_fgi_digest(supabase) -> dict:
-    """
-    1) 브라우저 알림 연동 유저 전원 (push_subscription)
-    2) 텔레그램 chat_id 있는 유저에게 DM (웹에서 연동 UI 제거돼도 기존 연동자용)
-    """
+    """16:10 스케줄 — 브라우저 알림 구독자에게만 짧은 웹 푸시."""
     readings = await fetch_all_fgi_readings()
     human = human_indicator_snapshot(supabase)
     title, push_body = build_fgi_push_summary(readings, human)
@@ -228,24 +290,10 @@ async def broadcast_fgi_digest(supabase) -> dict:
         notif_type="fgi_digest",
     )
 
-    tg = {"sent": 0, "failed": 0, "total": 0}
-    if (os.getenv("FGI_TELEGRAM_DM", "1").strip().lower() not in ("0", "false", "no")):
-        html = build_fgi_broadcast_html(readings, human)
-        tg = await _broadcast_fgi_telegram_dm(supabase, html, _fgi_survey_link_markup())
-
-    ok = push_sent > 0 or tg["sent"] > 0
-    logger.info(
-        "FGI 발송: 웹푸시 %s명, 텔레그램 %s/%s명",
-        push_sent,
-        tg["sent"],
-        tg["total"],
-    )
+    logger.info("FGI 웹푸시 발송: %s명", push_sent)
     return {
-        "ok": ok,
+        "ok": push_sent > 0,
         "push_sent": push_sent,
-        "telegram_sent": tg["sent"],
-        "telegram_failed": tg["failed"],
-        "telegram_total": tg["total"],
         "readings_count": len(readings),
         "human": human,
     }

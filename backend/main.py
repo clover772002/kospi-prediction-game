@@ -182,10 +182,8 @@ async def job_16_10_fgi_broadcast():
 
     out = await broadcast_fgi_digest(_supabase_direct())
     logger.info(
-        "16:10 FGI 완료: 웹푸시 %s명, 텔레그램 %s/%s명 (지표 %s건)",
+        "16:10 FGI 웹푸시 완료: %s명 (지표 %s건, 텔레그램은 /fgi 요청 시 답변)",
         out.get("push_sent"),
-        out.get("telegram_sent"),
-        out.get("telegram_total"),
         out.get("readings_count"),
     )
 
@@ -4694,7 +4692,7 @@ class AdminBlindPollSeedBody(BaseModel):
 
 @app.post("/api/admin/fgi-broadcast")
 async def admin_fgi_broadcast(request: Request):
-    """FGI 집계 — 웹 푸시 전원 + (선택) 텔레그램 DM 수동 발송 (x-admin-secret)."""
+    """FGI 웹 푸시 수동 발송 (x-admin-secret). 텔레그램은 봇에 /fgi 로 조회."""
     _require_admin_secret(request)
     from telegram_fgi_broadcast import broadcast_fgi_digest
 
