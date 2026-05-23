@@ -167,6 +167,12 @@ async def handle_poll_reply(
 ) -> bool:
     if not is_admin_chat(chat_id):
         return False
+
+    from telegram_fgi_broadcast import is_fgi_telegram_query
+
+    if is_fgi_telegram_query(text):
+        return False
+
     survey_date = _pending.get(chat_id)
     if not survey_date:
         return False

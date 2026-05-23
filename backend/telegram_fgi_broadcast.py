@@ -22,8 +22,12 @@ _FGI_COMMANDS = frozenset({
     "/fgi", "/지수", "/공포", "/탐욕", "/fear", "/greed",
     "/help_fgi", "/fgi_help",
 })
-# 채팅에 두 글자만내도 조회 (정확히 일치)
-_FGI_SHORT_TRIGGERS = frozenset({"공포", "지수", "탐욕"})
+# 채팅 키워드 (띄어쓰기 제거 후 비교 포함)
+_FGI_SHORT_TRIGGERS = frozenset({
+    "공포", "지수", "탐욕",
+    "공포지수", "탐욕지수", "공포탐욕", "공포탐욕지수",
+    "fgi",
+})
 
 
 def today_kst() -> str:
@@ -204,9 +208,15 @@ def _normalize_telegram_text(text: str) -> str:
     t = (text or "").strip()
     if not t:
         return ""
+    t = re.sub(r"[\u200b\uFEFF]", "", t)
     if "@" in t and t.startswith("/"):
         t = t.split("@", 1)[0]
-    return t
+    return t.strip("?!.．。,，、 ")
+
+
+def _compact_text(t: str) -> str:
+    """띄어쓰기·제로폭 제거 — 「공포 지수」→「공포지수」와 동일 취급."""
+    return re.sub(r"[\s\u200b\uFEFF]+", "", t)
 
 
 def is_fgi_telegram_query(text: str) -> bool:
@@ -214,24 +224,28 @@ def is_fgi_telegram_query(text: str) -> bool:
     t = _normalize_telegram_text(text)
     if not t:
         return False
-    if t in _FGI_SHORT_TRIGGERS:
+    compact = _compact_text(t)
+    if t in _FGI_SHORT_TRIGGERS or compact in _FGI_SHORT_TRIGGERS:
         return True
     low = t.lower()
+    compact_low = _compact_text(low)
     if low in _FGI_COMMANDS:
         return True
-    if low.startswith("/fgi") or low.startswith("/지수"):
+    if low.startswith("/fgi") or low.startswith("/지수") or low.startswith("/공포"):
         return True
     phrases = (
         "공포탐욕",
-        "공포 탐욕",
         "공포탐욕지수",
+        "공포지수",
         "공포 지수",
+        "탐욕지수",
         "fear and greed",
         "fear greed",
     )
-    if any(p in low for p in phrases):
+    phrase_compact = tuple(_compact_text(p) for p in phrases)
+    if any(p in compact_low for p in phrase_compact if p):
         return True
-    if re.fullmatch(r"(fgi|f\s*&\s*g)", low):
+    if re.fullmatch(r"(fgi|f\s*&\s*g)", compact_low):
         return True
     return False
 
@@ -272,8 +286,8 @@ async def handle_telegram_fgi_message(chat_id: int | str, text: str, supabase) -
             chat_id,
             "<b>공포·탐욕 지수 조회</b>\n\n"
             "채팅에 아래만내면 됩니다.\n"
-            "· <b>공포</b> · <b>지수</b> · <b>탐욕</b> (두 글자)\n"
-            "· <code>공포탐욕</code> · <code>/fgi</code> (선택)\n\n"
+            "· <b>공포</b> · <b>지수</b> · <b>탐욕</b>\n"
+            "· <b>공포지수</b> · <code>공포탐욕</code>\n\n"
             "<i>웹앱 연동 없이 봇만 써도 됩니다.</i>",
         )
         return True
