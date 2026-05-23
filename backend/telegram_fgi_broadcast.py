@@ -236,6 +236,13 @@ def is_fgi_telegram_query(text: str) -> bool:
     return False
 
 
+def _fgi_cache_is_fresh() -> bool:
+    global _FGI_REPLY_CACHE
+    if not _FGI_REPLY_CACHE:
+        return False
+    return time.time() - _FGI_REPLY_CACHE[0] < _FGI_CACHE_SEC
+
+
 async def build_fgi_reply_html(supabase, *, force_refresh: bool = False) -> str:
     global _FGI_REPLY_CACHE
     now = time.time()
@@ -275,6 +282,17 @@ async def handle_telegram_fgi_message(chat_id: int | str, text: str, supabase) -
         return False
 
     try:
+        from telegram_bot import send_chat_action
+
+        if not _fgi_cache_is_fresh():
+            await send_chat_action(chat_id, "typing")
+            await send_message(
+                chat_id,
+                "📊 <b>지표 수집 중</b>\n\n"
+                "코스피·미국·코인 등 여러 곳에서 불러오고 있어요.\n"
+                "잠시만 기다려 주세요…",
+            )
+
         html = await build_fgi_reply_html(supabase)
         await send_message(chat_id, html, _fgi_survey_link_markup())
     except Exception as e:

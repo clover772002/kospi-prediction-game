@@ -32,6 +32,18 @@ def _api(path: str) -> str:
     return f"https://api.telegram.org/bot{_token()}/{path}"
 
 
+async def send_chat_action(chat_id: int | str, action: str = "typing") -> None:
+    """채팅 중 표시(입력 중 등). 실패해도 본 흐름은 계속."""
+    try:
+        async with httpx.AsyncClient(timeout=5) as client:
+            await client.post(
+                _api("sendChatAction"),
+                json={"chat_id": chat_id, "action": action},
+            )
+    except Exception as e:
+        logger.debug("sendChatAction 실패: %s", e)
+
+
 async def send_message(chat_id: int | str, text: str, reply_markup: dict = None) -> dict:
     payload = {"chat_id": chat_id, "text": text, "parse_mode": "HTML"}
     if reply_markup:
