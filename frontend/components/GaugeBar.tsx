@@ -15,6 +15,31 @@ function calcBet(gauge: number, tokens: number) {
   return Math.max(1, Math.round((Math.abs(gauge) / 100) * tokens));
 }
 
+const GAUGE_TICKS: { v: number; color: string }[] = [
+  { v: -100, color: "text-blue-400/90" },
+  { v: -50, color: "text-gray-500" },
+  { v: -10, color: "text-gray-500" },
+  { v: 0, color: "text-gray-500" },
+  { v: 10, color: "text-gray-500" },
+  { v: 50, color: "text-gray-500" },
+  { v: 100, color: "text-red-400/90" },
+];
+
+function gaugeTickLeft(v: number): string {
+  return `${50 + v / 2}%`;
+}
+
+function gaugeTickTransform(v: number): string {
+  if (v <= -100) return "translateX(0)";
+  if (v >= 100) return "translateX(-100%)";
+  return "translateX(-50%)";
+}
+
+function formatGaugeTick(v: number): string {
+  if (v === 0) return "0";
+  return v > 0 ? `+${v}` : `${v}`;
+}
+
 /** 트랙 좌표(왼쪽 0 ~ 오른쪽 1) → -100..100 (0 불가) */
 function valueFromTrackFraction(f: number): number {
   const clamped = Math.min(1, Math.max(0, f));
@@ -159,9 +184,26 @@ export default function GaugeBar({
 
       {/* 드래그 게이지 */}
       <div
-        className={`select-none rounded-xl py-3 -my-1 ${disabled ? "" : "cursor-grab active:cursor-grabbing"}`}
+        className={`select-none rounded-xl pt-1 pb-3 -my-1 ${disabled ? "" : "cursor-grab active:cursor-grabbing"}`}
         style={{ touchAction: "none" }}
       >
+        <p className="text-center text-[10px] sm:text-xs text-gray-500 mb-1 leading-none">
+          확신도 눈금 <span className="text-gray-600">(등락률 % 아님)</span>
+        </p>
+        <div className="relative h-4 mb-0.5 px-0.5" aria-hidden>
+          {GAUGE_TICKS.map(({ v, color }) => (
+            <span
+              key={v}
+              className={`absolute bottom-0 text-[10px] sm:text-xs font-bold tabular-nums leading-none ${color}`}
+              style={{
+                left: gaugeTickLeft(v),
+                transform: gaugeTickTransform(v),
+              }}
+            >
+              {formatGaugeTick(v)}
+            </span>
+          ))}
+        </div>
         <div
           ref={trackRef}
           role="slider"
@@ -208,27 +250,9 @@ export default function GaugeBar({
         )}
       </div>
 
-      <div className="flex justify-between text-sm font-bold px-1">
+      <div className="flex justify-between text-sm font-bold px-1 -mt-1">
         <span className="text-blue-400">하락</span>
         <span className="text-red-400">상승</span>
-      </div>
-
-      <div className="space-y-1 px-0.5">
-        <p className="text-center text-xs text-gray-500 leading-snug">
-          막대 눈금 — <span className="text-gray-400">확신도</span> 크기 (코스피 등락률 % 아님)
-        </p>
-        <div
-          className="flex justify-between text-xs font-bold tabular-nums text-gray-600"
-          aria-hidden
-        >
-          <span className="text-blue-400/85">−100</span>
-          <span>−50</span>
-          <span>−10</span>
-          <span className="text-gray-500 font-medium">0</span>
-          <span>+10</span>
-          <span>+50</span>
-          <span className="text-red-400/85">+100</span>
-        </div>
       </div>
 
       {/* 배팅 정보 */}
