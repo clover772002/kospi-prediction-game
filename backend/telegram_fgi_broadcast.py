@@ -22,6 +22,8 @@ _FGI_COMMANDS = frozenset({
     "/fgi", "/지수", "/공포", "/탐욕", "/fear", "/greed",
     "/help_fgi", "/fgi_help",
 })
+# 채팅에 두 글자만내도 조회 (정확히 일치)
+_FGI_SHORT_TRIGGERS = frozenset({"공포", "지수", "탐욕"})
 
 
 def today_kst() -> str:
@@ -212,6 +214,8 @@ def is_fgi_telegram_query(text: str) -> bool:
     t = _normalize_telegram_text(text)
     if not t:
         return False
+    if t in _FGI_SHORT_TRIGGERS:
+        return True
     low = t.lower()
     if low in _FGI_COMMANDS:
         return True
@@ -260,8 +264,9 @@ async def handle_telegram_fgi_message(chat_id: int | str, text: str, supabase) -
         await send_message(
             chat_id,
             "<b>공포·탐욕 지수 조회</b>\n\n"
-            "명령: <code>/fgi</code> · <code>/지수</code>\n"
-            "또는 채팅에 「공포탐욕」「공포 지수」라고 보내 주세요.\n\n"
+            "채팅에 아래만내면 됩니다.\n"
+            "· <b>공포</b> · <b>지수</b> · <b>탐욕</b> (두 글자)\n"
+            "· <code>공포탐욕</code> · <code>/fgi</code> (선택)\n\n"
             "<i>웹앱 연동 없이 봇만 써도 됩니다.</i>",
         )
         return True
@@ -276,7 +281,7 @@ async def handle_telegram_fgi_message(chat_id: int | str, text: str, supabase) -
         logger.exception("FGI 텔레그램 답변 실패: %s", e)
         await send_message(
             chat_id,
-            "지표를 불러오지 못했어요. 1~2분 뒤 <code>/fgi</code> 로 다시 시도해 주세요.",
+            "지표를 불러오지 못했어요. 1~2분 뒤 「공포」 또는 「지수」로 다시 시도해 주세요.",
         )
     return True
 
