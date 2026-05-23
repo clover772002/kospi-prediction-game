@@ -59,6 +59,7 @@ except ImportError:
 from insights_catalog import INSIGHT_PRODUCTS, TOKEN_PACKS, paywall_enabled, stripe_configured
 from consumables_catalog import CONSUMABLE_PRODUCTS
 from consumables_service import purchase_consumable
+from admin_seed_responses import clear_seed_responses, seed_survey_responses
 from survey_writes import (
     SurveySubmissionLocked,
     fetch_pending_grant,
@@ -4586,6 +4587,50 @@ async def admin_reopen_survey():
     d = today_kst()
     sb.table("daily_surveys").update({"is_closed": False}).eq("survey_date", d).execute()
     return {"success": True, "survey_date": d}
+
+
+class AdminSeedSurveyBody(BaseModel):
+    """관리자: 봇 계정 + 랜덤 게이지로 survey_responses 시드."""
+
+    survey_date: str | None = None
+    count: int = 15
+    up_ratio: float | None = None  # 0~1, None이면 상승/하락 랜덤
+    dry_run: bool = False
+    force: bool = False
+
+
+@app.post("/api/admin/seed-survey-responses")
+async def admin_seed_survey_responses(
+    request: Request,
+    body: AdminSeedSurveyBody,
+):
+    """
+    랜덤 확신도(게이지) 응답을 DB에 실제로 INSERT.
+    헤더: x-admin-secret (ADMIN_SECRET)
+    """
+    _require_admin_secret(request)
+    d = (body.survey_date or today_kst()).strip()[:10]
+    sb = _supabase_direct()
+    return seed_survey_responses(
+        sb,
+        d,
+        body.count,
+        up_ratio=body.up_ratio,
+        dry_run=body.dry_run,
+        force=body.force,
+    )
+
+
+@app.delete("/api/admin/seed-survey-responses")
+async def admin_clear_seed_survey_responses(
+    request: Request,
+    survey_date: str | None = None,
+):
+    """시드 봇(seed+날짜@bots.kospi-seed.local) 응답·계정 제거."""
+    _require_admin_secret(request)
+    d = (survey_date or today_kst()).strip()[:10]
+    sb = _supabase_direct()
+    return clear_seed_responses(sb, d)
 
 
 @app.post("/api/admin/resend-telegram-survey")
