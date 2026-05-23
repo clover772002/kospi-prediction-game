@@ -9,7 +9,6 @@ import os
 import re
 import time
 from datetime import datetime
-from urllib.parse import urlparse
 from zoneinfo import ZoneInfo
 
 from fear_greed_fetch import FgiReading, fetch_all_fgi_readings
@@ -89,11 +88,9 @@ def _market_score_line(r: FgiReading) -> str:
     return f"{name}(—) {_html_esc(r.source)}"
 
 
-def _human_score_line(human: dict, *, survey_src: str = "fgi") -> str:
-    """코스피 투표 — 요약 한 줄 + vercel plain URL (메시지 내 유일한 링크)."""
+def _human_score_line(human: dict) -> str:
+    """코스피 투표(하락 58%) + vercel 루트 URL (메시지 내 유일한 링크)."""
     base = _app_base_url()
-    survey_url = f"{base}/survey?src={survey_src}"
-    host = urlparse(base).netloc or base.replace("https://", "").replace("http://", "")
     name = _html_esc("코스피 투표")
     if human["up_pct"] is not None:
         up, down = human["up_pct"], human["down_pct"]
@@ -101,10 +98,10 @@ def _human_score_line(human: dict, *, survey_src: str = "fgi") -> str:
             tag = f"상승 {_fmt_score(up)}%"
         else:
             tag = f"하락 {_fmt_score(down)}%"
-        head = f"{name}(<b>{_html_esc(tag)}</b>) {_html_esc(host)}"
+        head = f"{name}(<b>{_html_esc(tag)}</b>)"
     else:
-        head = f"{name}(—) {_html_esc(host)}"
-    return f"{head}\n{_html_url(survey_url)}"
+        head = f"{name}(—)"
+    return f"{head}\n{_html_url(base)}"
 
 
 def _empty_human_snapshot() -> dict:
@@ -232,7 +229,6 @@ def build_fgi_broadcast_html(
     human: dict,
     *,
     as_of: datetime | None = None,
-    survey_src: str = "fgi",
 ) -> str:
     now = as_of or datetime.now(KST)
     header = f"📊 <b>공포·탐욕 지수</b> ({now.strftime('%Y-%m-%d %H:%M')} KST)\n\n"
