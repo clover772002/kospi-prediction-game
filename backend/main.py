@@ -177,17 +177,20 @@ async def job_22_00():
 
 
 async def job_16_10_fgi_broadcast():
-    """평일 16:10 - 공포·탐욕 지수 + 인간지표 텔레그램 FGI 채널 발송."""
+    """평일 16:10 - 공포·탐욕 지수 + 인간지표, 텔레그램 연동 유저 전원 DM."""
     if korea_public_holiday_on(today_date_kst()):
-        logger.info("16:10 FGI 채널 발송 생략: 오늘 법정공휴일")
+        logger.info("16:10 FGI DM 발송 생략: 오늘 법정공휴일")
         return
     from telegram_fgi_broadcast import broadcast_fgi_digest
 
     out = await broadcast_fgi_digest(_supabase_direct())
-    if out.get("ok"):
-        logger.info("16:10 FGI 채널 발송 완료 (읽기 %s건)", out.get("readings_count"))
-    else:
-        logger.warning("16:10 FGI 채널 발송 실패: %s", out.get("error") or out.get("telegram"))
+    logger.info(
+        "16:10 FGI DM 완료: %s/%s명 (실패 %s, 지표 %s건)",
+        out.get("sent"),
+        out.get("total"),
+        out.get("failed"),
+        out.get("readings_count"),
+    )
 
 
 async def job_21_30_admin_poll_request():
@@ -393,7 +396,7 @@ async def lifespan(app_instance):
     scheduler.add_job(
         job_16_10_fgi_broadcast,
         CronTrigger(hour=16, minute=10, timezone="Asia/Seoul"),
-        id="fgi_channel_broadcast",
+        id="fgi_dm_broadcast",
         replace_existing=True,
     )
     scheduler.add_job(
@@ -423,7 +426,7 @@ async def lifespan(app_instance):
     )
     scheduler.start()
     logger.info(
-        "스케줄러 시작: 16:10(FGI채널) / 21:30(관리자 투표입력요청) / 22:00(설문) / 08:45(마감임박) / 09:00(마감) / 15:35(정확도) / KOSPI 스냅샷"
+        "스케줄러 시작: 16:10(FGI DM) / 21:30(관리자 투표입력요청) / 22:00(설문) / 08:45(마감임박) / 09:00(마감) / 15:35(정확도) / KOSPI 스냅샷"
     )
     yield
     scheduler.shutdown()
@@ -4694,7 +4697,7 @@ class AdminBlindPollSeedBody(BaseModel):
 
 @app.post("/api/admin/fgi-broadcast")
 async def admin_fgi_broadcast(request: Request):
-    """FGI 집계 채널에 수동 발송 (TELEGRAM_FGI_CHANNEL_ID, x-admin-secret)."""
+    """FGI 집계를 텔레그램 연동 유저 전원 DM으로 수동 발송 (x-admin-secret)."""
     _require_admin_secret(request)
     from telegram_fgi_broadcast import broadcast_fgi_digest
 

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""텔레그램 FGI 집계 채널 — 외부 지표 + 인간지표(코스피 예측 게임) 브로드캐스트."""
+"""텔레그램 FGI 집계 — 연동 유저 전원 DM (기존 Profitchat 봇·토큰)."""
 from __future__ import annotations
 
 import logging
@@ -15,13 +15,17 @@ logger = logging.getLogger(__name__)
 KST = ZoneInfo("Asia/Seoul")
 
 
-def fgi_channel_id() -> str | None:
-    raw = (os.getenv("TELEGRAM_FGI_CHANNEL_ID") or "").strip()
-    return raw or None
-
-
 def _app_base_url() -> str:
     return (os.getenv("PUBLIC_APP_URL") or "https://kospi-prediction-game.vercel.app").rstrip("/")
+
+
+def _fgi_survey_link_markup() -> dict:
+    url = f"{_app_base_url()}/survey?src=telegram_fgi"
+    return {
+        "inline_keyboard": [[
+            {"text": "📊 웹 설문 열기 (슬라이더 · 1% 단위)", "url": url},
+        ]],
+    }
 
 
 def _link(url: str, label: str) -> str:
@@ -150,23 +154,55 @@ def build_fgi_broadcast_html(
 
 
 async def broadcast_fgi_digest(supabase) -> dict:
-    """FGI 채널로 집계 메시지 발송. TELEGRAM_FGI_CHANNEL_ID 필요."""
-    chat_id = fgi_channel_id()
-    if not chat_id:
-        return {"ok": False, "error": "TELEGRAM_FGI_CHANNEL_ID 미설정"}
-
+    """텔레그램 연동 유저 전원 DM (TELEGRAM_BOT_TOKEN, send_daily_survey와 동일 대상)."""
     readings = await fetch_all_fgi_readings()
     human = human_indicator_snapshot(supabase)
     text = build_fgi_broadcast_html(readings, human)
+    markup = _fgi_survey_link_markup()
 
-    result = await send_message(chat_id, text)
-    ok = bool(result.get("ok"))
-    if not ok:
-        logger.error("FGI 채널 발송 실패: %s", result)
+    users = (
+        supabase.table("users")
+        .select("telegram_chat_id")
+        .not_.is_("telegram_chat_id", "null")
+        .execute()
+    )
+    chat_ids = [
+        u["telegram_chat_id"]
+        for u in (users.data or [])
+        if u.get("telegram_chat_id") is not None
+    ]
+
+    if not chat_ids:
+        logger.info("FGI DM 발송: 텔레그램 연동 유저 없음")
+        return {
+            "ok": True,
+            "sent": 0,
+            "failed": 0,
+            "total": 0,
+            "readings_count": len(readings),
+            "human": human,
+        }
+
+    sent = 0
+    failed = 0
+    for chat_id in chat_ids:
+        try:
+            result = await send_message(chat_id, text, markup)
+            if result.get("ok"):
+                sent += 1
+            else:
+                failed += 1
+                logger.warning("FGI DM 실패 chat_id=%s: %s", chat_id, result)
+        except Exception as e:
+            failed += 1
+            logger.error("FGI DM 예외 chat_id=%s: %s", chat_id, e)
+
+    logger.info("FGI DM 발송 완료: %s/%s명 (실패 %s)", sent, len(chat_ids), failed)
     return {
-        "ok": ok,
-        "channel_id": chat_id,
+        "ok": sent > 0,
+        "sent": sent,
+        "failed": failed,
+        "total": len(chat_ids),
         "readings_count": len(readings),
         "human": human,
-        "telegram": result,
     }
