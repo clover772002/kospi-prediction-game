@@ -57,6 +57,8 @@ export interface PushPreferences {
   expert_chat:    boolean;
   /** 단톡방 새 메시지 알림 */
   direction_chat: boolean;
+  /** 공포·탐욕 지수·인간지표 집계 (장 마감 후) */
+  fgi_digest: boolean;
 }
 
 export interface UserProfile {

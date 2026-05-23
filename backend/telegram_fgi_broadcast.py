@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""텔레그램 FGI 집계 — 연동 유저 전원 DM (기존 Profitchat 봇·토큰)."""
+"""공포·탐욕 지수 집계 알림 — 웹 푸시(주) + 텔레그램 DM(연동자만·선택)."""
 from __future__ import annotations
 
 import logging
@@ -8,21 +8,27 @@ from datetime import datetime
 from zoneinfo import ZoneInfo
 
 from fear_greed_fetch import FgiReading, fetch_all_fgi_readings
-from krx_calendar import next_trading_day_str
+from krx_calendar import KST, next_trading_day_str
+from telegram_bot import send_message
+from webpush_helper import send_web_push_to_all
+
+logger = logging.getLogger(__name__)
 
 
 def today_kst() -> str:
-    from datetime import datetime
-    from krx_calendar import KST
     return datetime.now(KST).date().isoformat()
-from telegram_bot import send_message
-
-logger = logging.getLogger(__name__)
-KST = ZoneInfo("Asia/Seoul")
 
 
 def _app_base_url() -> str:
     return (os.getenv("PUBLIC_APP_URL") or "https://kospi-prediction-game.vercel.app").rstrip("/")
+
+
+def _fmt_score(score: float | int | None) -> str:
+    if score is None:
+        return "—"
+    if float(score) == int(score):
+        return str(int(score))
+    return str(round(float(score), 1))
 
 
 def _fgi_survey_link_markup() -> dict:
@@ -40,26 +46,21 @@ def _link(url: str, label: str) -> str:
 
 
 def _score_line(r: FgiReading) -> str:
-    if r.score is None:
-        body = "—"
-    else:
-        s = int(r.score) if float(r.score) == int(r.score) else round(float(r.score), 1)
-        body = f"{s} · {r.zone}"
+    body = f"{_fmt_score(r.score)} · {r.zone}" if r.score is not None else "—"
     src = _link(r.url, r.source)
-    extra = f" <i>({r.note})</i>" if r.note and r.note not in ("조회 실패", "") else ""
+    extra = ""
     if r.note == "조회 실패":
         extra = " <i>(조회 실패)</i>"
+    elif r.note and r.note not in ("조회 실패", ""):
+        extra = f" <i>({r.note})</i>"
     return f"{r.market} {src}\n   {body}{extra}"
 
 
 def human_indicator_snapshot(supabase) -> dict:
-    """
-    인간지표: 실제 설문 응답만 집계(패딩 없음).
-    우선 다음 거래일 설문(모집 중) → 없으면 오늘 설문.
-    """
+    """인간지표: 실제 설문 응답만 집계(패딩 없음)."""
     base = _app_base_url()
-    survey_url = f"{base}/survey?src=telegram_fgi"
-    home_url = f"{base}/?src=telegram_fgi"
+    survey_url = f"{base}/survey?src=fgi_push"
+    home_url = f"{base}/?src=fgi_push"
 
     candidates: list[tuple[str, str]] = []
     next_str = next_trading_day_str()
@@ -100,11 +101,10 @@ def human_indicator_snapshot(supabase) -> dict:
     rows = resp.data or []
     total = len(rows)
     up = sum(1 for r in rows if r.get("kospi_answer"))
-    down = total - up
 
     if total > 0:
         up_pct = round(up / total * 100, 1)
-        down_pct = round(down / total * 100, 1)
+        down_pct = round(100 - up_pct, 1)
     else:
         up_pct = down_pct = None
 
@@ -127,6 +127,33 @@ def human_indicator_snapshot(supabase) -> dict:
     }
 
 
+def build_fgi_push_summary(readings: list[FgiReading], human: dict) -> tuple[str, str]:
+    """웹 푸시용 짧은 제목·본문."""
+    parts: list[str] = []
+    for r in readings:
+        if r.score is None:
+            continue
+        tag = r.source.replace("FearGreedChart", "FGC").replace("Alternative.me", "코인")
+        if "KOSPI FGI" in r.source:
+            tag = "KOSPIFGI"
+        parts.append(f"{tag}{_fmt_score(r.score)}")
+
+    machine = " · ".join(parts[:6]) if parts else "지표 조회 중"
+
+    if human["up_pct"] is not None:
+        human_bit = (
+            f"인간지표 상승{human['up_pct']}%·하락{human['down_pct']}% "
+            f"({human['phase']} {human['total']}명)"
+        )
+    else:
+        human_bit = f"인간지표 ({human['phase']} · 응답 {human['total']}명)"
+
+    body = f"{machine}\n{human_bit} — 탭하면 상세"
+    if len(body) > 220:
+        body = body[:217] + "…"
+    return "📊 공포·탐욕 지수", body
+
+
 def build_fgi_broadcast_html(
     readings: list[FgiReading],
     human: dict,
@@ -138,9 +165,7 @@ def build_fgi_broadcast_html(
 
     machine = "<b>🤖 시장 지표</b>\n"
     machine += "\n".join(_score_line(r) for r in readings)
-    machine += (
-        "\n\n<i>※ 코스피 숫자는 출처마다 산식이 달라 다를 수 있습니다.</i>"
-    )
+    machine += "\n\n<i>※ 코스피 숫자는 출처마다 산식이 달라 다를 수 있습니다.</i>"
 
     h = human
     if h["up_pct"] is not None:
@@ -159,13 +184,7 @@ def build_fgi_broadcast_html(
     return header + machine + human_block
 
 
-async def broadcast_fgi_digest(supabase) -> dict:
-    """텔레그램 연동 유저 전원 DM (TELEGRAM_BOT_TOKEN, send_daily_survey와 동일 대상)."""
-    readings = await fetch_all_fgi_readings()
-    human = human_indicator_snapshot(supabase)
-    text = build_fgi_broadcast_html(readings, human)
-    markup = _fgi_survey_link_markup()
-
+async def _broadcast_fgi_telegram_dm(supabase, text: str, markup: dict) -> dict:
     users = (
         supabase.table("users")
         .select("telegram_chat_id")
@@ -177,20 +196,7 @@ async def broadcast_fgi_digest(supabase) -> dict:
         for u in (users.data or [])
         if u.get("telegram_chat_id") is not None
     ]
-
-    if not chat_ids:
-        logger.info("FGI DM 발송: 텔레그램 연동 유저 없음")
-        return {
-            "ok": True,
-            "sent": 0,
-            "failed": 0,
-            "total": 0,
-            "readings_count": len(readings),
-            "human": human,
-        }
-
-    sent = 0
-    failed = 0
+    sent = failed = 0
     for chat_id in chat_ids:
         try:
             result = await send_message(chat_id, text, markup)
@@ -198,17 +204,48 @@ async def broadcast_fgi_digest(supabase) -> dict:
                 sent += 1
             else:
                 failed += 1
-                logger.warning("FGI DM 실패 chat_id=%s: %s", chat_id, result)
+                logger.warning("FGI 텔레그램 DM 실패 chat_id=%s: %s", chat_id, result)
         except Exception as e:
             failed += 1
-            logger.error("FGI DM 예외 chat_id=%s: %s", chat_id, e)
+            logger.error("FGI 텔레그램 DM 예외 chat_id=%s: %s", chat_id, e)
+    return {"sent": sent, "failed": failed, "total": len(chat_ids)}
 
-    logger.info("FGI DM 발송 완료: %s/%s명 (실패 %s)", sent, len(chat_ids), failed)
+
+async def broadcast_fgi_digest(supabase) -> dict:
+    """
+    1) 브라우저 알림 연동 유저 전원 (push_subscription)
+    2) 텔레그램 chat_id 있는 유저에게 DM (웹에서 연동 UI 제거돼도 기존 연동자용)
+    """
+    readings = await fetch_all_fgi_readings()
+    human = human_indicator_snapshot(supabase)
+    title, push_body = build_fgi_push_summary(readings, human)
+
+    push_sent = await send_web_push_to_all(
+        supabase,
+        title,
+        push_body,
+        human["survey_url"],
+        notif_type="fgi_digest",
+    )
+
+    tg = {"sent": 0, "failed": 0, "total": 0}
+    if (os.getenv("FGI_TELEGRAM_DM", "1").strip().lower() not in ("0", "false", "no")):
+        html = build_fgi_broadcast_html(readings, human)
+        tg = await _broadcast_fgi_telegram_dm(supabase, html, _fgi_survey_link_markup())
+
+    ok = push_sent > 0 or tg["sent"] > 0
+    logger.info(
+        "FGI 발송: 웹푸시 %s명, 텔레그램 %s/%s명",
+        push_sent,
+        tg["sent"],
+        tg["total"],
+    )
     return {
-        "ok": sent > 0,
-        "sent": sent,
-        "failed": failed,
-        "total": len(chat_ids),
+        "ok": ok,
+        "push_sent": push_sent,
+        "telegram_sent": tg["sent"],
+        "telegram_failed": tg["failed"],
+        "telegram_total": tg["total"],
         "readings_count": len(readings),
         "human": human,
     }

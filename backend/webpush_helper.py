@@ -18,6 +18,7 @@ NOTIF_TYPES = {
     "group_nudge":    "그룹 독촉 알림",
     "expert_chat":    "고수 소통(질문·답장) 알림",
     "direction_chat": "소통방 새 메시지 알림",
+    "fgi_digest":     "공포·탐욕 지수 집계 (16:10)",
 }
 
 def _load_vapid_private_key() -> str:
