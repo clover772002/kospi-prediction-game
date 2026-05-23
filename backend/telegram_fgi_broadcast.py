@@ -57,45 +57,45 @@ def _fmt_score(score: float | int | None) -> str:
     return str(round(float(score), 1))
 
 
-def _score_line(r: FgiReading) -> str:
-    """수치 → 출처 → URL (시장 지표 본문)."""
-    if r.score is not None:
-        score_part = f"<b>{_fmt_score(r.score)}</b> · {_html_esc(r.zone)}"
-    else:
-        score_part = "—"
-    note = ""
-    if r.note == "조회 실패":
-        note = "\n   <i>(조회 실패)</i>"
-    elif r.note and r.note not in ("조회 실패", ""):
-        note = f"\n   <i>({_html_esc(r.note)})</i>"
-    return (
-        f"{_html_esc(r.market)}\n"
-        f"   {score_part}\n"
-        f"   {_html_esc(r.source)}\n"
-        f"   {_html_url(r.url)}{note}"
+def _market_short_name(market: str) -> str:
+    """🇰🇷 코스피 → 코스피"""
+    s = re.sub(
+        r"^[\s\U0001F1E0-\U0001FFFF\U0001F300-\U0001FAFF]+",
+        "",
+        (market or "").strip(),
     )
+    return s.strip() or market.strip()
 
 
-def _human_fgi_reading(human: dict, *, survey_src: str = "telegram_fgi") -> FgiReading:
-    """시장 지표와 동일 포맷 — 수치·출처(호스트)·URL만."""
+def _market_score_line(r: FgiReading) -> str:
+    """코스피(31, 공포) FearGreedChart + URL (2줄)."""
+    name = _html_esc(_market_short_name(r.market))
+    if r.score is not None:
+        head = (
+            f"{name}(<b>{_fmt_score(r.score)}</b>, {_html_esc(r.zone)}) "
+            f"{_html_esc(r.source)}"
+        )
+    else:
+        head = f"{name}(—) {_html_esc(r.source)}"
+    return f"{head}\n{_html_url(r.url)}"
+
+
+def _human_score_line(human: dict, *, survey_src: str = "telegram_fgi") -> str:
+    """코스피(하락 58%) 호스트 + URL — 방향·% 순서."""
     base = _app_base_url()
     url = f"{base}/survey?src={survey_src}"
     host = urlparse(base).netloc or base.replace("https://", "").replace("http://", "")
+    name = _html_esc("코스피")
     if human["up_pct"] is not None:
         up, down = human["up_pct"], human["down_pct"]
         if up >= down:
-            score, zone = up, "상승"
+            tag = f"상승 {_fmt_score(up)}%"
         else:
-            score, zone = down, "하락"
+            tag = f"하락 {_fmt_score(down)}%"
+        head = f"{name}(<b>{_html_esc(tag)}</b>) {_html_esc(host)}"
     else:
-        score, zone = None, "—"
-    return FgiReading(
-        market="🇰🇷 코스피",
-        source=host,
-        score=score,
-        zone=zone,
-        url=url,
-    )
+        head = f"{name}(—) {_html_esc(host)}"
+    return f"{head}\n{_html_url(url)}"
 
 
 def _empty_human_snapshot() -> dict:
@@ -228,12 +228,11 @@ def build_fgi_broadcast_html(
     now = as_of or datetime.now(KST)
     header = f"📊 <b>공포·탐욕 지수</b> ({now.strftime('%Y-%m-%d %H:%M')} KST)\n\n"
 
-    lines = [_score_line(r) for r in readings]
-    lines.append(_score_line(_human_fgi_reading(human, survey_src=survey_src)))
+    blocks = [_market_score_line(r) for r in readings]
+    blocks.append(_human_score_line(human, survey_src=survey_src))
 
     market = "<b>🤖 시장 지표</b>\n"
-    market += "\n".join(lines)
-    market += "\n\n<i>※ 코스피 숫자는 출처마다 산식이 달라 다를 수 있습니다.</i>"
+    market += "\n\n".join(blocks)
 
     return header + market
 
