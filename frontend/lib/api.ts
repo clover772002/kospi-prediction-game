@@ -131,6 +131,10 @@ export interface Challenge {
 export interface NextSurveyInfo {
   survey_date: string;
   is_open: boolean;
+  display_participants?: number;
+  display_yes_pct?: number;
+  rise_count?: number;
+  fall_count?: number;
 }
 
 export interface TodaySurvey {
@@ -138,6 +142,8 @@ export interface TodaySurvey {
   survey_date: string;
   total_responses: number;
   kospi_yes_pct: number | null;
+  rise_count?: number | null;
+  fall_count?: number | null;
   kospi_weighted_pct: number | null;
   kospi_result: boolean | null;
   kospi_change_pct: number | null;
