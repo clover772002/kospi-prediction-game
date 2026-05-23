@@ -177,10 +177,7 @@ async def job_22_00():
 
 
 async def job_16_10_fgi_broadcast():
-    """평일 16:10 - 공포·탐욕 지수 + 인간지표, 텔레그램 연동 유저 전원 DM."""
-    if korea_public_holiday_on(today_date_kst()):
-        logger.info("16:10 FGI DM 발송 생략: 오늘 법정공휴일")
-        return
+    """매일 16:10 - 공포·탐욕 지수 + 인간지표, 텔레그램 연동 유저 전원 DM (공휴일 포함)."""
     from telegram_fgi_broadcast import broadcast_fgi_digest
 
     out = await broadcast_fgi_digest(_supabase_direct())
@@ -426,7 +423,7 @@ async def lifespan(app_instance):
     )
     scheduler.start()
     logger.info(
-        "스케줄러 시작: 16:10(FGI DM) / 21:30(관리자 투표입력요청) / 22:00(설문) / 08:45(마감임박) / 09:00(마감) / 15:35(정확도) / KOSPI 스냅샷"
+        "스케줄러 시작: 16:10(FGI DM·매일·공휴일포함) / 21:30(관리자 투표) / 22:00(설문) / 08:45 / 09:00 / 15:35 / KOSPI 스냅샷"
     )
     yield
     scheduler.shutdown()

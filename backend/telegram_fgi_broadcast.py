@@ -8,7 +8,13 @@ from datetime import datetime
 from zoneinfo import ZoneInfo
 
 from fear_greed_fetch import FgiReading, fetch_all_fgi_readings
-from krx_calendar import next_trading_day_str, today_kst
+from krx_calendar import next_trading_day_str
+
+
+def today_kst() -> str:
+    from datetime import datetime
+    from krx_calendar import KST
+    return datetime.now(KST).date().isoformat()
 from telegram_bot import send_message
 
 logger = logging.getLogger(__name__)
