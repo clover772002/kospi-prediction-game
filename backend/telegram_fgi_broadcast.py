@@ -77,18 +77,24 @@ def _is_kospi_reading(r: FgiReading) -> bool:
 
 
 def _market_score_line(r: FgiReading) -> str:
-    """코스피(31, 공포) FearGreedChart — 링크 없음(본문 URL은 vercel만)."""
+    """코스피(31, 공포) FearGreedChart + 출처 URL (2줄)."""
     name = _html_esc(_market_short_name(r.market))
     if r.score is not None:
-        return (
+        head = (
             f"{name}(<b>{_fmt_score(r.score)}</b>, {_html_esc(r.zone)}) "
             f"{_html_esc(r.source)}"
         )
-    return f"{name}(—) {_html_esc(r.source)}"
+    else:
+        head = f"{name}(—) {_html_esc(r.source)}"
+    url = (r.url or "").strip()
+    low = url.lower()
+    if not url or "t.me" in low or "telegram." in low:
+        return head
+    return f"{head}\n{_html_url(url)}"
 
 
 def _human_score_line(human: dict) -> str:
-    """코스피 투표(하락 58%) + vercel 루트 URL (메시지 내 유일한 링크)."""
+    """코스피 투표(하락 58%) + vercel 루트 URL (우리 링크만, 텔레그램 URL 없음)."""
     base = _app_base_url()
     name = _html_esc("코스피 투표")
     if human["up_pct"] is not None:
