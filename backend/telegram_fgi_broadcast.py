@@ -50,8 +50,12 @@ def _html_esc(text: str) -> str:
     return html_module.escape(str(text), quote=False)
 
 
-def _html_url(url: str) -> str:
-    return str(url).replace("&", "&amp;")
+def _html_link(url: str, label: str | None = None) -> str:
+    """HTML 모드에서는 plain URL이 클릭되지 않음 — <a> 필수."""
+    u = str(url).strip()
+    href = html_module.escape(u, quote=True)
+    text = _html_esc(label if label is not None else u)
+    return f'<a href="{href}">{text}</a>'
 
 
 def _fmt_score(score: float | int | None) -> str:
