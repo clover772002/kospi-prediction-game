@@ -38,7 +38,14 @@ def today_kst() -> str:
 
 
 def _app_base_url() -> str:
-    return (os.getenv("PUBLIC_APP_URL") or "https://kospi-prediction-game.vercel.app").rstrip("/")
+    """텔레그램 DM 본문용 — vercel(웹)만, t.me 등은 사용 안 함."""
+    default = "https://kospi-prediction-game.vercel.app"
+    raw = (os.getenv("PUBLIC_APP_URL") or default).rstrip("/")
+    low = raw.lower()
+    if "t.me" in low or "telegram." in low:
+        logger.warning("PUBLIC_APP_URL이 텔레그램 주소라 기본 vercel URL 사용: %s", raw)
+        return default
+    return raw
 
 
 def _html_esc(text: str) -> str:
@@ -72,20 +79,18 @@ def _is_kospi_reading(r: FgiReading) -> bool:
 
 
 def _market_score_line(r: FgiReading) -> str:
-    """코스피(31, 공포) FearGreedChart + URL (2줄)."""
+    """코스피(31, 공포) FearGreedChart — 링크 없음(본문 URL은 vercel만)."""
     name = _html_esc(_market_short_name(r.market))
     if r.score is not None:
-        head = (
+        return (
             f"{name}(<b>{_fmt_score(r.score)}</b>, {_html_esc(r.zone)}) "
             f"{_html_esc(r.source)}"
         )
-    else:
-        head = f"{name}(—) {_html_esc(r.source)}"
-    return f"{head}\n{_html_url(r.url)}"
+    return f"{name}(—) {_html_esc(r.source)}"
 
 
-def _human_score_line(human: dict, *, survey_src: str = "telegram_fgi") -> str:
-    """코스피 투표 — 시장 지표와 동일: 요약 한 줄 + plain URL 한 줄(브라우저)."""
+def _human_score_line(human: dict, *, survey_src: str = "fgi") -> str:
+    """코스피 투표 — 요약 한 줄 + vercel plain URL (메시지 내 유일한 링크)."""
     base = _app_base_url()
     survey_url = f"{base}/survey?src={survey_src}"
     host = urlparse(base).netloc or base.replace("https://", "").replace("http://", "")
@@ -227,7 +232,7 @@ def build_fgi_broadcast_html(
     human: dict,
     *,
     as_of: datetime | None = None,
-    survey_src: str = "telegram_fgi",
+    survey_src: str = "fgi",
 ) -> str:
     now = as_of or datetime.now(KST)
     header = f"📊 <b>공포·탐욕 지수</b> ({now.strftime('%Y-%m-%d %H:%M')} KST)\n\n"
