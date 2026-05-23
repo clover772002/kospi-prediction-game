@@ -117,3 +117,72 @@ def parse_blind_poll_text(raw: str) -> dict[str, Any]:
         "up_votes": int(up_votes),
         "down_votes": int(down_votes),
     }
+
+
+def parse_admin_poll_simple(raw: str) -> dict[str, Any]:
+    """
+    관리자 DM용 — 상승 % · 참여 인원만.
+    예: 62 1284  /  62% 1284명  /  상승 62 1284
+    """
+    if not raw or not raw.strip():
+        raise HTTPException(status_code=422, detail="숫자 두 개(상승%, 참여 수)를 보내주세요.")
+
+    text = raw.replace(",", "").replace("，", "").strip()
+
+    up_pct = _first_float(
+        [
+            r"상승\s*(\d+(?:\.\d+)?)\s*%?",
+            r"(\d+(?:\.\d+)?)\s*%",
+        ],
+        text,
+    )
+
+    total_votes: int | None = None
+    m = re.search(
+        r"(\d+)\s*(?:명|표|참여|인|votes?|participants?)",
+        text,
+        re.IGNORECASE,
+    )
+    if m:
+        total_votes = int(m.group(1))
+
+    nums = [float(x) for x in re.findall(r"\d+(?:\.\d+)?", text)]
+    ints = [int(round(x)) for x in nums]
+
+    if up_pct is None:
+        for n in nums:
+            if 0 < n <= 100:
+                up_pct = n
+                break
+
+    if total_votes is None and ints:
+        big = [n for n in ints if n > 100]
+        if big:
+            total_votes = max(big)
+        elif len(ints) >= 2 and up_pct is not None:
+            other = [n for n in ints if n != int(up_pct)]
+            total_votes = max(other) if other else None
+        elif len(ints) == 1 and up_pct is not None and ints[0] != int(up_pct):
+            total_votes = ints[0]
+
+    if up_pct is None or total_votes is None or total_votes < 1:
+        raise HTTPException(
+            status_code=422,
+            detail="상승 %와 참여 인원을 알려주세요. 예: 62 1284 (한 줄) 또는 62% / 1284명",
+        )
+
+    up_pct = max(1.0, min(99.0, float(up_pct)))
+    up_votes = round(total_votes * up_pct / 100)
+    if up_votes < 1:
+        up_votes = 1
+    if up_votes >= total_votes:
+        up_votes = total_votes - 1
+    down_votes = total_votes - up_votes
+
+    return {
+        "up_pct": round(up_pct, 2),
+        "down_pct": round(100 - up_pct, 2),
+        "total_votes": int(total_votes),
+        "up_votes": int(up_votes),
+        "down_votes": int(down_votes),
+    }

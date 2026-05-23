@@ -10,7 +10,7 @@ from typing import Any
 from fastapi import HTTPException
 from supabase import Client
 
-from blind_poll_parse import parse_blind_poll_text
+from blind_poll_parse import parse_admin_poll_simple, parse_blind_poll_text
 
 logger = logging.getLogger(__name__)
 
@@ -197,6 +197,33 @@ def seed_survey_from_poll(
         "total_responses_after": int(getattr(after, "count", None) or 0),
         "samples": created[:5],
     }
+
+
+def seed_survey_from_admin_simple(
+    supabase: Client,
+    survey_date: str,
+    reply_text: str,
+    *,
+    max_seed: int = MAX_SEED_PER_CALL,
+    dry_run: bool = False,
+    force: bool = False,
+) -> dict[str, Any]:
+    """관리자 텔레그램 답장(상승% + 참여 수) → 시드."""
+    parsed = parse_admin_poll_simple(reply_text)
+    out = seed_survey_from_poll(
+        supabase,
+        survey_date,
+        total_votes=parsed["total_votes"],
+        up_votes=parsed["up_votes"],
+        down_votes=parsed["down_votes"],
+        up_pct=parsed["up_pct"],
+        max_seed=max_seed,
+        dry_run=dry_run,
+        force=force,
+        source="admin_telegram",
+    )
+    out["parsed"] = parsed
+    return out
 
 
 def seed_survey_from_blind_text(
