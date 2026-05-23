@@ -2,7 +2,6 @@
 """공포·탐욕 지수 — 웹 푸시(스케줄) + 텔레그램 봇은 물으면 답변(연동 불필요)."""
 from __future__ import annotations
 
-import asyncio
 import html as html_module
 import logging
 import os
