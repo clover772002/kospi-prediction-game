@@ -55,17 +55,32 @@ async def _post_send_message(payload: dict) -> dict:
             return {"ok": False, "description": resp.text[:200]}
 
 
-async def send_message(chat_id: int | str, text: str, reply_markup: dict = None) -> dict:
-    payload: dict = {"chat_id": chat_id, "text": text, "parse_mode": "HTML"}
+async def send_message(
+    chat_id: int | str,
+    text: str,
+    reply_markup: dict = None,
+    *,
+    parse_mode: str | None = "HTML",
+    disable_web_page_preview: bool = False,
+) -> dict:
+    payload: dict = {"chat_id": chat_id, "text": text}
+    if parse_mode:
+        payload["parse_mode"] = parse_mode
+    if disable_web_page_preview:
+        payload["disable_web_page_preview"] = True
     if reply_markup:
         payload["reply_markup"] = reply_markup
     data = await _post_send_message(payload)
-    if data.get("ok"):
+    if data.get("ok") or parse_mode is None:
         return data
     desc = data.get("description", "")
     logger.warning("sendMessage HTML 실패 (%s), plain 재시도", desc)
     plain = re.sub(r"<[^>]+>", "", text)
-    plain_payload: dict = {"chat_id": chat_id, "text": plain}
+    plain_payload: dict = {
+        "chat_id": chat_id,
+        "text": plain,
+        "disable_web_page_preview": disable_web_page_preview,
+    }
     if reply_markup:
         plain_payload["reply_markup"] = reply_markup
     return await _post_send_message(plain_payload)

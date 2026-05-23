@@ -237,7 +237,7 @@ def build_fgi_broadcast_html(
     other_blocks = [_market_score_line(r) for r in readings if not _is_kospi_reading(r)]
     blocks = (
         kospi_blocks
-        + [_human_score_line(human, survey_src=survey_src)]
+        + [_human_score_line(human)]
         + other_blocks
     )
 
@@ -311,7 +311,8 @@ async def build_fgi_reply_html(supabase, *, force_refresh: bool = False) -> str:
         return _FGI_REPLY_CACHE[1]
 
     readings = await fetch_all_fgi_readings()
-    human = await asyncio.to_thread(human_indicator_snapshot_safe, supabase)
+    # Supabase 클라이언트는 스레드 간 공유 불가 — 동기 호출만 사용
+    human = human_indicator_snapshot_safe(supabase)
     html = build_fgi_broadcast_html(readings, human)
     _FGI_REPLY_CACHE = (now, html)
     return html
@@ -348,7 +349,19 @@ async def handle_telegram_fgi_message(chat_id: int | str, text: str, supabase) -
             )
 
         html = await build_fgi_reply_html(supabase)
-        result = await send_message(chat_id, html)
+        result = await send_message(
+            chat_id,
+            html,
+            disable_web_page_preview=True,
+        )
+        if not result.get("ok"):
+            plain = re.sub(r"<[^>]+>", "", html)
+            result = await send_message(
+                chat_id,
+                plain,
+                parse_mode=None,
+                disable_web_page_preview=True,
+            )
         if not result.get("ok"):
             raise RuntimeError(result.get("description") or "sendMessage failed")
     except Exception as e:
@@ -356,6 +369,7 @@ async def handle_telegram_fgi_message(chat_id: int | str, text: str, supabase) -
         await send_message(
             chat_id,
             "지표를 불러오지 못했어요. 1~2분 뒤 「공포」 또는 「지수」로 다시 시도해 주세요.",
+            parse_mode=None,
         )
     return True
 
@@ -373,7 +387,9 @@ async def send_fgi_telegram_to_admins(supabase, *, force_refresh: bool = True) -
     sent = 0
     errors: list[str] = []
     for cid in ids:
-        result = await send_message(cid, html)
+        result = await send_message(
+            cid, html, disable_web_page_preview=True
+        )
         if result.get("ok"):
             sent += 1
         else:
