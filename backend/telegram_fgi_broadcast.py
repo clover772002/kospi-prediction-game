@@ -49,20 +49,23 @@ def _fgi_survey_link_markup() -> dict:
     }
 
 
-def _link(url: str, label: str) -> str:
-    safe_url = url.replace('"', "%22")
-    return f'<a href="{safe_url}">{label}</a>'
-
-
 def _score_line(r: FgiReading) -> str:
-    body = f"{_fmt_score(r.score)} · {r.zone}" if r.score is not None else "—"
-    src = _link(r.url, r.source)
-    extra = ""
+    """수치 → 출처명 → URL(텔레그램이 URL을 바로 탭 가능하게 노출)."""
+    if r.score is not None:
+        score_part = f"<b>{_fmt_score(r.score)}</b> · {r.zone}"
+    else:
+        score_part = "—"
+    note = ""
     if r.note == "조회 실패":
-        extra = " <i>(조회 실패)</i>"
+        note = "\n   <i>(조회 실패)</i>"
     elif r.note and r.note not in ("조회 실패", ""):
-        extra = f" <i>({r.note})</i>"
-    return f"{r.market} {src}\n   {body}{extra}"
+        note = f"\n   <i>({r.note})</i>"
+    return (
+        f"{r.market}\n"
+        f"   {score_part}\n"
+        f"   {r.source}\n"
+        f"   {r.url}{note}"
+    )
 
 
 def human_indicator_snapshot(supabase) -> dict:
@@ -184,10 +187,12 @@ def build_fgi_broadcast_html(
 
     human_block = (
         f"\n\n<b>👥 인간지표</b> — 코스피 예측 게임\n"
-        f"{pct_line} ({h['phase']} · {h['total']}명)\n"
-        f"대상 거래일 {h['survey_date']}\n"
-        f"참여 {_link(h['survey_url'], '설문 참여하기')}\n"
-        f"소개 {_link(h['home_url'], '게임 알아보기')}"
+        f"   {pct_line}\n"
+        f"   {h['phase']} · {h['total']}명 · 거래일 {h['survey_date']}\n"
+        f"   설문 참여\n"
+        f"   {h['survey_url']}\n"
+        f"   게임 소개\n"
+        f"   {h['home_url']}"
     )
 
     return header + machine + human_block
