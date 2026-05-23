@@ -7,6 +7,7 @@ import os
 import re
 import time
 from datetime import datetime
+from urllib.parse import urlparse
 from zoneinfo import ZoneInfo
 
 from fear_greed_fetch import FgiReading, fetch_all_fgi_readings
@@ -46,15 +47,6 @@ def _fmt_score(score: float | int | None) -> str:
     return str(round(float(score), 1))
 
 
-def _fgi_survey_link_markup() -> dict:
-    url = f"{_app_base_url()}/survey?src=telegram_fgi"
-    return {
-        "inline_keyboard": [[
-            {"text": "👥 내 표 넣기 (1% 슬라이더)", "url": url},
-        ]],
-    }
-
-
 def _score_line(r: FgiReading) -> str:
     """수치 → 출처 → URL (시장 지표 본문)."""
     if r.score is not None:
@@ -74,25 +66,25 @@ def _score_line(r: FgiReading) -> str:
     )
 
 
-def _human_indicator_block(human: dict, *, survey_src: str = "telegram_fgi") -> str:
-    """맨 아래 — 인간지표 · 코스피 군중지수 (거래일·모집 상태 문구 없음)."""
-    survey_url = f"{_app_base_url()}/survey?src={survey_src}"
-    h = human
-    if h["up_pct"] is not None:
-        result_line = (
-            f"상승 <b>{h['up_pct']}%</b> · "
-            f"하락 <b>{h['down_pct']}%</b> ({h['total']}명)"
-        )
+def _human_fgi_reading(human: dict, *, survey_src: str = "telegram_fgi") -> FgiReading:
+    """시장 지표와 동일 포맷 — 수치·출처(호스트)·URL만."""
+    base = _app_base_url()
+    url = f"{base}/survey?src={survey_src}"
+    host = urlparse(base).netloc or base.replace("https://", "").replace("http://", "")
+    if human["up_pct"] is not None:
+        up, down = human["up_pct"], human["down_pct"]
+        if up >= down:
+            score, zone = up, "상승"
+        else:
+            score, zone = down, "하락"
     else:
-        result_line = (
-            f"상승 · 하락 <i>(아직 응답 없음)</i> ({h['total']}명)"
-        )
-
-    return (
-        f"\n\n<b>👥 인간지표 · 코스피 군중지수</b>\n"
-        f"{result_line}\n"
-        f"→ <b>내 표 넣기</b> (1% 슬라이더)\n"
-        f"{survey_url}"
+        score, zone = None, "—"
+    return FgiReading(
+        market="🇰🇷 코스피",
+        source=host,
+        score=score,
+        zone=zone,
+        url=url,
     )
 
 
@@ -204,13 +196,14 @@ def build_fgi_broadcast_html(
     now = as_of or datetime.now(KST)
     header = f"📊 <b>공포·탐욕 지수</b> ({now.strftime('%Y-%m-%d %H:%M')} KST)\n\n"
 
+    lines = [_score_line(r) for r in readings]
+    lines.append(_score_line(_human_fgi_reading(human, survey_src=survey_src)))
+
     market = "<b>🤖 시장 지표</b>\n"
-    market += "\n".join(_score_line(r) for r in readings)
+    market += "\n".join(lines)
     market += "\n\n<i>※ 코스피 숫자는 출처마다 산식이 달라 다를 수 있습니다.</i>"
 
-    our = _human_indicator_block(human, survey_src=survey_src)
-
-    return header + market + our
+    return header + market
 
 
 def _normalize_telegram_text(text: str) -> str:
