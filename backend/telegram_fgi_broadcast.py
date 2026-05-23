@@ -90,12 +90,12 @@ def _market_score_line(r: FgiReading) -> str:
 
 
 def _human_score_line(human: dict, *, survey_src: str = "telegram_fgi") -> str:
-    """코스피(하락 58%) — 호스트만 링크, survey URL 노출 없음."""
+    """코스피 투표(하락 58%) — 호스트만 링크, survey URL 노출 없음."""
     base = _app_base_url()
     survey_url = f"{base}/survey?src={survey_src}"
     host = urlparse(base).netloc or base.replace("https://", "").replace("http://", "")
     host_link = _html_link(survey_url, host)
-    name = _html_esc("코스피")
+    name = _html_esc("코스피 투표")
     if human["up_pct"] is not None:
         up, down = human["up_pct"], human["down_pct"]
         if up >= down:
