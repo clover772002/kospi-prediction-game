@@ -50,7 +50,7 @@ def _fgi_survey_link_markup() -> dict:
     url = f"{_app_base_url()}/survey?src=telegram_fgi"
     return {
         "inline_keyboard": [[
-            {"text": "📊 웹 설문 열기 (슬라이더 · 1% 단위)", "url": url},
+            {"text": "👥 내 표 넣기 (1% 슬라이더)", "url": url},
         ]],
     }
 
@@ -74,22 +74,24 @@ def _score_line(r: FgiReading) -> str:
     )
 
 
-def _our_indicator_block(human: dict, *, survey_src: str = "telegram_fgi") -> str:
-    """맨 아래 — 우리 설문 집계 (거래일·모집 상태 문구 없음)."""
+def _human_indicator_block(human: dict, *, survey_src: str = "telegram_fgi") -> str:
+    """맨 아래 — 인간지표 · 코스피 군중지수 (거래일·모집 상태 문구 없음)."""
     survey_url = f"{_app_base_url()}/survey?src={survey_src}"
     h = human
     if h["up_pct"] is not None:
         result_line = (
-            f"예측 결과  상승 <b>{h['up_pct']}%</b> · "
+            f"상승 <b>{h['up_pct']}%</b> · "
             f"하락 <b>{h['down_pct']}%</b> ({h['total']}명)"
         )
     else:
-        result_line = f"예측 결과  상승 · 하락 <i>(아직 응답 없음)</i> ({h['total']}명)"
+        result_line = (
+            f"상승 · 하락 <i>(아직 응답 없음)</i> ({h['total']}명)"
+        )
 
     return (
-        f"\n\n<b>우리만의 지표</b> — 코스피 예측\n"
+        f"\n\n<b>👥 인간지표 · 코스피 군중지수</b>\n"
         f"{result_line}\n"
-        f"<b>설문 참여</b>\n"
+        f"→ <b>내 표 넣기</b> (1% 슬라이더)\n"
         f"{survey_url}"
     )
 
@@ -206,7 +208,7 @@ def build_fgi_broadcast_html(
     market += "\n".join(_score_line(r) for r in readings)
     market += "\n\n<i>※ 코스피 숫자는 출처마다 산식이 달라 다를 수 있습니다.</i>"
 
-    our = _our_indicator_block(human, survey_src=survey_src)
+    our = _human_indicator_block(human, survey_src=survey_src)
 
     return header + market + our
 
@@ -291,9 +293,10 @@ async def handle_telegram_fgi_message(chat_id: int | str, text: str, supabase) -
     if t in ("/help_fgi", "/fgi_help"):
         await send_message(
             chat_id,
-            "<b>코스피 예측 · 시장 지수</b>\n\n"
+            "<b>공포·탐욕 · 시장·인간 지표</b>\n\n"
             "· <b>공포</b> · <b>지수</b> · <b>공포지수</b>\n\n"
-            "위는 시장 FGI, 맨 아래가 <b>우리 코스피 예측</b> 집계입니다.\n"
+            "위는 <b>🤖 시장 지표</b>, 맨 아래는 "
+            "<b>👥 인간지표 · 코스피 군중지수</b>입니다.\n"
             "<i>웹 연동 없이 봇만 써도 됩니다.</i>",
         )
         return True
