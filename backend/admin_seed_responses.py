@@ -10,18 +10,16 @@ from typing import Any
 from fastapi import HTTPException
 from supabase import Client
 
+from blind_poll_parse import parse_blind_poll_text
+
 logger = logging.getLogger(__name__)
 
 SEED_EMAIL_DOMAIN = "bots.kospi-seed.local"
 DEFAULT_BOT_TOKENS = 100
+MAX_SEED_PER_CALL = 200
 
 
-def _random_gauge(rng: random.Random, up_ratio: float | None) -> int:
-    """-100~100, 0 제외."""
-    if up_ratio is None:
-        up = rng.random() < 0.5
-    else:
-        up = rng.random() < max(0.05, min(0.95, up_ratio))
+def _random_gauge_for_side(rng: random.Random, *, up: bool) -> int:
     mag = rng.randint(5, 95)
     return mag if up else -mag
 
@@ -46,6 +44,187 @@ def _ensure_survey_open(supabase: Client, survey_date: str, *, force: bool) -> N
         )
 
 
+def _scale_poll_counts(
+    total_votes: int,
+    up_votes: int,
+    *,
+    max_seed: int,
+) -> tuple[int, int, int]:
+    """블라인드 표본이 크면 max_seed까지 비율 유지하며 축소."""
+    if total_votes <= max_seed:
+        return total_votes, up_votes, total_votes - up_votes
+    ratio = up_votes / total_votes if total_votes else 0.5
+    scaled_total = max_seed
+    scaled_up = max(1, min(scaled_total - 1, round(scaled_total * ratio)))
+    scaled_down = scaled_total - scaled_up
+    return scaled_total, scaled_up, scaled_down
+
+
+def _build_gauge_list(rng: random.Random, up_votes: int, down_votes: int) -> list[int]:
+    gauges = [_random_gauge_for_side(rng, up=True) for _ in range(up_votes)]
+    gauges.extend(_random_gauge_for_side(rng, up=False) for _ in range(down_votes))
+    rng.shuffle(gauges)
+    return gauges
+
+
+def _insert_one_seed_response(
+    supabase: Client,
+    survey_date: str,
+    gauge: int,
+    rng: random.Random,
+    *,
+    dry_run: bool,
+) -> dict[str, Any] | None:
+    email = f"seed+{survey_date}+{uuid.uuid4().hex[:10]}@{SEED_EMAIL_DOMAIN}"
+    name = f"참여{rng.randint(1000, 9999)}"
+    preview = {
+        "email": email,
+        "name": name,
+        "gauge_position": gauge,
+        "kospi_answer": gauge > 0,
+    }
+    if dry_run:
+        return preview
+
+    try:
+        auth_res = supabase.auth.admin.create_user(
+            {
+                "email": email,
+                "password": uuid.uuid4().hex,
+                "email_confirm": True,
+                "user_metadata": {"name": name, "is_seed_bot": True, "source": "blind_poll"},
+            }
+        )
+        user_id = str(auth_res.user.id)
+    except Exception as e:
+        logger.warning("auth 생성 실패: %s", e)
+        return None
+
+    try:
+        supabase.table("users").upsert(
+            {"id": user_id, "email": email, "name": name},
+            on_conflict="id",
+        ).execute()
+    except Exception as e:
+        logger.warning("users upsert 실패 %s: %s", user_id, e)
+
+    tokens_bet = max(1, round(abs(gauge) / 100 * DEFAULT_BOT_TOKENS))
+    try:
+        supabase.table("survey_responses").insert(
+            {
+                "user_id": user_id,
+                "survey_date": survey_date,
+                "kospi_answer": gauge > 0,
+                "kosdaq_answer": False,
+                "gauge_position": gauge,
+                "tokens_bet": tokens_bet,
+                "tokens_before": DEFAULT_BOT_TOKENS,
+            }
+        ).execute()
+        return {**preview, "user_id": user_id}
+    except Exception as e:
+        logger.warning("응답 저장 실패 %s: %s", user_id, e)
+        try:
+            supabase.auth.admin.delete_user(user_id)
+        except Exception:
+            pass
+        return None
+
+
+def seed_survey_from_poll(
+    supabase: Client,
+    survey_date: str,
+    *,
+    total_votes: int,
+    up_votes: int,
+    down_votes: int | None = None,
+    up_pct: float | None = None,
+    max_seed: int = MAX_SEED_PER_CALL,
+    dry_run: bool = False,
+    force: bool = False,
+    source: str = "manual",
+) -> dict[str, Any]:
+    """블라인드(또는 수동) 투표 비율에 맞춰 확신도만 랜덤인 응답 N건 생성."""
+    if down_votes is None:
+        down_votes = total_votes - up_votes
+    if up_votes + down_votes != total_votes:
+        raise HTTPException(status_code=422, detail="up_votes + down_votes != total_votes")
+
+    scaled_total, scaled_up, scaled_down = _scale_poll_counts(
+        total_votes, up_votes, max_seed=max(1, min(max_seed, MAX_SEED_PER_CALL))
+    )
+    _ensure_survey_open(supabase, survey_date, force=force)
+
+    rng = random.Random(f"{survey_date}:poll:{scaled_up}:{scaled_total}:{source}")
+    gauges = _build_gauge_list(rng, scaled_up, scaled_down)
+
+    created: list[dict[str, Any]] = []
+    errors = 0
+    for gauge in gauges:
+        row = _insert_one_seed_response(
+            supabase, survey_date, gauge, rng, dry_run=dry_run
+        )
+        if row:
+            created.append(row)
+        else:
+            errors += 1
+
+    after = (
+        supabase.table("survey_responses")
+        .select("user_id", count="exact", head=True)
+        .eq("survey_date", survey_date)
+        .execute()
+    )
+
+    return {
+        "survey_date": survey_date,
+        "source": source,
+        "dry_run": dry_run,
+        "blind_poll": {
+            "total_votes": total_votes,
+            "up_votes": up_votes,
+            "down_votes": down_votes,
+            "up_pct": up_pct,
+        },
+        "seeded": {
+            "total": scaled_total,
+            "up": scaled_up,
+            "down": scaled_down,
+            "scaled_from_blind": total_votes > scaled_total,
+        },
+        "created": len(created),
+        "failed": errors,
+        "total_responses_after": int(getattr(after, "count", None) or 0),
+        "samples": created[:5],
+    }
+
+
+def seed_survey_from_blind_text(
+    supabase: Client,
+    survey_date: str,
+    poll_text: str,
+    *,
+    max_seed: int = MAX_SEED_PER_CALL,
+    dry_run: bool = False,
+    force: bool = False,
+) -> dict[str, Any]:
+    parsed = parse_blind_poll_text(poll_text)
+    out = seed_survey_from_poll(
+        supabase,
+        survey_date,
+        total_votes=parsed["total_votes"],
+        up_votes=parsed["up_votes"],
+        down_votes=parsed["down_votes"],
+        up_pct=parsed["up_pct"],
+        max_seed=max_seed,
+        dry_run=dry_run,
+        force=force,
+        source="blind_paste",
+    )
+    out["parsed"] = parsed
+    return out
+
+
 def seed_survey_responses(
     supabase: Client,
     survey_date: str,
@@ -55,97 +234,27 @@ def seed_survey_responses(
     dry_run: bool = False,
     force: bool = False,
 ) -> dict[str, Any]:
-    """
-    봇 계정을 만들고 survey_responses에 랜덤 gauge_position을 INSERT.
-    실제 집계·/api/today·소통방 인원에 반영됩니다(표시 패딩 아님).
-    """
-    if count < 1 or count > 200:
-        raise HTTPException(status_code=422, detail="count는 1~200")
+    """완전 랜덤 비율 시드 (블라인드 없이)."""
+    if count < 1 or count > MAX_SEED_PER_CALL:
+        raise HTTPException(status_code=422, detail=f"count는 1~{MAX_SEED_PER_CALL}")
 
-    _ensure_survey_open(supabase, survey_date, force=force)
-
-    rng = random.Random(f"{survey_date}:{count}:{up_ratio}")
-    created: list[dict[str, Any]] = []
-    errors: list[str] = []
-
-    for _ in range(count):
-        gauge = _random_gauge(rng, up_ratio)
-        email = f"seed+{survey_date}+{uuid.uuid4().hex[:10]}@{SEED_EMAIL_DOMAIN}"
-        name = f"참여{rng.randint(1000, 9999)}"
-        preview = {
-            "email": email,
-            "name": name,
-            "gauge_position": gauge,
-            "kospi_answer": gauge > 0,
-        }
-        if dry_run:
-            created.append(preview)
-            continue
-
-        try:
-            auth_res = supabase.auth.admin.create_user(
-                {
-                    "email": email,
-                    "password": uuid.uuid4().hex,
-                    "email_confirm": True,
-                    "user_metadata": {"name": name, "is_seed_bot": True},
-                }
-            )
-            user_id = str(auth_res.user.id)
-        except Exception as e:
-            msg = f"auth 생성 실패 ({email}): {e}"
-            logger.warning(msg)
-            errors.append(msg)
-            continue
-
-        try:
-            supabase.table("users").upsert(
-                {"id": user_id, "email": email, "name": name},
-                on_conflict="id",
-            ).execute()
-        except Exception as e:
-            logger.warning("users upsert 실패 %s: %s", user_id, e)
-
-        tokens_bet = max(1, round(abs(gauge) / 100 * DEFAULT_BOT_TOKENS))
-        try:
-            supabase.table("survey_responses").insert(
-                {
-                    "user_id": user_id,
-                    "survey_date": survey_date,
-                    "kospi_answer": gauge > 0,
-                    "kosdaq_answer": False,
-                    "gauge_position": gauge,
-                    "tokens_bet": tokens_bet,
-                    "tokens_before": DEFAULT_BOT_TOKENS,
-                }
-            ).execute()
-            created.append({**preview, "user_id": user_id})
-        except Exception as e:
-            msg = f"응답 저장 실패 ({user_id}): {e}"
-            logger.warning(msg)
-            errors.append(msg)
-            try:
-                supabase.auth.admin.delete_user(user_id)
-            except Exception:
-                pass
-
-    after = (
-        supabase.table("survey_responses")
-        .select("user_id", count="exact", head=True)
-        .eq("survey_date", survey_date)
-        .execute()
+    ratio = 0.5 if up_ratio is None else max(0.05, min(0.95, up_ratio))
+    up_votes = round(count * ratio)
+    if up_votes < 1:
+        up_votes = 1
+    if up_votes >= count:
+        up_votes = count - 1
+    return seed_survey_from_poll(
+        supabase,
+        survey_date,
+        total_votes=count,
+        up_votes=up_votes,
+        up_pct=round(up_votes / count * 100, 2),
+        max_seed=count,
+        dry_run=dry_run,
+        force=force,
+        source="random",
     )
-    total_after = int(getattr(after, "count", None) or 0)
-
-    return {
-        "survey_date": survey_date,
-        "dry_run": dry_run,
-        "requested": count,
-        "created": len(created),
-        "total_responses_after": total_after,
-        "samples": created[:5],
-        "errors": errors[:8],
-    }
 
 
 def clear_seed_responses(supabase: Client, survey_date: str) -> dict[str, Any]:

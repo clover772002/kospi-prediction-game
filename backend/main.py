@@ -59,7 +59,12 @@ except ImportError:
 from insights_catalog import INSIGHT_PRODUCTS, TOKEN_PACKS, paywall_enabled, stripe_configured
 from consumables_catalog import CONSUMABLE_PRODUCTS
 from consumables_service import purchase_consumable
-from admin_seed_responses import clear_seed_responses, seed_survey_responses
+from admin_seed_responses import (
+    clear_seed_responses,
+    seed_survey_from_blind_text,
+    seed_survey_from_poll,
+    seed_survey_responses,
+)
 from survey_writes import (
     SurveySubmissionLocked,
     fetch_pending_grant,
@@ -4631,6 +4636,74 @@ async def admin_clear_seed_survey_responses(
     d = (survey_date or today_kst()).strip()[:10]
     sb = _supabase_direct()
     return clear_seed_responses(sb, d)
+
+
+class AdminBlindPollSeedBody(BaseModel):
+    """블라인드 글에서 복사한 투표 결과 → 우리 설문에 비율 맞춰 시드."""
+
+    survey_date: str | None = None
+    poll_text: str | None = None
+    total_votes: int | None = None
+    up_pct: float | None = None
+    up_votes: int | None = None
+    down_votes: int | None = None
+    max_seed: int = 200
+    dry_run: bool = False
+    force: bool = False
+
+
+@app.post("/api/admin/seed-from-blind-poll")
+async def admin_seed_from_blind_poll(
+    request: Request,
+    body: AdminBlindPollSeedBody,
+):
+    """
+    블라인드 「내일 코스피」 설문: 상승·하락 %·참여 수를 반영해 확신도만 랜덤 시드.
+    - poll_text: 글에서 복사 붙여넣기 (권장)
+    - 또는 total_votes + up_pct / up_votes 직접 지정
+    자동 URL 스크랩은 미포함(블라인드 로그인·Apify 별도). 헤더: x-admin-secret
+    """
+    _require_admin_secret(request)
+    d = (body.survey_date or today_kst()).strip()[:10]
+    sb = _supabase_direct()
+
+    if body.poll_text and body.poll_text.strip():
+        return seed_survey_from_blind_text(
+            sb,
+            d,
+            body.poll_text.strip(),
+            max_seed=body.max_seed,
+            dry_run=body.dry_run,
+            force=body.force,
+        )
+
+    if body.total_votes and body.total_votes > 0:
+        if body.up_votes is not None:
+            up_v = body.up_votes
+        elif body.up_pct is not None:
+            up_v = round(body.total_votes * body.up_pct / 100)
+        else:
+            raise HTTPException(
+                status_code=422,
+                detail="up_pct 또는 up_votes 중 하나가 필요합니다.",
+            )
+        return seed_survey_from_poll(
+            sb,
+            d,
+            total_votes=body.total_votes,
+            up_votes=up_v,
+            down_votes=body.down_votes,
+            up_pct=body.up_pct,
+            max_seed=body.max_seed,
+            dry_run=body.dry_run,
+            force=body.force,
+            source="blind_manual",
+        )
+
+    raise HTTPException(
+        status_code=422,
+        detail="poll_text(블라인드 복사) 또는 total_votes+up_pct 가 필요합니다.",
+    )
 
 
 @app.post("/api/admin/resend-telegram-survey")
