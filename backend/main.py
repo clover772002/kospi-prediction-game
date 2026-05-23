@@ -4696,6 +4696,18 @@ async def admin_fgi_broadcast(request: Request):
     return await broadcast_fgi_digest(_supabase_direct())
 
 
+@app.post("/api/admin/fgi-telegram-send")
+async def admin_fgi_telegram_send(request: Request):
+    """FGI 텔레그램 DM을 관리자(TELEGRAM_ADMIN_CHAT_ID)에게 전송."""
+    _require_admin_secret(request)
+    from telegram_fgi_broadcast import send_fgi_telegram_to_admins
+
+    out = await send_fgi_telegram_to_admins(_supabase_direct())
+    if not out.get("ok"):
+        raise HTTPException(status_code=400, detail=out)
+    return out
+
+
 @app.post("/api/admin/telegram-poll-request")
 async def admin_telegram_poll_request(
     request: Request,

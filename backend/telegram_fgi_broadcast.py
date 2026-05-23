@@ -363,6 +363,33 @@ async def handle_telegram_fgi_message(chat_id: int | str, text: str, supabase) -
     return True
 
 
+async def send_fgi_telegram_to_admins(supabase, *, force_refresh: bool = True) -> dict:
+    """TELEGRAM_ADMIN_CHAT_ID(S) 관리자에게 FGI 답변과 동일한 DM 전송."""
+    from telegram_admin_poll import admin_chat_ids
+    from telegram_bot import send_message
+
+    ids = admin_chat_ids()
+    if not ids:
+        return {"ok": False, "sent": 0, "error": "TELEGRAM_ADMIN_CHAT_ID(S) 미설정"}
+
+    html = await build_fgi_reply_html(supabase, force_refresh=force_refresh)
+    sent = 0
+    errors: list[str] = []
+    for cid in ids:
+        result = await send_message(cid, html)
+        if result.get("ok"):
+            sent += 1
+        else:
+            errors.append(f"{cid}: {result.get('description', 'unknown')}")
+
+    return {
+        "ok": sent > 0,
+        "sent": sent,
+        "admins": sorted(ids),
+        "errors": errors,
+    }
+
+
 async def broadcast_fgi_digest(supabase) -> dict:
     """16:10 스케줄 — 브라우저 알림 구독자에게만 짧은 웹 푸시."""
     readings = await fetch_all_fgi_readings()
