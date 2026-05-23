@@ -187,9 +187,6 @@ export default function GaugeBar({
         className={`select-none rounded-xl pt-1 pb-3 -my-1 ${disabled ? "" : "cursor-grab active:cursor-grabbing"}`}
         style={{ touchAction: "none" }}
       >
-        <p className="text-center text-[10px] sm:text-xs text-gray-500 mb-1 leading-none">
-          확신도 눈금 <span className="text-gray-600">(등락률 % 아님)</span>
-        </p>
         <div className="relative h-4 mb-0.5 px-0.5" aria-hidden>
           {GAUGE_TICKS.map(({ v, color }) => (
             <span
