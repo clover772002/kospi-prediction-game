@@ -9,7 +9,6 @@ import { peekDashboardSnapshot } from "@/lib/tab-session-cache";
 import { markWasTopExpert } from "@/lib/top-expert-notice";
 import { formatApiErrorMessage } from "@/lib/format-api-error";
 import KospiPriceStrip from "@/components/KospiPriceStrip";
-import SurveyCrowdPulse from "@/components/SurveyCrowdPulse";
 import GaugeBar from "@/components/GaugeBar";
 import AppAmbientBackground from "@/components/AppAmbientBackground";
 import PageLoadProgress from "@/components/PageLoadProgress";
@@ -255,14 +254,7 @@ function SurveyPageInner() {
   const priceTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // 다음 거래일 설문 (장마감 후 미리 참여)
-  const [nextSurvey, setNextSurvey] = useState<{
-    survey_date: string;
-    is_open: boolean;
-    display_participants?: number;
-    display_yes_pct?: number;
-    rise_count?: number;
-    fall_count?: number;
-  } | null>(null);
+  const [nextSurvey, setNextSurvey] = useState<{ survey_date: string; is_open: boolean } | null>(null);
   const [nextKospiAnswer, setNextKospiAnswer] = useState<boolean | null>(true);
   const [nextGaugePosition, setNextGaugePosition] = useState<number>(10);
   const [nextAlreadyAnswered, setNextAlreadyAnswered] = useState(false);
@@ -732,32 +724,6 @@ function SurveyPageInner() {
           resultUp={today?.kospi_result ?? null}
           live={kospiPrice}
         />
-      ) : null}
-
-      {!isWeekendKST && status !== "no_survey" && (today?.total_responses ?? 0) > 0 ? (
-        <div className="mt-3 mb-1">
-          <SurveyCrowdPulse
-            surveyDate={today?.survey_date ?? ""}
-            total={today?.total_responses ?? 0}
-            yesPct={today?.kospi_yes_pct ?? null}
-            riseCount={today?.rise_count}
-            fallCount={today?.fall_count}
-            active={status === "open"}
-          />
-        </div>
-      ) : null}
-
-      {showNextPreSurvey && nextSurvey?.survey_date && (nextSurvey.display_participants ?? 0) > 0 ? (
-        <div className="mt-2 mb-1">
-          <SurveyCrowdPulse
-            surveyDate={nextSurvey.survey_date}
-            total={nextSurvey.display_participants ?? 0}
-            yesPct={nextSurvey.display_yes_pct ?? null}
-            riseCount={nextSurvey.rise_count}
-            fallCount={nextSurvey.fall_count}
-            active={nextSurvey.is_open}
-          />
-        </div>
       ) : null}
 
       {/* 설문 없음 — 대기중 vs 휴장일 구분 */}

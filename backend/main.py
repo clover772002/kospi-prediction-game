@@ -59,7 +59,6 @@ except ImportError:
 from insights_catalog import INSIGHT_PRODUCTS, TOKEN_PACKS, paywall_enabled, stripe_configured
 from consumables_catalog import CONSUMABLE_PRODUCTS
 from consumables_service import purchase_consumable
-from crowd_display import CROWD_PAD_THRESHOLD, apply_crowd_display_padding
 from survey_writes import (
     SurveySubmissionLocked,
     fetch_pending_grant,
@@ -296,12 +295,28 @@ async def job_15_35():
             ds = sb.table("daily_surveys").select("expert_prediction").eq("survey_date", today_str).execute()
             expert_up = ds.data[0].get("expert_prediction") if ds.data else None
 
-            crowd = apply_crowd_display_padding(today_str, total_votes, up_votes)
-            display_total = crowd["total_responses"]
-            display_up = crowd["rise_count"]
-            display_down = crowd["fall_count"]
-            display_up_pct = float(crowd["kospi_yes_pct"])
-            display_down_pct = float(crowd["kospi_no_pct"])
+            # 표시용 참여자 수 보정
+            # 실제 참여자가 적을 때 기본 참여자(20~27명 랜덤)를 더해 자연스럽게 보이도록
+            import random as _rand
+            _PAD_THRESHOLD = 28  # 이 수 미만이면 패딩 추가
+            if total_votes < _PAD_THRESHOLD:
+                pad_total = _rand.randint(20, 27)  # 날마다 달라 보이도록
+                # 패딩 참여자는 다수결 방향으로 58~68% 분포
+                if majority_up:
+                    pad_up_ratio = _rand.uniform(0.58, 0.68)
+                else:
+                    pad_up_ratio = _rand.uniform(0.32, 0.42)
+                pad_up    = round(pad_total * pad_up_ratio)
+                pad_down  = pad_total - pad_up
+                display_total = total_votes + pad_total
+                display_up    = up_votes + pad_up
+                display_down  = down_votes + pad_down
+            else:
+                display_total = total_votes
+                display_up    = up_votes
+                display_down  = down_votes
+            display_up_pct   = round(display_up / display_total * 100, 2)
+            display_down_pct = round(display_down / display_total * 100, 2)
 
             sb.table("survey_summaries").upsert({
                 "survey_date":    today_str,
@@ -2343,7 +2358,6 @@ async def get_backtest(supabase: Client = Depends(get_supabase)):
 def _resolve_next_survey_open(supabase: Client) -> dict:
     """다음 거래일 사전 예측 블록용 — 레코드 없으면 생성 시도."""
     next_str = next_trading_day_str()
-    is_open = True
     res = (
         supabase.table("daily_surveys")
         .select("survey_date, is_closed")
@@ -2351,48 +2365,19 @@ def _resolve_next_survey_open(supabase: Client) -> dict:
         .execute()
     )
     if res.data:
-        is_open = not bool(res.data[0]["is_closed"])
-    else:
-        try:
-            supabase.table("daily_surveys").insert({
-                "survey_date": next_str,
-                "is_closed": False,
-            }).execute()
-            logger.info("next-survey: %s 설문 레코드 자동 생성", next_str)
-        except Exception as e:
-            logger.warning("next-survey: 레코드 생성 실패 (무시): %s", e)
-
-    real_total = 0
-    real_up = 0
+        return {
+            "survey_date": next_str,
+            "is_open": not bool(res.data[0]["is_closed"]),
+        }
     try:
-        cnt_res = (
-            supabase.table("survey_responses")
-            .select("user_id", count="exact", head=True)
-            .eq("survey_date", next_str)
-            .execute()
-        )
-        real_total = int(getattr(cnt_res, "count", None) or 0)
-        if real_total > 0:
-            up_res = (
-                supabase.table("survey_responses")
-                .select("user_id", count="exact", head=True)
-                .eq("survey_date", next_str)
-                .eq("kospi_answer", True)
-                .execute()
-            )
-            real_up = int(getattr(up_res, "count", None) or 0)
+        supabase.table("daily_surveys").insert({
+            "survey_date": next_str,
+            "is_closed": False,
+        }).execute()
+        logger.info("next-survey: %s 설문 레코드 자동 생성", next_str)
     except Exception as e:
-        logger.warning("next-survey 참여 수 조회 실패: %s", e)
-
-    crowd = apply_crowd_display_padding(next_str, real_total, real_up)
-    return {
-        "survey_date": next_str,
-        "is_open": is_open,
-        "display_participants": crowd["total_responses"],
-        "display_yes_pct": crowd["kospi_yes_pct"],
-        "rise_count": crowd["rise_count"],
-        "fall_count": crowd["fall_count"],
-    }
+        logger.warning("next-survey: 레코드 생성 실패 (무시): %s", e)
+    return {"survey_date": next_str, "is_open": True}
 
 
 async def _build_today_payload(supabase: Client, *, detail: bool) -> dict:
@@ -2458,27 +2443,11 @@ async def _build_today_payload(supabase: Client, *, detail: bool) -> dict:
             except Exception:
                 total = 0
 
-        real_up = 0
-        try:
-            up_res = (
-                supabase.table("survey_responses")
-                .select("user_id", count="exact", head=True)
-                .eq("survey_date", today_str)
-                .eq("kospi_answer", True)
-                .execute()
-            )
-            real_up = int(getattr(up_res, "count", None) or 0)
-        except Exception as e:
-            logger.warning("today summary 상승 count 실패: %s", e)
-
-        crowd = apply_crowd_display_padding(today_str, total, real_up)
         payload = {
             "status": status,
             "survey_date": today_str,
-            "total_responses": crowd["total_responses"],
-            "kospi_yes_pct": crowd["kospi_yes_pct"],
-            "rise_count": crowd["rise_count"],
-            "fall_count": crowd["fall_count"],
+            "total_responses": total,
+            "kospi_yes_pct": None,
             "kospi_weighted_pct": None,
             "kospi_result": survey.get("kospi_result"),
             "kospi_change_pct": survey.get("kospi_change_pct"),
@@ -2508,22 +2477,27 @@ async def _build_today_payload(supabase: Client, *, detail: bool) -> dict:
     }
 
     if total > 0:
+        import random as _rand
         kospi_yes = sum(1 for r in responses.data if r["kospi_answer"])
-        crowd = apply_crowd_display_padding(today_str, total, kospi_yes)
-        display_total = crowd["total_responses"]
-        display_yes = crowd["rise_count"]
-        base["total_responses"] = display_total
-        base["kospi_yes_pct"] = crowd["kospi_yes_pct"]
-        base["rise_count"] = crowd["rise_count"]
-        base["fall_count"] = crowd["fall_count"]
         raw_yes_pct = kospi_yes / total
+
+        _PAD_THRESHOLD = 28
+        if total < _PAD_THRESHOLD:
+            pad_n = _rand.randint(20, 27)
+            majority_up = raw_yes_pct >= 0.5
+            pad_up_ratio = _rand.uniform(0.58, 0.68) if majority_up else _rand.uniform(0.32, 0.42)
+            pad_yes = round(pad_n * pad_up_ratio)
+            display_yes = kospi_yes + pad_yes
+            display_total = total + pad_n
+        else:
+            display_yes = kospi_yes
+            display_total = total
+
+        base["kospi_yes_pct"] = round(display_yes / display_total * 100)
 
         acc_map, pred_count, _ = get_accuracy_data(supabase)
         raw_weighted = _calc_weighted_pct(responses.data, acc_map, pred_count)
-        if raw_weighted is not None and total < CROWD_PAD_THRESHOLD:
-            import random as _rand
-
-            pad_n = display_total - total
+        if raw_weighted is not None and total < _PAD_THRESHOLD:
             raw_dir = raw_weighted >= 50
             pad_w = _rand.uniform(0.58, 0.68) if raw_dir else _rand.uniform(0.32, 0.42)
             base["kospi_weighted_pct"] = round(
@@ -2574,7 +2548,7 @@ async def _build_today_payload(supabase: Client, *, detail: bool) -> dict:
 
 @app.get("/api/today/summary")
 async def get_today_summary(supabase: Client = Depends(get_supabase)):
-    """설문 탭 빠른 첫 페인트용. 표시용 참여·다수결 포함 — 상세 참여자 목록은 /api/today."""
+    """설문 탭 빠른 첫 페인트용. 참여자·가중·다수결 패딩 없음 — 대시보드는 /api/today 사용."""
     return await _build_today_payload(supabase, detail=False)
 
 

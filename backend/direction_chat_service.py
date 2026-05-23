@@ -12,7 +12,6 @@ from krx_calendar import next_trading_day_str, today_date_kst
 from supabase import Client
 
 from accuracy_aggregate import get_accuracy_data
-from crowd_display import apply_crowd_display_padding
 from survey_writes import apply_pending_presubmits
 
 logger = logging.getLogger(__name__)
@@ -177,7 +176,7 @@ def resolve_chat_survey_date(supabase: Client, user_id: str) -> str:
     return today
 
 
-def _count_members_raw(supabase: Client, survey_date: str) -> dict[str, int]:
+def _count_members(supabase: Client, survey_date: str) -> dict[str, int]:
     res = (
         supabase.table("survey_responses")
         .select("kospi_answer")
@@ -191,17 +190,6 @@ def _count_members_raw(supabase: Client, survey_date: str) -> dict[str, int]:
         elif r.get("kospi_answer") is False:
             down += 1
     return {"up": up, "down": down, "total": len(res.data or [])}
-
-
-def _count_members(supabase: Client, survey_date: str) -> dict[str, int]:
-    """소통방 헤더용 표시 인원(실제보다 북적이게 보정)."""
-    raw = _count_members_raw(supabase, survey_date)
-    crowd = apply_crowd_display_padding(survey_date, raw["total"], raw["up"])
-    return {
-        "up": crowd["rise_count"],
-        "down": crowd["fall_count"],
-        "total": crowd["total_responses"],
-    }
 
 
 def _user_message_count(supabase: Client, user_id: str, survey_date: str) -> int:
