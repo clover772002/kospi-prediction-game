@@ -46,34 +46,6 @@ def _fmt_score(score: float | int | None) -> str:
     return str(round(float(score), 1))
 
 
-def _fgi_survey_link_markup() -> dict:
-    url = f"{_app_base_url()}/survey?src=telegram_fgi"
-    return {
-        "inline_keyboard": [[
-            {"text": "📊 웹 설문 열기 (슬라이더 · 1% 단위)", "url": url},
-        ]],
-    }
-
-
-def _score_line(r: FgiReading) -> str:
-    """수치 → 출처 → URL (시장 지표 본문)."""
-    if r.score is not None:
-        score_part = f"<b>{_fmt_score(r.score)}</b> · {r.zone}"
-    else:
-        score_part = "—"
-    note = ""
-    if r.note == "조회 실패":
-        note = "\n   <i>(조회 실패)</i>"
-    elif r.note and r.note not in ("조회 실패", ""):
-        note = f"\n   <i>({r.note})</i>"
-    return (
-        f"{r.market}\n"
-        f"   {score_part}\n"
-        f"   {r.source}\n"
-        f"   {r.url}{note}"
-    )
-
-
 def _our_indicator_block(human: dict, *, survey_src: str = "telegram_fgi") -> str:
     """맨 아래 — 우리 설문 집계 (거래일·모집 상태 문구 없음)."""
     survey_url = f"{_app_base_url()}/survey?src={survey_src}"
@@ -192,23 +164,16 @@ def build_fgi_push_summary(readings: list[FgiReading], human: dict) -> tuple[str
     return "📊 공포·탐욕 지수", body
 
 
-def build_fgi_broadcast_html(
-    readings: list[FgiReading],
+def build_fgi_telegram_reply_html(
     human: dict,
     *,
     as_of: datetime | None = None,
     survey_src: str = "telegram_fgi",
 ) -> str:
+    """텔레그램 답변 — 조회 시각 + 우리 코스피 예측만 (외부 FGI 링크·버튼 없음)."""
     now = as_of or datetime.now(KST)
-    header = f"📊 <b>공포·탐욕 지수</b> ({now.strftime('%Y-%m-%d %H:%M')} KST)\n\n"
-
-    market = "<b>🤖 시장 지표</b>\n"
-    market += "\n".join(_score_line(r) for r in readings)
-    market += "\n\n<i>※ 코스피 숫자는 출처마다 산식이 달라 다를 수 있습니다.</i>"
-
-    our = _our_indicator_block(human, survey_src=survey_src)
-
-    return header + market + our
+    header = f"📊 <b>공포·탐욕 지수</b> ({now.strftime('%Y-%m-%d %H:%M')} KST)"
+    return header + _our_indicator_block(human, survey_src=survey_src)
 
 
 def _normalize_telegram_text(text: str) -> str:
@@ -274,9 +239,8 @@ async def build_fgi_reply_html(supabase, *, force_refresh: bool = False) -> str:
     ):
         return _FGI_REPLY_CACHE[1]
 
-    readings = await fetch_all_fgi_readings()
     human = human_indicator_snapshot(supabase)
-    html = build_fgi_broadcast_html(readings, human)
+    html = build_fgi_telegram_reply_html(human)
     _FGI_REPLY_CACHE = (now, html)
     return html
 
@@ -291,9 +255,8 @@ async def handle_telegram_fgi_message(chat_id: int | str, text: str, supabase) -
     if t in ("/help_fgi", "/fgi_help"):
         await send_message(
             chat_id,
-            "<b>코스피 예측 · 시장 지수</b>\n\n"
+            "<b>코스피 예측 집계</b>\n\n"
             "· <b>공포</b> · <b>지수</b> · <b>공포지수</b>\n\n"
-            "위는 시장 FGI, 맨 아래가 <b>우리 코스피 예측</b> 집계입니다.\n"
             "<i>웹 연동 없이 봇만 써도 됩니다.</i>",
         )
         return True
@@ -308,13 +271,13 @@ async def handle_telegram_fgi_message(chat_id: int | str, text: str, supabase) -
             await send_chat_action(chat_id, "typing")
             await send_message(
                 chat_id,
-                "📊 <b>지표 수집 중</b>\n\n"
-                "코스피·미국·코인 등 여러 곳에서 불러오고 있어요.\n"
+                "📊 <b>집계 중</b>\n\n"
+                "참여자 예측을 불러오고 있어요.\n"
                 "잠시만 기다려 주세요…",
             )
 
         html = await build_fgi_reply_html(supabase)
-        await send_message(chat_id, html, _fgi_survey_link_markup())
+        await send_message(chat_id, html)
     except Exception as e:
         logger.exception("FGI 텔레그램 답변 실패: %s", e)
         await send_message(
