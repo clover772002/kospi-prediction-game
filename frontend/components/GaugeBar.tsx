@@ -15,6 +15,18 @@ function calcBet(gauge: number, tokens: number) {
   return Math.max(1, Math.round((Math.abs(gauge) / 100) * tokens));
 }
 
+const GAUGE_QUICK_STEPS = [10, 50, 100] as const;
+
+function clampGauge(v: number): number {
+  let n = Math.max(-100, Math.min(100, Math.round(v)));
+  if (n === 0) n = v > 0 ? 1 : -1;
+  return n;
+}
+
+function applyGaugeDelta(current: number, delta: number): number {
+  return clampGauge(current + delta);
+}
+
 /** 트랙 좌표(왼쪽 0 ~ 오른쪽 1) → -100..100 (0 불가) */
 function valueFromTrackFraction(f: number): number {
   const clamped = Math.min(1, Math.max(0, f));
@@ -212,6 +224,43 @@ export default function GaugeBar({
         <span className="text-blue-400">하락</span>
         <span className="text-red-400">상승</span>
       </div>
+
+      {!disabled && (
+        <div className="space-y-2 rounded-xl border border-[#2A2A2A] bg-[#111]/60 px-3 py-3">
+          <p className="text-center text-xs text-gray-500 leading-relaxed">
+            <span className="font-bold text-gray-400">빠른 조절</span>
+            {" "}— ±10 · 50 · 100 버튼은{" "}
+            <span className="text-gray-400">확신도만</span> 한 번에 옮깁니다. 코스피 % 예측이 아니에요.
+          </p>
+          <div className="flex flex-wrap items-center justify-center gap-1.5">
+            {GAUGE_QUICK_STEPS.map((step) => (
+              <button
+                key={`neg-${step}`}
+                type="button"
+                onClick={() => onChange(applyGaugeDelta(value, -step))}
+                className="min-w-[3rem] rounded-lg border border-blue-500/35 bg-blue-500/10 px-2.5 py-2 text-sm font-black tabular-nums text-blue-300 hover:bg-blue-500/20 active:scale-95 transition-transform"
+                aria-label={`확신도 ${step}만큼 하락 쪽으로`}
+              >
+                −{step}
+              </button>
+            ))}
+            <span className="px-1 text-gray-600 text-xs" aria-hidden>
+              |
+            </span>
+            {GAUGE_QUICK_STEPS.map((step) => (
+              <button
+                key={`pos-${step}`}
+                type="button"
+                onClick={() => onChange(applyGaugeDelta(value, step))}
+                className="min-w-[3rem] rounded-lg border border-red-500/35 bg-red-500/10 px-2.5 py-2 text-sm font-black tabular-nums text-red-300 hover:bg-red-500/20 active:scale-95 transition-transform"
+                aria-label={`확신도 ${step}만큼 상승 쪽으로`}
+              >
+                +{step}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* 배팅 정보 */}
       <div className="bg-[#111] border border-[#2A2A2A] rounded-xl p-3 space-y-1.5">
