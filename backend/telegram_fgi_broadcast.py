@@ -49,11 +49,6 @@ def _html_url(url: str) -> str:
     return str(url).replace("&", "&amp;")
 
 
-def _html_link(url: str, label: str) -> str:
-    href = html_module.escape(str(url), quote=True)
-    return f'<a href="{href}">{_html_esc(label)}</a>'
-
-
 def _fmt_score(score: float | int | None) -> str:
     if score is None:
         return "—"
@@ -90,11 +85,10 @@ def _market_score_line(r: FgiReading) -> str:
 
 
 def _human_score_line(human: dict, *, survey_src: str = "telegram_fgi") -> str:
-    """코스피 투표(하락 58%) — 호스트만 링크, survey URL 노출 없음."""
+    """코스피 투표 — 시장 지표와 동일: 요약 한 줄 + plain URL 한 줄(브라우저)."""
     base = _app_base_url()
     survey_url = f"{base}/survey?src={survey_src}"
     host = urlparse(base).netloc or base.replace("https://", "").replace("http://", "")
-    host_link = _html_link(survey_url, host)
     name = _html_esc("코스피 투표")
     if human["up_pct"] is not None:
         up, down = human["up_pct"], human["down_pct"]
@@ -102,8 +96,10 @@ def _human_score_line(human: dict, *, survey_src: str = "telegram_fgi") -> str:
             tag = f"상승 {_fmt_score(up)}%"
         else:
             tag = f"하락 {_fmt_score(down)}%"
-        return f"{name}(<b>{_html_esc(tag)}</b>) {host_link}"
-    return f"{name}(—) {host_link}"
+        head = f"{name}(<b>{_html_esc(tag)}</b>) {_html_esc(host)}"
+    else:
+        head = f"{name}(—) {_html_esc(host)}"
+    return f"{head}\n{_html_url(survey_url)}"
 
 
 def _empty_human_snapshot() -> dict:
