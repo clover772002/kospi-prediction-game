@@ -176,6 +176,18 @@ async def job_22_00():
     logger.info("22:00 설문 발송 완료")
 
 
+async def job_21_30_admin_poll_request():
+    """매일 21:30 - 관리자 DM에 블라인드 등 외부 투표 수치 붙여넣기 요청 (본인만)"""
+    if korea_public_holiday_on(today_date_kst()):
+        logger.info("21:30 관리자 투표 요청 생략: 오늘 법정공휴일")
+        return
+    from telegram_admin_poll import notify_all_admins_poll_request
+
+    next_str = next_trading_day_str()
+    n = await notify_all_admins_poll_request(next_str)
+    logger.info("21:30 관리자 투표 입력 요청 완료 (대상 %s명, 거래일 %s)", n, next_str)
+
+
 async def job_08_45():
     """매일 08:45 - 텔레그램 + 웹푸시 마감임박 알림 (거래일에만 발송)"""
     sb = _supabase_direct()
@@ -364,6 +376,12 @@ scheduler = AsyncIOScheduler(timezone="Asia/Seoul")
 async def lifespan(app_instance):
     global _kospi_snap_lock
     _kospi_snap_lock = asyncio.Lock()
+    scheduler.add_job(
+        job_21_30_admin_poll_request,
+        CronTrigger(hour=21, minute=30, timezone="Asia/Seoul"),
+        id="admin_poll_request",
+        replace_existing=True,
+    )
     scheduler.add_job(job_22_00, CronTrigger(hour=22, minute=0,  timezone="Asia/Seoul"), id="survey_evening",   replace_existing=True)
     scheduler.add_job(job_08_45, CronTrigger(hour=8,  minute=45, timezone="Asia/Seoul"), id="survey_reminder",  replace_existing=True)
     scheduler.add_job(job_09_00, CronTrigger(hour=9,  minute=0,  timezone="Asia/Seoul"), id="survey_close",     replace_existing=True)
@@ -384,7 +402,9 @@ async def lifespan(app_instance):
         replace_existing=True,
     )
     scheduler.start()
-    logger.info("스케줄러 시작: 22:00(설문 발송·공휴일 제외) / 08:45(마감임박) / 09:00(마감) / 15:35(정확도) / 09-15시 30분(KOSPI 스냅샷)")
+    logger.info(
+        "스케줄러 시작: 21:30(관리자 투표입력요청) / 22:00(설문) / 08:45(마감임박) / 09:00(마감) / 15:35(정확도) / KOSPI 스냅샷"
+    )
     yield
     scheduler.shutdown()
 
@@ -4650,6 +4670,25 @@ class AdminBlindPollSeedBody(BaseModel):
     max_seed: int = 200
     dry_run: bool = False
     force: bool = False
+
+
+@app.post("/api/admin/telegram-poll-request")
+async def admin_telegram_poll_request(
+    request: Request,
+    survey_date: str | None = None,
+):
+    """관리자 텔레그램 DM으로 투표 수치 입력 요청 (TELEGRAM_ADMIN_CHAT_ID 필요)."""
+    _require_admin_secret(request)
+    from telegram_admin_poll import admin_chat_ids, notify_all_admins_poll_request
+
+    if not admin_chat_ids():
+        raise HTTPException(
+            status_code=400,
+            detail="TELEGRAM_ADMIN_CHAT_ID 또는 TELEGRAM_ADMIN_CHAT_IDS 환경변수를 설정하세요.",
+        )
+    d = (survey_date or next_trading_day_str()).strip()[:10]
+    n = await notify_all_admins_poll_request(d)
+    return {"survey_date": d, "admins_notified": n}
 
 
 @app.post("/api/admin/seed-from-blind-poll")

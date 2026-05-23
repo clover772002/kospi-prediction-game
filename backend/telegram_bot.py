@@ -250,7 +250,20 @@ async def handle_webhook(update: dict, supabase) -> None:
     if "message" in update:
         msg = update["message"]
         chat_id = msg["chat"]["id"]
-        text = msg.get("text", "")
+        text = msg.get("text", "") or ""
+
+        from telegram_admin_poll import (
+            handle_poll_command,
+            handle_poll_reply,
+            is_admin_chat,
+        )
+
+        if text.startswith("/poll") or text.startswith("/poll@"):
+            if await handle_poll_command(chat_id, text, supabase):
+                return
+
+        if is_admin_chat(chat_id) and await handle_poll_reply(chat_id, text, supabase):
+            return
 
         if text.startswith("/start"):
             parts = text.split(" ", 1)
