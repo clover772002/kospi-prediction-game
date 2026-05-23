@@ -72,6 +72,10 @@ def _market_short_name(market: str) -> str:
     return s.strip() or market.strip()
 
 
+def _is_kospi_reading(r: FgiReading) -> bool:
+    return _market_short_name(r.market) == "코스피"
+
+
 def _market_score_line(r: FgiReading) -> str:
     """코스피(31, 공포) FearGreedChart + URL (2줄)."""
     name = _html_esc(_market_short_name(r.market))
@@ -232,8 +236,13 @@ def build_fgi_broadcast_html(
     now = as_of or datetime.now(KST)
     header = f"📊 <b>공포·탐욕 지수</b> ({now.strftime('%Y-%m-%d %H:%M')} KST)\n\n"
 
-    blocks = [_market_score_line(r) for r in readings]
-    blocks.append(_human_score_line(human, survey_src=survey_src))
+    kospi_blocks = [_market_score_line(r) for r in readings if _is_kospi_reading(r)]
+    other_blocks = [_market_score_line(r) for r in readings if not _is_kospi_reading(r)]
+    blocks = (
+        kospi_blocks
+        + [_human_score_line(human, survey_src=survey_src)]
+        + other_blocks
+    )
 
     market = "<b>🤖 시장 지표</b>\n"
     market += "\n\n".join(blocks)
