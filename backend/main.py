@@ -4600,14 +4600,11 @@ async def stripe_webhook_route(request: Request):
 # ─────────────────────────────────────────────────────────────
 
 @app.post("/telegram/webhook")
-async def telegram_webhook(
-    request: Request,
-    supabase: Client = Depends(get_supabase),
-):
+async def telegram_webhook(request: Request):
     try:
         update = await request.json()
         logger.info(f"웹훅 수신: {update}")
-        await handle_webhook(update, supabase)
+        await handle_webhook(update, _supabase_direct())
     except Exception as e:
         logger.error(f"웹훅 처리 오류: {e}", exc_info=True)
     return {"ok": True}

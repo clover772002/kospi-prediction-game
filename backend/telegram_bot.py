@@ -8,6 +8,7 @@
 """
 import os
 import logging
+import re
 import httpx
 from dotenv import load_dotenv
 from webpush_helper import send_web_push_to_user
@@ -44,14 +45,30 @@ async def send_chat_action(chat_id: int | str, action: str = "typing") -> None:
         logger.debug("sendChatAction 실패: %s", e)
 
 
+async def _post_send_message(payload: dict) -> dict:
+    async with httpx.AsyncClient(timeout=25) as client:
+        resp = await client.post(_api("sendMessage"), json=payload)
+        logger.info("sendMessage → %s: %s", payload.get("chat_id"), resp.status_code)
+        try:
+            return resp.json()
+        except Exception:
+            return {"ok": False, "description": resp.text[:200]}
+
+
 async def send_message(chat_id: int | str, text: str, reply_markup: dict = None) -> dict:
-    payload = {"chat_id": chat_id, "text": text, "parse_mode": "HTML"}
+    payload: dict = {"chat_id": chat_id, "text": text, "parse_mode": "HTML"}
     if reply_markup:
         payload["reply_markup"] = reply_markup
-    async with httpx.AsyncClient(timeout=10) as client:
-        resp = await client.post(_api("sendMessage"), json=payload)
-        logger.info(f"sendMessage → {chat_id}: {resp.status_code}")
-        return resp.json()
+    data = await _post_send_message(payload)
+    if data.get("ok"):
+        return data
+    desc = data.get("description", "")
+    logger.warning("sendMessage HTML 실패 (%s), plain 재시도", desc)
+    plain = re.sub(r"<[^>]+>", "", text)
+    plain_payload: dict = {"chat_id": chat_id, "text": plain}
+    if reply_markup:
+        plain_payload["reply_markup"] = reply_markup
+    return await _post_send_message(plain_payload)
 
 
 async def edit_message_text(chat_id: int | str, message_id: int, text: str) -> dict:

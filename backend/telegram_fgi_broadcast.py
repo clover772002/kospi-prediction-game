@@ -2,6 +2,8 @@
 """공포·탐욕 지수 — 웹 푸시(스케줄) + 텔레그램 봇은 물으면 답변(연동 불필요)."""
 from __future__ import annotations
 
+import asyncio
+import html as html_module
 import logging
 import os
 import re
@@ -39,6 +41,14 @@ def _app_base_url() -> str:
     return (os.getenv("PUBLIC_APP_URL") or "https://kospi-prediction-game.vercel.app").rstrip("/")
 
 
+def _html_esc(text: str) -> str:
+    return html_module.escape(str(text), quote=False)
+
+
+def _html_url(url: str) -> str:
+    return str(url).replace("&", "&amp;")
+
+
 def _fmt_score(score: float | int | None) -> str:
     if score is None:
         return "—"
@@ -50,19 +60,19 @@ def _fmt_score(score: float | int | None) -> str:
 def _score_line(r: FgiReading) -> str:
     """수치 → 출처 → URL (시장 지표 본문)."""
     if r.score is not None:
-        score_part = f"<b>{_fmt_score(r.score)}</b> · {r.zone}"
+        score_part = f"<b>{_fmt_score(r.score)}</b> · {_html_esc(r.zone)}"
     else:
         score_part = "—"
     note = ""
     if r.note == "조회 실패":
         note = "\n   <i>(조회 실패)</i>"
     elif r.note and r.note not in ("조회 실패", ""):
-        note = f"\n   <i>({r.note})</i>"
+        note = f"\n   <i>({_html_esc(r.note)})</i>"
     return (
-        f"{r.market}\n"
+        f"{_html_esc(r.market)}\n"
         f"   {score_part}\n"
-        f"   {r.source}\n"
-        f"   {r.url}{note}"
+        f"   {_html_esc(r.source)}\n"
+        f"   {_html_url(r.url)}{note}"
     )
 
 
@@ -86,6 +96,20 @@ def _human_fgi_reading(human: dict, *, survey_src: str = "telegram_fgi") -> FgiR
         zone=zone,
         url=url,
     )
+
+
+def _empty_human_snapshot() -> dict:
+    base = _app_base_url()
+    return {
+        "survey_date": next_trading_day_str(),
+        "status": "open",
+        "phase": "—",
+        "total": 0,
+        "up_pct": None,
+        "down_pct": None,
+        "survey_url": f"{base}/survey?src=fgi_push",
+        "home_url": f"{base}/?src=fgi_push",
+    }
 
 
 def human_indicator_snapshot(supabase) -> dict:
@@ -157,6 +181,14 @@ def human_indicator_snapshot(supabase) -> dict:
         "survey_url": survey_url,
         "home_url": home_url,
     }
+
+
+def human_indicator_snapshot_safe(supabase) -> dict:
+    try:
+        return human_indicator_snapshot(supabase)
+    except Exception as e:
+        logger.exception("인간지표 집계 실패(시장 지표만 전송): %s", e)
+        return _empty_human_snapshot()
 
 
 def build_fgi_push_summary(readings: list[FgiReading], human: dict) -> tuple[str, str]:
@@ -270,7 +302,7 @@ async def build_fgi_reply_html(supabase, *, force_refresh: bool = False) -> str:
         return _FGI_REPLY_CACHE[1]
 
     readings = await fetch_all_fgi_readings()
-    human = human_indicator_snapshot(supabase)
+    human = await asyncio.to_thread(human_indicator_snapshot_safe, supabase)
     html = build_fgi_broadcast_html(readings, human)
     _FGI_REPLY_CACHE = (now, html)
     return html
@@ -286,11 +318,8 @@ async def handle_telegram_fgi_message(chat_id: int | str, text: str, supabase) -
     if t in ("/help_fgi", "/fgi_help"):
         await send_message(
             chat_id,
-            "<b>공포·탐욕 · 시장·인간 지표</b>\n\n"
-            "· <b>공포</b> · <b>지수</b> · <b>공포지수</b>\n\n"
-            "위는 <b>🤖 시장 지표</b>, 맨 아래는 "
-            "<b>👥 인간지표 · 코스피 군중지수</b>입니다.\n"
-            "<i>웹 연동 없이 봇만 써도 됩니다.</i>",
+            "<b>공포·탐욕 지수</b>\n\n"
+            "· <b>공포</b> · <b>지수</b> · <b>공포지수</b>",
         )
         return True
 
@@ -310,7 +339,9 @@ async def handle_telegram_fgi_message(chat_id: int | str, text: str, supabase) -
             )
 
         html = await build_fgi_reply_html(supabase)
-        await send_message(chat_id, html, _fgi_survey_link_markup())
+        result = await send_message(chat_id, html)
+        if not result.get("ok"):
+            raise RuntimeError(result.get("description") or "sendMessage failed")
     except Exception as e:
         logger.exception("FGI 텔레그램 답변 실패: %s", e)
         await send_message(
