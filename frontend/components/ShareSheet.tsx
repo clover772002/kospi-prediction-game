@@ -102,7 +102,7 @@ export default function ShareSheet({ url, title, text, renderTrigger }: ShareShe
 
   async function handleCopy() {
     try {
-      await navigator.clipboard.writeText(`${combinedShareText}\n${shareUrl}`);
+      await navigator.clipboard.writeText(shareUrl);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
