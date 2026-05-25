@@ -16,6 +16,7 @@ import PushConnectBanner from "@/components/PushConnectBanner";
 import AppTabNav from "@/components/AppTabNav";
 import PageLoadProgress from "@/components/PageLoadProgress";
 import FgiDigestPanel from "@/components/team-chat/FgiDigestPanel";
+import RoomCloseCountdown from "@/components/team-chat/RoomCloseCountdown";
 import TeamChatCrownFxLayer from "@/components/team-chat/TeamChatCrownFxLayer";
 import TeamChatMessageLabel from "@/components/team-chat/TeamChatMessageLabel";
 import { useTeamChatCrownFx } from "@/components/team-chat/useTeamChatCrownFx";
@@ -165,7 +166,14 @@ export default function TeamChatPage() {
       <TeamChatCrownFxLayer fx={crownFx} />
 
       <header className="relative z-10 shrink-0 border-b border-white/10 bg-black/40 px-4 py-3 backdrop-blur-sm">
-        <h1 className="text-base font-black">{status?.room_title ?? "소통방"}</h1>
+        <div className="flex items-start justify-between gap-3">
+          <h1 className="text-base font-black min-w-0">{status?.room_title ?? "소통방"}</h1>
+          <RoomCloseCountdown
+            roomOpen={Boolean(status?.room_open)}
+            roomCloseAt={status?.room_close_at}
+            surveyDate={surveyDate}
+          />
+        </div>
         <p className="mt-0.5 text-xs text-gray-400">
           {surveyDate ? `${surveyDate} · 참여 ${total}명` : "불러오는 중…"}
           {status?.my_team_label ? (

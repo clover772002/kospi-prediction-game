@@ -991,6 +991,9 @@ export interface DirectionChatStatus {
   survey_date: string;
   room_title?: string;
   room_open: boolean;
+  /** 해당 거래일 장 마감·결과 시각(KST, ISO8601) */
+  room_close_at?: string | null;
+  room_seconds_remaining?: number | null;
   room_closed_reason: string | null;
   answered: boolean;
   my_side: "up" | "down" | null;

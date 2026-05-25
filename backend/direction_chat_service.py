@@ -4,11 +4,11 @@ from __future__ import annotations
 
 import logging
 import os
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from typing import Any
 
 from fastapi import HTTPException
-from krx_calendar import next_trading_day_str, today_date_kst
+from krx_calendar import KST, next_trading_day_str, today_date_kst
 from supabase import Client
 
 from accuracy_aggregate import get_accuracy_data
@@ -22,6 +22,28 @@ def _today_str() -> str:
 
 MAX_BODY_LEN = int(os.getenv("DIRECTION_CHAT_MAX_BODY", "500"))
 MAX_MSG_PER_USER_DAY = int(os.getenv("DIRECTION_CHAT_MAX_MSG_PER_USER", "80"))
+# 장 결과·정산(15:35)과 맞춤 — 이 시각에 소통방 종료
+ROOM_CLOSE_HOUR = int(os.getenv("DIRECTION_CHAT_CLOSE_HOUR", "15"))
+ROOM_CLOSE_MINUTE = int(os.getenv("DIRECTION_CHAT_CLOSE_MINUTE", "35"))
+
+
+def _survey_date_key(survey_date: str) -> str:
+    return str(survey_date).strip()[:10]
+
+
+def _room_close_at(survey_date: str) -> datetime:
+    d = date.fromisoformat(_survey_date_key(survey_date))
+    return datetime(
+        d.year, d.month, d.day, ROOM_CLOSE_HOUR, ROOM_CLOSE_MINUTE, 0, tzinfo=KST,
+    )
+
+
+def _room_seconds_remaining(survey_date: str, *, closed: bool) -> int:
+    if closed:
+        return 0
+    now = datetime.now(KST)
+    close_at = _room_close_at(survey_date)
+    return max(0, int((close_at - now).total_seconds()))
 
 
 def _masked_name(name: str | None) -> str:
@@ -242,11 +264,15 @@ def build_status_payload(
     can_send = can_access and not closed
     today = _today_str()
     room_title = "오늘 소통방" if survey_date == today else "다음 거래일 소통방"
+    close_at = _room_close_at(survey_date)
+    secs_left = _room_seconds_remaining(survey_date, closed=closed)
 
     return {
         "survey_date": survey_date,
         "room_title": room_title,
         "room_open": not closed,
+        "room_close_at": close_at.isoformat(),
+        "room_seconds_remaining": secs_left,
         "room_closed_reason": (
             f"장이 마감되어 {room_title}방이 종료되었습니다." if closed else None
         ),
