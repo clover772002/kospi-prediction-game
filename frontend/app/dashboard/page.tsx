@@ -11,6 +11,7 @@ import AppAmbientBackground from "@/components/AppAmbientBackground";
 import AppTabNav from "@/components/AppTabNav";
 import DashboardInsightSection, { DashboardInsightSectionSkeleton } from "@/components/DashboardInsightSection";
 import CrowdGaugeBoxplotsSection from "@/components/CrowdGaugeBoxplotsSection";
+import DashboardCombinedShareButton from "@/components/DashboardCombinedShareButton";
 import StaleRefreshIndicator from "@/components/StaleRefreshIndicator";
 import { clearAllTabSnapshots, peekAnsweredToday, peekDashboardSnapshot, saveAnsweredToday, saveDashboardSnapshot, saveGroupsSnapshot } from "@/lib/tab-session-cache";
 import {
@@ -1249,6 +1250,14 @@ export default function DashboardPage() {
         </div>
 
         <CrowdGaugeBoxplotsSection />
+
+        <DashboardCombinedShareButton
+          today={today}
+          dash={dash}
+          todayEntry={todayEntry}
+          isCorrectToday={isCorrectToday}
+          disabled={Boolean(gateType)}
+        />
 
         {today?.participants && today.participants.length > 0 && (() => {
           const myEntry = dash?.history?.find((h) => sameSurveyDate(h.date, today.survey_date));
