@@ -18,6 +18,7 @@ import {
   clearAllTabSnapshots,
   peekSurveyNextSnapshot,
   peekSurveyTodaySnapshot,
+  saveAnsweredToday,
   saveSurveyNextSnapshot,
   saveSurveyTodaySnapshot,
 } from "@/lib/tab-session-cache";
@@ -350,6 +351,8 @@ function SurveyPageInner() {
       });
       if (!res.ok) return false;
       const data = await res.json();
+      const sd = (surveyDate ?? today?.survey_date)?.slice(0, 10);
+      if (sd) saveAnsweredToday(sd, Boolean(data.answered));
       if (surveyDate) return Boolean(data.answered);
       if (data.answered) {
         setAlreadyAnswered(true);
@@ -571,7 +574,10 @@ function SurveyPageInner() {
       setAlreadyAnswered(true);
       setPreviousAnswer(kospiAnswer);
       const sd = today?.survey_date?.slice(0, 10);
-      if (sd) void checkMyResponse(token, sd);
+      if (sd) {
+        saveAnsweredToday(sd, true);
+        void checkMyResponse(token, sd);
+      }
       void refreshPendingGrants();
     } catch (e: unknown) {
       const raw = e instanceof Error ? e.message : String(e);

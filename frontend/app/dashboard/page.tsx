@@ -4,7 +4,7 @@ import { Suspense, useEffect, useState, useCallback, useRef, useLayoutEffect } f
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
-import { getMe, getTodaySummary, getDashboardSummary, getDashboard, getExpertChatEligibility, createChallenge, getMyChallenges, reactToChallenge, requestRematch, acceptChallenge, declineChallenge, getMyGroups, UserProfile, TodaySurvey, DashboardData, Challenge, Group, type ExpertChatEligibility } from "@/lib/api";
+import { getMe, getTodaySummary, getDashboardSummary, getDashboard, getMySurveyResponse, getExpertChatEligibility, createChallenge, getMyChallenges, reactToChallenge, requestRematch, acceptChallenge, declineChallenge, getMyGroups, UserProfile, TodaySurvey, DashboardData, Challenge, Group, type ExpertChatEligibility } from "@/lib/api";
 import TopExpertNoticeBlock from "@/components/TopExpertNoticeBlock";
 import ShareSheet from "@/components/ShareSheet";
 import AppAmbientBackground from "@/components/AppAmbientBackground";
@@ -12,7 +12,7 @@ import AppTabNav from "@/components/AppTabNav";
 import DashboardInsightSection, { DashboardInsightSectionSkeleton } from "@/components/DashboardInsightSection";
 import CrowdGaugeBoxplotsSection from "@/components/CrowdGaugeBoxplotsSection";
 import StaleRefreshIndicator from "@/components/StaleRefreshIndicator";
-import { clearAllTabSnapshots, peekDashboardSnapshot, saveDashboardSnapshot, saveGroupsSnapshot } from "@/lib/tab-session-cache";
+import { clearAllTabSnapshots, peekAnsweredToday, peekDashboardSnapshot, saveAnsweredToday, saveDashboardSnapshot, saveGroupsSnapshot } from "@/lib/tab-session-cache";
 import {
   isNotificationConnected,
   mergeNotificationFields,
@@ -208,6 +208,8 @@ export default function DashboardPage() {
   const [acceptLoading, setAcceptLoading]          = useState<string | null>(null); // challenge_id
   const [revalidating, setRevalidating]            = useState(false);
   const [expertEligibility, setExpertEligibility] = useState<ExpertChatEligibility | null>(null);
+  /** null=미확인 — 로딩 중 설문 게이트 오표시 방지 */
+  const [answeredToday, setAnsweredToday] = useState<boolean | null>(null);
   const dashboardFetchSeq = useRef(0);
 
   useLayoutEffect(() => {
@@ -218,6 +220,17 @@ export default function DashboardPage() {
       setDash(cached.dash);
       setChallenges(cached.challenges);
       setLoading(false);
+      const sd = cached.today?.survey_date?.slice(0, 10);
+      if (sd) {
+        const fromAnswerCache = peekAnsweredToday(sd);
+        if (fromAnswerCache !== null) {
+          setAnsweredToday(fromAnswerCache);
+        } else if (
+          cached.dash?.history?.some((h) => sameSurveyDate(h.date, sd))
+        ) {
+          setAnsweredToday(true);
+        }
+      }
     }
   }, []);
 
@@ -237,12 +250,13 @@ export default function DashboardPage() {
             ),
           ]);
 
-        const [meR, todayR, dashSumR, chR, grpR] = await Promise.allSettled([
+        const [meR, todayR, dashSumR, chR, grpR, myRespR] = await Promise.allSettled([
           withTimeout(getMe(accessToken), 30_000),
           withTimeout(getTodaySummary(), 25_000),
           withTimeout(getDashboardSummary(accessToken), 20_000),
           withTimeout(getMyChallenges(accessToken), 25_000),
           withTimeout(getMyGroups(accessToken), 25_000),
+          withTimeout(getMySurveyResponse(accessToken), 12_000),
         ]);
 
         if (seq !== dashboardFetchSeq.current) return;
@@ -282,6 +296,16 @@ export default function DashboardPage() {
         setToday(todayData);
         if (dashData) setDash(dashData);
         setChallenges(chResult);
+
+        const sd = todayData.survey_date?.slice(0, 10);
+        if (myRespR.status === "fulfilled") {
+          setAnsweredToday(myRespR.value.answered);
+          if (sd) saveAnsweredToday(sd, myRespR.value.answered);
+        } else if (sd && dashData?.history?.some((h) => sameSurveyDate(h.date, sd))) {
+          setAnsweredToday(true);
+          saveAnsweredToday(sd, true);
+        }
+
         if (dashData) {
           saveDashboardSnapshot({
             user: profile,
@@ -292,7 +316,6 @@ export default function DashboardPage() {
           });
         }
 
-        const sd = todayData.survey_date?.slice(0, 10);
         void (async () => {
           if (sd) {
             try {
@@ -553,11 +576,19 @@ export default function DashboardPage() {
   const pendingConnectionCheck =
     (loading || revalidating) && !isConnected;
   const surveyDay = today?.status !== "no_survey";
-  const respondedToday = !!(
+  const respondedTodayFromHistory = !!(
     dash?.history?.length &&
     today?.survey_date &&
-    dash.history[0].date === today.survey_date
+    dash.history.some((h) => sameSurveyDate(h.date, today.survey_date))
   );
+  const respondedToday =
+    answeredToday === true ||
+    (answeredToday !== false && respondedTodayFromHistory);
+  /** 데이터 로딩·갱신 중에는 설문 미참여로 오판해 오버레이가 가리지 않도록 */
+  const pendingSurveyCheck =
+    (loading || revalidating) &&
+    answeredToday !== true &&
+    !respondedTodayFromHistory;
   // 장마감 후(result)는 누구나 볼 수 있음
   const marketClosed = today?.status === "result";
   // 휴장일(no_survey)에도 게이트 없음 — 예측할 장이 없으므로 누구나 열람 가능
@@ -572,6 +603,7 @@ export default function DashboardPage() {
   const gateType: "not_connected" | "no_survey" | null =
     marketClosed || isHolidayDay ? null :
     pendingConnectionCheck ? null :
+    pendingSurveyCheck ? null :
     !isConnected ? "not_connected" :
     !respondedToday ? "no_survey" :
     null;

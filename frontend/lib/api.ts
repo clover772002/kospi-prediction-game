@@ -251,6 +251,22 @@ export async function getTodaySummary(): Promise<TodaySurvey> {
   }
 }
 
+export interface MySurveyResponse {
+  answered: boolean;
+  kospi_answer: boolean | null;
+  gauge_position: number | null;
+  tokens_bet: number | null;
+}
+
+/** 오늘(또는 지정 거래일) 설문 참여 여부 — 대시보드 게이트용 경량 조회 */
+export async function getMySurveyResponse(
+  token: string,
+  surveyDate?: string,
+): Promise<MySurveyResponse> {
+  const q = surveyDate ? `?survey_date=${encodeURIComponent(surveyDate)}` : "";
+  return authFetch<MySurveyResponse>(`/api/survey/my-response${q}`, token);
+}
+
 export async function getDashboardSummary(token: string): Promise<DashboardData> {
   return authFetch<DashboardData>("/api/dashboard/summary", token);
 }

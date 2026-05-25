@@ -234,6 +234,78 @@ export type SurveyNextSnapshot = {
 const SURVEY_NEXT_KEY = "tab_survey_next_v1";
 let surveyNextMemory: SurveyNextSnapshot | null = null;
 
+// ── 오늘 설문 참여 여부 (대시보드 게이트 즉시 판정) ─────────────
+
+type AnsweredTodaySnapshot = {
+  surveyDate: string;
+  answered: boolean;
+  savedAt: number;
+};
+
+const ANSWERED_TODAY_KEY = "kp_answered_today_v1";
+let answeredTodayMemory: AnsweredTodaySnapshot | null = null;
+
+function surveyDateKey(d: string): string {
+  return d.trim().slice(0, 10);
+}
+
+export function peekAnsweredToday(surveyDate: string): boolean | null {
+  const key = surveyDateKey(surveyDate);
+  if (
+    answeredTodayMemory &&
+    answeredTodayMemory.surveyDate === key &&
+    Date.now() - answeredTodayMemory.savedAt <= DASHBOARD_SNAPSHOT_TTL_MS
+  ) {
+    return answeredTodayMemory.answered;
+  }
+  answeredTodayMemory = null;
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = sessionStorage.getItem(ANSWERED_TODAY_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as AnsweredTodaySnapshot;
+    if (
+      !parsed?.savedAt ||
+      parsed.surveyDate !== key ||
+      Date.now() - parsed.savedAt > DASHBOARD_SNAPSHOT_TTL_MS
+    ) {
+      sessionStorage.removeItem(ANSWERED_TODAY_KEY);
+      return null;
+    }
+    answeredTodayMemory = parsed;
+    return parsed.answered;
+  } catch {
+    return null;
+  }
+}
+
+export function saveAnsweredToday(surveyDate: string, answered: boolean): void {
+  const full: AnsweredTodaySnapshot = {
+    surveyDate: surveyDateKey(surveyDate),
+    answered,
+    savedAt: Date.now(),
+  };
+  answeredTodayMemory = full;
+  if (typeof window !== "undefined") {
+    try {
+      sessionStorage.setItem(ANSWERED_TODAY_KEY, JSON.stringify(full));
+    } catch {
+      /* noop */
+    }
+  }
+}
+
+export function clearAnsweredTodaySnapshot(): void {
+  answeredTodayMemory = null;
+  if (typeof window !== "undefined") {
+    try {
+      sessionStorage.removeItem(ANSWERED_TODAY_KEY);
+    } catch {
+      /* noop */
+    }
+  }
+}
+
 export function peekSurveyNextSnapshot(): Pick<SurveyNextSnapshot, "survey_date" | "is_open"> | null {
   if (surveyNextMemory && Date.now() - surveyNextMemory.savedAt <= DASHBOARD_SNAPSHOT_TTL_MS) {
     return { survey_date: surveyNextMemory.survey_date, is_open: surveyNextMemory.is_open };
@@ -346,6 +418,7 @@ export function clearAllTabSnapshots(): void {
   clearSurveyTodaySnapshot();
   clearSurveyNextSnapshot();
   clearGroupsSnapshot();
+  clearAnsweredTodaySnapshot();
 }
 
 /**
