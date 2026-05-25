@@ -153,7 +153,7 @@ export default function LoginPage() {
             투표를 모아 더 잘 맞춰요
           </h2>
           <p className="text-lg sm:text-xl text-gray-400 font-medium leading-relaxed mb-6 sm:mb-8">
-            참가자 예측을 모으고, 잘 맞춘 사람은 가중을 키우고 틀린 사람은 낮춰{" "}
+            많은 참가자가 모일수록 집계가 강해지고, 잘 맞춘 사람은 가중을 키우고 틀린 사람은 낮춰{" "}
             <span className="text-violet-200/95 font-bold">고수강화예측</span> 지표로 확인해요.
           </p>
           <ExpertWeightedInsightPlayground />

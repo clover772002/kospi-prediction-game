@@ -794,17 +794,20 @@ body {
   animation: login-weighted-aurora-kf 2.4s ease-in-out infinite;
 }
 
-@keyframes login-vote-dot-kf {
+@keyframes login-crowd-face-kf {
   0%,
   100% {
-    transform: translateY(0);
+    transform: translate(0, 0) rotate(0deg);
   }
-  50% {
-    transform: translateY(-4px);
+  33% {
+    transform: translate(2px, -5px) rotate(2deg);
+  }
+  66% {
+    transform: translate(-2px, -3px) rotate(-2deg);
   }
 }
-.login-vote-dot {
-  animation: login-vote-dot-kf 1.8s ease-in-out infinite;
+.login-crowd-face {
+  animation: login-crowd-face-kf 1.9s ease-in-out infinite;
 }
 
 @keyframes login-weight-badge-up-kf {
