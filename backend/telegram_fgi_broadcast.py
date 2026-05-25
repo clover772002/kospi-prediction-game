@@ -17,9 +17,9 @@ from webpush_helper import send_web_push_to_all
 
 logger = logging.getLogger(__name__)
 
-_FGI_REPLY_CACHE: tuple[int, float, str] | None = None
+_FGI_DATA_CACHE: tuple[int, float, list, dict] | None = None  # version, ts, readings, human
 _FGI_CACHE_SEC = 300
-_FGI_CACHE_VERSION = 2  # HTML 포맷 변경 시 캐시 무효화
+_FGI_CACHE_VERSION = 3  # payload API 추가 시 캐시 무효화
 
 _FGI_COMMANDS = frozenset({
     "/fgi", "/지수", "/공포", "/탐욕", "/fear", "/greed",
@@ -319,31 +319,65 @@ def is_fgi_telegram_query(text: str) -> bool:
 
 
 def _fgi_cache_is_fresh() -> bool:
-    global _FGI_REPLY_CACHE
-    if not _FGI_REPLY_CACHE:
+    global _FGI_DATA_CACHE
+    if not _FGI_DATA_CACHE:
         return False
-    if _FGI_REPLY_CACHE[0] != _FGI_CACHE_VERSION:
+    if _FGI_DATA_CACHE[0] != _FGI_CACHE_VERSION:
         return False
-    return time.time() - _FGI_REPLY_CACHE[1] < _FGI_CACHE_SEC
+    return time.time() - _FGI_DATA_CACHE[1] < _FGI_CACHE_SEC
 
 
-async def build_fgi_reply_html(supabase, *, force_refresh: bool = False) -> str:
-    global _FGI_REPLY_CACHE
+async def _get_fgi_data(supabase, *, force_refresh: bool = False) -> tuple[list[FgiReading], dict]:
+    """텔레그램·웹 공통 — 시장 지표 + 인간지표 스냅샷."""
+    global _FGI_DATA_CACHE
     now = time.time()
     if (
         not force_refresh
-        and _FGI_REPLY_CACHE
-        and _FGI_REPLY_CACHE[0] == _FGI_CACHE_VERSION
-        and now - _FGI_REPLY_CACHE[1] < _FGI_CACHE_SEC
+        and _FGI_DATA_CACHE
+        and _FGI_DATA_CACHE[0] == _FGI_CACHE_VERSION
+        and now - _FGI_DATA_CACHE[1] < _FGI_CACHE_SEC
     ):
-        return _FGI_REPLY_CACHE[2]
+        return _FGI_DATA_CACHE[2], _FGI_DATA_CACHE[3]
 
     readings = await fetch_all_fgi_readings()
-    # Supabase 클라이언트는 스레드 간 공유 불가 — 동기 호출만 사용
     human = human_indicator_snapshot_safe(supabase)
-    html = build_fgi_broadcast_html(readings, human)
-    _FGI_REPLY_CACHE = (_FGI_CACHE_VERSION, now, html)
-    return html
+    _FGI_DATA_CACHE = (_FGI_CACHE_VERSION, now, readings, human)
+    return readings, human
+
+
+def _fgi_reading_dict(r: FgiReading) -> dict:
+    return {
+        "market": r.market,
+        "market_short": _market_short_name(r.market),
+        "source": r.source,
+        "score": float(r.score) if r.score is not None else None,
+        "score_display": _fmt_score(r.score),
+        "zone": r.zone,
+        "url": (r.url or "").strip() or None,
+        "note": (r.note or "").strip() or None,
+        "is_kospi": _is_kospi_reading(r),
+    }
+
+
+async def build_fgi_digest_payload(supabase, *, force_refresh: bool = False) -> dict:
+    """소통방·공개 API — 텔레그램 「공포」 답변과 동일 데이터."""
+    readings, human = await _get_fgi_data(supabase, force_refresh=force_refresh)
+    now = datetime.now(KST)
+    kospi = [_fgi_reading_dict(r) for r in readings if _is_kospi_reading(r)]
+    other = [_fgi_reading_dict(r) for r in readings if not _is_kospi_reading(r)]
+    return {
+        "as_of": now.strftime("%Y-%m-%d %H:%M"),
+        "as_of_iso": now.isoformat(),
+        "readings_kospi": kospi,
+        "readings_other": other,
+        "human": human,
+        "cached": _fgi_cache_is_fresh(),
+    }
+
+
+async def build_fgi_reply_html(supabase, *, force_refresh: bool = False) -> str:
+    readings, human = await _get_fgi_data(supabase, force_refresh=force_refresh)
+    return build_fgi_broadcast_html(readings, human)
 
 
 async def handle_telegram_fgi_message(chat_id: int | str, text: str, supabase) -> bool:

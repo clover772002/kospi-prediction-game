@@ -2001,6 +2001,21 @@ def _spawn_settlement_side_effects(supabase: Client, survey_date_str: str | None
         pass
 
 
+@app.get("/api/public/fgi-digest")
+async def get_public_fgi_digest(supabase: Client = Depends(get_supabase)):
+    """텔레그램 봇 「공포」·「지수」와 동일한 공포·탐욕·인간지표 (로그인 불필요)."""
+    from telegram_fgi_broadcast import build_fgi_digest_payload
+
+    try:
+        return await build_fgi_digest_payload(supabase)
+    except Exception as e:
+        logger.exception("FGI digest 공개 API 실패")
+        raise HTTPException(
+            status_code=503,
+            detail="지표를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.",
+        ) from e
+
+
 @app.get("/api/public/kospi-price")
 async def get_kospi_price(supabase: Client = Depends(get_supabase)):
     """오늘 KOSPI 종가/OHLC — Naver basic API (Vercel에서 호출 가능)"""

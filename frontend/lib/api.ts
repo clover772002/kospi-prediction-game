@@ -251,6 +251,50 @@ export async function getTodaySummary(): Promise<TodaySurvey> {
   }
 }
 
+/** 텔레그램 「공포」·「지수」와 동일 — 공포·탐욕 + 코스피 투표 집계 */
+export interface FgiDigestReading {
+  market: string;
+  market_short: string;
+  source: string;
+  score: number | null;
+  score_display: string;
+  zone: string;
+  url: string | null;
+  note: string | null;
+  is_kospi: boolean;
+}
+
+export interface FgiHumanIndicator {
+  survey_date: string;
+  status: string;
+  phase: string;
+  total: number;
+  up_pct: number | null;
+  down_pct: number | null;
+  survey_url: string;
+  home_url: string;
+}
+
+export interface FgiDigestResponse {
+  as_of: string;
+  as_of_iso: string;
+  readings_kospi: FgiDigestReading[];
+  readings_other: FgiDigestReading[];
+  human: FgiHumanIndicator;
+  cached?: boolean;
+}
+
+export async function getFgiDigest(): Promise<FgiDigestResponse> {
+  const res = await fetch(`${resolveApiBase()}/api/public/fgi-digest`, { cache: "no-store" });
+  const text = await res.text();
+  if (!res.ok) throw new Error(formatApiErrorMessage(res.status, text));
+  try {
+    return JSON.parse(text) as FgiDigestResponse;
+  } catch {
+    throw new Error("FGI 지표 응답 형식 오류");
+  }
+}
+
 export interface MySurveyResponse {
   answered: boolean;
   kospi_answer: boolean | null;

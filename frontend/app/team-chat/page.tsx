@@ -15,6 +15,7 @@ import AppAmbientBackground from "@/components/AppAmbientBackground";
 import PushConnectBanner from "@/components/PushConnectBanner";
 import AppTabNav from "@/components/AppTabNav";
 import PageLoadProgress from "@/components/PageLoadProgress";
+import FgiDigestPanel from "@/components/team-chat/FgiDigestPanel";
 import TeamChatCrownFxLayer from "@/components/team-chat/TeamChatCrownFxLayer";
 import TeamChatMessageLabel from "@/components/team-chat/TeamChatMessageLabel";
 import { useTeamChatCrownFx } from "@/components/team-chat/useTeamChatCrownFx";
@@ -180,6 +181,8 @@ export default function TeamChatPage() {
           <p className="mt-1 text-xs text-amber-300/90">{status.room_closed_reason}</p>
         ) : null}
       </header>
+
+      {!boot ? <FgiDigestPanel /> : null}
 
       {err ? (
         <p className="relative z-10 mx-4 mt-2 shrink-0 rounded-lg border border-rose-500/40 bg-rose-950/40 px-3 py-2 text-sm text-rose-200">
