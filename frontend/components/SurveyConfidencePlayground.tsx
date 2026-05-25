@@ -8,17 +8,11 @@ function calcBet(gauge: number, tokens: number) {
   return Math.max(1, Math.round((Math.abs(gauge) / 100) * tokens));
 }
 
-function crowdMultiplier(gauge: number, yesPct: number) {
-  const crowdUp = Math.max(5, yesPct);
-  const crowdDn = Math.max(5, 100 - yesPct);
-  return gauge > 0 ? Math.round((crowdDn / crowdUp) * 1000) / 1000 : Math.round((crowdUp / crowdDn) * 1000) / 1000;
-}
-
 /** 설문 카드 안 예시 블록(데모 숫자, 실제 참여·정산과 무관) */
 export default function SurveyConfidencePlayground() {
   const [gauge, setGauge] = useState(35);
   const [bob, setBob] = useState(0);
-  const DEMO_YES_PCT = 42;
+  const [outcomePhase, setOutcomePhase] = useState<"hit" | "miss">("hit");
 
   useEffect(() => {
     let raf = 0;
@@ -41,12 +35,18 @@ export default function SurveyConfidencePlayground() {
     return () => cancelAnimationFrame(raf);
   }, []);
 
+  useEffect(() => {
+    const id = window.setInterval(() => {
+      setOutcomePhase((p) => (p === "hit" ? "miss" : "hit"));
+    }, 2800);
+    return () => window.clearInterval(id);
+  }, []);
+
   const isUp = gauge > 0;
   const abs = Math.abs(gauge);
   const bet = calcBet(gauge, DEMO_HOLDING);
   const halfSpanPct = (abs / 100) * 50;
-  const mult = crowdMultiplier(gauge, DEMO_YES_PCT);
-  const grossHit = Math.max(1, Math.round(bet * mult));
+  const payoutHit = Math.max(1, Math.round(bet * 1.15));
 
   const riseVisual = Math.round(12 + (isUp ? (abs / 100) * 88 : (100 - abs) / 100 * 20));
   const fallVisual = Math.round(12 + (!isUp ? (abs / 100) * 88 : (100 - abs) / 100 * 20));
@@ -128,18 +128,31 @@ export default function SurveyConfidencePlayground() {
           <span className={`font-black tabular-nums shrink-0 ${dirColor}`}>{bet.toLocaleString()}</span>
         </div>
 
-        <div className="rounded-lg border border-emerald-500/20 bg-[#0d1210]/90 px-3 py-3 space-y-2">
-          <p className="text-base text-emerald-400/95 font-bold text-center">적중 예시 숫자</p>
-          <p className="text-lg sm:text-xl text-center tabular-nums text-white leading-relaxed">
-            <span className="text-gray-400 font-bold">{bet.toLocaleString()}</span>
-            <span className="text-gray-600 mx-0.5">×</span>
-            <span className="text-cyan-300/95 font-black">{mult.toFixed(2)}</span>
-            <span className="text-sm text-gray-500 ml-1 font-bold">집단비율</span>
-            <span className="text-gray-600 mx-1">≈</span>
-            <span className="text-emerald-300 font-black">+{grossHit}</span>
-            <span className="text-sm text-gray-500 ml-1 font-bold">토큰</span>
+        <div
+          className={`rounded-lg border px-3 py-3.5 space-y-1 transition-colors duration-500 ${
+            outcomePhase === "hit"
+              ? "border-emerald-500/30 bg-[#0d1210]/90"
+              : "border-red-500/25 bg-[#120a0a]/90"
+          }`}
+        >
+          <p
+            className={`text-lg sm:text-xl text-center font-black leading-relaxed transition-all duration-500 ${
+              outcomePhase === "hit" ? "text-emerald-300 login-token-outcome-pop" : "text-red-400 login-token-outcome-pop"
+            }`}
+          >
+            {outcomePhase === "hit" ? (
+              <>
+                맞추면 <span className="tabular-nums">+{payoutHit.toLocaleString()}</span> 토큰
+              </>
+            ) : (
+              <>
+                틀리면 <span className="tabular-nums">−{bet.toLocaleString()}</span> 토큰
+              </>
+            )}
           </p>
-          <p className="text-base text-gray-500 text-center font-medium">틀리면 배팅만큼 빠짐 (예시)</p>
+          <p className="text-base text-gray-500 text-center font-medium">
+            확신도에 따라 배팅 규모가 달라져요 (예시)
+          </p>
         </div>
       </div>
     </div>

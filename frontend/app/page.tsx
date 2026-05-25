@@ -8,6 +8,7 @@ import SurveyConfidencePlayground from "@/components/SurveyConfidencePlayground"
 import ExpertMessageConceptPlayground from "@/components/ExpertMessageConceptPlayground";
 import LoadingPurposeSplash from "@/components/LoadingPurposeSplash";
 import ExpertPickRevealPlayground from "@/components/ExpertPickRevealPlayground";
+import ExpertWeightedInsightPlayground from "@/components/ExpertWeightedInsightPlayground";
 
 function detectBrowser(): "kakao" | "inapp" | "normal" {
   if (typeof navigator === "undefined") return "normal";
@@ -145,6 +146,17 @@ export default function LoginPage() {
             <ExpertPickRevealPlayground />
             <ExpertMessageConceptPlayground />
           </div>
+        </section>
+
+        <section className="min-w-0 rounded-3xl border-2 border-violet-500/35 bg-gradient-to-b from-[#100818]/95 to-[#121212]/90 p-5 sm:p-8">
+          <h2 className="text-[1.65rem] sm:text-[2.2rem] font-black text-white leading-tight mb-2 sm:mb-3 pb-4 border-b border-violet-500/25">
+            투표를 모아 더 잘 맞춰요
+          </h2>
+          <p className="text-lg sm:text-xl text-gray-400 font-medium leading-relaxed mb-6 sm:mb-8">
+            참가자 예측을 모으고, 잘 맞춘 사람은 가중을 키우고 틀린 사람은 낮춰{" "}
+            <span className="text-violet-200/95 font-bold">고수강화예측</span> 지표로 확인해요.
+          </p>
+          <ExpertWeightedInsightPlayground />
         </section>
       </div>
 

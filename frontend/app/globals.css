@@ -767,6 +767,112 @@ body {
   animation: expert-pick-ribbon-shift 2.6s ease-in-out infinite;
 }
 
+/* ── 로그인 랜딩: 고수 가중 지표 · 토큰 승패 ───────────── */
+@keyframes login-weighted-glow-kf {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(139, 92, 246, 0);
+  }
+  50% {
+    box-shadow: 0 0 28px rgba(167, 139, 250, 0.12);
+  }
+}
+.login-weighted-glow {
+  animation: login-weighted-glow-kf 3.2s ease-in-out infinite;
+}
+
+@keyframes login-weighted-aurora-kf {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+.login-weighted-aurora {
+  animation: login-weighted-aurora-kf 2.4s ease-in-out infinite;
+}
+
+@keyframes login-vote-dot-kf {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
+}
+.login-vote-dot {
+  animation: login-vote-dot-kf 1.8s ease-in-out infinite;
+}
+
+@keyframes login-weight-badge-up-kf {
+  0%,
+  100% {
+    box-shadow: 0 0 0 rgba(251, 191, 36, 0);
+  }
+  50% {
+    box-shadow: 0 0 16px rgba(251, 191, 36, 0.25);
+  }
+}
+.login-weight-badge-up {
+  animation: login-weight-badge-up-kf 1.6s ease-in-out infinite;
+}
+
+@keyframes login-weighted-bar-pulse-kf {
+  0%,
+  100% {
+    filter: brightness(1);
+  }
+  50% {
+    filter: brightness(1.18);
+  }
+}
+.login-weighted-bar-pulse {
+  animation: login-weighted-bar-pulse-kf 1.4s ease-in-out infinite;
+}
+
+@keyframes login-weighted-label-glow-kf {
+  0%,
+  100% {
+    text-shadow: 0 0 0 transparent;
+  }
+  50% {
+    text-shadow: 0 0 12px rgba(251, 191, 36, 0.45);
+  }
+}
+.login-weighted-label-glow {
+  animation: login-weighted-label-glow-kf 1.8s ease-in-out infinite;
+}
+
+@keyframes login-weighted-caption-fade-kf {
+  0% {
+    opacity: 0.35;
+    transform: translateY(4px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.login-weighted-caption-fade {
+  animation: login-weighted-caption-fade-kf 0.45s ease-out;
+}
+
+@keyframes login-token-outcome-pop-kf {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.02);
+  }
+}
+.login-token-outcome-pop {
+  animation: login-token-outcome-pop-kf 1.2s ease-in-out infinite;
+}
+
 /* ── 대결 안내 카드 (로그인 랜딩) ──────────────────────── */
 @keyframes duel-step-scale {
   0%, 100% { transform: scale(1); }
