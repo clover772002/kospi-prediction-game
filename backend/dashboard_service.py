@@ -177,7 +177,18 @@ def build_user_dashboard(
     except Exception:
         pass
 
-    total_with_result = sum(1 for h in history if h["kospi_correct"] is not None)
+    # 누적 적중률: 전체 accuracy_records 기준 (history_limit 과 분리 — 요약 5일만 쓰면 %가 깜빡임)
+    acc_stats_total = 0
+    acc_stats_correct = 0
+    for acc in accuracy_map.values():
+        kc = _cell_truthy_bool(acc.get("kospi_correct"))
+        if kc is not None:
+            acc_stats_total += 1
+            if kc:
+                acc_stats_correct += 1
+
+    history_with_result = sum(1 for h in history if h["kospi_correct"] is not None)
+    history_correct = sum(1 for h in history if h["kospi_correct"])
 
     base: dict[str, Any] = {
         "accuracy": {"kospi": None, "overall": None},
@@ -190,10 +201,15 @@ def build_user_dashboard(
         "history_truncated": lim < 30,
     }
 
-    if total_with_result == 0:
+    if acc_stats_total > 0:
+        kospi_correct_cnt = acc_stats_correct
+        total_with_result = acc_stats_total
+    elif history_with_result > 0:
+        kospi_correct_cnt = history_correct
+        total_with_result = history_with_result
+    else:
         return base
 
-    kospi_correct_cnt = sum(1 for h in history if h["kospi_correct"])
     kospi_acc = round(kospi_correct_cnt / total_with_result * 100)
     base["accuracy"] = {"kospi": kospi_acc, "overall": kospi_acc}
 
