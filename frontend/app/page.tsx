@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
@@ -8,95 +8,6 @@ import SurveyConfidencePlayground from "@/components/SurveyConfidencePlayground"
 import ExpertMessageConceptPlayground from "@/components/ExpertMessageConceptPlayground";
 import LoadingPurposeSplash from "@/components/LoadingPurposeSplash";
 import ExpertPickRevealPlayground from "@/components/ExpertPickRevealPlayground";
-
-type LandingFeatureDetail = {
-  summary: string;
-  steps: string[] | null;
-  mockup: ReactNode;
-};
-
-type LandingFeature = {
-  icon: string;
-  title: string;
-  desc: string;
-  detail: LandingFeatureDetail;
-};
-
-const FEATURES: LandingFeature[] = [
-  {
-    icon: "🔔",
-    title: "알림으로 설문",
-    desc: "한 번 안내 · 한 번 탭",
-    detail: {
-      summary: "",
-      steps: null,
-      mockup: (
-        <div className="mt-4 space-y-4">
-          <div className="rounded-2xl border-2 border-[#444] bg-[#1A1A1A] p-5 sm:p-6">
-            <div className="flex items-start gap-4">
-              <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-purple-600 text-4xl">📊</div>
-              <div className="min-w-0 flex-1 pt-1">
-                <p className="text-xl font-black leading-tight text-white sm:text-2xl">오늘 코스피 설문</p>
-                <p className="mt-2 text-lg font-bold text-gray-400">🔔 안내 받고 → 📱 알림 탭하면 됩니다</p>
-              </div>
-            </div>
-          </div>
-          <div className="rounded-2xl border-2 border-[#444] bg-[#111] p-5 sm:p-6">
-            <div className="grid grid-cols-2 gap-3">
-              <div className="rounded-xl border-2 border-red-500/55 bg-red-500/20 py-5 text-center text-xl font-black text-red-100 sm:text-2xl">
-                📈 상승
-              </div>
-              <div className="rounded-xl border-2 border-blue-500/55 bg-blue-500/25 py-5 text-center text-xl font-black text-blue-100 sm:text-2xl">
-                📉 하락
-              </div>
-            </div>
-          </div>
-        </div>
-      ),
-    },
-  },
-  {
-    icon: "📊",
-    title: "집단 에너지",
-    desc: "많은 사람이 참여하면",
-    detail: {
-      summary: "",
-      steps: null,
-      mockup: (() => {
-        const Bar = ({ yes, no }: { yes: number; no: number }) => (
-          <div>
-            <div className="flex h-12 overflow-hidden rounded-full text-xl font-black">
-              <div className="flex items-center justify-center bg-red-500 text-white" style={{ width: `${yes}%` }}>
-                {yes}%
-              </div>
-              <div className="flex items-center justify-center bg-blue-500 text-white" style={{ width: `${no}%` }}>
-                {no}%
-              </div>
-            </div>
-            <div className="mt-2 flex justify-between px-2 text-lg font-bold text-gray-400">
-              <span>📈 업</span>
-              <span>📉 다운</span>
-            </div>
-          </div>
-        );
-        return (
-          <div className="mt-4 space-y-5">
-            <div className="rounded-2xl border-2 border-[#383838] bg-[#1A1A1A] p-5 sm:p-6">
-              <p className="mb-5 text-2xl font-black text-white">📊 참여 결과</p>
-              <Bar yes={72} no={28} />
-            </div>
-            <div className="rounded-2xl border-2 border-amber-500/45 bg-[#1A1A1A] p-5 sm:p-6">
-              <p className="text-2xl font-black text-yellow-200">⭐ 반영 버전 예시</p>
-              <div className="mt-5">
-                <Bar yes={61} no={39} />
-              </div>
-            </div>
-          </div>
-        );
-      })(),
-    },
-  },
-];
 
 function detectBrowser(): "kakao" | "inapp" | "normal" {
   if (typeof navigator === "undefined") return "normal";
@@ -124,7 +35,6 @@ export default function LoginPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [signing, setSigning] = useState<"google" | "kakao" | null>(null);
-  const [openIdx, setOpenIdx] = useState<number | null>(null);
   const [browserType, setBrowserType] = useState<"kakao" | "inapp" | "normal">("normal");
 
   useEffect(() => {
@@ -224,60 +134,6 @@ export default function LoginPage() {
             코스피를 예측하고 토큰을 얻어요
           </h2>
           <SurveyConfidencePlayground />
-          <div className="w-full space-y-3 mt-8">
-            {FEATURES.map((item, idx) => {
-              const isOpen = openIdx === idx;
-              const summary = item.detail.summary?.trim();
-              return (
-                <div
-                  key={item.title}
-                  className="bg-[#151515]/90 rounded-3xl border-2 border-[#2f2f2f] overflow-hidden transition-all"
-                >
-                  <button
-                    type="button"
-                    className="w-full flex items-center gap-4 px-5 py-4 sm:py-5 text-left"
-                    onClick={() => setOpenIdx(isOpen ? null : idx)}
-                  >
-        <span className="text-5xl sm:text-6xl flex-shrink-0 leading-none">{item.icon}</span>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-black text-xl sm:text-2xl text-white">{item.title}</p>
-                      <p className="text-gray-400 font-bold text-lg mt-1">{item.desc}</p>
-                    </div>
-                    <span className={`text-gray-500 text-3xl flex-shrink-0 transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`}>
-                      ▾
-                    </span>
-                  </button>
-
-                  {isOpen && (
-                    <div className="px-5 pb-5">
-                      <div className="border-t border-[#333] pt-4">
-                        {summary ? (
-                          <p className="text-gray-200 text-lg sm:text-xl leading-relaxed mb-3">{summary}</p>
-                        ) : null}
-                        {item.detail.steps && item.detail.steps.length > 0 ? (
-                          <div className="space-y-2 mb-4">
-                            {item.detail.steps.map((s, i) => (
-                              <p
-                                key={s}
-                                className={`text-lg ${
-                                  i === item.detail.steps!.length - 1 && s.startsWith("💡")
-                                    ? "text-yellow-300 font-bold"
-                                    : "text-sky-300 font-bold"
-                                }`}
-                              >
-                                {s}
-                              </p>
-                            ))}
-                          </div>
-                        ) : null}
-                        {item.detail.mockup}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
         </section>
 
         <section className="min-w-0 rounded-3xl border-2 border-sky-500/35 bg-gradient-to-b from-[#081018]/95 to-[#121212]/90 p-5 sm:p-8">
