@@ -243,8 +243,12 @@ async def fetch_all_fgi_readings() -> list[FgiReading]:
         _fetch_us_cnn(),
         _fetch_nikkei_fgc(),
         _fetch_crypto_fgi(),
+        return_exceptions=True,
     )
     readings: list[FgiReading] = []
     for part in chunks:
+        if isinstance(part, Exception):
+            logger.warning("FGI 소스 수집 예외(건너뜀): %s", part)
+            continue
         readings.extend(part)
     return readings

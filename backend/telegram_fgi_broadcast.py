@@ -8,6 +8,7 @@ import os
 import re
 import time
 from datetime import datetime
+from urllib.parse import urlparse
 from zoneinfo import ZoneInfo
 
 from fear_greed_fetch import FgiReading, fetch_all_fgi_readings
@@ -16,8 +17,9 @@ from webpush_helper import send_web_push_to_all
 
 logger = logging.getLogger(__name__)
 
-_FGI_REPLY_CACHE: tuple[float, str] | None = None
+_FGI_REPLY_CACHE: tuple[int, float, str] | None = None
 _FGI_CACHE_SEC = 300
+_FGI_CACHE_VERSION = 2  # HTML 포맷 변경 시 캐시 무효화
 
 _FGI_COMMANDS = frozenset({
     "/fgi", "/지수", "/공포", "/탐욕", "/fear", "/greed",
@@ -58,6 +60,18 @@ def _html_link(url: str, label: str | None = None) -> str:
     return f'<a href="{href}">{text}</a>'
 
 
+def _html_to_plain(text: str) -> str:
+    """HTML 실패 시 — 링크·줄바꿈 유지, parse_mode 없이 URL 자동 링크."""
+    s = re.sub(
+        r'<a href="[^"]+">([^<]*)</a>',
+        r"\1",
+        text,
+        flags=re.I,
+    )
+    s = re.sub(r"</?b>", "", s)
+    return s.strip()
+
+
 def _fmt_score(score: float | int | None) -> str:
     if score is None:
         return "—"
@@ -89,12 +103,12 @@ def _market_score_line(r: FgiReading) -> str:
             f"{_html_esc(r.source)}"
         )
     else:
-        head = f"{name}(—) {_html_esc(r.source)}"
+        head = f"{name}(-) {_html_esc(r.source)}"
     url = (r.url or "").strip()
     low = url.lower()
     if not url or "t.me" in low or "telegram." in low:
         return head
-    return f"{head}\n{_html_url(url)}"
+    return f"{head}\n{_html_link(url, r.source)}"
 
 
 def _human_score_line(human: dict) -> str:
@@ -104,13 +118,15 @@ def _human_score_line(human: dict) -> str:
     if human["up_pct"] is not None:
         up, down = human["up_pct"], human["down_pct"]
         if up >= down:
-            tag = f"상승 {_fmt_score(up)}%"
+            pct = _fmt_score(up)
+            head = f"{name}(<b>상승 {pct}</b>%)"
         else:
-            tag = f"하락 {_fmt_score(down)}%"
-        head = f"{name}(<b>{_html_esc(tag)}</b>)"
+            pct = _fmt_score(down)
+            head = f"{name}(<b>하락 {pct}</b>%)"
     else:
-        head = f"{name}(—)"
-    return f"{head}\n{_html_url(base)}"
+        head = f"{name}(-)"
+    host = urlparse(base).netloc or base.replace("https://", "").replace("http://", "")
+    return f"{head}\n{_html_link(base, host)}"
 
 
 def _empty_human_snapshot() -> dict:
@@ -306,7 +322,9 @@ def _fgi_cache_is_fresh() -> bool:
     global _FGI_REPLY_CACHE
     if not _FGI_REPLY_CACHE:
         return False
-    return time.time() - _FGI_REPLY_CACHE[0] < _FGI_CACHE_SEC
+    if _FGI_REPLY_CACHE[0] != _FGI_CACHE_VERSION:
+        return False
+    return time.time() - _FGI_REPLY_CACHE[1] < _FGI_CACHE_SEC
 
 
 async def build_fgi_reply_html(supabase, *, force_refresh: bool = False) -> str:
@@ -315,15 +333,16 @@ async def build_fgi_reply_html(supabase, *, force_refresh: bool = False) -> str:
     if (
         not force_refresh
         and _FGI_REPLY_CACHE
-        and now - _FGI_REPLY_CACHE[0] < _FGI_CACHE_SEC
+        and _FGI_REPLY_CACHE[0] == _FGI_CACHE_VERSION
+        and now - _FGI_REPLY_CACHE[1] < _FGI_CACHE_SEC
     ):
-        return _FGI_REPLY_CACHE[1]
+        return _FGI_REPLY_CACHE[2]
 
     readings = await fetch_all_fgi_readings()
     # Supabase 클라이언트는 스레드 간 공유 불가 — 동기 호출만 사용
     human = human_indicator_snapshot_safe(supabase)
     html = build_fgi_broadcast_html(readings, human)
-    _FGI_REPLY_CACHE = (now, html)
+    _FGI_REPLY_CACHE = (_FGI_CACHE_VERSION, now, html)
     return html
 
 
@@ -364,7 +383,11 @@ async def handle_telegram_fgi_message(chat_id: int | str, text: str, supabase) -
             disable_web_page_preview=True,
         )
         if not result.get("ok"):
-            plain = re.sub(r"<[^>]+>", "", html)
+            logger.warning(
+                "FGI HTML 전송 실패: %s → plain 재시도",
+                result.get("description"),
+            )
+            plain = _html_to_plain(html)
             result = await send_message(
                 chat_id,
                 plain,
@@ -399,6 +422,11 @@ async def send_fgi_telegram_to_admins(supabase, *, force_refresh: bool = True) -
         result = await send_message(
             cid, html, disable_web_page_preview=True
         )
+        if not result.get("ok"):
+            plain = _html_to_plain(html)
+            result = await send_message(
+                cid, plain, parse_mode=None, disable_web_page_preview=True
+            )
         if result.get("ok"):
             sent += 1
         else:
