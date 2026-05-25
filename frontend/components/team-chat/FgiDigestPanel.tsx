@@ -69,7 +69,7 @@ function humanVoteLine(human: FgiDigestResponse["human"]): ReactNode {
   );
 }
 
-/** 소통방 상단 — 텔레그램 「공포」와 동일 지표 */
+/** 소통방 상단 — 공포·탐욕·인간지표 */
 export default function FgiDigestPanel() {
   const [open, setOpen] = useState(true);
   const [data, setData] = useState<FgiDigestResponse | null>(null);
@@ -144,7 +144,7 @@ export default function FgiDigestPanel() {
       {open ? (
         <div className="mt-2.5 space-y-3 rounded-xl border border-violet-500/15 bg-[#100a14]/80 px-3 py-3">
           {loading && !data ? (
-            <p className="text-sm text-gray-500 animate-pulse">지표 수집 중… (텔레그램과 동일 소스)</p>
+            <p className="text-sm text-gray-500 animate-pulse">지표 수집 중…</p>
           ) : null}
           {err ? (
             <p className="text-sm text-rose-300/90">
@@ -180,9 +180,6 @@ export default function FgiDigestPanel() {
                   ))}
                 </div>
               </div>
-              <p className="text-[10px] text-gray-600 leading-relaxed">
-                텔레그램 봇에 「공포」 또는 「지수」를 내면 같은 내용을 받을 수 있어요.
-              </p>
             </>
           ) : null}
         </div>
