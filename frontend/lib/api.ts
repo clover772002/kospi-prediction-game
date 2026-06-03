@@ -909,6 +909,11 @@ export interface HallOfFameRankings {
   my_weekly_rank: number | null;
   my_accuracy_cumulative_rank: number | null;
   my_accuracy_weekly_rank: number | null;
+  /** 상위 목록 밖이어도 전체 순위·점수 */
+  my_cumulative_entry?: HallOfFameRankingEntry | null;
+  my_weekly_entry?: HallOfFameRankingEntry | null;
+  my_accuracy_cumulative_entry?: HallOfFameRankingEntry | null;
+  my_accuracy_weekly_entry?: HallOfFameRankingEntry | null;
 }
 
 export async function getHallOfFameRankings(accessToken: string): Promise<HallOfFameRankings> {

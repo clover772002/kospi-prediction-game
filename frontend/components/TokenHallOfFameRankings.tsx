@@ -15,18 +15,76 @@ function formatWeekRange(data: HallOfFameRankings): string {
   return `${data.week_start.slice(5).replace("-", "/")} ~ ${data.week_end.slice(5).replace("-", "/")} (KST)`;
 }
 
+function rankMedal(rank: number): string | null {
+  if (rank === 1) return "🥇";
+  if (rank === 2) return "🥈";
+  if (rank === 3) return "🥉";
+  return null;
+}
+
+function RankingRow({
+  entry,
+  variant,
+  highlight,
+}: {
+  entry: HallOfFameRankingEntry;
+  variant: "token" | "accuracy";
+  highlight?: boolean;
+}) {
+  const medal = rankMedal(entry.rank);
+  const scoreMain =
+    variant === "accuracy" ? (
+      <>
+        {entry.score}
+        <span className="text-[10px] font-normal text-gray-500">%</span>
+      </>
+    ) : (
+      <ChipAmount amount={entry.score} compact className="text-amber-200" />
+    );
+  const scoreSub =
+    variant === "accuracy" && entry.correct != null && entry.total != null ? (
+      <span className="ml-1 text-[10px] font-normal text-gray-500 tabular-nums">
+        ({entry.correct}/{entry.total})
+      </span>
+    ) : null;
+
+  return (
+    <div
+      className={`flex items-center justify-between gap-2 rounded-xl border px-3 py-2.5 text-xs sm:text-sm ${
+        highlight
+          ? "border-amber-400/35 bg-amber-500/10 text-white"
+          : "border-[#2A2A2A] bg-[#1A1A1A] text-gray-200"
+      }`}
+    >
+      <span className="flex min-w-0 items-center gap-2">
+        <span className="w-7 shrink-0 text-center font-black tabular-nums text-gray-400">
+          {medal ?? entry.rank}
+        </span>
+        <span className="truncate font-bold">{entry.masked_name}</span>
+        {highlight ? (
+          <span className="shrink-0 text-[10px] font-bold text-amber-300/90">나</span>
+        ) : null}
+      </span>
+      <span className="shrink-0 font-black tabular-nums text-amber-200">
+        {scoreMain}
+        {scoreSub}
+      </span>
+    </div>
+  );
+}
+
 function RankingList({
   entries,
   variant,
-  myRank,
+  myEntry,
   meId,
 }: {
   entries: HallOfFameRankingEntry[];
   variant: "token" | "accuracy";
-  myRank: number | null;
+  myEntry: HallOfFameRankingEntry | null | undefined;
   meId: string | null;
 }) {
-  if (entries.length === 0) {
+  if (entries.length === 0 && !myEntry) {
     return (
       <p className="text-xs text-gray-500 py-2">
         {variant === "token" ? "아직 칩 순위 데이터가 없어요." : "아직 적중률 순위 데이터가 없어요."}
@@ -34,61 +92,34 @@ function RankingList({
     );
   }
 
-  return (
-    <div className="space-y-1">
-      {myRank != null ? (
-        <p className="text-[11px] text-amber-200/90 mb-2">
-          내 순위 <span className="font-black tabular-nums">{myRank}</span>위
-        </p>
-      ) : meId ? (
-        <p className="text-[11px] text-gray-500 mb-2">이번 목록에 내 기록이 없어요.</p>
-      ) : null}
-      <ol className="space-y-1.5">
-        {entries.map((e) => {
-          const mine = meId != null && e.user_id === meId;
-          const medal = e.rank === 1 ? "🥇" : e.rank === 2 ? "🥈" : e.rank === 3 ? "🥉" : null;
-          const scoreMain =
-            variant === "accuracy" ? (
-              <>
-                {e.score}
-                <span className="text-[10px] font-normal text-gray-500">%</span>
-              </>
-            ) : (
-              <ChipAmount amount={e.score} compact className="text-amber-200" />
-            );
-          const scoreSub =
-            variant === "accuracy" && e.correct != null && e.total != null ? (
-              <span className="ml-1 text-[10px] font-normal text-gray-500 tabular-nums">
-                ({e.correct}/{e.total})
-              </span>
-            ) : null;
+  const myInTopList =
+    meId != null && entries.some((e) => e.user_id === meId);
 
-          return (
-            <li
-              key={e.user_id}
-              className={`flex items-center justify-between gap-2 rounded-xl border px-3 py-2 text-xs ${
-                mine
-                  ? "border-amber-400/35 bg-amber-500/10 text-white"
-                  : "border-[#2A2A2A] bg-[#1A1A1A] text-gray-200"
-              }`}
-            >
-              <span className="flex min-w-0 items-center gap-2">
-                <span className="w-6 shrink-0 font-black tabular-nums text-gray-400">
-                  {medal ?? e.rank}
-                </span>
-                <span className="truncate font-bold">{e.masked_name}</span>
-                {mine ? (
-                  <span className="shrink-0 text-[10px] text-amber-300/90">나</span>
-                ) : null}
-              </span>
-              <span className="shrink-0 font-black tabular-nums text-amber-200">
-                {scoreMain}
-                {scoreSub}
-              </span>
-            </li>
-          );
-        })}
-      </ol>
+  return (
+    <div className="space-y-3">
+      {entries.length > 0 ? (
+        <ol className="space-y-1.5" aria-label="상위 순위">
+          {entries.map((e) => {
+            const mine = meId != null && e.user_id === meId;
+            return (
+              <li key={e.user_id}>
+                <RankingRow entry={e} variant={variant} highlight={mine} />
+              </li>
+            );
+          })}
+        </ol>
+      ) : null}
+
+      {meId && myEntry ? (
+        <div className="rounded-xl border border-amber-500/25 bg-amber-950/20 px-3 py-2.5">
+          <p className="text-xs font-black text-amber-200/95 mb-2">내 순위</p>
+          <RankingRow
+            entry={myEntry}
+            variant={variant}
+            highlight={!myInTopList}
+          />
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -100,7 +131,7 @@ function RankBlock({
   tab,
   onTabChange,
   entries,
-  myRank,
+  myEntry,
   meId,
   loading,
   err,
@@ -111,7 +142,7 @@ function RankBlock({
   tab: Tab;
   onTabChange: (t: Tab) => void;
   entries: HallOfFameRankingEntry[];
-  myRank: number | null;
+  myEntry: HallOfFameRankingEntry | null | undefined;
   meId: string | null;
   loading: boolean;
   err: string | null;
@@ -173,7 +204,7 @@ function RankBlock({
       ) : err ? (
         <p className="text-xs text-red-300/90">{err}</p>
       ) : (
-        <RankingList entries={entries} variant={variant} myRank={myRank} meId={meId} />
+        <RankingList entries={entries} variant={variant} myEntry={myEntry} meId={meId} />
       )}
     </section>
   );
@@ -214,17 +245,17 @@ export default function TokenHallOfFameRankings({
 
   const tokenEntries =
     tokenTab === "weekly" ? data?.weekly ?? [] : data?.cumulative ?? [];
-  const tokenMyRank =
-    tokenTab === "weekly" ? data?.my_weekly_rank : data?.my_cumulative_rank;
+  const tokenMyEntry =
+    tokenTab === "weekly" ? data?.my_weekly_entry : data?.my_cumulative_entry;
 
   const accuracyEntries =
     accuracyTab === "weekly"
       ? data?.accuracy_weekly ?? []
       : data?.accuracy_cumulative ?? [];
-  const accuracyMyRank =
+  const accuracyMyEntry =
     accuracyTab === "weekly"
-      ? data?.my_accuracy_weekly_rank
-      : data?.my_accuracy_cumulative_rank;
+      ? data?.my_accuracy_weekly_entry
+      : data?.my_accuracy_cumulative_entry;
 
   return (
     <div className="mb-2">
@@ -235,7 +266,7 @@ export default function TokenHallOfFameRankings({
         tab={tokenTab}
         onTabChange={setTokenTab}
         entries={tokenEntries}
-        myRank={tokenMyRank ?? null}
+        myEntry={tokenMyEntry}
         meId={meId}
         loading={loading}
         err={err}
@@ -247,7 +278,7 @@ export default function TokenHallOfFameRankings({
         tab={accuracyTab}
         onTabChange={setAccuracyTab}
         entries={accuracyEntries}
-        myRank={accuracyMyRank ?? null}
+        myEntry={accuracyMyEntry}
         meId={meId}
         loading={loading}
         err={err}

@@ -261,6 +261,202 @@ def _find_my_rank(entries: list[dict[str, Any]], user_id: str | None) -> int | N
     return None
 
 
+def _my_entry_from_ranked(
+    ranked: list[dict[str, Any]],
+    user_id: str | None,
+) -> dict[str, Any] | None:
+    if not user_id:
+        return None
+    for i, item in enumerate(ranked):
+        if item.get("user_id") == user_id:
+            out = dict(item)
+            out["rank"] = i + 1
+            return out
+    return None
+
+
+def find_my_cumulative_token_entry(
+    supabase: Client,
+    user_id: str,
+) -> dict[str, Any] | None:
+    """상위 N 밖이어도 보유 칩 기준 전체 순위·점수."""
+    try:
+        me_r = (
+            supabase.table("users")
+            .select("id, name, email, tokens")
+            .eq("id", user_id)
+            .limit(1)
+            .execute()
+        )
+    except Exception as e:
+        logger.warning("내 누적 칩 순위 조회 실패: %s", e)
+        return None
+    rows = me_r.data or []
+    if not rows:
+        return None
+    row = rows[0]
+    if is_seed_bot_email(row.get("email")):
+        return None
+    my_tokens = int(row.get("tokens") or 100)
+    masked = _masked_name(row.get("name"))
+    try:
+        all_r = (
+            supabase.table("users")
+            .select("id, email, tokens")
+            .order("tokens", desc=True)
+            .order("id")
+            .execute()
+        )
+    except Exception as e:
+        logger.warning("누적 칩 전체 순위 조회 실패: %s", e)
+        return None
+    rank = 0
+    for r in all_r.data or []:
+        if is_seed_bot_email(r.get("email")):
+            continue
+        rank += 1
+        if str(r["id"]) == user_id:
+            return {
+                "user_id": user_id,
+                "masked_name": masked,
+                "score": my_tokens,
+                "rank": rank,
+            }
+    return None
+
+
+def _weekly_token_sums(
+    supabase: Client,
+    *,
+    week_start: str,
+    week_end: str,
+) -> dict[str, int]:
+    try:
+        r = (
+            supabase.table("survey_responses")
+            .select("user_id, tokens_won")
+            .gte("survey_date", week_start)
+            .lte("survey_date", week_end)
+            .not_.is_("tokens_won", "null")
+            .execute()
+        )
+    except Exception as e:
+        logger.warning("주간 칩 합계 조회 실패: %s", e)
+        return {}
+    sums: dict[str, int] = defaultdict(int)
+    for row in r.data or []:
+        uid = str(row.get("user_id") or "")
+        if not uid:
+            continue
+        try:
+            sums[uid] += int(row.get("tokens_won") or 0)
+        except (TypeError, ValueError):
+            continue
+    return dict(sums)
+
+
+def find_my_weekly_token_entry(
+    supabase: Client,
+    user_id: str,
+    *,
+    week_start: str,
+    week_end: str,
+) -> dict[str, Any] | None:
+    """이번 주 칩 획득 합계 기준 전체 순위·점수."""
+    sums = _weekly_token_sums(supabase, week_start=week_start, week_end=week_end)
+    sums.setdefault(user_id, 0)
+    name_map = _fetch_name_map(supabase, list(sums.keys()))
+    if user_id not in name_map:
+        return None
+    ranked = sorted(sums.items(), key=lambda x: (-x[1], x[0]))
+    full: list[dict[str, Any]] = []
+    for uid, score in ranked:
+        if uid not in name_map:
+            continue
+        full.append({
+            "user_id": uid,
+            "masked_name": name_map[uid],
+            "score": score,
+        })
+    return _my_entry_from_ranked(full, user_id)
+
+
+def _full_accuracy_ranked(
+    stats: dict[str, dict[str, int]],
+    name_map: dict[str, str],
+) -> list[dict[str, Any]]:
+    candidates: list[dict[str, Any]] = []
+    for uid, s in stats.items():
+        if uid not in name_map:
+            continue
+        total = int(s.get("total") or 0)
+        correct = int(s.get("correct") or 0)
+        if total <= 0:
+            continue
+        pct = round(correct / total * 100)
+        candidates.append({
+            "user_id": uid,
+            "masked_name": name_map[uid],
+            "score": pct,
+            "correct": correct,
+            "total": total,
+        })
+    candidates.sort(key=lambda x: (-x["score"], -x["total"], x["user_id"]))
+    return _assign_ranks(candidates)
+
+
+def find_my_cumulative_accuracy_entry(
+    supabase: Client,
+    user_id: str,
+) -> dict[str, Any] | None:
+    try:
+        _, _, user_scores = get_accuracy_data(supabase)
+    except Exception as e:
+        logger.warning("내 누적 적중률 순위 실패: %s", e)
+        return None
+    if user_id not in user_scores:
+        return None
+    name_map = _fetch_name_map(supabase, list(user_scores.keys()))
+    full = _full_accuracy_ranked(user_scores, name_map)
+    return _my_entry_from_ranked(full, user_id)
+
+
+def find_my_weekly_accuracy_entry(
+    supabase: Client,
+    user_id: str,
+    *,
+    week_start: str,
+    week_end: str,
+) -> dict[str, Any] | None:
+    try:
+        r = (
+            supabase.table("accuracy_records")
+            .select("user_id, kospi_correct")
+            .gte("survey_date", week_start)
+            .lte("survey_date", week_end)
+            .execute()
+        )
+    except Exception as e:
+        logger.warning("내 주간 적중률 순위 실패: %s", e)
+        return None
+    stats: dict[str, dict[str, int]] = defaultdict(lambda: {"correct": 0, "total": 0})
+    for row in r.data or []:
+        kc = _cell_truthy_bool(row.get("kospi_correct"))
+        if kc is None:
+            continue
+        uid = str(row.get("user_id") or "")
+        if not uid:
+            continue
+        stats[uid]["total"] += 1
+        if kc:
+            stats[uid]["correct"] += 1
+    if user_id not in stats:
+        return None
+    name_map = _fetch_name_map(supabase, list(stats.keys()))
+    full = _full_accuracy_ranked(dict(stats), name_map)
+    return _my_entry_from_ranked(full, user_id)
+
+
 def build_hall_of_fame_payload(
     supabase: Client,
     *,
@@ -288,6 +484,22 @@ def build_hall_of_fame_payload(
         week_end=week_end,
         limit=limit,
     )
+    my_cumulative_entry = find_my_cumulative_token_entry(supabase, current_user_id)
+    my_weekly_entry = find_my_weekly_token_entry(
+        supabase,
+        current_user_id,
+        week_start=week_start,
+        week_end=week_end,
+    )
+    my_accuracy_cumulative_entry = find_my_cumulative_accuracy_entry(
+        supabase, current_user_id
+    )
+    my_accuracy_weekly_entry = find_my_weekly_accuracy_entry(
+        supabase,
+        current_user_id,
+        week_start=week_start,
+        week_end=week_end,
+    )
     return {
         "week_id": week_id,
         "week_start": week_start,
@@ -296,8 +508,24 @@ def build_hall_of_fame_payload(
         "weekly": weekly,
         "accuracy_cumulative": accuracy_cumulative,
         "accuracy_weekly": accuracy_weekly,
-        "my_cumulative_rank": _find_my_rank(cumulative, current_user_id),
-        "my_weekly_rank": _find_my_rank(weekly, current_user_id),
-        "my_accuracy_cumulative_rank": _find_my_rank(accuracy_cumulative, current_user_id),
-        "my_accuracy_weekly_rank": _find_my_rank(accuracy_weekly, current_user_id),
+        "my_cumulative_rank": (
+            _find_my_rank(cumulative, current_user_id)
+            or (my_cumulative_entry or {}).get("rank")
+        ),
+        "my_weekly_rank": (
+            _find_my_rank(weekly, current_user_id)
+            or (my_weekly_entry or {}).get("rank")
+        ),
+        "my_accuracy_cumulative_rank": (
+            _find_my_rank(accuracy_cumulative, current_user_id)
+            or (my_accuracy_cumulative_entry or {}).get("rank")
+        ),
+        "my_accuracy_weekly_rank": (
+            _find_my_rank(accuracy_weekly, current_user_id)
+            or (my_accuracy_weekly_entry or {}).get("rank")
+        ),
+        "my_cumulative_entry": my_cumulative_entry,
+        "my_weekly_entry": my_weekly_entry,
+        "my_accuracy_cumulative_entry": my_accuracy_cumulative_entry,
+        "my_accuracy_weekly_entry": my_accuracy_weekly_entry,
     }
