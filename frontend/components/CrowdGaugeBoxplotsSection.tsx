@@ -341,17 +341,9 @@ export default function CrowdGaugeBoxplotsSection({
 
   return (
     <div className={shellClass}>
-      <div className="space-y-1">
-        <p className={isSurvey ? surveyUi.cardTitle : "font-bold text-base text-white"}>
-          {isSurvey ? "진행 중 설문 현황" : "전체 예측 방향/확신분포"}
-        </p>
-        {isSurvey ? (
-          <p className={surveyUi.bodyMuted}>
-            지금 열려 있는 설문 거래일만 실시간으로 보여요. 결과가 확정된 과거 이력은 표시하지
-            않습니다.
-          </p>
-        ) : null}
-      </div>
+      {!isSurvey ? (
+        <p className="font-bold text-base text-white">전체 예측 방향/확신분포</p>
+      ) : null}
 
       {err ? (
         <p className="text-sm text-red-400 rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-2">
