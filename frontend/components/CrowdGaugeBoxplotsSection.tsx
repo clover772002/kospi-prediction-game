@@ -418,41 +418,52 @@ type SectionProps = {
   openDates?: string[];
   /** 설문 실시간 집계 — 결과 미확정 옆 장중 시세 */
   liveKospi?: KospiLiveQuoteData | null;
+  /** 설문 탭: 상단·사전예측 풋 공유 (중복 fetch 방지) */
+  days?: CrowdGaugeBoxplotDay[] | null;
+  daysError?: string | null;
 };
 
 export default function CrowdGaugeBoxplotsSection({
   variant = "dashboard",
   openDates = [],
   liveKospi = null,
+  days: daysProp,
+  daysError: daysErrorProp,
 }: SectionProps) {
-  const [days, setDays] = useState<CrowdGaugeBoxplotDay[] | null>(null);
-  const [err, setErr] = useState<string | null>(null);
+  const [internalDays, setInternalDays] = useState<CrowdGaugeBoxplotDay[] | null>(null);
+  const [internalErr, setInternalErr] = useState<string | null>(null);
   const isSurvey = variant === "survey";
+  const controlled = daysProp !== undefined;
+  const days = controlled ? daysProp : internalDays;
+  const err = controlled ? (daysErrorProp ?? null) : internalErr;
   const openKeys = openDates.map(normalizeSurveyDateKey).filter((k) => k.length >= 8);
 
   useEffect(() => {
+    if (controlled) return;
     let cancelled = false;
-    setErr(null);
+    setInternalErr(null);
     void (async () => {
       try {
         const d = await getCrowdGaugeBoxplots(isSurvey ? 8 : 30);
-        if (!cancelled) setDays(Array.isArray(d.days) ? d.days : []);
+        if (!cancelled) setInternalDays(Array.isArray(d.days) ? d.days : []);
       } catch (e: unknown) {
-        if (!cancelled) setErr(e instanceof Error ? e.message : String(e));
+        if (!cancelled) setInternalErr(e instanceof Error ? e.message : String(e));
       }
     })();
     return () => {
       cancelled = true;
     };
-  }, [isSurvey]);
+  }, [isSurvey, controlled]);
 
   const pendingByKey = new Map(
     (days ?? []).filter(isPendingResult).map((d) => [normalizeSurveyDateKey(d.survey_date), d] as const),
   );
-  const liveEntries = openKeys.map((key) => ({
-    key,
-    day: pendingByKey.get(key) ?? null,
-  }));
+  const liveEntries = openKeys
+    .map((key) => ({
+      key,
+      day: pendingByKey.get(key) ?? null,
+    }))
+    .filter((e) => e.day !== null);
 
   const shellClass = isSurvey
     ? "fade-up-3 space-y-3"
@@ -500,15 +511,7 @@ export default function CrowdGaugeBoxplotsSection({
                   {formatLiveDateLabel(key)} · {day ? "진행 중 · 실시간 집계" : "진행 중 · 응답 대기"}
                 </p>
               </div>
-              {day ? (
-                <DayCard day={day} emphasize liveKospi={liveKospi} />
-              ) : (
-                <div
-                  className={`mx-2 mb-2 rounded-xl border border-dashed border-[#444] px-4 py-6 text-center ${surveyUi.hint}`}
-                >
-                  아직 이 거래일 설문 응답이 없어요. 첫 참여가 들어오면 여기에 무리 분포가 표시됩니다.
-                </div>
-              )}
+              <DayCard day={day!} emphasize liveKospi={liveKospi} />
             </div>
           ))}
         </div>
@@ -521,6 +524,66 @@ export default function CrowdGaugeBoxplotsSection({
           ))}
         </div>
       ) : null}
+    </div>
+  );
+}
+
+/** 사전 예측 제출 아래 — 해당 거래일 무리 집계(응답 없으면 안내) */
+export function SurveyDayCrowdFoot({
+  dateKey,
+  days,
+  daysError,
+  liveKospi = null,
+}: {
+  dateKey: string;
+  days: CrowdGaugeBoxplotDay[] | null;
+  daysError: string | null;
+  liveKospi?: KospiLiveQuoteData | null;
+}) {
+  const key = normalizeSurveyDateKey(dateKey);
+  if (key.length < 8) return null;
+
+  if (daysError) {
+    return (
+      <p className="mt-4 text-sm text-red-400 rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-2">
+        {daysError}
+      </p>
+    );
+  }
+
+  if (days === null) {
+    return (
+      <div className="mt-4 grid grid-cols-2 gap-3 animate-pulse">
+        <div className="h-28 rounded-xl bg-[#252525]" />
+        <div className="h-28 rounded-xl bg-[#252525]" />
+      </div>
+    );
+  }
+
+  const day =
+    days.find((d) => normalizeSurveyDateKey(d.survey_date) === key && isPendingResult(d)) ??
+    null;
+
+  return (
+    <div className="mt-4 rounded-xl bg-violet-950/10 px-2 py-2 sm:px-3">
+      <div className="flex items-center gap-2 px-2 pt-2 pb-1">
+        <span className="relative flex h-2.5 w-2.5">
+          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-amber-400/70 opacity-75" />
+          <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-amber-400" />
+        </span>
+        <p className={`${surveyUi.body} text-violet-100 tabular-nums`}>
+          {formatLiveDateLabel(key)} · {day ? "진행 중 · 실시간 집계" : "진행 중 · 응답 대기"}
+        </p>
+      </div>
+      {day ? (
+        <DayCard day={day} emphasize liveKospi={liveKospi} />
+      ) : (
+        <div
+          className={`mx-2 mb-2 rounded-xl border border-dashed border-[#444] px-4 py-6 text-center ${surveyUi.hint}`}
+        >
+          아직 이 거래일 설문 응답이 없어요. 첫 참여가 들어오면 여기에 무리 분포가 표시됩니다.
+        </div>
+      )}
     </div>
   );
 }

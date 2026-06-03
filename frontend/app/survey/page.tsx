@@ -1,9 +1,23 @@
 ﻿"use client";
 
-import { useEffect, useState, useCallback, useRef, Suspense, useLayoutEffect, useMemo } from "react";
+import {
+  useEffect,
+  useState,
+  useCallback,
+  useRef,
+  Suspense,
+  useLayoutEffect,
+  useMemo,
+  type ReactNode,
+} from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
-import type { MySurveyResponse, TodaySurvey } from "@/lib/api";
+import {
+  getCrowdGaugeBoxplots,
+  type CrowdGaugeBoxplotDay,
+  type MySurveyResponse,
+  type TodaySurvey,
+} from "@/lib/api";
 import { buildKstSurveyTodayPlaceholder } from "@/lib/survey-today-placeholder";
 import {
   fetchNextSurveyCached,
@@ -33,7 +47,9 @@ import PageLoadProgress from "@/components/PageLoadProgress";
 import AppTabNav from "@/components/AppTabNav";
 import StaleRefreshIndicator from "@/components/StaleRefreshIndicator";
 import WeeklyParticipationCard from "@/components/WeeklyParticipationCard";
-import CrowdGaugeBoxplotsSection from "@/components/CrowdGaugeBoxplotsSection";
+import CrowdGaugeBoxplotsSection, {
+  SurveyDayCrowdFoot,
+} from "@/components/CrowdGaugeBoxplotsSection";
 import { isKospiMarketSessionOpenKST } from "@/lib/kospi-market-hours";
 import { surveyUi } from "@/lib/survey-ui-tokens";
 
@@ -282,6 +298,7 @@ function NextPreSurveyPanel({
   onStartEditConfidence,
   onCancelEditConfidence,
   confidenceJustSaved,
+  crowdFoot,
 }: {
   surveyDate: string;
   responseKnown: boolean;
@@ -299,6 +316,7 @@ function NextPreSurveyPanel({
   onStartEditConfidence: () => void;
   onCancelEditConfidence: () => void;
   confidenceJustSaved: boolean;
+  crowdFoot?: ReactNode;
 }) {
   const target = formatPreSurveyTarget(surveyDate);
   const sectionDate = formatSurveySectionDate(surveyDate);
@@ -353,6 +371,7 @@ function NextPreSurveyPanel({
       ) : null}
     </>
       )}
+      {crowdFoot}
     </div>
   );
 }
@@ -431,6 +450,8 @@ function SurveyPageInner() {
 
   const [kospiPrice, setKospiPrice] = useState<KospiPrice | null>(null);
   const priceTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [crowdDays, setCrowdDays] = useState<CrowdGaugeBoxplotDay[] | null>(null);
+  const [crowdDaysError, setCrowdDaysError] = useState<string | null>(null);
 
   // 다음 거래일 설문 (장마감 후 미리 참여)
   const [nextSurvey, setNextSurvey] = useState<{ survey_date: string; is_open: boolean } | null>(null);
@@ -862,8 +883,17 @@ function SurveyPageInner() {
     }
   };
 
-  const crowdOpenDates = useMemo(() => {
-    const out: string[] = [];
+  const status = today?.status ?? "no_survey";
+  const surveyUiLocked = awaitingToday || submitting || nextSubmitting;
+
+  const _kstNow = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Seoul" }));
+  const _kstDay = _kstNow.getDay();
+  const isWeekendKST = _kstDay === 0 || _kstDay === 6;
+  const showNextPreSurvey =
+    !!nextSurvey?.is_open && (status !== "open" || alreadyAnswered || submitted);
+
+  /** 상단 실시간 집계 — 오늘 거래일만(응답 있는 날만 카드 표시) */
+  const crowdTopDates = useMemo(() => {
     const todayKey = today?.survey_date?.trim().slice(0, 10);
     if (
       todayKey &&
@@ -871,29 +901,68 @@ function SurveyPageInner() {
       today?.status !== "no_survey" &&
       today?.status !== "result"
     ) {
-      out.push(todayKey);
+      return [todayKey];
     }
+    return [];
+  }, [today?.survey_date, today?.status]);
+
+  const liveKospiForCrowd = useMemo(
+    () =>
+      isKospiMarketSessionOpenKST() && kospiPrice
+        ? {
+            price: kospiPrice.price,
+            change_pct: kospiPrice.change_pct,
+            is_up: kospiPrice.is_up,
+          }
+        : null,
+    [kospiPrice],
+  );
+
+  const nextPreSurveyCrowdFoot = useMemo(() => {
     const nextKey = nextSurvey?.survey_date?.trim().slice(0, 10);
-    if (nextSurvey?.is_open && nextKey && nextKey.length >= 8 && !out.includes(nextKey)) {
-      out.push(nextKey);
+    if (!showNextPreSurvey || !nextSurvey?.is_open || !nextKey || nextKey.length < 8) {
+      return null;
     }
-    return out;
-  }, [today?.survey_date, today?.status, nextSurvey?.survey_date, nextSurvey?.is_open]);
+    return (
+      <SurveyDayCrowdFoot
+        dateKey={nextKey}
+        days={crowdDays}
+        daysError={crowdDaysError}
+        liveKospi={liveKospiForCrowd}
+      />
+    );
+  }, [
+    showNextPreSurvey,
+    nextSurvey?.is_open,
+    nextSurvey?.survey_date,
+    crowdDays,
+    crowdDaysError,
+    liveKospiForCrowd,
+  ]);
+
+  useEffect(() => {
+    if (isWeekendKST) return;
+    let cancelled = false;
+    setCrowdDaysError(null);
+    void (async () => {
+      try {
+        const d = await getCrowdGaugeBoxplots(8);
+        if (!cancelled) setCrowdDays(Array.isArray(d.days) ? d.days : []);
+      } catch (e: unknown) {
+        if (!cancelled) {
+          setCrowdDaysError(e instanceof Error ? e.message : String(e));
+          setCrowdDays([]);
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [isWeekendKST, today?.survey_date, nextSurvey?.survey_date, alreadyAnswered, nextSubmitted]);
 
   if (authChecking) {
     return <PageLoadProgress label="확인 중…" accent="violet" />;
   }
-
-  const status = today?.status ?? "no_survey";
-  const surveyUiLocked = awaitingToday || submitting || nextSubmitting;
-
-  // API status와 무관하게 클라이언트에서 주말 여부 직접 판단
-  const _kstNow = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Seoul" }));
-  const _kstDay = _kstNow.getDay();
-  const isWeekendKST = _kstDay === 0 || _kstDay === 6;
-  /** 당일 설문 제출 전에는 사전설문 UI를 가리고, 마감·결과·휴장·당일 완료 후에만 표시 */
-  const showNextPreSurvey =
-    !!nextSurvey?.is_open && (status !== "open" || alreadyAnswered || submitted);
 
   return (
     <main className="relative w-full min-h-screen app-page-tab-pad min-w-0 box-border text-[1.0625rem] sm:text-lg px-4 sm:px-5">
@@ -960,16 +1029,10 @@ function SurveyPageInner() {
         <div className="mb-4 fade-up-2">
           <CrowdGaugeBoxplotsSection
             variant="survey"
-            openDates={crowdOpenDates}
-            liveKospi={
-              isKospiMarketSessionOpenKST() && kospiPrice
-                ? {
-                    price: kospiPrice.price,
-                    change_pct: kospiPrice.change_pct,
-                    is_up: kospiPrice.is_up,
-                  }
-                : null
-            }
+            openDates={crowdTopDates}
+            days={crowdDays}
+            daysError={crowdDaysError}
+            liveKospi={liveKospiForCrowd}
           />
         </div>
       ) : null}
@@ -1007,6 +1070,7 @@ function SurveyPageInner() {
                 }
               }}
               confidenceJustSaved={nextConfidenceSavedFlash}
+              crowdFoot={nextPreSurveyCrowdFoot}
             />
           </div>
         </div>
@@ -1094,6 +1158,7 @@ function SurveyPageInner() {
                   }
                 }}
                 confidenceJustSaved={nextConfidenceSavedFlash}
+                crowdFoot={nextPreSurveyCrowdFoot}
               />
             </div>
           )}
@@ -1205,6 +1270,7 @@ function SurveyPageInner() {
                     }
                   }}
                   confidenceJustSaved={nextConfidenceSavedFlash}
+                  crowdFoot={nextPreSurveyCrowdFoot}
                 />
               </div>
             </div>
