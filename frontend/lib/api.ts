@@ -882,22 +882,31 @@ export async function createStripePackCheckout(accessToken: string, packSlug: st
   });
 }
 
-/** 명예의 전당 토큰 순위 항목 */
-export interface TokenRankingEntry {
+/** 명예의 전당 순위 항목 (토큰·적중률 공통) */
+export interface HallOfFameRankingEntry {
   user_id: string;
   masked_name: string;
   score: number;
   rank: number;
+  correct?: number;
+  total?: number;
 }
+
+/** @deprecated HallOfFameRankingEntry 사용 */
+export type TokenRankingEntry = HallOfFameRankingEntry;
 
 export interface HallOfFameRankings {
   week_id: string;
   week_start: string;
   week_end: string;
-  cumulative: TokenRankingEntry[];
-  weekly: TokenRankingEntry[];
+  cumulative: HallOfFameRankingEntry[];
+  weekly: HallOfFameRankingEntry[];
+  accuracy_cumulative: HallOfFameRankingEntry[];
+  accuracy_weekly: HallOfFameRankingEntry[];
   my_cumulative_rank: number | null;
   my_weekly_rank: number | null;
+  my_accuracy_cumulative_rank: number | null;
+  my_accuracy_weekly_rank: number | null;
 }
 
 export async function getHallOfFameRankings(accessToken: string): Promise<HallOfFameRankings> {
