@@ -35,37 +35,43 @@ function RankingRow({
   const scoreMain =
     variant === "accuracy" ? (
       <>
-        {entry.score}
-        <span className="text-[10px] font-normal text-gray-500">%</span>
+        <span className="text-xl sm:text-2xl">{entry.score}</span>
+        <span className="text-sm sm:text-base font-bold text-gray-500">%</span>
       </>
     ) : (
-      <ChipAmount amount={entry.score} compact className="text-amber-200" />
+      <ChipAmount amount={entry.score} large className="text-amber-200" />
     );
   const scoreSub =
     variant === "accuracy" && entry.correct != null && entry.total != null ? (
-      <span className="ml-1 text-[10px] font-normal text-gray-500 tabular-nums">
+      <span className="ml-1.5 text-sm sm:text-base font-medium text-gray-500 tabular-nums">
         ({entry.correct}/{entry.total})
       </span>
     ) : null;
 
   return (
     <div
-      className={`flex items-center justify-between gap-2 rounded-xl border px-3 py-2.5 text-xs sm:text-sm ${
+      className={`flex items-center justify-between gap-3 rounded-xl border px-3.5 py-3 sm:px-4 sm:py-3.5 ${
         highlight
           ? "border-amber-400/35 bg-amber-500/10 text-white"
           : "border-[#2A2A2A] bg-[#1A1A1A] text-gray-200"
       }`}
     >
-      <span className="flex min-w-0 items-center gap-2">
-        <span className="w-7 shrink-0 text-center font-black tabular-nums text-gray-400">
-          {medal ?? entry.rank}
-        </span>
-        <span className="truncate font-bold">{entry.masked_name}</span>
+      <span className="flex min-w-0 items-center gap-2.5 sm:gap-3">
+        {medal ? (
+          <span className="w-9 sm:w-10 shrink-0 text-center text-2xl sm:text-3xl leading-none" aria-hidden>
+            {medal}
+          </span>
+        ) : (
+          <span className="w-9 sm:w-10 shrink-0 text-center text-lg sm:text-xl font-black tabular-nums text-gray-400">
+            {entry.rank}
+          </span>
+        )}
+        <span className="truncate text-base sm:text-lg font-bold">{entry.masked_name}</span>
         {highlight ? (
-          <span className="shrink-0 text-[10px] font-bold text-amber-300/90">나</span>
+          <span className="shrink-0 text-xs sm:text-sm font-bold text-amber-300/90">나</span>
         ) : null}
       </span>
-      <span className="shrink-0 font-black tabular-nums text-amber-200">
+      <span className="shrink-0 font-black tabular-nums text-amber-200 flex items-baseline">
         {scoreMain}
         {scoreSub}
       </span>
@@ -86,7 +92,7 @@ function RankingList({
 }) {
   if (entries.length === 0 && !myEntry) {
     return (
-      <p className="text-xs text-gray-500 py-2">
+      <p className="text-sm sm:text-base text-gray-500 py-2">
         {variant === "token" ? "아직 칩 순위 데이터가 없어요." : "아직 적중률 순위 데이터가 없어요."}
       </p>
     );
@@ -98,7 +104,7 @@ function RankingList({
   return (
     <div className="space-y-3">
       {entries.length > 0 ? (
-        <ol className="space-y-1.5" aria-label="상위 순위">
+        <ol className="space-y-2" aria-label="상위 순위">
           {entries.map((e) => {
             const mine = meId != null && e.user_id === meId;
             return (
@@ -111,8 +117,8 @@ function RankingList({
       ) : null}
 
       {meId && myEntry ? (
-        <div className="rounded-xl border border-amber-500/25 bg-amber-950/20 px-3 py-2.5">
-          <p className="text-xs font-black text-amber-200/95 mb-2">내 순위</p>
+        <div className="rounded-xl border border-amber-500/25 bg-amber-950/20 px-3.5 py-3 sm:px-4 sm:py-3.5">
+          <p className="text-sm sm:text-base font-black text-amber-200/95 mb-2.5">내 순위</p>
           <RankingRow
             entry={myEntry}
             variant={variant}
@@ -165,21 +171,21 @@ function RankBlock({
         : "전체 기간 코스피 예측 적중률이에요. 참여 일수가 많을수록 같은 %라도 순위에서 유리합니다.";
 
   return (
-    <section className={`mb-5 rounded-2xl border p-4 ${borderClass}`}>
+    <section className={`mb-5 rounded-2xl border p-4 sm:p-5 ${borderClass}`}>
       <div className="mb-3 flex items-start justify-between gap-2">
         <div>
-          <h2 className={`text-sm font-black ${titleClass}`}>{title}</h2>
+          <h2 className={`text-base sm:text-lg font-black ${titleClass}`}>{title}</h2>
           {data ? (
-            <p className="mt-0.5 text-[10px] text-gray-500">
+            <p className="mt-1 text-xs sm:text-sm text-gray-500">
               {tab === "weekly" ? `주간 · ${formatWeekRange(data)}` : "누적 · 전체 기간"}
             </p>
           ) : null}
         </div>
-        <div className="flex shrink-0 rounded-lg border border-[#333] bg-[#111] p-0.5 text-[10px]">
+        <div className="flex shrink-0 rounded-lg border border-[#333] bg-[#111] p-0.5 text-xs sm:text-sm">
           <button
             type="button"
             onClick={() => onTabChange("weekly")}
-            className={`rounded-md px-2.5 py-1 font-bold transition-colors ${
+            className={`rounded-md px-3 py-1.5 font-bold transition-colors ${
               tab === "weekly" ? activeTabClass : "text-gray-500"
             }`}
           >
@@ -188,7 +194,7 @@ function RankBlock({
           <button
             type="button"
             onClick={() => onTabChange("cumulative")}
-            className={`rounded-md px-2.5 py-1 font-bold transition-colors ${
+            className={`rounded-md px-3 py-1.5 font-bold transition-colors ${
               tab === "cumulative" ? activeTabClass : "text-gray-500"
             }`}
           >
@@ -197,12 +203,12 @@ function RankBlock({
         </div>
       </div>
 
-      <p className="mb-3 text-[11px] leading-relaxed text-white/75">{description}</p>
+      <p className="mb-4 text-sm sm:text-base leading-relaxed text-white/80">{description}</p>
 
       {loading && !data ? (
-        <p className="text-xs text-gray-500">불러오는 중…</p>
+        <p className="text-sm text-gray-500">불러오는 중…</p>
       ) : err ? (
-        <p className="text-xs text-red-300/90">{err}</p>
+        <p className="text-sm text-red-300/90">{err}</p>
       ) : (
         <RankingList entries={entries} variant={variant} myEntry={myEntry} meId={meId} />
       )}
