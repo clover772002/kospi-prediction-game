@@ -183,12 +183,12 @@ export default function GaugeBar({
       {/* 방향 + 확신도 수치 */}
       <div className="flex items-end justify-between gap-3">
         <div>
-          <p className="text-xs text-gray-500 font-bold mb-0.5">예측 방향</p>
-          <span className={`text-2xl font-black ${dirColor}`}>{dirLabel}</span>
+          <p className="text-xs sm:text-sm text-gray-500 font-bold mb-0.5">예측 방향</p>
+          <span className={`text-3xl sm:text-4xl font-black ${dirColor}`}>{dirLabel}</span>
         </div>
         <div className="text-right">
-          <p className="text-xs text-gray-500 font-bold mb-0.5">확신도 (등락률 아님)</p>
-          <span className={`text-3xl font-black tabular-nums ${dirColor}`}>
+          <p className="text-xs sm:text-sm text-gray-500 font-bold mb-0.5">확신도 (등락률 아님)</p>
+          <span className={`text-4xl sm:text-5xl font-black tabular-nums leading-none ${dirColor}`}>
             {isUp ? "+" : ""}
             {value}
           </span>
@@ -204,11 +204,11 @@ export default function GaugeBar({
         className={`select-none rounded-xl pt-1 pb-3 -my-1 ${disabled ? "" : "cursor-grab active:cursor-grabbing"}`}
         style={{ touchAction: "none" }}
       >
-        <div className="relative h-4 mb-0.5 px-0.5" aria-hidden>
+        <div className="relative h-5 sm:h-6 mb-1 px-0.5" aria-hidden>
           {GAUGE_TICKS.map(({ v, color }) => (
             <span
               key={v}
-              className={`absolute bottom-0 text-[10px] sm:text-xs font-bold tabular-nums leading-none ${color}`}
+              className={`absolute bottom-0 text-xs sm:text-sm font-black tabular-nums leading-none ${color}`}
               style={{
                 left: gaugeTickLeft(v),
                 transform: gaugeTickTransform(v),
@@ -264,29 +264,29 @@ export default function GaugeBar({
         )}
       </div>
 
-      <div className="flex justify-between text-sm font-bold px-1 -mt-1">
+      <div className="flex justify-between text-base sm:text-lg font-bold px-1 -mt-1">
         <span className="text-blue-400">하락</span>
         <span className="text-red-400">상승</span>
       </div>
 
       {/* 배팅 정보 */}
-      <div className="bg-[#111] border border-[#2A2A2A] rounded-xl p-3 space-y-1.5">
-        <div className="flex justify-between text-base items-center">
-          <span className="text-gray-500">보유</span>
-          <ChipAmount amount={tokens} className="text-white" />
+      <div className="bg-[#111] border border-[#2A2A2A] rounded-xl p-4 sm:p-5 space-y-2.5">
+        <div className="flex justify-between text-base sm:text-lg items-center">
+          <span className="text-gray-500 font-medium">보유</span>
+          <ChipAmount amount={tokens} large className="text-white" />
         </div>
-        <div className="flex justify-between text-base items-center">
-          <span className="text-gray-500">배팅</span>
-          <ChipAmount amount={bet} className={dirColor} />
+        <div className="flex justify-between text-base sm:text-lg items-center">
+          <span className="text-gray-500 font-medium">배팅</span>
+          <ChipAmount amount={bet} large className={dirColor} />
         </div>
         <div className="h-px bg-[#222]" />
-        <div className="flex justify-between gap-2 text-base items-center flex-wrap">
-          <span className="text-gray-500 shrink-0">적중 시</span>
-          <ChipAmount amount={hitBalance} className="text-green-400" />
+        <div className="flex justify-between gap-2 text-base sm:text-lg items-center flex-wrap">
+          <span className="text-gray-500 shrink-0 font-medium">적중 시</span>
+          <ChipAmount amount={hitBalance} large className="text-green-400" />
         </div>
-        <div className="flex justify-between text-base items-center">
-          <span className="text-gray-500">실패 시</span>
-          <ChipAmount amount={Math.max(0, tokens - bet)} className="text-red-400" />
+        <div className="flex justify-between text-base sm:text-lg items-center">
+          <span className="text-gray-500 font-medium">실패 시</span>
+          <ChipAmount amount={Math.max(0, tokens - bet)} large className="text-red-400" />
         </div>
       </div>
 

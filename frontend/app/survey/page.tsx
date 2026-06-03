@@ -194,9 +194,14 @@ function SurveyCompletedPanel({
             disabled
             beginnerTips={false}
           />
-          <p className="text-center text-sm font-bold text-white/90 mt-2 tabular-nums">
-            {dirEmoji} {dirLabel} · 확신도 {Math.abs(gaugeValue)} · 배팅{" "}
-            <ChipAmount amount={bet} compact className="inline-flex text-red-200" />
+          <p className="text-center text-base sm:text-lg font-bold text-white/90 mt-2 tabular-nums flex flex-wrap items-center justify-center gap-x-1.5 gap-y-0.5">
+            <span>
+              {dirEmoji} {dirLabel} · 확신도{" "}
+              <span className="text-xl sm:text-2xl font-black text-white">{Math.abs(gaugeValue)}</span>
+            </span>
+            <span className="inline-flex items-center gap-1">
+              · 배팅 <ChipAmount amount={bet} large className="inline-flex text-red-200" />
+            </span>
           </p>
         </div>
         <button
