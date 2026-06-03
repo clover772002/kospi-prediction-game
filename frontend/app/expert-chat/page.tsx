@@ -1,13 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import {
   getExpertChatThreadMessages,
-  getExpertChatThreads,
-  getToday,
   postExpertChatMessage,
   postExpertChatAcceptTip,
   postExpertChatReply,
@@ -17,16 +15,27 @@ import {
   type ExpertChatThreadSummary,
   type UserProfile,
 } from "@/lib/api";
+import { buildKstSurveyTodayPlaceholder } from "@/lib/survey-today-placeholder";
 import {
   getExpertChatEligibilityCached,
+  getExpertChatThreadsCached,
   getMeCached,
+  getTodaySummaryCached,
+  invalidateExpertChatThreadsCache,
   invalidateExpertEligibilityCache,
 } from "@/lib/session-api-cache";
+import {
+  peekDashboardSnapshot,
+  peekExpertChatSnapshot,
+  peekSurveyTodaySnapshot,
+  saveExpertChatSnapshot,
+} from "@/lib/tab-session-cache";
 import AppAmbientBackground from "@/components/AppAmbientBackground";
 import AppTabNav from "@/components/AppTabNav";
 import ExpertChatTabGate from "@/components/ExpertChatTabGate";
 import TopExpertNoticeBlock from "@/components/TopExpertNoticeBlock";
 import PageLoadProgress from "@/components/PageLoadProgress";
+import StaleRefreshIndicator from "@/components/StaleRefreshIndicator";
 
 function newIdempotencyKey(): string {
   if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
@@ -38,6 +47,16 @@ function newIdempotencyKey(): string {
 function maskFallback(id: string): string {
   const s = id.slice(0, 4);
   return s ? `참여자 (${s}…)` : "참여자";
+}
+
+function resolveInitialSurveyDate(): string {
+  const expert = peekExpertChatSnapshot();
+  if (expert?.surveyDate) return expert.surveyDate;
+  const survey = peekSurveyTodaySnapshot();
+  if (survey?.today?.survey_date) return survey.today.survey_date.slice(0, 10);
+  const dash = peekDashboardSnapshot();
+  if (dash?.today?.survey_date) return dash.today.survey_date.slice(0, 10);
+  return buildKstSurveyTodayPlaceholder().survey_date;
 }
 
 export default function ExpertChatPage() {
@@ -56,7 +75,10 @@ export default function ExpertChatPage() {
   const [sendKey, setSendKey] = useState(newIdempotencyKey);
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [boot, setBoot] = useState(true);
+  const [authChecking, setAuthChecking] = useState(true);
+  const [awaitingCore, setAwaitingCore] = useState(true);
+  const [revalidating, setRevalidating] = useState(false);
+  const hadSnapOnMount = useRef(false);
 
   const selectedThread = useMemo(
     () => threads.find((t) => t.thread_id === selectedId) ?? null,
@@ -79,9 +101,10 @@ export default function ExpertChatPage() {
     );
   }, [me, eligibility]);
 
-  const refreshThreads = useCallback(async (accessToken: string) => {
-    const { threads: t } = await getExpertChatThreads(accessToken);
+  const refreshThreads = useCallback(async (accessToken: string, sd: string, el: ExpertChatEligibility) => {
+    const t = await getExpertChatThreadsCached(accessToken);
     setThreads(t);
+    saveExpertChatSnapshot(sd, el, t);
   }, []);
 
   const refreshEligibility = useCallback(async (accessToken: string, sd: string) => {
@@ -90,56 +113,93 @@ export default function ExpertChatPage() {
     setEligibility(e);
   }, []);
 
+  useLayoutEffect(() => {
+    const sd = resolveInitialSurveyDate();
+    setSurveyDate(sd);
+    const dash = peekDashboardSnapshot();
+    if (dash?.user) setMe(dash.user);
+    const snap = peekExpertChatSnapshot();
+    if (snap && snap.surveyDate === sd) {
+      hadSnapOnMount.current = true;
+      setEligibility(snap.eligibility);
+      setThreads(snap.threads);
+      setAwaitingCore(false);
+    } else {
+      hadSnapOnMount.current = false;
+    }
+  }, []);
+
   useEffect(() => {
     let cancelled = false;
-    void supabase.auth.getSession().then(({ data: { session } }) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (cancelled) return;
-      if (!session) {
+      setAuthChecking(false);
+      if (!session?.access_token) {
         router.replace("/");
         return;
       }
-      setToken(session.access_token);
-    });
-    const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => {
-      if (!session) router.replace("/");
-      else setToken(session.access_token);
+      if (event === "INITIAL_SESSION" || event === "SIGNED_IN") {
+        setToken(session.access_token);
+      }
     });
     return () => {
       cancelled = true;
-      sub.subscription.unsubscribe();
+      subscription.unsubscribe();
     };
   }, [router]);
 
   useEffect(() => {
     if (!token) return;
     let cancelled = false;
+    const silent = hadSnapOnMount.current;
     void (async () => {
-      setBoot(true);
+      if (!silent) setRevalidating(true);
       setErr(null);
       try {
-        const [prof, today] = await Promise.all([getMeCached(token), getToday()]);
+        const today = await getTodaySummaryCached();
+        const sd = (surveyDate ?? today.survey_date)?.slice(0, 10) ?? null;
+        if (!sd) {
+          setAwaitingCore(false);
+          return;
+        }
         if (cancelled) return;
-        setMe(prof);
-        const sd = today.survey_date?.slice(0, 10) ?? null;
         setSurveyDate(sd);
-        if (sd) {
-          const e = await getExpertChatEligibilityCached(token, sd);
-          if (cancelled) return;
-          setEligibility(e);
-          if (e.can_access_expert_chat) {
-            await refreshThreads(token);
+
+        const e = await getExpertChatEligibilityCached(token, sd);
+        if (cancelled) return;
+        setEligibility(e);
+
+        let t: ExpertChatThreadSummary[] = [];
+        if (e.can_access_expert_chat) {
+          if (hadSnapOnMount.current) {
+            t = peekExpertChatSnapshot()?.threads ?? [];
+          } else {
+            t = await getExpertChatThreadsCached(token);
           }
         }
-      } catch (e) {
-        if (!cancelled) setErr(e instanceof Error ? e.message : String(e));
+        if (cancelled) return;
+        setThreads(t);
+        saveExpertChatSnapshot(sd, e, t);
+        setAwaitingCore(false);
+      } catch (err) {
+        if (!cancelled) setErr(err instanceof Error ? err.message : String(err));
       } finally {
-        if (!cancelled) setBoot(false);
+        if (!cancelled) setRevalidating(false);
       }
     })();
+
+    window.setTimeout(() => {
+      void getMeCached(token)
+        .then((prof) => {
+          if (!cancelled) setMe(prof);
+        })
+        .catch(() => {});
+    }, 50);
+
     return () => {
       cancelled = true;
     };
-  }, [token, refreshThreads]);
+  }, [token, surveyDate]);
 
   useEffect(() => {
     if (!pickerRecipients.length) {
@@ -195,7 +255,10 @@ export default function ExpertChatPage() {
       }
       setBody("");
       setSendKey(newIdempotencyKey());
-      await refreshThreads(token);
+      invalidateExpertChatThreadsCache();
+      if (eligibility && surveyDate) {
+        await refreshThreads(token, surveyDate, eligibility);
+      }
       if (res.thread_id) {
         setSelectedId(res.thread_id);
       }
@@ -218,7 +281,10 @@ export default function ExpertChatPage() {
       setReplyBody("");
       const { messages: ms } = await getExpertChatThreadMessages(token, selectedThread.thread_id);
       setMessages(ms);
-      await refreshThreads(token);
+      invalidateExpertChatThreadsCache();
+      if (eligibility && surveyDate) {
+        await refreshThreads(token, surveyDate, eligibility);
+      }
     } catch (e) {
       setErr(e instanceof Error ? e.message : String(e));
     } finally {
@@ -234,7 +300,10 @@ export default function ExpertChatPage() {
       await postExpertChatAcceptTip(token, { message_id: messageId });
       const { messages: ms } = await getExpertChatThreadMessages(token, selectedThread.thread_id);
       setMessages(ms);
-      await refreshThreads(token);
+      invalidateExpertChatThreadsCache();
+      if (eligibility && surveyDate) {
+        await refreshThreads(token, surveyDate, eligibility);
+      }
     } catch (e: unknown) {
       setErr(e instanceof Error ? e.message : String(e));
     } finally {
@@ -246,15 +315,18 @@ export default function ExpertChatPage() {
     return nameMap.get(uid) ?? maskFallback(uid);
   }
 
-  if (!token || boot) {
-    return <PageLoadProgress label="고수 소통 불러오는 중…" accent="blue" />;
+  if (authChecking || !token) {
+    return <PageLoadProgress label="확인 중…" accent="blue" />;
   }
 
-  const tabLocked = eligibility != null && !eligibility.can_access_expert_chat;
+  const tabLocked =
+    !awaitingCore && eligibility != null && !eligibility.can_access_expert_chat;
+  const actionLocked = awaitingCore || busy;
 
   if (tabLocked && eligibility) {
     return (
       <>
+        <StaleRefreshIndicator show={awaitingCore || revalidating} tone="violet" />
         <AppAmbientBackground />
         <main className="relative z-10 mx-auto min-h-screen max-w-md px-4 app-page-tab-pad pt-6">
           <h1 className="mb-4 text-center text-2xl font-black text-white">고수 소통</h1>
@@ -282,6 +354,7 @@ export default function ExpertChatPage() {
 
   return (
     <>
+      <StaleRefreshIndicator show={awaitingCore || revalidating} tone="violet" />
       <AppAmbientBackground />
       <main className="relative z-10 mx-auto min-h-screen max-w-md px-4 app-page-tab-pad pt-5">
         <div className="mb-4 flex items-center justify-between gap-2">
@@ -423,8 +496,8 @@ export default function ExpertChatPage() {
                       {showExpertTipCta ? (
                         <button
                           type="button"
-                          disabled={busy}
-                          onClick={() => void handleAcceptTip(m.id)}
+                  disabled={actionLocked}
+                  onClick={() => void handleAcceptTip(m.id)}
                           className="max-w-[85%] rounded-lg border border-amber-500/35 bg-amber-600/25 px-3 py-1.5 text-[11px] font-bold text-amber-100 transition-colors hover:bg-amber-600/35 disabled:opacity-45"
                         >
                           팁 {m.tip_tokens}토큰 수락하기
@@ -452,7 +525,7 @@ export default function ExpertChatPage() {
                 />
                 <button
                   type="button"
-                  disabled={busy || !replyBody.trim()}
+                  disabled={actionLocked || !replyBody.trim()}
                   onClick={() => void handleReply()}
                   className="w-full rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 py-2.5 text-sm font-bold text-white disabled:opacity-50"
                 >
@@ -485,11 +558,11 @@ export default function ExpertChatPage() {
             rows={5}
             className="mb-3 w-full resize-none rounded-xl border border-[#333] bg-[#111] px-3 py-2 text-sm text-white placeholder:text-gray-600"
             placeholder="고수에게 보낼 메시지"
-            disabled={!eligibility?.can_send_message}
+            disabled={actionLocked || !eligibility?.can_send_message}
           />
           <button
             type="button"
-            disabled={busy || !eligibility?.can_send_message || !body.trim() || !recipientId}
+            disabled={actionLocked || !eligibility?.can_send_message || !body.trim() || !recipientId}
             onClick={() => void handleSend()}
             className="w-full rounded-xl bg-gradient-to-r from-amber-600 to-orange-600 py-2.5 text-sm font-black text-white disabled:opacity-50"
           >

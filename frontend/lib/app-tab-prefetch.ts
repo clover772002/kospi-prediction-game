@@ -9,9 +9,16 @@ import {
   getMyGroups,
   getShopCatalog,
 } from "@/lib/api";
-import { getDirectionChatRoomCached, getMeCached, getTodaySummaryCached } from "@/lib/session-api-cache";
+import {
+  getDirectionChatRoomCached,
+  getExpertChatEligibilityCached,
+  getExpertChatThreadsCached,
+  getMeCached,
+  getTodaySummaryCached,
+} from "@/lib/session-api-cache";
 import {
   saveDashboardSnapshot,
+  saveExpertChatSnapshot,
   saveGroupsSnapshot,
   saveShopSnapshot,
   saveSurveyNextSnapshot,
@@ -119,6 +126,19 @@ export async function runAppTabPrefetch(
           saveTeamChatSnapshot(room.survey_date, st, messages);
         })
         .catch(() => {});
+
+      void (async () => {
+        try {
+          const e = await withTimeout(getExpertChatEligibilityCached(accessToken, sdTeam), 20_000);
+          let threads: Awaited<ReturnType<typeof getExpertChatThreadsCached>> = [];
+          if (e.can_access_expert_chat) {
+            threads = await withTimeout(getExpertChatThreadsCached(accessToken), 20_000);
+          }
+          saveExpertChatSnapshot(sdTeam, e, threads);
+        } catch {
+          /* 고수 탭은 백그라운드 워밍 */
+        }
+      })();
     }
 
     onProgress?.("준비 완료!");

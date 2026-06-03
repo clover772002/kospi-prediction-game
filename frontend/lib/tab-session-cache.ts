@@ -3,6 +3,8 @@ import type {
   DashboardData,
   DirectionChatMessageRow,
   DirectionChatStatus,
+  ExpertChatEligibility,
+  ExpertChatThreadSummary,
   Group,
   ShopCatalog,
   TodaySurvey,
@@ -43,8 +45,16 @@ export type TeamChatTabSnapshot = {
   savedAt: number;
 };
 
+export type ExpertChatTabSnapshot = {
+  surveyDate: string;
+  eligibility: ExpertChatEligibility;
+  threads: ExpertChatThreadSummary[];
+  savedAt: number;
+};
+
 const STORAGE_KEY = "kp_dash_snap_v1";
 const TEAM_CHAT_KEY = "kp_team_chat_snap_v1";
+const EXPERT_CHAT_KEY = "kp_expert_chat_snap_v1";
 const SHOP_KEY = "kp_shop_snap_v1";
 const SURVEY_TODAY_KEY = "kp_survey_today_snap_v1";
 const GROUPS_KEY = "kp_groups_snap_v1";
@@ -492,6 +502,76 @@ export function clearTeamChatSnapshot(): void {
   }
 }
 
+// ── 고수 소통 (/expert-chat) ──────────────────────────────────
+
+let expertChatMemory: ExpertChatTabSnapshot | null = null;
+
+function readExpertChatFromStorage(): ExpertChatTabSnapshot | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = sessionStorage.getItem(EXPERT_CHAT_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as ExpertChatTabSnapshot;
+    if (!parsed?.savedAt || Date.now() - parsed.savedAt > DASHBOARD_SNAPSHOT_TTL_MS) {
+      sessionStorage.removeItem(EXPERT_CHAT_KEY);
+      return null;
+    }
+    return parsed;
+  } catch {
+    try {
+      sessionStorage.removeItem(EXPERT_CHAT_KEY);
+    } catch {
+      /* noop */
+    }
+    return null;
+  }
+}
+
+export function peekExpertChatSnapshot(): ExpertChatTabSnapshot | null {
+  if (expertChatMemory && Date.now() - expertChatMemory.savedAt <= DASHBOARD_SNAPSHOT_TTL_MS) {
+    return expertChatMemory;
+  }
+  expertChatMemory = null;
+  const s = readExpertChatFromStorage();
+  if (s) {
+    expertChatMemory = s;
+    return s;
+  }
+  return null;
+}
+
+export function saveExpertChatSnapshot(
+  surveyDate: string,
+  eligibility: ExpertChatEligibility,
+  threads: ExpertChatThreadSummary[],
+): void {
+  const full: ExpertChatTabSnapshot = {
+    surveyDate: surveyDate.slice(0, 10),
+    eligibility,
+    threads,
+    savedAt: Date.now(),
+  };
+  expertChatMemory = full;
+  if (typeof window !== "undefined") {
+    try {
+      sessionStorage.setItem(EXPERT_CHAT_KEY, JSON.stringify(full));
+    } catch {
+      /* noop */
+    }
+  }
+}
+
+export function clearExpertChatSnapshot(): void {
+  expertChatMemory = null;
+  if (typeof window !== "undefined") {
+    try {
+      sessionStorage.removeItem(EXPERT_CHAT_KEY);
+    } catch {
+      /* noop */
+    }
+  }
+}
+
 /** 로그아웃 시 탭 스냅샷 전부 제거 */
 export function clearAllTabSnapshots(): void {
   clearDashboardSnapshot();
@@ -500,6 +580,7 @@ export function clearAllTabSnapshots(): void {
   clearSurveyNextSnapshot();
   clearGroupsSnapshot();
   clearTeamChatSnapshot();
+  clearExpertChatSnapshot();
   clearAnsweredTodaySnapshot();
   clearSessionApiCache();
 }

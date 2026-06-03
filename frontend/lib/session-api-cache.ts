@@ -1,12 +1,14 @@
 import {
   getDirectionChatRoom,
   getExpertChatEligibility,
+  getExpertChatThreads,
   getMe,
   getMySurveyResponse,
   getPendingGrant,
   getTodaySummary,
   type DirectionChatRoom,
   type ExpertChatEligibility,
+  type ExpertChatThreadSummary,
   type MySurveyResponse,
   type NextSurveyInfo,
   type TodaySurvey,
@@ -20,6 +22,7 @@ const PENDING_GRANT_TTL_MS = 60_000;
 const NEXT_SURVEY_TTL_MS = 120_000;
 const TODAY_SUMMARY_TTL_MS = 90_000;
 const DIRECTION_ROOM_TTL_MS = 45_000;
+const EXPERT_THREADS_TTL_MS = 45_000;
 
 let meCache: { token: string; data: UserProfile; savedAt: number } | null = null;
 let meInflight: { token: string; promise: Promise<UserProfile> } | null = null;
@@ -41,6 +44,9 @@ let todaySummaryInflight: Promise<TodaySurvey> | null = null;
 
 const directionRoomCache = new Map<string, { data: DirectionChatRoom; savedAt: number }>();
 const directionRoomInflight = new Map<string, Promise<DirectionChatRoom>>();
+
+const expertThreadsCache = new Map<string, { data: ExpertChatThreadSummary[]; savedAt: number }>();
+const expertThreadsInflight = new Map<string, Promise<ExpertChatThreadSummary[]>>();
 
 function directionRoomKey(token: string, surveyDate?: string): string {
   const d = surveyDate?.trim().slice(0, 10) ?? "";
@@ -102,6 +108,46 @@ export async function getExpertChatEligibilityCached(
     eligInflight.delete(key);
   });
   return promise;
+}
+
+/** AppTabNav·고수 탭 즉시 페인트 — 아직 유효한 eligibility만 */
+export function peekExpertEligibilityCached(
+  token: string,
+  surveyDate?: string,
+): ExpertChatEligibility | null {
+  const key = eligKey(token, surveyDate);
+  const hit = eligCache.get(key);
+  if (hit && Date.now() - hit.savedAt < ELIG_TTL_MS) {
+    return hit.data;
+  }
+  return null;
+}
+
+/** 고수 탭 스레드 목록 dedupe */
+export async function getExpertChatThreadsCached(token: string): Promise<ExpertChatThreadSummary[]> {
+  const now = Date.now();
+  const hit = expertThreadsCache.get(token);
+  if (hit && now - hit.savedAt < EXPERT_THREADS_TTL_MS) {
+    return hit.data;
+  }
+  const inflight = expertThreadsInflight.get(token);
+  if (inflight) return inflight;
+
+  const promise = getExpertChatThreads(token).then(({ threads }) => {
+    expertThreadsCache.set(token, { data: threads, savedAt: Date.now() });
+    expertThreadsInflight.delete(token);
+    return threads;
+  });
+  expertThreadsInflight.set(token, promise);
+  promise.catch(() => {
+    expertThreadsInflight.delete(token);
+  });
+  return promise;
+}
+
+export function invalidateExpertChatThreadsCache(): void {
+  expertThreadsCache.clear();
+  expertThreadsInflight.clear();
 }
 
 /** 설문·대시 — 거래일별 my-response 중복 방지 (HAR: Next 라우트 3회+프록시) */
@@ -268,6 +314,7 @@ export function clearSessionApiCache(): void {
   invalidatePendingGrantCache();
   invalidateTodaySummaryCache();
   invalidateDirectionChatRoomCache();
+  invalidateExpertChatThreadsCache();
   nextSurveyCache = null;
   nextSurveyInflight = null;
 }
