@@ -130,41 +130,73 @@ function HorizontalSignedBox({
   const pMed = toPct(median);
   const boxLeft = Math.min(pQ1, pQ3);
   const boxW = Math.max(0.35, Math.abs(pQ3 - pQ1));
+  const whiskerStroke = variant === "rise" ? "#dc2626" : "#2563eb";
+  const boxFill = variant === "rise" ? "rgba(239,68,68,0.18)" : "rgba(59,130,246,0.18)";
+  const boxStroke = variant === "rise" ? "rgba(248,113,113,0.55)" : "rgba(96,165,250,0.55)";
+  const midY = 10;
+  const boxTop = 3;
+  const boxBottom = 17;
 
   return (
     <BoxplotCardWrap highlight={highlight}>
       <div className={`rounded-xl border ${palette.border} bg-[#141414]/90 ${cardPad} flex flex-col h-full ${ring}`}>
         <BoxplotColumnHeader variant={variant} count={respondentCount} emphasize={emphasize} />
-        <div className="relative h-10 w-full flex-1 min-h-[40px] mt-1">
-          <div className="absolute inset-x-0 bottom-0 h-px bg-gray-700/90" />
-          <div className="absolute inset-x-0 top-0 bottom-2">
-            <div
-              className={`absolute top-1/2 left-0 h-2.5 w-px -translate-x-1/2 -translate-y-1/2 ${palette.whisker}`}
-              style={{ left: `${pMin}%` }}
+        <div className="relative w-full mt-1">
+          <svg
+            viewBox="0 0 100 20"
+            className="block w-full h-5"
+            preserveAspectRatio="none"
+            aria-hidden
+          >
+            <line
+              x1={pMin}
+              y1={midY}
+              x2={pMax}
+              y2={midY}
+              stroke={whiskerStroke}
+              strokeWidth="0.65"
+              strokeLinecap="round"
+              opacity={0.85}
             />
-            <div
-              className={`absolute top-1/2 left-0 h-2.5 w-px -translate-x-1/2 -translate-y-1/2 ${palette.whisker}`}
-              style={{ left: `${pMax}%` }}
+            <line
+              x1={pMin}
+              y1={midY - 3.5}
+              x2={pMin}
+              y2={midY + 3.5}
+              stroke={whiskerStroke}
+              strokeWidth="0.65"
+              strokeLinecap="round"
             />
-            <div
-              className={`absolute top-1/2 h-0.5 -translate-y-1/2 ${palette.whisker} rounded-full opacity-80`}
-              style={{
-                left: `${Math.min(pMin, pMax)}%`,
-                width: `${Math.abs(pMax - pMin)}%`,
-              }}
+            <line
+              x1={pMax}
+              y1={midY - 3.5}
+              x2={pMax}
+              y2={midY + 3.5}
+              stroke={whiskerStroke}
+              strokeWidth="0.65"
+              strokeLinecap="round"
             />
-            <div
-              className={`absolute top-1/2 h-5 -translate-y-1/2 rounded-md border ${palette.box}`}
-              style={{
-                left: `${boxLeft}%`,
-                width: `${boxW}%`,
-              }}
+            <rect
+              x={boxLeft}
+              y={boxTop}
+              width={boxW}
+              height={boxBottom - boxTop}
+              rx={1.2}
+              fill={boxFill}
+              stroke={boxStroke}
+              strokeWidth="0.5"
             />
-            <div
-              className={`absolute top-1/2 left-0 z-[1] h-5 w-0.5 -translate-x-1/2 -translate-y-1/2 ${palette.med}`}
-              style={{ left: `${pMed}%` }}
+            <line
+              x1={pMed}
+              y1={boxTop}
+              x2={pMed}
+              y2={boxBottom}
+              stroke="#f5f5f5"
+              strokeWidth="0.75"
+              strokeLinecap="round"
             />
-          </div>
+          </svg>
+          <div className="mt-1 h-px w-full bg-gray-700/90" />
         </div>
         {variant === "fall" ? (
           <div className="flex justify-between text-[10px] sm:text-xs text-white/80 tabular-nums mt-1 px-0.5">
