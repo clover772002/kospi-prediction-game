@@ -30,7 +30,6 @@ import { markWasTopExpert } from "@/lib/top-expert-notice";
 import { formatApiErrorMessage } from "@/lib/format-api-error";
 import KospiPriceStrip from "@/components/KospiPriceStrip";
 import GaugeBar from "@/components/GaugeBar";
-import { ChipAmount } from "@/components/ChipAmount";
 import AppAmbientBackground from "@/components/AppAmbientBackground";
 import PageLoadProgress from "@/components/PageLoadProgress";
 import AppTabNav from "@/components/AppTabNav";
@@ -108,10 +107,6 @@ function SurveyHeadingTitle({ label }: { label: string }) {
   );
 }
 
-function tokensBetFromGauge(gauge: number, tokens: number) {
-  return Math.max(1, Math.round((Math.abs(gauge) / 100) * tokens));
-}
-
 /** 제출 완료 후 요약 · 확신도 변경 진입 */
 function SurveyCompletedPanel({
   headline,
@@ -172,10 +167,6 @@ function SurveyCompletedPanel({
   }
 
   if (!editing) {
-    const dirLabel = gaugeValue > 0 ? "상승" : "하락";
-    const dirEmoji = gaugeValue > 0 ? "📈" : "📉";
-    const bet = tokensBetFromGauge(gaugeValue, userTokens);
-
     return (
       <div className="flex flex-col gap-3">
         <p className={`text-center ${surveyUi.cardTitle} text-emerald-400`}>{headline}</p>
@@ -196,17 +187,6 @@ function SurveyCompletedPanel({
             disabled
             beginnerTips={false}
           />
-          <div className={`${surveyUi.highlightBox} text-center`}>
-            <p className={`${surveyUi.body} text-white/90 tabular-nums flex flex-wrap items-center justify-center gap-x-2 gap-y-1`}>
-              <span>
-                {dirEmoji} {dirLabel} · 확신도{" "}
-                <span className={`${surveyUi.numEmphasis} text-white`}>{Math.abs(gaugeValue)}</span>
-              </span>
-              <span className="inline-flex items-center gap-1">
-                · 배팅 <ChipAmount amount={bet} xlarge className="inline-flex text-red-200" />
-              </span>
-            </p>
-          </div>
         </div>
         <button
           type="button"
