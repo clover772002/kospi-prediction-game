@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import {
@@ -330,18 +329,13 @@ export default function ExpertChatPage() {
       <AppAmbientBackground />
       <main className="relative z-10 mx-auto min-h-screen max-w-md px-4 app-page-tab-pad pt-5">
         <div className="mb-4 flex items-center justify-between gap-2">
-          <Link href="/dashboard" className="text-xs text-gray-500 hover:text-gray-300">
-            ← 대시보드
-          </Link>
+          <h1 className="text-2xl font-black text-white">명예의 전당</h1>
           {surveyDate ? (
-            <span className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[10px] text-gray-400">
+            <span className="shrink-0 rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[10px] text-gray-400">
               기준일 {surveyDate}
             </span>
           ) : null}
         </div>
-
-        <h1 className="mb-1 text-2xl font-black text-white">명예의 전당</h1>
-        <p className="mb-4 text-center text-sm sm:text-base text-gray-500">칩·적중률 순위 · 초고수 소통</p>
 
         <TokenHallOfFameRankings accessToken={token} meId={me?.id ?? null} />
 
