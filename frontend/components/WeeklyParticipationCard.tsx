@@ -2,6 +2,7 @@
 
 import type { ParticipationRewardsStatus } from "@/lib/api";
 import { ChipAmount, ChipAmountFraction, formatChipAmountText } from "@/components/ChipAmount";
+import { surveyUi } from "@/lib/survey-ui-tokens";
 
 /** backend/participation_rewards.py WEEKLY_BONUS_BY_DAYS 와 동일 */
 const WEEKLY_TIERS: { day: number; chips: number }[] = [
@@ -120,16 +121,16 @@ export default function WeeklyParticipationCard({ status, compact }: Props) {
   }
 
   return (
-    <div className="bg-[#1A1A1A] border border-amber-500/25 rounded-xl px-4 sm:px-5 py-5 space-y-5">
+    <div className={surveyUi.card}>
       <div className="flex items-center justify-between gap-2">
-        <p className="text-lg sm:text-xl font-black text-amber-200/95">주간 참여 보상</p>
-        <p className="text-sm sm:text-base text-gray-500 shrink-0">월~일 거래일</p>
+        <p className={surveyUi.cardTitle}>주간 참여 보상</p>
+        <p className={`${surveyUi.cardMeta} shrink-0`}>월~일 거래일</p>
       </div>
 
       <StampRow days={days} />
 
       <div className="flex flex-col items-center gap-2.5">
-        <p className="text-sm sm:text-base text-gray-400">도장 합계 (5회 만점 기준)</p>
+        <p className={surveyUi.label}>도장 합계 (5회 만점 기준)</p>
         <ChipAmountFraction
           current={stampSum}
           max={MAX_STAMP_CHIP_TOTAL}
@@ -137,14 +138,14 @@ export default function WeeklyParticipationCard({ status, compact }: Props) {
           className={allStamps ? "text-emerald-300" : ""}
         />
         {allStamps ? (
-          <p className="text-base sm:text-lg font-bold text-emerald-400/95">5회 도장 모두 찍음!</p>
+          <p className={`${surveyUi.body} text-emerald-400/95`}>5회 도장 모두 찍음!</p>
         ) : null}
       </div>
 
       <div className="flex justify-center">
-        <div className="rounded-xl border border-amber-500/30 bg-amber-950/25 px-4 py-4 sm:py-5 text-center w-full max-w-sm">
-          <p className="text-base sm:text-lg text-amber-200/90 mb-2 leading-snug">
-            <span className="font-black text-amber-300 tabular-nums text-xl sm:text-2xl">
+        <div className={`${surveyUi.highlightBox} text-center w-full max-w-sm`}>
+          <p className={`${surveyUi.body} text-amber-200/90 mb-2 leading-snug`}>
+            <span className={`${surveyUi.numEmphasis} text-amber-300`}>
               {days}/{max}
             </span>
             <span className="font-bold"> 일 참여 · </span>

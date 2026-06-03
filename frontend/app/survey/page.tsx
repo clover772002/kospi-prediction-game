@@ -36,6 +36,7 @@ import PageLoadProgress from "@/components/PageLoadProgress";
 import AppTabNav from "@/components/AppTabNav";
 import StaleRefreshIndicator from "@/components/StaleRefreshIndicator";
 import WeeklyParticipationCard from "@/components/WeeklyParticipationCard";
+import { surveyUi } from "@/lib/survey-ui-tokens";
 
 interface KospiPrice {
   price: number | null;
@@ -91,7 +92,7 @@ function formatPreSurveyTarget(surveyDate: string) {
 function PreSurveyTargetBanner({ surveyDate }: { surveyDate: string }) {
   const t = formatPreSurveyTarget(surveyDate);
   return (
-    <p className="text-center text-amber-300/90 text-sm font-bold mb-3">
+    <p className={`text-center text-amber-300/90 ${surveyUi.body} mb-3`}>
       사전 예측 · {t.dateLine}
     </p>
   );
@@ -149,7 +150,7 @@ function SurveyCompletedPanel({
   if (pendingGrantRedo) {
     return (
       <>
-        <p className="text-center text-sm text-amber-300 mb-2">재투표 1회 가능</p>
+        <p className={`text-center ${surveyUi.body} text-amber-300 mb-2`}>재투표 1회 가능</p>
         <SurveyGaugeSubmit
           gaugeValue={gaugeValue}
           onGaugeChange={onGaugeChange}
@@ -176,17 +177,17 @@ function SurveyCompletedPanel({
 
     return (
       <div className="flex flex-col gap-3">
-        <p className="text-center text-lg font-black text-emerald-400">{headline}</p>
-        {subline ? <p className="text-center text-xs text-gray-500">{subline}</p> : null}
+        <p className={`text-center ${surveyUi.cardTitle} text-emerald-400`}>{headline}</p>
+        {subline ? <p className={`text-center ${surveyUi.cardMeta}`}>{subline}</p> : null}
         {justSaved ? (
           <div
-            className="rounded-xl border border-emerald-500/45 bg-emerald-500/20 px-3 py-2.5 text-center text-sm font-bold text-emerald-200"
+            className={`rounded-xl border border-emerald-500/45 bg-emerald-500/20 px-4 py-3 text-center ${surveyUi.body} text-emerald-200`}
             role="status"
           >
             ✓ 확신도가 저장되었어요
           </div>
         ) : null}
-        <div className="rounded-2xl border border-emerald-500/30 bg-emerald-950/25 px-2 py-3">
+        <div className="space-y-3">
           <GaugeBar
             value={gaugeValue}
             onChange={() => {}}
@@ -194,28 +195,30 @@ function SurveyCompletedPanel({
             disabled
             beginnerTips={false}
           />
-          <p className="text-center text-base sm:text-lg font-bold text-white/90 mt-2 tabular-nums flex flex-wrap items-center justify-center gap-x-1.5 gap-y-0.5">
-            <span>
-              {dirEmoji} {dirLabel} · 확신도{" "}
-              <span className="text-xl sm:text-2xl font-black text-white">{Math.abs(gaugeValue)}</span>
-            </span>
-            <span className="inline-flex items-center gap-1">
-              · 배팅 <ChipAmount amount={bet} large className="inline-flex text-red-200" />
-            </span>
-          </p>
+          <div className={`${surveyUi.highlightBox} text-center`}>
+            <p className={`${surveyUi.body} text-white/90 tabular-nums flex flex-wrap items-center justify-center gap-x-2 gap-y-1`}>
+              <span>
+                {dirEmoji} {dirLabel} · 확신도{" "}
+                <span className={`${surveyUi.numEmphasis} text-white`}>{Math.abs(gaugeValue)}</span>
+              </span>
+              <span className="inline-flex items-center gap-1">
+                · 배팅 <ChipAmount amount={bet} xlarge className="inline-flex text-red-200" />
+              </span>
+            </p>
+          </div>
         </div>
         <button
           type="button"
           onClick={onStartEdit}
           disabled={submitDisabled}
-          className="w-full rounded-2xl border border-[#3d3d3d] bg-[#252525] py-3.5 text-sm font-bold text-white transition-colors hover:border-emerald-500/45 hover:bg-[#2d2d2d] disabled:opacity-45"
+          className={surveyUi.btnSecondary}
         >
           확신도 변경하기
         </button>
         {showTeamChatLink ? (
           <Link
             href="/team-chat"
-            className="block rounded-2xl border border-violet-500/35 bg-violet-500/10 px-4 py-3.5 text-center text-sm font-bold text-violet-200 hover:bg-violet-500/15"
+            className={`block rounded-xl border border-violet-500/35 bg-violet-500/10 px-4 text-center ${surveyUi.btnPrimary} text-violet-200 hover:bg-violet-500/15`}
           >
             소통방 보기 →
           </Link>
@@ -231,8 +234,8 @@ function SurveyCompletedPanel({
 
   return (
     <div className="flex flex-col gap-3">
-      <p className="text-center text-sm font-bold text-amber-200/95">확신도 조정 중</p>
-      <p className="text-center text-xs text-gray-500">방향 유지 · 09:00 마감 전에 저장해 주세요</p>
+      <p className={`text-center ${surveyUi.cardTitle} text-amber-200/95`}>확신도 조정 중</p>
+      <p className={`text-center ${surveyUi.cardMeta}`}>방향 유지 · 09:00 마감 전에 저장해 주세요</p>
       <SurveyGaugeSubmit
         gaugeValue={gaugeValue}
         onGaugeChange={onGaugeChange}
@@ -248,7 +251,7 @@ function SurveyCompletedPanel({
         type="button"
         onClick={onCancelEdit}
         disabled={submitting}
-        className="w-full rounded-xl border border-[#333] bg-[#1A1A1A] py-2.5 text-sm font-bold text-gray-400 hover:text-white disabled:opacity-45"
+        className={`${surveyUi.btnSecondary} border-[#333] bg-[#1A1A1A] text-gray-400 hover:text-white`}
       >
         취소
       </button>
@@ -327,7 +330,7 @@ function NextPreSurveyPanel({
     <>
       <PreSurveyTargetBanner surveyDate={surveyDate} />
       {!responseKnown ? (
-        <p className="text-center text-xs text-gray-500 mb-2">참여 여부 확인 중… (아래에서 바로 넣을 수 있어요)</p>
+        <p className={`text-center ${surveyUi.hint} mb-2`}>참여 여부 확인 중… (아래에서 바로 넣을 수 있어요)</p>
       ) : null}
       <SurveyGaugeSubmit
         gaugeValue={gaugeValue}
@@ -384,7 +387,7 @@ function SurveyGaugeSubmit({
         type="button"
         onClick={() => void onSubmit()}
         disabled={locked || gaugeValue === 0}
-        className={`w-full py-5 font-black text-lg rounded-2xl transition-all active:scale-95 ${submitBtnClass}`}
+        className={`${surveyUi.btnPrimary} ${submitBtnClass}`}
       >
         {submitting ? (
           <span className="flex items-center justify-center gap-2">
@@ -1099,7 +1102,7 @@ function SurveyPageInner() {
       {/* 설문 진행 중 — 투표 폼 */}
       {status === "open" && !isWeekendKST && !alreadyAnswered && !submitted && (
         <div className="space-y-4 mt-4 fade-up">
-          <p className="text-center text-sm text-gray-400">09:00 마감 · 게이지로 방향·확신도 선택</p>
+          <p className={`text-center ${surveyUi.hint}`}>09:00 마감 · 게이지로 방향·확신도 선택</p>
           <div className="w-full min-w-0">
             <SurveyGaugeSubmit
               gaugeValue={gaugePosition}

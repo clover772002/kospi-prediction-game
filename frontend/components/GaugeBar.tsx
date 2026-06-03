@@ -2,6 +2,7 @@
 
 import { useCallback, useId, useRef, useState } from "react";
 import { ChipAmount } from "@/components/ChipAmount";
+import { surveyUi } from "@/lib/survey-ui-tokens";
 
 interface GaugeBarProps {
   value: number; // -100 ~ +100 (0 제외)
@@ -135,33 +136,31 @@ export default function GaugeBar({
 
   const dirLabel = isUp ? "상승" : "하락";
   const dirColor = isUp ? "text-red-400" : "text-blue-400";
-  const borderCls = isUp ? "border-red-500/40" : "border-blue-500/40";
-  const bgGlow = isUp ? "bg-red-500/5" : "bg-blue-500/5";
 
   const helpIdRaw = useId();
   const helpId = helpIdRaw.includes(":") ? helpIdRaw.replace(/:/g, "") : helpIdRaw;
 
   const gaugeDisclaimer = (
-    <p className="text-base text-gray-500 leading-snug pt-3 border-t border-[#2A2A2A]">
+    <p className={`${surveyUi.hint} leading-snug pt-3 border-t border-[#2A2A2A]`}>
       아래 표시는 <span className="text-gray-400">등락률 예측</span>이 아니라, 제출하신 예측의{" "}
       <span className="text-gray-400">방향·확신도</span>입니다.
     </p>
   );
 
   return (
-    <div className={`w-full max-w-full min-w-0 rounded-2xl border ${borderCls} ${bgGlow} px-5 py-6 sm:px-6 space-y-4 box-border`}>
+    <div className={`w-full max-w-full min-w-0 box-border ${surveyUi.card}`}>
       {tipsInteractive && (
         <div className="space-y-2 pb-2 border-b border-[#2A2A2A] w-full min-w-0">
-          <p id={helpId} className="text-base text-gray-300 leading-snug">
+          <p id={helpId} className={`${surveyUi.bodyMuted} text-gray-300`}>
             막대 <strong className="text-blue-400">왼쪽</strong>=하락·<strong className="text-red-400">오른쪽</strong>
             =상승, 멀수록 그 방향 확신이 큽니다.
           </p>
-          <details className="group rounded-xl bg-[#111]/90 border border-[#2a2a2a] px-4 py-2.5">
-            <summary className="text-base text-cyan-400 font-bold cursor-pointer list-none [&::-webkit-details-marker]:hidden flex items-center gap-1">
+          <details className="group rounded-xl bg-[#111]/90 border border-[#2a2a2a] px-4 py-3">
+            <summary className={`${surveyUi.body} text-cyan-400 cursor-pointer list-none [&::-webkit-details-marker]:hidden flex items-center gap-1`}>
               <span>확신도·칩 자세히 보기</span>
               <span className="text-gray-600 group-open:rotate-180 transition-transform">▼</span>
             </summary>
-            <div className="mt-2 text-base text-gray-500 leading-relaxed space-y-2 pb-1 w-full min-w-0">
+            <div className={`mt-2 ${surveyUi.hint} leading-relaxed space-y-2 pb-1 w-full min-w-0`}>
               <p>
                 표시되는 ±숫자는 <strong className="text-gray-300">확신도 스케일</strong>입니다. 코스피가 몇 % 오르거나
                 내릴지 맞히는 항목이 <strong className="text-gray-300">아닙니다.</strong>
@@ -183,21 +182,19 @@ export default function GaugeBar({
       {/* 방향 + 확신도 수치 */}
       <div className="flex items-end justify-between gap-3">
         <div>
-          <p className="text-xs sm:text-sm text-gray-500 font-bold mb-0.5">예측 방향</p>
-          <span className={`text-3xl sm:text-4xl font-black ${dirColor}`}>{dirLabel}</span>
+          <p className={`${surveyUi.label} mb-1`}>예측 방향</p>
+          <span className={`${surveyUi.cardTitle} ${dirColor}`}>{dirLabel}</span>
         </div>
         <div className="text-right">
-          <p className="text-xs sm:text-sm text-gray-500 font-bold mb-0.5">확신도 (등락률 아님)</p>
-          <span className={`text-4xl sm:text-5xl font-black tabular-nums leading-none ${dirColor}`}>
+          <p className={`${surveyUi.label} mb-1`}>확신도 (등락률 아님)</p>
+          <span className={`${surveyUi.numEmphasis} leading-none ${dirColor}`}>
             {isUp ? "+" : ""}
             {value}
           </span>
         </div>
       </div>
 
-      <p className="text-center text-lg sm:text-xl font-black text-amber-100 leading-snug">
-        얼마나 확신하나요?
-      </p>
+      <p className={`text-center ${surveyUi.cardTitle} text-amber-100 leading-snug`}>얼마나 확신하나요?</p>
 
       {/* 드래그 게이지 */}
       <div
@@ -208,7 +205,7 @@ export default function GaugeBar({
           {GAUGE_TICKS.map(({ v, color }) => (
             <span
               key={v}
-              className={`absolute bottom-0 text-xs sm:text-sm font-black tabular-nums leading-none ${color}`}
+              className={`absolute bottom-0 ${surveyUi.label} tabular-nums leading-none ${color}`}
               style={{
                 left: gaugeTickLeft(v),
                 transform: gaugeTickTransform(v),
@@ -258,35 +255,35 @@ export default function GaugeBar({
           />
         </div>
         {!disabled && (
-          <p className="text-center text-sm text-gray-500 mt-2">
+          <p className={`text-center ${surveyUi.hint} mt-2`}>
             막대를 드래그해 방향·확신도를 정하면 배팅 칩이 함께 바뀝니다.
           </p>
         )}
       </div>
 
-      <div className="flex justify-between text-base sm:text-lg font-bold px-1 -mt-1">
+      <div className={`flex justify-between ${surveyUi.body} px-1 -mt-1`}>
         <span className="text-blue-400">하락</span>
         <span className="text-red-400">상승</span>
       </div>
 
       {/* 배팅 정보 */}
-      <div className="bg-[#111] border border-[#2A2A2A] rounded-xl p-4 sm:p-5 space-y-2.5">
-        <div className="flex justify-between text-base sm:text-lg items-center">
-          <span className="text-gray-500 font-medium">보유</span>
-          <ChipAmount amount={tokens} large className="text-white" />
+      <div className={`${surveyUi.highlightBox} space-y-3`}>
+        <div className={`flex justify-between ${surveyUi.body} items-center`}>
+          <span className={surveyUi.label}>보유</span>
+          <ChipAmount amount={tokens} xlarge className="text-white" />
         </div>
-        <div className="flex justify-between text-base sm:text-lg items-center">
-          <span className="text-gray-500 font-medium">배팅</span>
-          <ChipAmount amount={bet} large className={dirColor} />
+        <div className={`flex justify-between ${surveyUi.body} items-center`}>
+          <span className={surveyUi.label}>배팅</span>
+          <ChipAmount amount={bet} xlarge className={dirColor} />
         </div>
-        <div className="h-px bg-[#222]" />
-        <div className="flex justify-between gap-2 text-base sm:text-lg items-center flex-wrap">
-          <span className="text-gray-500 shrink-0 font-medium">적중 시</span>
-          <ChipAmount amount={hitBalance} large className="text-green-400" />
+        <div className="h-px bg-amber-500/20" />
+        <div className={`flex justify-between gap-2 ${surveyUi.body} items-center flex-wrap`}>
+          <span className={`${surveyUi.label} shrink-0`}>적중 시</span>
+          <ChipAmount amount={hitBalance} xlarge className="text-green-400" />
         </div>
-        <div className="flex justify-between text-base sm:text-lg items-center">
-          <span className="text-gray-500 font-medium">실패 시</span>
-          <ChipAmount amount={Math.max(0, tokens - bet)} large className="text-red-400" />
+        <div className={`flex justify-between ${surveyUi.body} items-center`}>
+          <span className={surveyUi.label}>실패 시</span>
+          <ChipAmount amount={Math.max(0, tokens - bet)} xlarge className="text-red-400" />
         </div>
       </div>
 

@@ -1,5 +1,7 @@
 "use client";
 
+import { surveyUi } from "@/lib/survey-ui-tokens";
+
 /** 설문 상단 — 코스피 종가·등락률 숫자만 (차트·OHLC 없음) */
 export default function KospiPriceStrip({
   status,
@@ -32,9 +34,9 @@ export default function KospiPriceStrip({
     const up = resultUp;
     return (
       <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 py-1 tabular-nums">
-        <span className="text-sm text-gray-500">코스피 종가</span>
+        <span className={surveyUi.cardMeta}>코스피 종가</span>
         <span
-          className={`text-lg font-black ${up ? "text-market-up" : "text-market-down"}`}
+          className={`${surveyUi.numEmphasis} ${up ? "text-market-up" : "text-market-down"}`}
         >
           {up ? "▲" : "▼"} {resultPct >= 0 ? "+" : ""}
           {resultPct.toFixed(2)}%
@@ -47,15 +49,15 @@ export default function KospiPriceStrip({
     const up = live.is_up ?? (live.change_pct ?? 0) >= 0;
     return (
       <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 py-1 tabular-nums">
-        <span className="text-sm text-gray-500">
+        <span className={surveyUi.cardMeta}>
           {isMarketOpen ? "코스피(장중)" : "코스피"}
         </span>
-        <span className="text-lg font-black text-white">
+        <span className={`${surveyUi.numEmphasis} text-white`}>
           {live.price.toLocaleString()}
         </span>
         {live.change_pct !== null && live.change_pct !== undefined ? (
           <span
-            className={`text-base font-bold ${up ? "text-market-up" : "text-market-down"}`}
+            className={`${surveyUi.body} ${up ? "text-market-up" : "text-market-down"}`}
           >
             {up ? "+" : ""}
             {live.change_pct.toFixed(2)}%
