@@ -16,7 +16,16 @@ import {
   invalidatePendingGrantCache,
   invalidateTodaySummaryCache,
 } from "@/lib/session-api-cache";
-import { peekAnsweredToday, peekDashboardSnapshot, peekSurveyTodaySnapshot } from "@/lib/tab-session-cache";
+import {
+  clearAllTabSnapshots,
+  peekAnsweredToday,
+  peekDashboardSnapshot,
+  peekSurveyNextSnapshot,
+  peekSurveyTodaySnapshot,
+  saveAnsweredToday,
+  saveSurveyNextSnapshot,
+  saveSurveyTodaySnapshot,
+} from "@/lib/tab-session-cache";
 import { markWasTopExpert } from "@/lib/top-expert-notice";
 import { formatApiErrorMessage } from "@/lib/format-api-error";
 import KospiPriceStrip from "@/components/KospiPriceStrip";
@@ -25,14 +34,6 @@ import AppAmbientBackground from "@/components/AppAmbientBackground";
 import PageLoadProgress from "@/components/PageLoadProgress";
 import AppTabNav from "@/components/AppTabNav";
 import StaleRefreshIndicator from "@/components/StaleRefreshIndicator";
-import {
-  clearAllTabSnapshots,
-  peekSurveyNextSnapshot,
-  peekSurveyTodaySnapshot,
-  saveAnsweredToday,
-  saveSurveyNextSnapshot,
-  saveSurveyTodaySnapshot,
-} from "@/lib/tab-session-cache";
 
 interface KospiPrice {
   price: number | null;
