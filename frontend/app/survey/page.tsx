@@ -984,31 +984,13 @@ function SurveyPageInner() {
         const mins = kst.getHours() * 60 + kst.getMinutes();
         const isWeekend = day === 0 || day === 6;
         const isEarlyMorning = !isWeekend && mins < 9 * 60;
-        const isPreSurvey = !isWeekend && mins >= 9 * 60 && mins < 22 * 60;
-        if (isPreSurvey) return null;
+        if (!isEarlyMorning) return null;
         return (
           <div className="flex flex-col gap-5 mt-10">
             <div className="flex flex-col items-center gap-3 text-center">
-              {isEarlyMorning ? (
-                <>
-                  <div className="text-5xl">⏳</div>
-                  <p className="text-2xl sm:text-3xl font-bold text-white leading-snug">설문 준비 중입니다</p>
-                  <p className="text-base text-gray-400 px-2">
-                    잠시 후 화면을 새로 고침해 주십시오.
-                  </p>
-                </>
-              ) : (
-                <>
-                  <div className="text-5xl">🏖️</div>
-                  <p className="text-2xl sm:text-3xl font-bold text-white leading-snug">당일은 개장하지 않습니다</p>
-                  <p className="text-base text-gray-400 px-2">주말·공휴일에는 거래소가 개장하지 않습니다.</p>
-                  {nextSurvey?.is_open && (
-                    <p className="text-base text-yellow-400 mt-2 px-2">
-                      💡 {formatPreSurveyTarget(nextSurvey.survey_date).dateLine} 사전 예측 가능
-                    </p>
-                  )}
-                </>
-              )}
+              <div className="text-5xl">⏳</div>
+              <p className="text-2xl sm:text-3xl font-bold text-white leading-snug">설문 준비 중입니다</p>
+              <p className="text-base text-gray-400 px-2">잠시 후 화면을 새로 고침해 주십시오.</p>
             </div>
           </div>
         );
