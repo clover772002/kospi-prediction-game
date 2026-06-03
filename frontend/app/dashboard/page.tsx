@@ -1003,97 +1003,8 @@ export default function DashboardPage() {
             );
           })()}
 
-          {(status === "open" || status === "closed" || status === "result") && !isWeekendKST && today && (() => {
-            const myEntry = dash?.history?.find((h) => sameSurveyDate(h.date, today.survey_date));
-            const myPickVerdict = userPickVerdictFromTodayAndHistory(today, myEntry);
-            const effectiveMarketDir = resolvedMarketDirection(today, myEntry);
-            return (
+          {(status === "open" || status === "closed" || status === "result") && !isWeekendKST && today && (
               <>
-              <p className="text-xs text-white/80 text-center leading-snug mb-1.5 px-1">
-                예측 칸 숫자는 <span className="text-white">확신도</span>·
-                <span className="text-white">무리 선택 비율</span>입니다.
-                <span className="text-amber-200/95"> 실적</span>만 코스피 등락률이에요.
-              </p>
-              <div className="grid grid-cols-4 gap-1.5">
-                {/* 우리 적중률 (가중 집계) */}
-                <div className="bg-yellow-500/5 border border-yellow-500/20 rounded-xl py-3 px-1 flex flex-col items-center gap-0.5 text-center">
-                  <p className="text-sm text-yellow-400/80 leading-tight">{OUR_ACCURACY_LABEL}</p>
-                  {today.kospi_weighted_pct !== null ? (
-                    <>
-                      <p className={`text-sm font-black ${today.kospi_weighted_pct >= 50 ? "text-red-400" : "text-blue-400"}`}>
-                        {today.kospi_weighted_pct >= 50 ? "📈상승" : "📉하락"}
-                      </p>
-                      <p className="text-sm text-white tabular-nums">{today.kospi_weighted_pct}%</p>
-                      <p className="text-[10px] text-white/70 leading-tight">상승 선택 비율</p>
-                    </>
-                  ) : (
-                    <p className="text-sm text-white">-</p>
-                  )}
-                </div>
-
-                {/* 단순통계 */}
-                <div className="bg-[#111] border border-[#2A2A2A] rounded-xl py-3 px-1 flex flex-col items-center gap-0.5 text-center">
-                  <p className="text-sm text-white leading-tight">단순</p>
-                  {today.kospi_yes_pct !== null ? (
-                    <>
-                      <p className={`text-sm font-black ${today.kospi_yes_pct >= 50 ? "text-red-400" : "text-blue-400"}`}>
-                        {today.kospi_yes_pct >= 50 ? "📈상승" : "📉하락"}
-                      </p>
-                      <p className="text-sm text-white tabular-nums">{today.kospi_yes_pct}%</p>
-                      <p className="text-[10px] text-white/70 leading-tight">상승 선택 비율</p>
-                    </>
-                  ) : (
-                    <p className="text-sm text-white">-</p>
-                  )}
-                </div>
-
-                {/* 내 선택 */}
-                <div className="bg-[#111] border border-[#2A2A2A] rounded-xl py-3 px-1 flex flex-col items-center gap-0.5 text-center">
-                  <p className="text-sm text-white leading-tight">내선택</p>
-                  {myEntry ? (
-                    <>
-                      <p className={`text-sm font-black ${myEntry.kospi_answer ? "text-red-400" : "text-blue-400"}`}>
-                        {myEntry.kospi_answer ? "📈상승" : "📉하락"}
-                      </p>
-                      {myEntry.gauge_position != null && myEntry.gauge_position !== undefined ? (
-                        <p className="text-xs text-white/85 tabular-nums">
-                          확신도 {formatConfidenceGauge(myEntry.gauge_position)}
-                        </p>
-                      ) : null}
-                      <p className="text-sm">
-                        {myPickVerdict === null
-                          ? "대기중"
-                          : myPickVerdict
-                            ? "✅맞음"
-                            : "❌틀림"}
-                      </p>
-                    </>
-                  ) : (
-                    <p className="text-sm text-white">미참여</p>
-                  )}
-                </div>
-
-                {/* 실적 */}
-                <div className="bg-amber-500/5 border border-amber-500/25 rounded-xl py-3 px-1 flex flex-col items-center gap-0.5 text-center">
-                  <p className="text-sm text-amber-200/90 leading-tight">실적</p>
-                  {effectiveMarketDir !== null ? (
-                    <>
-                      <p className={`text-sm font-black ${effectiveMarketDir ? "text-red-400" : "text-blue-400"}`}>
-                        {effectiveMarketDir ? "📈상승" : "📉하락"}
-                      </p>
-                      <p className="text-[10px] text-amber-200/80 leading-tight">등락률</p>
-                      <p
-                        className={`text-sm tabular-nums ${today.kospi_change_pct == null ? "text-white" : today.kospi_change_pct >= 0 ? "text-red-400/80" : "text-blue-400/80"}`}
-                      >
-                        {today.kospi_change_pct == null ? "확인중" : `${today.kospi_change_pct >= 0 ? "+" : ""}${today.kospi_change_pct.toFixed(2)}%`}
-                      </p>
-                    </>
-                  ) : (
-                    <p className="text-sm text-white">장마감전</p>
-                  )}
-                </div>
-              </div>
-
               {user && expertEligibility ? (
                 <div className="mt-3">
                   <TopExpertNoticeBlock
@@ -1177,8 +1088,7 @@ export default function DashboardPage() {
                 );
               })()}
               </>
-            );
-          })()}
+          )}
         </div>
 
         {/* ── 내 통계 + 예측 이력 ──────────────────────────── */}

@@ -6,6 +6,7 @@ import {
   type CrowdGaugeBoxplotDay,
   type CrowdGaugeBoxplotStats,
 } from "@/lib/api";
+import { KospiLiveQuote, type KospiLiveQuoteData } from "@/components/KospiPriceStrip";
 import { surveyUi } from "@/lib/survey-ui-tokens";
 
 /** 하락축 -100~0 → 플롯 0~100% (왼쪽이 -100, 오른쪽이 0) */
@@ -310,11 +311,14 @@ function DirectionSharePie({
 function DayCard({
   day,
   emphasize = false,
+  liveKospi = null,
 }: {
   day: CrowdGaugeBoxplotDay;
   emphasize?: boolean;
+  liveKospi?: KospiLiveQuoteData | null;
 }) {
   const resultLabel = formatMarketResultLabel(day.kospi_result, day.kospi_change_pct);
+  const pendingResult = isPendingResult(day);
 
   const hiRise = day.correct_team === "rise";
   const hiFall = day.correct_team === "fall";
@@ -360,8 +364,9 @@ function DayCard({
       }
     >
       {emphasize ? (
-        <div className="flex justify-end mb-2">
-          <p className={resultCls}>{resultLabel}</p>
+        <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 mb-2 px-1">
+          <p className={resultCls}>{pendingResult ? "결과 미확정" : resultLabel}</p>
+          {pendingResult && liveKospi?.price != null ? <KospiLiveQuote live={liveKospi} /> : null}
         </div>
       ) : (
         <div className="flex flex-wrap items-baseline justify-between gap-2 mb-2">
@@ -411,11 +416,14 @@ type SectionProps = {
   variant?: "dashboard" | "survey";
   /** 설문 탭: 지금 투표·대기 중인 거래일 (YYYY-MM-DD) */
   openDates?: string[];
+  /** 설문 실시간 집계 — 결과 미확정 옆 장중 시세 */
+  liveKospi?: KospiLiveQuoteData | null;
 };
 
 export default function CrowdGaugeBoxplotsSection({
   variant = "dashboard",
   openDates = [],
+  liveKospi = null,
 }: SectionProps) {
   const [days, setDays] = useState<CrowdGaugeBoxplotDay[] | null>(null);
   const [err, setErr] = useState<string | null>(null);
@@ -493,7 +501,7 @@ export default function CrowdGaugeBoxplotsSection({
                 </p>
               </div>
               {day ? (
-                <DayCard day={day} emphasize />
+                <DayCard day={day} emphasize liveKospi={liveKospi} />
               ) : (
                 <div
                   className={`mx-2 mb-2 rounded-xl border border-dashed border-[#444] px-4 py-6 text-center ${surveyUi.hint}`}

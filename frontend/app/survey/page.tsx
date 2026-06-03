@@ -28,7 +28,6 @@ import {
 } from "@/lib/tab-session-cache";
 import { markWasTopExpert } from "@/lib/top-expert-notice";
 import { formatApiErrorMessage } from "@/lib/format-api-error";
-import KospiPriceStrip from "@/components/KospiPriceStrip";
 import GaugeBar from "@/components/GaugeBar";
 import AppAmbientBackground from "@/components/AppAmbientBackground";
 import PageLoadProgress from "@/components/PageLoadProgress";
@@ -481,14 +480,14 @@ function SurveyPageInner() {
     return () => clearTimeout(t);
   }, [searchParams]);
 
-  // 확정 등락률이 없고 장 중일 때만 백그라운드 숫자 갱신(60초)
+  // 확정 등락률 전 — 시세 1회 조회, 장 중이면 60초마다 갱신
   useEffect(() => {
     if (today?.kospi_change_pct != null) return;
+    void fetchKospiPrice();
     const kst = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Seoul" }));
     const mins = kst.getHours() * 60 + kst.getMinutes();
     const isMarketOpen = mins >= 9 * 60 && mins < 15 * 60 + 35;
     if (!isMarketOpen) return;
-    void fetchKospiPrice();
     priceTimerRef.current = setInterval(fetchKospiPrice, 60000);
     return () => {
       if (priceTimerRef.current) clearInterval(priceTimerRef.current);
@@ -927,17 +926,20 @@ function SurveyPageInner() {
 
       {!isWeekendKST ? (
         <div className="mb-4 fade-up-2">
-          <CrowdGaugeBoxplotsSection variant="survey" openDates={crowdOpenDates} />
+          <CrowdGaugeBoxplotsSection
+            variant="survey"
+            openDates={crowdOpenDates}
+            liveKospi={
+              kospiPrice
+                ? {
+                    price: kospiPrice.price,
+                    change_pct: kospiPrice.change_pct,
+                    is_up: kospiPrice.is_up,
+                  }
+                : null
+            }
+          />
         </div>
-      ) : null}
-
-      {!isWeekendKST && status !== "no_survey" ? (
-        <KospiPriceStrip
-          status={status}
-          resultPct={today?.kospi_change_pct ?? null}
-          resultUp={today?.kospi_result ?? null}
-          live={kospiPrice}
-        />
       ) : null}
 
       {/* 설문 없음 — 대기중 vs 휴장일 구분 */}
