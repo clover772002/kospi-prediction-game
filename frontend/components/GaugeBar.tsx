@@ -11,6 +11,11 @@ interface GaugeBarProps {
   lockDirection?: boolean;
   /** false면 안내 숨김 · 생략 시 조작/읽기 전용 각각 맞는 짧은 안내 표시 */
   beginnerTips?: boolean;
+  /** 제출 완료 읽기 전용: 좌측 완료 뱃지 */
+  surveyCompleted?: boolean;
+  completedLabel?: string;
+  /** 완료 뱃지 아래 짧은 안내(예: 마감 전 확신도 조정) */
+  completedHint?: string;
 }
 
 function calcBet(gauge: number, tokens: number) {
@@ -71,6 +76,9 @@ export default function GaugeBar({
   disabled = false,
   lockDirection = false,
   beginnerTips,
+  surveyCompleted = false,
+  completedLabel = "설문 완료",
+  completedHint,
 }: GaugeBarProps) {
   const tipsEnabled = beginnerTips !== false;
   const tipsInteractive = tipsEnabled && !disabled;
@@ -136,8 +144,14 @@ export default function GaugeBar({
   const helpIdRaw = useId();
   const helpId = helpIdRaw.includes(":") ? helpIdRaw.replace(/:/g, "") : helpIdRaw;
 
+  const cardBorder = surveyCompleted
+    ? "border-emerald-500/40 ring-1 ring-emerald-500/15"
+    : "border-amber-500/25";
+
   return (
-    <div className="w-full max-w-full min-w-0 box-border bg-[#1A1A1A] border border-amber-500/25 rounded-xl px-3 sm:px-4 py-3 space-y-2.5">
+    <div
+      className={`w-full max-w-full min-w-0 box-border bg-[#1A1A1A] border rounded-xl px-3 sm:px-4 py-3 space-y-2.5 ${cardBorder}`}
+    >
       {tipsInteractive && (
         <div className="space-y-1.5 pb-1.5 border-b border-[#2A2A2A] w-full min-w-0">
           <p id={helpId} className="text-sm text-gray-400 leading-snug">
@@ -162,9 +176,23 @@ export default function GaugeBar({
       )}
 
       <div className="flex items-center justify-between gap-3 min-h-[2rem]">
-        <p className="text-sm sm:text-base font-bold text-amber-100/90 leading-snug min-w-0">
-          방향과 확신도로 예측하세요
-        </p>
+        {surveyCompleted ? (
+          <div className="min-w-0 flex flex-col gap-0.5">
+            <span className="inline-flex w-fit items-center gap-1.5 rounded-full border border-emerald-500/55 bg-emerald-500/15 px-2.5 py-1 text-sm font-black text-emerald-300">
+              <span aria-hidden className="text-emerald-400">
+                ✓
+              </span>
+              {completedLabel}
+            </span>
+            {completedHint ? (
+              <p className="text-xs text-gray-500 leading-snug pl-0.5">{completedHint}</p>
+            ) : null}
+          </div>
+        ) : (
+          <p className="text-sm sm:text-base font-bold text-amber-100/90 leading-snug min-w-0">
+            방향과 확신도로 예측하세요
+          </p>
+        )}
         <div className={`flex items-baseline gap-2.5 shrink-0 tabular-nums ${dirColor}`}>
           <span className="text-base sm:text-lg font-black whitespace-nowrap">
             <span className="text-gray-500 font-bold text-xs mr-1">방향</span>

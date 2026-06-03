@@ -116,9 +116,11 @@ function SurveyCompletedPanel({
   error,
   showTeamChatLink = false,
   submitBtnClass = "bg-emerald-600 hover:bg-emerald-500 disabled:bg-[#333] disabled:text-gray-500 text-white",
+  completedLabel = "설문 완료",
 }: {
   headline: string;
   subline?: string;
+  completedLabel?: string;
   gaugeValue: number;
   userTokens: number;
   editing: boolean;
@@ -163,7 +165,6 @@ function SurveyCompletedPanel({
         {headline ? (
           <p className={`text-center ${surveyUi.cardTitle} text-emerald-400`}>{headline}</p>
         ) : null}
-        {subline ? <p className={`text-center ${surveyUi.cardMeta}`}>{subline}</p> : null}
         {justSaved ? (
           <div
             className={`rounded-xl border border-emerald-500/45 bg-emerald-500/20 px-4 py-3 text-center ${surveyUi.body} text-emerald-200`}
@@ -179,6 +180,9 @@ function SurveyCompletedPanel({
             tokens={userTokens}
             disabled
             beginnerTips={false}
+            surveyCompleted
+            completedLabel={completedLabel}
+            completedHint={subline}
           />
         </div>
         <button
@@ -280,6 +284,8 @@ function NextPreSurveyPanel({
       <>
         <SurveyCompletedPanel
           headline=""
+          completedLabel="사전 예측 완료"
+          subline="09:00 마감 전까지 확신도만 조정할 수 있어요"
           gaugeValue={gaugeValue}
           userTokens={userTokens}
           editing={editingConfidence}
@@ -1014,8 +1020,8 @@ function SurveyPageInner() {
       {status === "open" && !isWeekendKST && alreadyAnswered && (
         <div className="flex flex-col gap-4 mt-6 fade-up">
           <SurveyCompletedPanel
-            headline="✓ 설문 완료"
-            subline="09:00 마감 · 확신도는 마감 전까지 바꿀 수 있어요"
+            headline=""
+            subline="09:00 마감 전까지 확신도만 조정할 수 있어요"
             gaugeValue={gaugePosition}
             userTokens={userTokens}
             editing={editingTodayConfidence}
