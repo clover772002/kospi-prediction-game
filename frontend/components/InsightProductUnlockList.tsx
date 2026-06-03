@@ -33,7 +33,7 @@ export default function InsightProductUnlockList({
   /** 현재 선택 거래일에 대해 이미 잠금 해제된 상품 slug */
   const [unlockedSlugs, setUnlockedSlugs] = useState<Set<string>>(() => new Set());
 
-  /** 거래일·토큰 변경 시: 서버 목록으로만 초기화 (이전 날짜의 로컬 잠금 해제와 섞이지 않음) */
+  /** 거래일·칩 변경 시: 서버 목록으로만 초기화 (이전 날짜의 로컬 잠금 해제와 섞이지 않음) */
   const loadUnlockedForDate = useCallback(async () => {
     if (!accessToken || !surveyDate) {
       setUnlockedSlugs(new Set());
@@ -87,11 +87,11 @@ export default function InsightProductUnlockList({
       const bal = typeof out.balance === "number" ? out.balance : null;
       const spent = typeof out.spent === "number" ? out.spent : null;
       if (out.skipped) {
-        setFlash(out.message ?? "페이월이 꺼져 있어 별도 토큰 차감 없이 열람할 수 있어요.");
+        setFlash(out.message ?? "페이월이 꺼져 있어 별도 칩 차감 없이 열람할 수 있어요.");
       } else if (out.already_unlocked) {
         setFlash("이미 이 거래일에 열람한 기록이 있어요. 대시보드에서 바로 볼 수 있어요.");
       } else if (bal != null && spent != null) {
-        setFlash(`잠금 해제했어요. 차감 ${spent.toLocaleString()} 토큰 · 잔액 약 ${bal.toLocaleString()} 토큰`);
+        setFlash(`잠금 해제했어요. 차감 ${spent.toLocaleString()} 칩 · 잔액 약 ${bal.toLocaleString()} 칩`);
       } else {
         setFlash("잠금 해제가 반영됐어요. 대시보드에서 확인해 보세요.");
       }
@@ -122,7 +122,7 @@ export default function InsightProductUnlockList({
           >
             <div className="flex items-start justify-between gap-2 flex-wrap">
               <p className="font-bold text-white min-w-0 flex-1">{p.title}</p>
-              <p className="text-xs text-amber-300 font-black tabular-nums shrink-0">{p.price_tokens} 토큰</p>
+              <p className="text-xs text-amber-300 font-black tabular-nums shrink-0">{p.price_tokens} 칩</p>
             </div>
             {isInsightProductSlug(p.slug) ? <InsightAnimatedPreview slug={p.slug} /> : null}
             <button
@@ -137,7 +137,7 @@ export default function InsightProductUnlockList({
                   ? "처리 중…"
                   : !surveyDate
                     ? "먼저 위에서 거래일을 선택해 주세요"
-                    : `${p.price_tokens} 토큰으로 잠금 해제`}
+                    : `${p.price_tokens} 칩으로 잠금 해제`}
             </button>
             {p.description ? (
               <details className="group border-t border-white/[0.06] pt-2 text-left">
@@ -150,7 +150,7 @@ export default function InsightProductUnlockList({
               </details>
             ) : null}
             {walletTokens != null ? (
-              <p className="text-[10px] text-gray-500 text-center tabular-nums">현재 보유 약 {walletTokens.toLocaleString()} 토큰</p>
+              <p className="text-[10px] text-gray-500 text-center tabular-nums">현재 보유 약 {walletTokens.toLocaleString()} 칩</p>
             ) : null}
           </li>
         );

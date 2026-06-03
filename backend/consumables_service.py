@@ -271,7 +271,7 @@ def _purchase_rakeback(
         return {"ok": False, "error": "no_response", "message": "그 날 참여 기록이 없습니다."}
     tokens_won = rr.data[0].get("tokens_won")
     if tokens_won is None:
-        return {"ok": False, "error": "not_settled_row", "message": "토큰 정산 기록이 아직 없습니다."}
+        return {"ok": False, "error": "not_settled_row", "message": "칩 정산 기록이 아직 없습니다."}
     if int(tokens_won) >= 0:
         return {"ok": False, "error": "no_loss", "message": "배팅 손실 기록이 없으면 레이크백을 받을 수 없습니다."}
 

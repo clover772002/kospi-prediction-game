@@ -27,7 +27,7 @@ function RankingList({
   if (entries.length === 0) {
     return (
       <p className="text-xs text-gray-500 py-2">
-        {variant === "token" ? "아직 토큰 순위 데이터가 없어요." : "아직 적중률 순위 데이터가 없어요."}
+        {variant === "token" ? "아직 칩 순위 데이터가 없어요." : "아직 적중률 순위 데이터가 없어요."}
       </p>
     );
   }
@@ -60,7 +60,7 @@ function RankingList({
                 ({e.correct}/{e.total})
               </span>
             ) : variant === "token" ? (
-              <span className="ml-0.5 text-[10px] font-normal text-gray-500">토큰</span>
+              <span className="ml-0.5 text-[10px] font-normal text-gray-500">칩</span>
             ) : null;
 
           return (
@@ -127,10 +127,10 @@ function RankBlock({
   const description =
     tab === "weekly"
       ? variant === "token"
-        ? "이번 주 설문 적중·배팅으로만 번 토큰 합계예요(손실 포함). 가입·참여 보상 같은 기본 소득은 넣지 않습니다."
+        ? "이번 주 설문 적중·배팅으로만 번 칩 합계예요(손실 포함). 가입·참여 보상 같은 기본 소득은 넣지 않습니다."
         : "이번 주 확정된 코스피 예측만 집계한 적중률이에요. 아직 결과가 없는 날은 빼고 계산합니다."
       : variant === "token"
-        ? "현재 보유 토큰 순위예요. 설문·적중·소통·보상이 모두 반영된 잔액입니다."
+        ? "현재 보유 칩 순위예요. 설문·적중·소통·보상이 모두 반영된 잔액입니다."
         : "전체 기간 코스피 예측 적중률이에요. 참여 일수가 많을수록 같은 %라도 순위에서 유리합니다.";
 
   return (
@@ -229,7 +229,7 @@ export default function TokenHallOfFameRankings({
   return (
     <div className="mb-2">
       <RankBlock
-        title="토큰 순위"
+        title="칩 순위"
         variant="token"
         data={data}
         tab={tokenTab}

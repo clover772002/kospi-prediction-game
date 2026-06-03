@@ -26,7 +26,7 @@ interface Props {
   hideUnlockControl?: boolean;
 }
 
-/** 대시보드용: 해당 거래일 고수·다수결 차이 아이템 (토큰 잠금) */
+/** 대시보드용: 해당 거래일 고수·다수결 차이 아이템 (칩 잠금) */
 export default function ExpertGapInsightCard({
   accessToken,
   surveyDate,
@@ -162,7 +162,7 @@ export default function ExpertGapInsightCard({
               />
             ) : locked ? (
               <span className="rounded-lg font-black tabular-nums border px-2.5 py-1 text-[11px] whitespace-nowrap border-violet-500/35 bg-violet-500/10 text-violet-200/80">
-                {priceTokens} 토큰
+                {priceTokens} 칩
               </span>
             ) : null}
             <span className={d.icon} aria-hidden>

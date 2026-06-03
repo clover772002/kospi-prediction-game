@@ -10,7 +10,7 @@ export const INSIGHT_CARD_META = {
     priceTokens: 140,
     instantExample: "예: 최근 7거래일 · 최고 고수 일별 적중(0%·100%)",
     hint:
-      "선택한 날을 끝으로 최근 거래일 7일 구간에서, 토큰 1위 고수가 참여한 날만 코스피 결과 확정 시 적중 여부를 볼 수 있어요. 미참여·미확정일은 비워 둡니다.",
+      "선택한 날을 끝으로 최근 거래일 7일 구간에서, 칩 1위 고수가 참여한 날만 코스피 결과 확정 시 적중 여부를 볼 수 있어요. 미참여·미확정일은 비워 둡니다.",
   },
   time_slice_accuracy: {
     priceTokens: 130,
@@ -34,7 +34,7 @@ export const INSIGHT_CARD_META = {
     priceTokens: 95,
     instantExample: "예: 전역 최고 고수 — 그날 방향 + 확신도(게이지)",
     hint:
-      "현재 토큰 1위 고수가 그날 설문에 참여했을 때, 초성 이름과 함께 방향·확신도(게이지)·토큰 잔액을 보여 줍니다.",
+      "현재 칩 1위 고수가 그날 설문에 참여했을 때, 초성 이름과 함께 방향·확신도(게이지)·칩 잔액을 보여 줍니다.",
   },
   novice_leader_pick: {
     priceTokens: 85,

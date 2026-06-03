@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""토큰 ledger / 아이템(집계 열람) 차감 (Supabase 서비스 롤 전용)."""
+"""칩 ledger / 아이템(집계 열람) 차감 (Supabase 서비스 롤 전용)."""
 from __future__ import annotations
 
 import logging
@@ -131,7 +131,7 @@ def unlock_insight_with_tokens(
         .execute()
     )
     if not upd.data:
-        logger.warning(f"토큰 동시성 충돌 user={user_id} slug={product_slug}")
+        logger.warning(f"칩 동시성 충돌 user={user_id} slug={product_slug}")
         raise RuntimeError("concurrent_token_update")
 
     try:
@@ -204,7 +204,7 @@ def spend_tokens_idempotent(
         .execute()
     )
     if not upd.data:
-        logger.warning(f"토큰 동시성 충돌 spend user={user_id}")
+        logger.warning(f"칩 동시성 충돌 spend user={user_id}")
         raise RuntimeError("concurrent_token_update")
     try:
         insert_ledger(

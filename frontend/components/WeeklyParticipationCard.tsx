@@ -23,7 +23,7 @@ export default function WeeklyParticipationCard({ status, compact }: Props) {
       <p className="text-xs text-amber-200/90 text-center px-2">
         이번 주 설문 <span className="font-bold tabular-nums">{days}/{max}</span>일 ·{" "}
         <span className="font-bold tabular-nums">{schedule}</span>{" "}
-        <span className="text-amber-300">+{projected}</span> 토큰 예정
+        <span className="text-amber-300">+{projected}</span> 칩 예정
       </p>
     );
   }
@@ -37,18 +37,18 @@ export default function WeeklyParticipationCard({ status, compact }: Props) {
           {days}/{max}
         </span>
         일 참여 · <span className="font-bold text-amber-300 tabular-nums">{schedule}</span>에{" "}
-        <span className="font-black text-yellow-400 tabular-nums">+{projected}</span> 토큰 지급 예정
+        <span className="font-black text-yellow-400 tabular-nums">+{projected}</span> 칩 지급 예정
       </p>
       {status.next_tier_days != null && status.next_tier_bonus != null && days < max ? (
         <p className="text-xs text-white/65">
-          하루 더 참여하면 예상 +{status.next_tier_bonus} 토큰 (→ {status.next_tier_days}일 기준)
+          하루 더 참여하면 예상 +{status.next_tier_bonus} 칩 (→ {status.next_tier_days}일 기준)
         </p>
       ) : days >= max ? (
         <p className="text-xs text-emerald-400/90">이번 주 최대 참여 구간입니다.</p>
       ) : null}
       {showSignup ? (
         <p className="text-xs text-sky-300/90 border-t border-[#2A2A2A] pt-2">
-          신규 가입 시 1회 +{status.signup_bonus_amount} 토큰 (가입 직후 자동 지급)
+          신규 가입 시 1회 +{status.signup_bonus_amount} 칩 (가입 직후 자동 지급)
         </p>
       ) : null}
     </div>

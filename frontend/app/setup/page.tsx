@@ -86,7 +86,7 @@ export default function SetupPage() {
     return () => window.removeEventListener("beforeinstallprompt", onInstallPrompt);
   }, []);
 
-  /** 다른 탭에서 채운 대시보드 스냅샷 → 설정 첫 페인트 즉시 (토큰은 아래 getSession에서) */
+  /** 다른 탭에서 채운 대시보드 스냅샷 → 설정 첫 페인트 즉시 (칩은 아래 getSession에서) */
   useLayoutEffect(() => {
     const snap = peekDashboardSnapshot();
     const u = snap?.user;

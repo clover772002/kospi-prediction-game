@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""명예의 전당 — 토큰·적중률 누적·주간 순위."""
+"""명예의 전당 — 칩·적중률 누적·주간 순위."""
 from __future__ import annotations
 
 import logging
@@ -47,7 +47,7 @@ def build_cumulative_token_leaderboard(
     current_user_id: str | None = None,
     limit: int = DEFAULT_LIMIT,
 ) -> list[dict[str, Any]]:
-    """보유 토큰(users.tokens) 기준 누적 순위."""
+    """보유 칩(users.tokens) 기준 누적 순위."""
     lim = max(1, min(int(limit), 50))
     try:
         r = (
@@ -59,7 +59,7 @@ def build_cumulative_token_leaderboard(
             .execute()
         )
     except Exception as e:
-        logger.warning("누적 토큰 순위 조회 실패: %s", e)
+        logger.warning("누적 칩 순위 조회 실패: %s", e)
         return []
 
     rows: list[dict[str, Any]] = []
@@ -104,7 +104,7 @@ def build_weekly_token_leaderboard(
             .execute()
         )
     except Exception as e:
-        logger.warning("주간 토큰 순위 조회 실패: %s", e)
+        logger.warning("주간 칩 순위 조회 실패: %s", e)
         return []
 
     sums: dict[str, int] = defaultdict(int)

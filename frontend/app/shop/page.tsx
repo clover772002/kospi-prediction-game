@@ -17,7 +17,7 @@ import { InsightDashboardCompactProvider } from "@/contexts/InsightDashboardComp
 import { useInsightSurveyDatePicker } from "@/hooks/useInsightSurveyDatePicker";
 import { INSIGHT_PRODUCTS_PREVIEW_ONLY, SHOP_CONSUMABLES_PREVIEW_ONLY } from "@/lib/insight_items_config";
 
-/** 당분간 원화(Stripe) 토큰팩 UI 비표시. 다시 켤 때는 true로 변경하고 아래 token pack 섹션·핸들러 복구 */
+/** 당분간 원화(Stripe) 칩팩 UI 비표시. 다시 켤 때는 true로 변경하고 아래 token pack 섹션·핸들러 복구 */
 const SHOW_STRIPE_TOKEN_PACKS = false;
 
 function ShopInner() {
@@ -46,7 +46,7 @@ function ShopInner() {
     const cancel = searchParams.get("cancel");
     if (paid === "1") {
       setFlash(
-        "결제가 완료됐습니다. 웹훅 처리까지 잠시 걸릴 수 있어요. 대시보드에서 새로고침해 토큰을 확인해 주세요.",
+        "결제가 완료됐습니다. 웹훅 처리까지 잠시 걸릴 수 있어요. 대시보드에서 새로고침해 칩을 확인해 주세요.",
       );
     } else if (cancel === "1") {
       setFlash("결제를 취소했거나 창을 닫았어요.");
@@ -165,11 +165,11 @@ function ShopInner() {
         <div className="flex items-start justify-between gap-2">
           <div>
             <h1 className="text-xl font-black text-white flex items-center gap-2">
-              💎 토큰 상점
+              💎 칩 상점
             </h1>
             <p className="text-xs text-gray-500 mt-1">
-              게임 내 토큰으로 집계 아이템
-              {!SHOP_CONSUMABLES_PREVIEW_ONLY ? "·소모품" : ""}을 구매할 수 있어요. 당분간 원화 충전 없이 토큰만 사용합니다.
+              게임 내 칩으로 집계 아이템
+              {!SHOP_CONSUMABLES_PREVIEW_ONLY ? "·소모품" : ""}을 구매할 수 있어요. 당분간 원화 충전 없이 칩만 사용합니다.
               {SHOP_CONSUMABLES_PREVIEW_ONLY ? " 소모품 구매만 당분간 닫아 두었어요." : ""}
             </p>
           </div>
@@ -192,7 +192,7 @@ function ShopInner() {
 
         {catalog && !catalog.paywall_enabled ? (
           <p className="text-xs text-gray-500 rounded-xl border border-white/[0.08] bg-white/[0.03] px-3 py-2">
-            현재 아이템 잠금(페이월)이 꺼져 있어 집계 카드를 추가 토큰 없이 미리 볼 수 있어요. 정책이 켜지면 아래 금액만큼 토큰이 필요합니다.
+            현재 아이템 잠금(페이월)이 꺼져 있어 집계 카드를 추가 칩 없이 미리 볼 수 있어요. 정책이 켜지면 아래 금액만큼 칩이 필요합니다.
           </p>
         ) : null}
 
@@ -216,7 +216,7 @@ function ShopInner() {
           ) : (
             <p className="text-[10px] text-gray-500 leading-relaxed">
               <strong className="text-gray-400">고수보정, 일반통계</strong>는 이름만 두 가지로 보이지만{" "}
-              <strong className="text-gray-300">한 장의 카드(고수 가중 vs 다수결)</strong>예요. 잠금이 켜져 있으면 아래 「토큰으로 잠금 해제」에서 해제한 뒤 같은 내용이{" "}
+              <strong className="text-gray-300">한 장의 카드(고수 가중 vs 다수결)</strong>예요. 잠금이 켜져 있으면 아래 「칩으로 잠금 해제」에서 해제한 뒤 같은 내용이{" "}
               <Link href="/dashboard" className="text-violet-400 hover:text-violet-300 underline underline-offset-2">
                 대시보드
               </Link>
@@ -253,7 +253,7 @@ function ShopInner() {
               <p className="text-[10px] text-gray-500 leading-relaxed">
                 {INSIGHT_PRODUCTS_PREVIEW_ONLY
                   ? "지금은 미리보기 모드예요. 카드 하단 블러 영역에 실제 집계는 표시되지 않아요."
-                  : "페이월이 꺼져 있으면 토큰 없이 내용이 보일 수 있어요. 잠금이면 카드가 🔐 상태 → 바로 아래에서 토큰으로 해제하세요."}
+                  : "페이월이 꺼져 있으면 칩 없이 내용이 보일 수 있어요. 잠금이면 카드가 🔐 상태 → 바로 아래에서 칩으로 해제하세요."}
               </p>
               <InsightDashboardCompactProvider>
                 <InsightsInView eager fallback={<InsightCardsStackSkeleton />}>
@@ -272,7 +272,7 @@ function ShopInner() {
 
           {!INSIGHT_PRODUCTS_PREVIEW_ONLY ? (
             <div className="border-t border-white/[0.08] pt-4 space-y-2">
-              <h3 className="text-[11px] font-black text-gray-500 uppercase tracking-widest">토큰으로 잠금 해제</h3>
+              <h3 className="text-[11px] font-black text-gray-500 uppercase tracking-widest">칩으로 잠금 해제</h3>
               {token && (catalog?.insight_products?.length ?? 0) > 0 ? (
                 <InsightProductUnlockList
                   products={catalog!.insight_products}
@@ -294,14 +294,14 @@ function ShopInner() {
           ) : (
             <div className="border-t border-white/[0.08] pt-4">
               <p className="text-[10px] text-gray-500 leading-relaxed rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2">
-                토큰으로 잠금 해제는 집계 공개가 재개되면 다시 활성화됩니다.
+                칩으로 잠금 해제는 집계 공개가 재개되면 다시 활성화됩니다.
               </p>
             </div>
           )}
         </section>
 
         <section className="space-y-3">
-          <h2 className="text-[11px] font-black text-gray-500 uppercase tracking-widest">소모품 (설문·토큰 규칙)</h2>
+          <h2 className="text-[11px] font-black text-gray-500 uppercase tracking-widest">소모품 (설문·칩 규칙)</h2>
           {SHOP_CONSUMABLES_PREVIEW_ONLY ? (
             <>
               <p className="text-[10px] text-gray-500 leading-relaxed">
@@ -330,7 +330,7 @@ function ShopInner() {
                           </p>
                           <div className="flex items-center justify-between gap-2 flex-wrap">
                             <p className="text-xs text-amber-300 font-black tabular-nums">
-                              {(Number(c.price_tokens) || 0).toLocaleString()} 토큰
+                              {(Number(c.price_tokens) || 0).toLocaleString()} 칩
                             </p>
                             <span className="text-[11px] font-black rounded-lg bg-cyan-600/80 px-3 py-1.5 text-white/70">
                               구매
@@ -351,7 +351,7 @@ function ShopInner() {
                   </span>
                   <p className="text-sm font-black text-gray-100">소모품 구매 준비 중</p>
                   <p className="text-[10px] text-gray-500 leading-relaxed max-w-[260px]">
-                    정책·운영 준비가 끝나면 이 패널이 열리고 같은 목록에서 토큰으로 구매할 수 있어요.
+                    정책·운영 준비가 끝나면 이 패널이 열리고 같은 목록에서 칩으로 구매할 수 있어요.
                   </p>
                 </div>
               </div>
@@ -386,7 +386,7 @@ function ShopInner() {
 
         {SHOW_STRIPE_TOKEN_PACKS ? (
           <section className="space-y-3">
-            <h2 className="text-[11px] font-black text-gray-500 uppercase tracking-widest">토큰 팩 (Stripe 결제)</h2>
+            <h2 className="text-[11px] font-black text-gray-500 uppercase tracking-widest">칩 팩 (Stripe 결제)</h2>
             {!catalog?.stripe_ready ? (
               <p className="text-xs text-gray-500">
                 결제(Gateway)가 아직 연결되지 않았습니다. 운영 환경에서 Stripe 키와 Price ID를 설정하면 구매 버튼이 활성화돼요.
@@ -401,7 +401,7 @@ function ShopInner() {
                     className="rounded-2xl border border-amber-500/30 bg-gradient-to-b from-amber-950/30 to-[#141414]/90 px-4 py-4 flex flex-col gap-3"
                   >
                     <div className="flex items-baseline justify-between gap-2">
-                      <p className="text-lg font-black text-white tabular-nums">{pack.tokens} 토큰</p>
+                      <p className="text-lg font-black text-white tabular-nums">{pack.tokens} 칩</p>
                       <p className="text-sm text-amber-200 font-bold">{pack.price_label ?? ""}</p>
                     </div>
                     {!pack.stripe_price_configured ? (
@@ -424,7 +424,7 @@ function ShopInner() {
 
         <section className="rounded-2xl border border-white/[0.06] bg-[#111]/80 px-4 py-3 text-[10px] text-gray-500 leading-relaxed space-y-2">
           <p>
-            토큰은 서비스 내 재화이며 현금으로 환전·환급되지 않습니다. 집계·아이템(열람형 콘텐츠)은 참고용 정보이며 투자·재산 관리 조언이 아닙니다.
+            칩은 서비스 내 재화이며 현금으로 환전·환급되지 않습니다. 집계·아이템(열람형 콘텐츠)은 참고용 정보이며 투자·재산 관리 조언이 아닙니다.
           </p>
           <p>
             환불·청약철회 등 유료 이용 관련 세부사항은{" "}

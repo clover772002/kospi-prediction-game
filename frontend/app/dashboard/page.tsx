@@ -1119,7 +1119,7 @@ export default function DashboardPage() {
                     </span>
                     {!expertUnlocked && tokens != null ? (
                       <span className="text-sm font-normal text-white/70">
-                        토큰 {expertMin}개 이상이면 초고수 소통이 열립니다 (현재 {tokens}개)
+                        칩 {expertMin}개 이상이면 초고수 소통이 열립니다 (현재 {tokens}개)
                       </span>
                     ) : null}
                   </Link>
@@ -1214,7 +1214,7 @@ export default function DashboardPage() {
 
               {dash.tokens != null && (
                 <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-xl px-4 py-3">
-                  <p className="text-sm text-white mb-1">보유 토큰</p>
+                  <p className="text-sm text-white mb-1">보유 칩</p>
                   <p className="text-xl font-black text-yellow-400 tabular-nums">
                     💰 {dash.tokens.toLocaleString()}
                   </p>
@@ -1262,10 +1262,10 @@ export default function DashboardPage() {
                           </th>
                           <th className={`${HISTORY_TH} min-w-[5rem] text-center`}>판정</th>
                           <th
-                            title="해당일 배팅한 토큰 (적중 시 같은 만큼 획득, 미적중 시 같은 만큼 손실)"
+                            title="해당일 배팅한 칩 (적중 시 같은 만큼 획득, 미적중 시 같은 만큼 손실)"
                             className={`${HISTORY_TH} min-w-[5.5rem] pr-4 text-right`}
                           >
-                            배팅토큰
+                            배팅칩
                           </th>
                         </tr>
                       </thead>
@@ -1632,7 +1632,7 @@ export default function DashboardPage() {
         {token && (
           <div className="space-y-4 pt-2">
             <h2 className="font-black text-base text-white leading-snug">
-              토큰을 더 빨리 모으고 싶다면?
+              칩을 더 빨리 모으고 싶다면?
             </h2>
             <Suspense fallback={<DashboardInsightSectionSkeleton />}>
               <DashboardInsightSection

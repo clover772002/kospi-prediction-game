@@ -88,12 +88,12 @@ export default function ConsumableShopCard({
       closePanel();
       const balRaw = out.balance_after ?? out.balance ?? out.spent;
       const balMsg = balRaw != null ? String(balRaw) : "";
-      setFlash(balMsg ? `구매가 완료됐습니다. 현재 보유 약 ${balMsg}토큰` : "구매가 완료됐습니다.");
+      setFlash(balMsg ? `구매가 완료됐습니다. 현재 보유 약 ${balMsg}칩` : "구매가 완료됐습니다.");
     } catch (err: unknown) {
       if (err instanceof InsightInsufficientTokensError) {
         const req = err.detail.required;
         const hav = err.detail.balance;
-        setErr(`토큰이 부족합니다. 필요 ${req ?? "?"} · 보유 ${hav ?? "?"} 토큰`);
+        setErr(`칩이 부족합니다. 필요 ${req ?? "?"} · 보유 ${hav ?? "?"} 칩`);
         await onBalanceRefresh();
       } else {
         setErr(err instanceof Error ? err.message : "구매하지 못했습니다.");
@@ -111,7 +111,7 @@ export default function ConsumableShopCard({
       {c.description ? <p className="text-[11px] text-gray-500 mt-1 leading-relaxed">{c.description}</p> : null}
 
       <div className="flex items-center justify-between gap-2 flex-wrap">
-        <p className="text-xs text-amber-300 font-black tabular-nums">{cost} 토큰</p>
+        <p className="text-xs text-amber-300 font-black tabular-nums">{cost} 칩</p>
         {!panelOpen ? (
           <button
             type="button"
@@ -131,17 +131,17 @@ export default function ConsumableShopCard({
             <li>
               현재 보유:{" "}
               <span className="font-bold text-cyan-200">
-                {hasBalanceInfo ? `${walletTokens} 토큰` : "조회 중…"}
+                {hasBalanceInfo ? `${walletTokens} 칩` : "조회 중…"}
               </span>
             </li>
             <li>
-              차감: <span className="font-bold text-amber-200">{cost} 토큰</span>
+              차감: <span className="font-bold text-amber-200">{cost} 칩</span>
             </li>
             {afterPurchase !== null ? (
               <li>
                 예상 보유:{" "}
                 <span className={sufficient ? "font-bold text-white" : "font-bold text-red-400"}>
-                  {afterPurchase} 토큰
+                  {afterPurchase} 칩
                 </span>
               </li>
             ) : null}

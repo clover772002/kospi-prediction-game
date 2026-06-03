@@ -5,7 +5,7 @@ import { useCallback, useId, useRef, useState } from "react";
 interface GaugeBarProps {
   value: number; // -100 ~ +100 (0 제외)
   onChange: (v: number) => void;
-  tokens: number; // 현재 보유 토큰
+  tokens: number; // 현재 보유 칩
   disabled?: boolean;
   /** true면 상승/하락 방향 유지(확신도만 조정) */
   lockDirection?: boolean;
@@ -157,7 +157,7 @@ export default function GaugeBar({
           </p>
           <details className="group rounded-xl bg-[#111]/90 border border-[#2a2a2a] px-4 py-2.5">
             <summary className="text-base text-cyan-400 font-bold cursor-pointer list-none [&::-webkit-details-marker]:hidden flex items-center gap-1">
-              <span>확신도·토큰 자세히 보기</span>
+              <span>확신도·칩 자세히 보기</span>
               <span className="text-gray-600 group-open:rotate-180 transition-transform">▼</span>
             </summary>
             <div className="mt-2 text-base text-gray-500 leading-relaxed space-y-2 pb-1 w-full min-w-0">
@@ -171,8 +171,8 @@ export default function GaugeBar({
                 방향에 대한 <strong className="text-gray-400">강한 확신</strong>을 의미합니다.
               </p>
               <p>
-                <strong className="text-gray-400">배팅 토큰</strong>은 확신도와 보유량에 따라 자동 산출됩니다. 적중 시{" "}
-                <strong className="text-gray-300">배팅한 만큼 토큰을 얻고</strong>, 미적중 시 배팅한 만큼 잃습니다.
+                <strong className="text-gray-400">배팅 칩</strong>은 확신도와 보유량에 따라 자동 산출됩니다. 적중 시{" "}
+                <strong className="text-gray-300">배팅한 만큼 칩을 얻고</strong>, 미적중 시 배팅한 만큼 잃습니다.
               </p>
             </div>
           </details>
@@ -258,7 +258,7 @@ export default function GaugeBar({
         </div>
         {!disabled && (
           <p className="text-center text-sm text-gray-500 mt-2">
-            막대를 드래그해 방향·확신도를 정하면 배팅 토큰이 함께 바뀝니다.
+            막대를 드래그해 방향·확신도를 정하면 배팅 칩이 함께 바뀝니다.
           </p>
         )}
       </div>
@@ -271,23 +271,23 @@ export default function GaugeBar({
       {/* 배팅 정보 */}
       <div className="bg-[#111] border border-[#2A2A2A] rounded-xl p-3 space-y-1.5">
         <div className="flex justify-between text-base">
-          <span className="text-gray-500">보유 토큰</span>
+          <span className="text-gray-500">보유 칩</span>
           <span className="text-white font-bold tabular-nums">💰 {tokens.toLocaleString()}</span>
         </div>
         <div className="flex justify-between text-base">
-          <span className="text-gray-500">배팅 토큰</span>
+          <span className="text-gray-500">배팅 칩</span>
           <span className={`font-black tabular-nums ${dirColor}`}>{bet.toLocaleString()}</span>
         </div>
         <div className="h-px bg-[#222]" />
         <div className="flex justify-between gap-2 text-base items-start flex-wrap">
           <span className="text-gray-500 shrink-0">적중 시 보유</span>
           <span className="text-green-400 font-bold text-right leading-snug tabular-nums">
-            약 {hitBalance.toLocaleString()} 토큰
+            약 {hitBalance.toLocaleString()} 칩
           </span>
         </div>
         <div className="flex justify-between text-base">
           <span className="text-gray-500">실패 시</span>
-          <span className="text-red-400 font-bold tabular-nums">약 {(tokens - bet).toLocaleString()} 토큰</span>
+          <span className="text-red-400 font-bold tabular-nums">약 {(tokens - bet).toLocaleString()} 칩</span>
         </div>
       </div>
 

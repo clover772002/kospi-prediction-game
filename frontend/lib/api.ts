@@ -463,7 +463,7 @@ export async function requestRematch(
   return authFetch(`/api/challenges/${challenge_id}/rematch`, token, { method: "POST" });
 }
 
-// ─── 상점 · 아이템 (토큰/결제 플랜) ────────────────────────
+// ─── 상점 · 아이템 (칩/결제 플랜) ────────────────────────
 
 export interface ExpertGapInsightResponse {
   accessible: boolean;
@@ -882,7 +882,7 @@ export async function createStripePackCheckout(accessToken: string, packSlug: st
   });
 }
 
-/** 명예의 전당 순위 항목 (토큰·적중률 공통) */
+/** 명예의 전당 순위 항목 (칩·적중률 공통) */
 export interface HallOfFameRankingEntry {
   user_id: string;
   masked_name: string;

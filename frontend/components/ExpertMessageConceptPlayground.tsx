@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 const PHASE_MS = 640;
 const N_PHASE = 7;
 
-/** 로그인 랜딩: 토큰 → 초고수 소통 시각 예시 */
+/** 로그인 랜딩: 칩 → 초고수 소통 시각 예시 */
 export default function ExpertMessageConceptPlayground() {
   const [phase, setPhase] = useState(0);
 
@@ -24,7 +24,7 @@ export default function ExpertMessageConceptPlayground() {
   return (
     <div className="w-full rounded-3xl border-2 border-sky-500/35 bg-gradient-to-b from-[#0c1218]/95 to-[#0e0e10] overflow-hidden shadow-[inset_0_1px_0_rgba(56,189,248,0.08)]">
       <div className="flex items-center justify-center px-4 py-2.5 bg-sky-500/10 border-b border-sky-500/20">
-        <span className="text-base sm:text-lg font-black text-sky-200/95 tracking-wide">토큰 → 초고수 채팅</span>
+        <span className="text-base sm:text-lg font-black text-sky-200/95 tracking-wide">칩 → 초고수 채팅</span>
       </div>
 
       <div className="relative px-3 py-3 min-h-[11rem]">
@@ -36,7 +36,7 @@ export default function ExpertMessageConceptPlayground() {
         />
 
         <div className="relative z-[1] flex flex-col gap-2">
-          <p className="text-lg sm:text-xl text-gray-400 text-center font-black px-2">토큰 주면 질문 · 답 채팅</p>
+          <p className="text-lg sm:text-xl text-gray-400 text-center font-black px-2">칩 주면 질문 · 답 채팅</p>
 
           {/* 내 메시지 (우측) */}
           <div

@@ -142,11 +142,11 @@ export default function SurveyConfidencePlayground() {
           >
             {outcomePhase === "hit" ? (
               <>
-                맞추면 <span className="tabular-nums">+{payoutHit.toLocaleString()}</span> 토큰
+                맞추면 <span className="tabular-nums">+{payoutHit.toLocaleString()}</span> 칩
               </>
             ) : (
               <>
-                틀리면 <span className="tabular-nums">−{bet.toLocaleString()}</span> 토큰
+                틀리면 <span className="tabular-nums">−{bet.toLocaleString()}</span> 칩
               </>
             )}
           </p>

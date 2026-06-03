@@ -21,7 +21,7 @@ export default function PrivacyPage() {
           <p className="mt-2 text-xs text-gray-500">
             <span className="text-gray-400">고수 소통 기능 사용 시:</span> 참가자가 보낸 메시지 본문, 스레드
             정보, 고수 「팁 수락」 시점 등이 서비스 제공·분쟁 대응·스팸 방지를 위해 Supabase(DB)에 저장됩니다. 보낸
-            직후에는 참가자 토큰만 차감되었다가 고수가 수락하면 상대에게 정산되는 흐름으로 처리합니다.
+            직후에는 참가자 칩만 차감되었다가 고수가 수락하면 상대에게 정산되는 흐름으로 처리합니다.
           </p>
           <p className="mt-1 text-gray-500 text-xs">프로필 사진·연락처·실시간 위치는 수집하지 않습니다.</p>
         </section>
@@ -53,7 +53,7 @@ export default function PrivacyPage() {
             <li>· <span className="text-white">Vercel</span> — 프론트엔드 호스팅 (미국 소재)</li>
             <li>· <span className="text-white">Railway</span> — 백엔드 서버 (미국 소재)</li>
             <li>
-              · <span className="text-white">Stripe</span> — 토큰 팩 등 유료 결제 처리 (미국 소재).
+              · <span className="text-white">Stripe</span> — 칩 팩 등 유료 결제 처리 (미국 소재).
               카드 결제 시 결제 정보는 Stripe 및 카드 네트워크에 따라 필요한 범위에서 처리됩니다. 당사는 원칙적으로 전체 카드 번호를 저장하지 않습니다.
             </li>
           </ul>
@@ -82,10 +82,10 @@ export default function PrivacyPage() {
         </section>
 
         <section>
-          <h2 className="text-white font-bold mb-2">7. 디지털 콘텐츠·토큰(플랫폼 크레딛)</h2>
+          <h2 className="text-white font-bold mb-2">7. 디지털 콘텐츠·칩(플랫폼 크레딛)</h2>
           <p className="text-gray-400">
-            일부 기능은 서비스 내 토큰을 사용하거나, 유료 결제로 토큰 팩을 구매하여 이용할 수 있습니다.
-            토큰은 현금 또는 외환으로 환전·환급되지 않는 플랫폼 전용 크레딛이며, 아이템·집계형 콘텐츠 열람 등 서비스 범위 내에서만 소비됩니다.
+            일부 기능은 서비스 내 칩을 사용하거나, 유료 결제로 칩 팩을 구매하여 이용할 수 있습니다.
+            칩은 현금 또는 외환으로 환전·환급되지 않는 플랫폼 전용 크레딛이며, 아이템·집계형 콘텐츠 열람 등 서비스 범위 내에서만 소비됩니다.
           </p>
           <p className="text-gray-500 text-xs mt-2">
             집계 및 아이템(열람형 정보)은 참고용 정보이며 특정 종목·지수 매매를 권유하거나 수익을 보장하지 않습니다 (투자 자문 아님).
@@ -95,7 +95,7 @@ export default function PrivacyPage() {
         <section>
           <h2 className="text-white font-bold mb-2">8. 청약철회·환불(유료 이용)</h2>
           <p className="text-gray-400">
-            전자상거래법 등 관련 법령에 따라 디지털 콘텐츠·즉시 사용 가능한 플랫폼 크레딧(토큰)의 성격상, 제공이 개시된 후에는 청약철회가 제한될 수 있습니다.
+            전자상거래법 등 관련 법령에 따라 디지털 콘텐츠·즉시 사용 가능한 플랫폼 크레딧(칩)의 성격상, 제공이 개시된 후에는 청약철회가 제한될 수 있습니다.
           </p>
           <p className="text-gray-400 mt-2">
             미사용 상태의 결제, 중복 결제, 서비스 오류 등은 이메일로 문의해 주시면 사실관계 확인 후 처리 방안을 안내합니다.

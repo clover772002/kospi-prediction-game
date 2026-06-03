@@ -26,7 +26,7 @@ interface Props {
   hideUnlockControl?: boolean;
 }
 
-/** 최근 7거래일 전역 최고 고수 1명 적중 시계열 (토큰 잠금) */
+/** 최근 7거래일 전역 최고 고수 1명 적중 시계열 (칩 잠금) */
 export default function RollingCrowdInsightCard({
   accessToken,
   surveyDateAsEndDate,
@@ -158,7 +158,7 @@ export default function RollingCrowdInsightCard({
               />
             ) : locked ? (
               <span className="rounded-lg font-black tabular-nums border px-2.5 py-1 text-[11px] whitespace-nowrap border-sky-500/35 bg-sky-500/10 text-sky-200/80">
-                {priceTokens} 토큰
+                {priceTokens} 칩
               </span>
             ) : null}
             <span className={d.icon} aria-hidden>

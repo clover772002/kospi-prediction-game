@@ -215,7 +215,7 @@ export default function VoteTimeProfileInsightCard({
               <span
                 className={`rounded-lg font-black tabular-nums border px-2.5 py-1 text-[11px] whitespace-nowrap ${priceChipReadonly}`}
               >
-                {priceTokens} 토큰
+                {priceTokens} 칩
               </span>
             ) : null}
             <span className={ix.icon} aria-hidden>

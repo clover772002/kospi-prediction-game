@@ -141,13 +141,13 @@ async def get_current_user(request: Request, supabase: Client = Depends(get_supa
     try:
         result = supabase.auth.get_user(token)
         if not result or not result.user:
-            raise HTTPException(status_code=401, detail="유효하지 않은 토큰입니다.")
+            raise HTTPException(status_code=401, detail="로그인이 만료되었거나 유효하지 않습니다.")
         return result.user
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"JWT 검증 오류: {e}")
-        raise HTTPException(status_code=401, detail="유효하지 않은 토큰입니다.")
+        raise HTTPException(status_code=401, detail="로그인이 만료되었거나 유효하지 않습니다.")
 
 
 # ─────────────────────────────────────────────────────────────
@@ -206,11 +206,11 @@ async def job_21_30_admin_poll_request():
 
 
 async def job_weekly_participation_rewards():
-    """매주 일요일 21:00 KST — 이번 주(월~일) 설문 참여 일수별 토큰 일괄 지급."""
+    """매주 일요일 21:00 KST — 이번 주(월~일) 설문 참여 일수별 칩 일괄 지급."""
     try:
         run_weekly_grants_for_week(_supabase_direct())
     except Exception as e:
-        logger.exception("주간 참여 토큰 지급 작업 실패: %s", e)
+        logger.exception("주간 참여 칩 지급 작업 실패: %s", e)
 
 
 async def job_08_45():
@@ -440,7 +440,7 @@ async def lifespan(app_instance):
     )
     scheduler.start()
     logger.info(
-        "스케줄러 시작: 16:10(FGI) / 21:00(주간참여토큰) / 21:30(관리자투표) / 22:00(설문) / 08:45 / 09:00 / 15:35 / KOSPI 스냅샷"
+        "스케줄러 시작: 16:10(FGI) / 21:00(주간참여칩) / 21:30(관리자투표) / 22:00(설문) / 08:45 / 09:00 / 15:35 / KOSPI 스냅샷"
     )
     yield
     scheduler.shutdown()
@@ -978,7 +978,7 @@ def _build_rolling_crowd_summary_payload(supabase: Client, end_date_str: str) ->
     last_s = series[-1]["survey_date"]
     bullets = [
         f"종료 거래일 {end_date_str} 기준, 직전 포함 {_ROLLING_CROWD_WINDOW_TRADING_DAYS}거래일({first_s} ~ {last_s})입니다.",
-        "각 날짜는 토큰 1위(고수)가 그날 설문에 참여했을 때만, 코스피 결과가 확정된 날의 적중 여부(0%·100%)를 셉니다.",
+        "각 날짜는 칩 1위(고수)가 그날 설문에 참여했을 때만, 코스피 결과가 확정된 날의 적중 여부(0%·100%)를 셉니다.",
         "최고 고수가 그날 미참여이거나 아직 결과가 없는 날은 수치를 숨깁니다.",
         f"적중률을 채운 칸은 {ok_cells}개입니다.",
         "투자·매매 의사결정이 아니며 수익을 보장하지 않습니다.",
@@ -990,7 +990,7 @@ def _build_rolling_crowd_summary_payload(supabase: Client, end_date_str: str) ->
             "window_trading_days": _ROLLING_CROWD_WINDOW_TRADING_DAYS,
             "series": series,
             "bullets": bullets,
-            "computed_note": "고수는 전체 참가자 중 현재 보유 토큰이 가장 많은 1명(동률 시 id순)입니다.",
+            "computed_note": "고수는 전체 참가자 중 현재 보유 칩이 가장 많은 1명(동률 시 id순)입니다.",
         },
         None,
     )
@@ -1121,7 +1121,7 @@ def _build_leader_pick_payload(
             return None, tier_err
         if not leader or leader not in day_uids:
             return None, "segment_empty"
-        rank_label_ko = "토큰 1위 고수"
+        rank_label_ko = "칩 1위 고수"
         segment_n = 1
     else:
         _experts, novices = _wave_b_expert_and_novice_ids(day_uids, acc_map, pred_count)
@@ -1161,7 +1161,7 @@ def _build_leader_pick_payload(
     cohort_title = "최고 고수" if cohort == "expert" else "하수층"
     frac_pct = int(round(_EXPERT_NOVICE_FRAC * 100))
     expert_bullet = (
-        f"※ {rank_label_ko}: 전체 참가자 중 현재 보유 토큰 1위(동률 시 id순)이며, "
+        f"※ {rank_label_ko}: 전체 참가자 중 현재 보유 칩 1위(동률 시 id순)이며, "
         "그날 설문에 참여했을 때만 표시합니다."
     )
     novice_bullet = (
@@ -1178,7 +1178,7 @@ def _build_leader_pick_payload(
     ]
 
     computed_note = (
-        "숫자는 해당 고수의 현재 토큰 잔액입니다."
+        "숫자는 해당 고수의 현재 칩 잔액입니다."
         if cohort == "expert"
         else "적중률은 원시 적중 비율(accuracy_records 분모)입니다."
     )
@@ -1220,7 +1220,7 @@ def _timed_user_bucket_records(rows: list[dict]) -> list[tuple[str, bool, int]]:
 def _build_time_slice_accuracy_payload(
     supabase: Client, survey_date_str: str
 ) -> tuple[dict | None, str | None]:
-    """토큰 1위 고수가 종료 거래일까지 직전 7거래일 구간에서 남긴 제출 시각 버킷 분포."""
+    """칩 1위 고수가 종료 거래일까지 직전 7거래일 구간에서 남긴 제출 시각 버킷 분포."""
     leader, tier_err = global_top_expert_uid(supabase)
     if tier_err:
         return None, tier_err
@@ -1285,7 +1285,7 @@ def _build_time_slice_accuracy_payload(
         )
 
     bullets = [
-        "전체 참가자 중 현재 보유 토큰이 가장 많은 고수 1명(동률 시 id순)을 골랐습니다.",
+        "전체 참가자 중 현재 보유 칩이 가장 많은 고수 1명(동률 시 id순)을 골랐습니다.",
         f"그 참가자의 최근 {_ROLLING_CROWD_WINDOW_TRADING_DAYS}거래일({date_strs[0]} ~ {date_strs[-1]}) 구간에서 제출 시각이 기록된 응답 {total_ts}건을 버킷에 담았습니다.",
         "이름은 초성만 표시합니다.",
         "투자·매매 의사결정이 아니며 수익을 보장하지 않습니다.",
@@ -1715,8 +1715,8 @@ def settle_kospi_survey_day(
     *,
     update_daily_survey_row: bool = True,
 ) -> dict:
-    """KOSPI 종가 확정 후 accuracy·유저 토큰·스트릭·survey_responses 배당 저장.
-    Vercel/온디맨드가 accuracy만 넣었을 때 호출하면 토큰이 보강됨."""
+    """KOSPI 종가 확정 후 accuracy·유저 칩·스트릭·survey_responses 배당 저장.
+    Vercel/온디맨드가 accuracy만 넣었을 때 호출하면 칩이 보강됨."""
     with _settle_rlock_for(survey_date_str):
         return _settle_kospi_survey_day_inner(
             supabase, survey_date_str, is_up, change_pct,
@@ -1732,8 +1732,8 @@ def _settle_kospi_survey_day_inner(
     *,
     update_daily_survey_row: bool = True,
 ) -> dict:
-    """KOSPI 종가 확정 후 accuracy·유저 토큰·스트릭·survey_responses 배당 저장.
-    Vercel/온디맨드가 accuracy만 넣었을 때 호출하면 토큰이 보강됨."""
+    """KOSPI 종가 확정 후 accuracy·유저 칩·스트릭·survey_responses 배당 저장.
+    Vercel/온디맨드가 accuracy만 넣었을 때 호출하면 칩이 보강됨."""
     pct_out = round(float(change_pct), 2) if change_pct is not None else None
 
     responses = (
@@ -1859,7 +1859,7 @@ def _settle_kospi_tokens_for_user_date(
         )
     except Exception as e:
         logger.warning(
-            "개인 토큰 정산: 응답 조회 실패 user=%s date=%s — %s",
+            "개인 칩 정산: 응답 조회 실패 user=%s date=%s — %s",
             user_id,
             survey_date_str,
             e,
@@ -1881,7 +1881,7 @@ def _settle_kospi_tokens_for_user_date(
     try:
         u_row = supabase.table("users").select("tokens, game_over_count").eq("id", user_id).execute()
     except Exception as e:
-        logger.warning("개인 토큰 정산: users 조회 실패 user=%s — %s", user_id, e)
+        logger.warning("개인 칩 정산: users 조회 실패 user=%s — %s", user_id, e)
         return False
     if not u_row.data:
         return False
@@ -1917,7 +1917,7 @@ def _settle_kospi_tokens_for_user_date(
         }).eq("user_id", user_id).eq("survey_date", survey_date_str).is_("tokens_won", "null").execute()
     except Exception as e:
         logger.error(
-            "개인 토큰 정산: DB 업데이트 실패 user=%s date=%s — %s",
+            "개인 칩 정산: DB 업데이트 실패 user=%s date=%s — %s",
             user_id,
             survey_date_str,
             e,
@@ -1928,7 +1928,7 @@ def _settle_kospi_tokens_for_user_date(
 
 
 def ensure_kospi_tokens_settled_for_date(supabase: Client, survey_date_str: str) -> None:
-    """DB에 종가 결과만 있고 토큰 정산이 빠진 날 보강 (Vercel·온디맨드 분기 등)."""
+    """DB에 종가 결과만 있고 칩 정산이 빠진 날 보강 (Vercel·온디맨드 분기 등)."""
     try:
         ds = (
             supabase.table("daily_surveys")
@@ -1971,7 +1971,7 @@ def ensure_kospi_tokens_settled_for_date(supabase: Client, survey_date_str: str)
             update_daily_survey_row=False,
         )
     except Exception as e:
-        logger.error(f"토큰 정산 보강 실패 ({survey_date_str}): {e}")
+        logger.error(f"칩 정산 보강 실패 ({survey_date_str}): {e}")
 
 
 async def _persist_kospi_survey_close_if_needed(supabase: Client, survey_date_str: str) -> bool:
@@ -2011,7 +2011,7 @@ async def _persist_kospi_survey_close_if_needed(supabase: Client, survey_date_st
             update_daily_survey_row=True,
         )
     except Exception as e:
-        logger.error(f"KOSPI 보강·토큰 정산 실패: {e}")
+        logger.error(f"KOSPI 보강·칩 정산 실패: {e}")
         return False
 
     logger.info(f"KOSPI 결과 DB 보강(온디맨드): {survey_date_str} {'▲' if is_up else '▼'} {pct_val}%")
@@ -2019,7 +2019,7 @@ async def _persist_kospi_survey_close_if_needed(supabase: Client, survey_date_st
 
 
 def _spawn_settlement_side_effects(supabase: Client, survey_date_str: str | None = None) -> None:
-    """읽기 API 응답을 막지 않도록 KOSPI 보강·전체 토큰 정산을 백그라운드에서 실행."""
+    """읽기 API 응답을 막지 않도록 KOSPI 보강·전체 칩 정산을 백그라운드에서 실행."""
     sd = (survey_date_str or today_kst()).strip()[:10]
 
     async def _run() -> None:
@@ -2030,7 +2030,7 @@ def _spawn_settlement_side_effects(supabase: Client, survey_date_str: str | None
         try:
             ensure_kospi_tokens_settled_for_date(supabase, sd)
         except Exception as ex:
-            logger.warning("백그라운드 토큰 정산 보강 실패 (%s): %s", sd, ex)
+            logger.warning("백그라운드 칩 정산 보강 실패 (%s): %s", sd, ex)
 
     try:
         asyncio.get_running_loop().create_task(_run())
@@ -2140,7 +2140,7 @@ async def admin_run_15_35():
 
 @app.post("/api/admin/run-weekly-participation-rewards")
 async def admin_run_weekly_participation_rewards(request: Request):
-    """주간 설문 참여 토큰 수동 지급. 헤더: x-admin-secret. Body(선택): { \"week_end\": \"YYYY-MM-DD\" }"""
+    """주간 설문 참여 칩 수동 지급. 헤더: x-admin-secret. Body(선택): { \"week_end\": \"YYYY-MM-DD\" }"""
     _require_admin_secret(request)
     week_end = None
     try:
@@ -2909,7 +2909,7 @@ async def post_consumable_purchase(
             gauge_position=body.gauge_position,
         )
     except RuntimeError:
-        raise HTTPException(status_code=503, detail="토큰 동시성 충돌 — 잠시 후 다시 시도해 주세요.") from None
+        raise HTTPException(status_code=503, detail="칩 동시성 충돌 — 잠시 후 다시 시도해 주세요.") from None
     if not out.get("ok"):
         code = 400
         if out.get("error") == "insufficient_tokens":
@@ -2942,7 +2942,7 @@ async def hall_of_fame_rankings(
     current_user=Depends(get_current_user),
     supabase: Client = Depends(get_supabase),
 ):
-    """명예의 전당 — 보유 토큰 누적 순위 + 이번 주 설문 토큰 순위."""
+    """명예의 전당 — 보유 칩 누적 순위 + 이번 주 설문 칩 순위."""
     user_id = str(current_user.id)
     try:
         return build_hall_of_fame_payload(supabase, current_user_id=user_id)
@@ -2974,7 +2974,7 @@ async def expert_chat_send_message(
     current_user=Depends(get_current_user),
     supabase: Client = Depends(get_supabase),
 ):
-    """참가자 토큰 차감 + 메시지 저장. 초고수에게는 「팁 수락」받았을 때 정산합니다."""
+    """참가자 칩 차감 + 메시지 저장. 초고수에게는 「팁 수락」받았을 때 정산합니다."""
     user_id = str(current_user.id)
     sd = (body.survey_date or "").strip() or today_kst()
     if len(sd) != 10:
@@ -3044,7 +3044,7 @@ async def expert_chat_accept_tip(
     current_user=Depends(get_current_user),
     supabase: Client = Depends(get_supabase),
 ):
-    """초고수만: 참가자 메시지에 붙은 팁을 수락하면 토큰이 전달됩니다."""
+    """초고수만: 참가자 메시지에 붙은 팁을 수락하면 칩이 전달됩니다."""
     expert_id = str(current_user.id)
     mid = (body.message_id or "").strip()
     if not mid:
@@ -3064,7 +3064,7 @@ async def expert_chat_reply(
     current_user=Depends(get_current_user),
     supabase: Client = Depends(get_supabase),
 ):
-    """초고수 답장(토큰 0). 참가자에게 웹 푸시 가능 시 알림 시도."""
+    """초고수 답장(칩 0). 참가자에게 웹 푸시 가능 시 알림 시도."""
     expert_id = str(current_user.id)
     tid = (ep.thread_id or "").strip()
     if not tid:
@@ -4500,7 +4500,7 @@ async def get_insight_entitlements(
     current_user=Depends(get_current_user),
     supabase: Client = Depends(get_supabase),
 ):
-    """선택 거래일에 대해 이미 토큰 잠금 해제한 집계 상품 slug 목록(아이템 탭 버튼 비활성화용)."""
+    """선택 거래일에 대해 이미 칩 잠금 해제한 집계 상품 slug 목록(아이템 탭 버튼 비활성화용)."""
     user_id = str(current_user.id)
     sd = survey_date.strip()
     if len(sd) != 10 or sd[4] != "-" or sd[7] != "-":

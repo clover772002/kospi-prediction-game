@@ -25,7 +25,7 @@ interface Props {
   hideUnlockControl?: boolean;
 }
 
-/** 상승·하락 선택 무리별 확신도(게이지) 분포 (토큰 잠금) */
+/** 상승·하락 선택 무리별 확신도(게이지) 분포 (칩 잠금) */
 export default function CrowdConvictionInsightCard({
   accessToken,
   surveyDate,
@@ -176,7 +176,7 @@ export default function CrowdConvictionInsightCard({
               />
             ) : locked ? (
               <span className="rounded-lg font-black tabular-nums border px-2.5 py-1 text-[11px] whitespace-nowrap border-rose-500/35 bg-rose-500/10 text-rose-200/80">
-                {priceTokens} 토큰
+                {priceTokens} 칩
               </span>
             ) : null}
             <span className={ix.icon} aria-hidden>

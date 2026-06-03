@@ -205,7 +205,7 @@ export default function CohortLeaderPickInsightCard({
               <span
                 className={`rounded-lg font-black tabular-nums border px-2.5 py-1 text-[11px] whitespace-nowrap ${priceChipReadonly}`}
               >
-                {priceTokens} 토큰
+                {priceTokens} 칩
               </span>
             ) : null}
             <span className={ix.icon} aria-hidden>
@@ -243,7 +243,7 @@ export default function CohortLeaderPickInsightCard({
               <span className="mx-2 text-gray-600">·</span>
               <span className="tabular-nums">
                 {cohort === "expert" && pick.leader_token_balance != null
-                  ? `${pick.leader_token_balance} 토큰`
+                  ? `${pick.leader_token_balance} 칩`
                   : `${pick.leader_accuracy_pct ?? "—"}%`}
               </span>
             </p>

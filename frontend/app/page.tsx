@@ -132,14 +132,14 @@ export default function LoginPage() {
       <div className="w-full mb-12 min-w-0 space-y-12">
         <section className="min-w-0 rounded-3xl border-2 border-amber-500/35 bg-gradient-to-b from-[#161008]/95 to-[#121212]/90 p-5 sm:p-8">
           <h2 className="text-[1.65rem] sm:text-[2.2rem] font-black text-white leading-tight mb-6 sm:mb-8 pb-4 border-b border-amber-500/25">
-            코스피를 예측하고 토큰을 얻어요
+            코스피를 예측하고 칩을 얻어요
           </h2>
           <SurveyConfidencePlayground />
         </section>
 
         <section className="min-w-0 rounded-3xl border-2 border-sky-500/35 bg-gradient-to-b from-[#081018]/95 to-[#121212]/90 p-5 sm:p-8">
           <h2 className="text-[1.65rem] sm:text-[2.2rem] font-black text-white leading-tight mb-6 sm:mb-8 pb-4 border-b border-sky-500/25">
-            토큰으로 초고수랑 소통해요
+            칩으로 초고수랑 소통해요
           </h2>
 
           <div className="space-y-10">
@@ -217,7 +217,7 @@ export default function LoginPage() {
           {[
             {
               q: "완전 무료인가요?",
-              a: "시작하고 설문 참여 같은 기본 흐름은 무료로 시작해요. 토큰은 적중 등으로 쌓이고, 초고수 선택픽이나 명예의 전당 소통에 쓰일 수 있어요. 유료 과금이 생기면 사전 공지합니다.",
+              a: "시작하고 설문 참여 같은 기본 흐름은 무료로 시작해요. 칩은 적중 등으로 쌓이고, 초고수 선택픽이나 명예의 전당 소통에 쓰일 수 있어요. 유료 과금이 생기면 사전 공지합니다.",
             },
             {
               q: "매일 해야 하나요? 빠지면 불이익이 있나요?",
@@ -237,7 +237,7 @@ export default function LoginPage() {
             },
             {
               q: "초고수랑 어떻게 소통하나요?",
-              a: "시작 시 100토큰이 주어지고, 명예의 전당(초고수 소통)은 보유 토큰이 210개 이상일 때 열립니다. 「초고수」는 전체 참가자 중 토큰이 가장 많은 1명이며, 상단 순위를 확인한 뒤 대시보드·명예의 전당에서 질문을 보낼 수 있어요. 질문 1통당 25토큰이 차감되며, 초고수가 팁을 수락할 때 전달됩니다.",
+              a: "시작 시 100칩이 주어지고, 명예의 전당(초고수 소통)은 보유 칩이 210개 이상일 때 열립니다. 「초고수」는 전체 참가자 중 칩이 가장 많은 1명이며, 상단 순위를 확인한 뒤 대시보드·명예의 전당에서 질문을 보낼 수 있어요. 질문 1통당 25칩이 차감되며, 초고수가 팁을 수락할 때 전달됩니다.",
             },
             {
               q: "예측 결과가 조작될 수 있나요?",

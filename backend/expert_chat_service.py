@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""초고수 소통: 리더보드 스냅샷·스레드·토큰 전달(멱등)."""
+"""초고수 소통: 리더보드 스냅샷·스레드·칩 전달(멱등)."""
 from __future__ import annotations
 
 import logging
@@ -18,13 +18,13 @@ from token_wallet import grant_tokens_with_ledger, spend_tokens_idempotent
 logger = logging.getLogger(__name__)
 
 TIP_TOKENS = int(os.getenv("EXPERT_CHAT_TIP_TOKENS", "25"))
-# 시작 100토큰 대비 약 3회 적중·참여 분량(기본 100 + ~110) — 한 번만 100% 맞춰 열리는 것 방지
+# 시작 100칩 대비 약 3회 적중·참여 분량(기본 100 + ~110) — 한 번만 100% 맞춰 열리는 것 방지
 MIN_TAB_BALANCE = int(os.getenv("EXPERT_CHAT_MIN_TAB_BALANCE", "210"))
 TOP_N = 1
 MAX_BODY_LEN = int(os.getenv("EXPERT_CHAT_MAX_BODY", "1200"))
 MAX_MESSAGES_PER_PARTICIPANT_SURVEY = int(os.getenv("EXPERT_CHAT_MAX_MSG_PER_SURVEY", "30"))
 
-TAB_BLOCKED_REASON = f"초고수 소통은 토큰 {MIN_TAB_BALANCE}개 이상부터 이용할 수 있습니다."
+TAB_BLOCKED_REASON = f"초고수 소통은 칩 {MIN_TAB_BALANCE}개 이상부터 이용할 수 있습니다."
 
 
 def user_token_balance(supabase: Client, user_id: str) -> int:
@@ -167,13 +167,13 @@ def build_eligibility_payload(
         if not can_access_tab:
             return TAB_BLOCKED_REASON
         if leader_err == "segment_empty":
-            return "아직 토큰 1위 초고수를 정할 참가자가 없어요"
+            return "아직 칩 1위 초고수를 정할 참가자가 없어요"
         if not top_entry:
             return "오늘 설문에 참여한 초고수가 없어요"
         if leader_uid == current_user_id:
             return "초고수 본인은 질문을 보낼 수 없어요"
         if my_balance < TIP_TOKENS:
-            return f"질문 보내기에 토큰이 부족해요. (필요 {TIP_TOKENS}개)"
+            return f"질문 보내기에 칩이 부족해요. (필요 {TIP_TOKENS}개)"
         return "초고수에게 보낼 수 없어요"
 
     send_blocked_reason: str | None = None if can_send else _blocked()
@@ -279,7 +279,7 @@ def send_participant_message(
         bd = spend.get("balance")
         raise HTTPException(
             status_code=402,
-            detail=f"토큰이 부족합니다. 필요 {TIP_TOKENS} · 보유 {bd if bd is not None else '?'}",
+            detail=f"칩이 부족합니다. 필요 {TIP_TOKENS} · 보유 {bd if bd is not None else '?'}",
         )
     if not spend.get("spent"):
         dup_msg = (
@@ -337,7 +337,7 @@ def send_participant_message(
             )
         except Exception as re:
             logger.critical("전송 실패 후 환급도 실패 user=%s key=%s: %s", participant_id, key, re)
-        raise HTTPException(status_code=500, detail="메시지 저장에 실패했습니다. 토큰은 환급됐을 수 있어요.") from e
+        raise HTTPException(status_code=500, detail="메시지 저장에 실패했습니다. 칩은 환급됐을 수 있어요.") from e
 
     msg_id = str(msg_row["id"])
     _touch_thread_updated(supabase, thread_id)
@@ -457,7 +457,7 @@ def accept_participant_tip(
         )
     except Exception as e:
         logger.exception("초고수 팁 수락 지급 실패 msg=%s: %s", mid, e)
-        raise HTTPException(status_code=500, detail="토큰 정산에 실패했습니다. 잠시 후 다시 시도해 주세요.") from e
+        raise HTTPException(status_code=500, detail="칩 정산에 실패했습니다. 잠시 후 다시 시도해 주세요.") from e
 
     now_iso = datetime.now(timezone.utc).isoformat()
     try:

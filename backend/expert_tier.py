@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""전역 초고수(토큰 1위) — 명예의 전당·아이템·집계 카드 공통 정의."""
+"""전역 초고수(칩 1위) — 명예의 전당·아이템·집계 카드 공통 정의."""
 from __future__ import annotations
 
 import logging
@@ -29,7 +29,7 @@ def _fetch_user_token_balance(supabase: Client, user_id: str) -> int:
 
 
 def global_top_expert_uid(supabase: Client) -> tuple[str | None, str | None]:
-    """보유 토큰이 가장 많은 참가자 1명(동률 시 id순). users 행이 없으면 segment_empty."""
+    """보유 칩이 가장 많은 참가자 1명(동률 시 id순). users 행이 없으면 segment_empty."""
     try:
         res = (
             supabase.table("users")
@@ -40,7 +40,7 @@ def global_top_expert_uid(supabase: Client) -> tuple[str | None, str | None]:
             .execute()
         )
     except Exception as e:
-        logger.warning("초고수(토큰 1위) 조회 실패: %s", e)
+        logger.warning("초고수(칩 1위) 조회 실패: %s", e)
         return None, "segment_empty"
 
     rows = res.data or []
@@ -61,5 +61,5 @@ def global_top_expert_ids_on_day(day_user_ids: set[str], leader_uid: str | None)
 
 
 def leader_token_balance(supabase: Client, uid: str) -> int:
-    """카드·UI용 — 해당 참가자 현재 토큰 잔액."""
+    """카드·UI용 — 해당 참가자 현재 칩 잔액."""
     return _fetch_user_token_balance(supabase, uid)

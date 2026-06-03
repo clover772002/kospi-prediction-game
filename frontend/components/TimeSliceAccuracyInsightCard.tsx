@@ -169,7 +169,7 @@ export default function TimeSliceAccuracyInsightCard({
               />
             ) : locked ? (
               <span className="rounded-lg font-black tabular-nums border px-2.5 py-1 text-[11px] whitespace-nowrap border-amber-500/35 bg-amber-500/10 text-amber-200/80">
-                {priceTokens} 토큰
+                {priceTokens} 칩
               </span>
             ) : null}
             <span className={d.icon} aria-hidden>
@@ -197,7 +197,7 @@ export default function TimeSliceAccuracyInsightCard({
               {(data.data.leader_token_balance ?? data.data.leader_accuracy_pct) != null ? (
                 <>
                   {" "}
-                  · 보유 토큰{" "}
+                  · 보유 칩{" "}
                   <span className="text-gray-300 tabular-nums">
                     {data.data.leader_token_balance ?? data.data.leader_accuracy_pct}개
                   </span>

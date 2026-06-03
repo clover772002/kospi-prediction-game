@@ -60,13 +60,13 @@ const PREVIEW_ROWS: {
 
 /**
  * 집계 아이템 미리보기: 카탈로그 설명만, 차트 영역은 블러(데이터 미노출).
- * 토큰 API를 호출하지 않습니다.
+ * 칩 API를 호출하지 않습니다.
  */
 export default function InsightPreviewStack({ surveyDate }: { surveyDate: string }) {
   return (
     <div className="space-y-2">
       <p className="text-[10px] text-amber-200/80 rounded-xl border border-amber-500/25 bg-amber-500/5 px-3 py-2 leading-relaxed">
-        지금은 참여 규모가 작아 <strong className="text-amber-100">집계 차트·토큰 열람은 잠시 닫아 두었어요</strong>. 아래는 각 아이템이 어떤 정보인지
+        지금은 참여 규모가 작아 <strong className="text-amber-100">집계 차트·칩 열람은 잠시 닫아 두었어요</strong>. 아래는 각 아이템이 어떤 정보인지
         설명만 확인할 수 있어요. 표본이 쌓이면 공개를 재개할 예정이에요.
       </p>
       {PREVIEW_ROWS.map(({ slug, title, cardClass, badgeClass }) => {

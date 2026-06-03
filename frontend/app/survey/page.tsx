@@ -194,7 +194,7 @@ function SurveyCompletedPanel({
             beginnerTips={false}
           />
           <p className="text-center text-sm font-bold text-white/90 mt-2 tabular-nums">
-            {dirEmoji} {dirLabel} · 확신도 {Math.abs(gaugeValue)} · 배팅 {bet}토큰
+            {dirEmoji} {dirLabel} · 확신도 {Math.abs(gaugeValue)} · 배팅 {bet}칩
           </p>
         </div>
         <button
@@ -645,7 +645,7 @@ function SurveyPageInner() {
           const me = await getMeCached(session.access_token);
           if (typeof me.tokens === "number") setUserTokens(me.tokens);
         } catch {
-          /* 토큰 표시는 기본값 유지 */
+          /* 칩 표시는 기본값 유지 */
         }
       })();
     };

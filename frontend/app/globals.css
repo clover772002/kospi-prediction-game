@@ -641,7 +641,7 @@ body {
   animation: flow-op-blink 4s ease-in-out infinite;
 }
 
-/* 설문 데모: 적중 토큰 숫자 은은한 펄스 */
+/* 설문 데모: 적중 칩 숫자 은은한 펄스 */
 @keyframes hit-token-glow-kf {
   0%, 100% { filter: drop-shadow(0 0 4px rgba(52, 211, 153, 0.25)); }
   50% { filter: drop-shadow(0 0 12px rgba(52, 211, 153, 0.5)); }
@@ -767,7 +767,7 @@ body {
   animation: expert-pick-ribbon-shift 2.6s ease-in-out infinite;
 }
 
-/* ── 로그인 랜딩: 고수 가중 지표 · 토큰 승패 ───────────── */
+/* ── 로그인 랜딩: 고수 가중 지표 · 칩 승패 ───────────── */
 @keyframes login-weighted-glow-kf {
   0%,
   100% {

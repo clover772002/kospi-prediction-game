@@ -3,10 +3,10 @@
 import { useEffect, useState } from "react";
 
 const PHASE_MS = 580;
-/** 8단계 루프: 잠금 → 안내 → 토큰 표시 → 지불 순간 → 해제 반짝 → 유지 ×2 → 다음 루프 */
+/** 8단계 루프: 잠금 → 안내 → 칩 표시 → 지불 순간 → 해제 반짝 → 유지 ×2 → 다음 루프 */
 const N_PHASE = 8;
 
-/** 로그인 랜딩: 토큰으로 초고수 선택픽 해제 카드 예시 */
+/** 로그인 랜딩: 칩으로 초고수 선택픽 해제 카드 예시 */
 export default function ExpertPickRevealPlayground() {
   const [phase, setPhase] = useState(0);
   const [burstNonce, setBurstNonce] = useState(0);
@@ -30,7 +30,7 @@ export default function ExpertPickRevealPlayground() {
   return (
     <div className="w-full rounded-3xl border-2 border-amber-500/35 bg-gradient-to-b from-[#1a1510]/95 to-[#101010] overflow-hidden expert-pick-card-glow">
       <div className="flex items-center justify-center px-4 py-2.5 bg-amber-500/10 border-b border-amber-500/20">
-        <span className="text-base sm:text-lg font-black text-amber-200 tracking-wide">토큰 → 선택픽</span>
+        <span className="text-base sm:text-lg font-black text-amber-200 tracking-wide">칩 → 선택픽</span>
       </div>
 
       <div className="relative px-3 py-4 min-h-[11.5rem]">
@@ -75,7 +75,7 @@ export default function ExpertPickRevealPlayground() {
                     {pickLive ? "✨" : "🔒"}
                   </span>
                   <span className="text-base font-black text-gray-400">
-                    {pickLive ? "열람 완료" : "토큰이면 열람"}
+                    {pickLive ? "열람 완료" : "칩이면 열람"}
                   </span>
                 </div>
 
@@ -104,7 +104,7 @@ export default function ExpertPickRevealPlayground() {
                   {pickLive ? (
                     <p className="text-sm sm:text-base text-amber-200/90 font-bold mt-2">실제 화면은 날짜마다 달라져요</p>
                   ) : (
-                    <p className="text-sm sm:text-base text-gray-500 mt-2 font-medium">토큰 쓰면 표시</p>
+                    <p className="text-sm sm:text-base text-gray-500 mt-2 font-medium">칩 쓰면 표시</p>
                   )}
                 </div>
               </div>

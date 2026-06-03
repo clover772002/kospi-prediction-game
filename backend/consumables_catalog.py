@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""설문 규칙 변경용 소모품(토큰 결제 후 grant·환급 등)."""
+"""설문 규칙 변경용 소모품(칩 결제 후 grant·환급 등)."""
 
 CONSUMABLE_PRODUCTS = {
     "vote_redo_once": {
@@ -39,7 +39,7 @@ CONSUMABLE_PRODUCTS = {
         "price_tokens": 90,
         "description": (
             "다음 한 번 결과가 오답이어도 연승(스트릭) 숫자는 리셋되지 않습니다. "
-            "배팅·토큰 정산 결과 자체는 기존 게임 규칙과 동일합니다."
+            "배팅·칩 정산 결과 자체는 기존 게임 규칙과 동일합니다."
         ),
         "requires_survey_date": False,
     },
@@ -48,7 +48,7 @@ CONSUMABLE_PRODUCTS = {
         "category": "item",
         "price_tokens": 40,
         "description": (
-            "특정 거래일 결과 정산이 끝난 뒤 그날 기록된 배팅 손실액(tokens_won<0 의 절대값)의 10%를 토큰으로 돌려받습니다. "
+            "특정 거래일 결과 정산이 끝난 뒤 그날 기록된 배팅 손실액(tokens_won<0 의 절대값)의 10%를 칩으로 돌려받습니다. "
             "(참여 보너스·연속 배당 등은 포함하지 않음.) 같은 날 같은 티어는 한 번만."
         ),
         "rakeback_pct": 10,

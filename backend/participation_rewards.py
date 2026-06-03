@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""가입·주간 설문 참여 토큰 보상 (ledger 멱등)."""
+"""가입·주간 설문 참여 칩 보상 (ledger 멱등)."""
 from __future__ import annotations
 
 import logging
@@ -251,7 +251,7 @@ def run_weekly_grants_for_week(
         "errors": errors,
         "total_delta": total_delta,
     }
-    logger.info("주간 참여 토큰 지급 완료: %s", summary)
+    logger.info("주간 참여 칩 지급 완료: %s", summary)
     return summary
 
 
