@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { useEffect, useState, useCallback, useRef, Suspense, useLayoutEffect } from "react";
+import { useEffect, useState, useCallback, useRef, Suspense, useLayoutEffect, useMemo } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
@@ -872,12 +872,23 @@ function SurveyPageInner() {
   const showNextPreSurvey =
     !!nextSurvey?.is_open && (status !== "open" || alreadyAnswered || submitted);
 
-  const crowdFocusDate = (() => {
-    const kst = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Seoul" }));
-    const fallback = `${kst.getFullYear()}-${String(kst.getMonth() + 1).padStart(2, "0")}-${String(kst.getDate()).padStart(2, "0")}`;
-    const fromToday = today?.survey_date?.trim().slice(0, 10);
-    return fromToday && fromToday.length >= 8 ? fromToday : fallback;
-  })();
+  const crowdOpenDates = useMemo(() => {
+    const out: string[] = [];
+    const todayKey = today?.survey_date?.trim().slice(0, 10);
+    if (
+      todayKey &&
+      todayKey.length >= 8 &&
+      today?.status !== "no_survey" &&
+      today?.status !== "result"
+    ) {
+      out.push(todayKey);
+    }
+    const nextKey = nextSurvey?.survey_date?.trim().slice(0, 10);
+    if (nextSurvey?.is_open && nextKey && nextKey.length >= 8 && !out.includes(nextKey)) {
+      out.push(nextKey);
+    }
+    return out;
+  }, [today?.survey_date, today?.status, nextSurvey?.survey_date, nextSurvey?.is_open]);
 
   return (
     <main className="relative w-full min-h-screen app-page-tab-pad min-w-0 box-border text-[1.0625rem] sm:text-lg px-4 sm:px-5">
@@ -942,7 +953,7 @@ function SurveyPageInner() {
 
       {!isWeekendKST ? (
         <div className="mb-4 fade-up-2">
-          <CrowdGaugeBoxplotsSection variant="survey" focusDate={crowdFocusDate} />
+          <CrowdGaugeBoxplotsSection variant="survey" openDates={crowdOpenDates} />
         </div>
       ) : null}
 

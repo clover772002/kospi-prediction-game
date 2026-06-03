@@ -291,28 +291,32 @@ function normalizeSurveyDateKey(d: string | null | undefined): string {
   return (d ?? "").trim().slice(0, 10);
 }
 
+function isPendingResult(day: CrowdGaugeBoxplotDay): boolean {
+  return day.kospi_result === null || day.kospi_result === undefined;
+}
+
 type SectionProps = {
-  /** 설문 탭: 오늘(진행 중) 강조 · 대시보드: 전체 목록 */
+  /** 설문 탭: 진행 중 설문만 · 대시보드: 전체 목록 */
   variant?: "dashboard" | "survey";
-  /** 설문 탭에서 강조할 거래일 (YYYY-MM-DD) */
-  focusDate?: string | null;
+  /** 설문 탭: 지금 투표·대기 중인 거래일 (YYYY-MM-DD) */
+  openDates?: string[];
 };
 
 export default function CrowdGaugeBoxplotsSection({
   variant = "dashboard",
-  focusDate = null,
+  openDates = [],
 }: SectionProps) {
   const [days, setDays] = useState<CrowdGaugeBoxplotDay[] | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const isSurvey = variant === "survey";
-  const focusKey = normalizeSurveyDateKey(focusDate);
+  const openKeys = openDates.map(normalizeSurveyDateKey).filter((k) => k.length >= 8);
 
   useEffect(() => {
     let cancelled = false;
     setErr(null);
     void (async () => {
       try {
-        const d = await getCrowdGaugeBoxplots(isSurvey ? 14 : 30);
+        const d = await getCrowdGaugeBoxplots(isSurvey ? 8 : 30);
         if (!cancelled) setDays(d.days);
       } catch (e: unknown) {
         if (!cancelled) setErr(e instanceof Error ? e.message : String(e));
@@ -323,14 +327,13 @@ export default function CrowdGaugeBoxplotsSection({
     };
   }, [isSurvey]);
 
-  const focusDay =
-    days && focusKey
-      ? days.find((d) => normalizeSurveyDateKey(d.survey_date) === focusKey) ?? null
-      : null;
-  const historyDays =
-    days && focusKey
-      ? days.filter((d) => normalizeSurveyDateKey(d.survey_date) !== focusKey)
-      : days ?? [];
+  const pendingByKey = new Map(
+    (days ?? []).filter(isPendingResult).map((d) => [normalizeSurveyDateKey(d.survey_date), d] as const),
+  );
+  const liveEntries = openKeys.map((key) => ({
+    key,
+    day: pendingByKey.get(key) ?? null,
+  }));
 
   const shellClass = isSurvey
     ? `${surveyUi.card} fade-up-3`
@@ -340,12 +343,12 @@ export default function CrowdGaugeBoxplotsSection({
     <div className={shellClass}>
       <div className="space-y-1">
         <p className={isSurvey ? surveyUi.cardTitle : "font-bold text-base text-white"}>
-          전체 예측 방향/확신분포
+          {isSurvey ? "진행 중 설문 현황" : "전체 예측 방향/확신분포"}
         </p>
         {isSurvey ? (
           <p className={surveyUi.bodyMuted}>
-            다른 참가자들이 지금 이 거래일을 상승·하락으로 어떻게 보는지, 확신도 분포까지 한눈에
-            확인할 수 있어요.
+            지금 열려 있는 설문 거래일만 실시간으로 보여요. 결과가 확정된 과거 이력은 표시하지
+            않습니다.
           </p>
         ) : null}
       </div>
@@ -363,44 +366,43 @@ export default function CrowdGaugeBoxplotsSection({
         </div>
       ) : null}
 
-      {!err && days && days.length === 0 ? (
+      {!err && days && days.length === 0 && (!isSurvey || openKeys.length === 0) ? (
         <p className={isSurvey ? surveyUi.bodyMuted : "text-base text-white"}>
           아직 집계할 거래일이 없어요.
         </p>
       ) : null}
 
-      {isSurvey && !err && days && days.length > 0 ? (
-        <div className="space-y-4">
-          <div className="rounded-xl border-2 border-violet-500/30 bg-violet-950/20 px-1 py-1 sm:px-1.5">
-            <div className="flex items-center gap-2 px-2 pt-2 pb-1">
-              <span className="relative flex h-2.5 w-2.5">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-amber-400/70 opacity-75" />
-                <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-amber-400" />
-              </span>
-              <p className={`${surveyUi.body} text-violet-100`}>
-                {focusDay ? "오늘 · 실시간 집계" : "이 거래일 · 집계 준비 중"}
-              </p>
-            </div>
-            {focusDay ? (
-              <DayCard day={focusDay} emphasize />
-            ) : (
-              <div className={`mx-2 mb-2 rounded-xl border border-dashed border-[#444] px-4 py-6 text-center ${surveyUi.hint}`}>
-                아직 이 날짜 예측이 모이지 않았어요. 첫 설문을 넣으면 여기에 무리 분포가
-                보입니다.
-              </div>
-            )}
-          </div>
+      {isSurvey && !err && days !== null && openKeys.length === 0 ? (
+        <p className={surveyUi.bodyMuted}>지금 집계할 진행 중 설문이 없어요.</p>
+      ) : null}
 
-          {historyDays.length > 0 ? (
-            <div className="space-y-2">
-              <p className={surveyUi.label}>지난 거래일</p>
-              <div className="space-y-2.5 max-h-[min(360px,45vh)] overflow-y-auto pr-1">
-                {historyDays.map((d) => (
-                  <DayCard key={d.survey_date} day={d} />
-                ))}
+      {isSurvey && !err && days !== null && liveEntries.length > 0 ? (
+        <div className="space-y-4">
+          {liveEntries.map(({ key, day }) => (
+            <div
+              key={key}
+              className="rounded-xl border-2 border-violet-500/30 bg-violet-950/20 px-1 py-1 sm:px-1.5"
+            >
+              <div className="flex items-center gap-2 px-2 pt-2 pb-1">
+                <span className="relative flex h-2.5 w-2.5">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-amber-400/70 opacity-75" />
+                  <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-amber-400" />
+                </span>
+                <p className={`${surveyUi.body} text-violet-100 tabular-nums`}>
+                  {key.replace(/-/g, ".")} · {day ? "진행 중 · 실시간 집계" : "진행 중 · 응답 대기"}
+                </p>
               </div>
+              {day ? (
+                <DayCard day={day} emphasize />
+              ) : (
+                <div
+                  className={`mx-2 mb-2 rounded-xl border border-dashed border-[#444] px-4 py-6 text-center ${surveyUi.hint}`}
+                >
+                  아직 이 거래일 설문 응답이 없어요. 첫 참여가 들어오면 여기에 무리 분포가 표시됩니다.
+                </div>
+              )}
             </div>
-          ) : null}
+          ))}
         </div>
       ) : null}
 
