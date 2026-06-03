@@ -29,28 +29,31 @@ const GAUGE_TICKS: { v: number; color: string }[] = [
   { v: 100, color: "text-red-400/90" },
 ];
 
-function gaugeTickLeft(v: number): string {
-  return `${50 + v / 2}%`;
-}
-
-function gaugeTickTransform(v: number): string {
-  if (v <= -100) return "translateX(0)";
-  if (v >= 100) return "translateX(-100%)";
-  return "translateX(-50%)";
-}
-
 function formatGaugeTick(v: number): string {
   if (v === 0) return "0";
   return v > 0 ? `+${v}` : `${v}`;
 }
 
-/** 트랙 좌표(왼쪽 0 ~ 오른쪽 1) → -100..100 (0 불가) */
-function valueFromTrackFraction(f: number): number {
-  const clamped = Math.min(1, Math.max(0, f));
-  let v = Math.round((clamped - 0.5) * 200);
+/** 썸이 트랙 끝에서 잘리지 않도록 좌우 여백(반지름) */
+const THUMB_SIZE_PX = 28;
+const THUMB_INSET_PX = THUMB_SIZE_PX / 2;
+
+/** -100~+100 → 패딩 반영된 가로 위치(썸 중심) */
+function gaugePositionCss(value: number): string {
+  const t = Math.min(100, Math.max(-100, value));
+  const ratio = (50 + t / 2) / 100;
+  return `calc(${THUMB_INSET_PX}px + (100% - ${THUMB_SIZE_PX}px) * ${ratio})`;
+}
+
+function valueFromClientX(rect: DOMRect, clientX: number): number {
+  const innerW = rect.width - THUMB_SIZE_PX;
+  if (innerW <= 0) return 0;
+  const x = clientX - rect.left - THUMB_INSET_PX;
+  const f = Math.min(1, Math.max(0, x / innerW));
+  let v = Math.round(f * 200 - 100);
   if (v > 100) v = 100;
   if (v < -100) v = -100;
-  if (v === 0) v = clamped >= 0.5 ? 1 : -1;
+  if (v === 0) v = f >= 0.5 ? 1 : -1;
   return v;
 }
 
@@ -90,10 +93,8 @@ export default function GaugeBar({
       const el = trackRef.current;
       if (!el || disabled) return;
       const rect = el.getBoundingClientRect();
-      const w = rect.width;
-      if (w <= 0) return;
-      const f = (clientX - rect.left) / w;
-      let next = valueFromTrackFraction(f);
+      if (rect.width <= THUMB_SIZE_PX) return;
+      let next = valueFromClientX(rect, clientX);
       if (lockDirection) next = clampGaugeToDirection(next, value);
       onChange(next);
     },
@@ -196,66 +197,76 @@ export default function GaugeBar({
 
       <p className={`text-center ${surveyUi.cardTitle} text-amber-100 leading-snug`}>얼마나 확신하나요?</p>
 
-      {/* 드래그 게이지 */}
+      {/* 드래그 게이지 — 썸은 트랙 밖(패딩)에 두어 ±100에서 잘리지 않음 */}
       <div
-        className={`select-none rounded-xl pt-1 pb-3 -my-1 ${disabled ? "" : "cursor-grab active:cursor-grabbing"}`}
+        ref={trackRef}
+        role="slider"
+        aria-valuemin={-100}
+        aria-valuemax={100}
+        aria-valuenow={value}
+        aria-disabled={disabled}
+        aria-label="익 거래일 코스피 상승·하락 방향과 확신 정도 선택, 좌측 하락 우측 상승"
+        aria-describedby={tipsInteractive ? helpId : undefined}
+        className={`select-none relative px-3.5 py-5 -mx-0.5 rounded-2xl ${
+          disabled ? "opacity-50 pointer-events-none" : "cursor-grab active:cursor-grabbing"
+        }`}
         style={{ touchAction: "none" }}
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={onPointerUp}
+        onPointerCancel={onPointerUp}
       >
-        <div className="relative h-5 sm:h-6 mb-1 px-0.5" aria-hidden>
+        <div className="relative h-6 sm:h-7 mb-3" aria-hidden>
           {GAUGE_TICKS.map(({ v, color }) => (
             <span
               key={v}
-              className={`absolute bottom-0 ${surveyUi.label} tabular-nums leading-none ${color}`}
-              style={{
-                left: gaugeTickLeft(v),
-                transform: gaugeTickTransform(v),
-              }}
+              className={`absolute bottom-0 -translate-x-1/2 ${surveyUi.label} tabular-nums leading-none ${color}`}
+              style={{ left: gaugePositionCss(v) }}
             >
               {formatGaugeTick(v)}
             </span>
           ))}
         </div>
-        <div
-          ref={trackRef}
-          role="slider"
-          aria-valuemin={-100}
-          aria-valuemax={100}
-          aria-valuenow={value}
-          aria-disabled={disabled}
-          aria-label="익 거래일 코스피 상승·하락 방향과 확신 정도 선택, 좌측 하락 우측 상승"
-          aria-describedby={tipsInteractive ? helpId : undefined}
-          className={`relative h-9 w-full rounded-full bg-[#1A1A1A] overflow-hidden border border-[#2A2A2A] ${disabled ? "opacity-50 pointer-events-none" : ""}`}
-          onPointerDown={onPointerDown}
-          onPointerMove={onPointerMove}
-          onPointerUp={onPointerUp}
-          onPointerCancel={onPointerUp}
-        >
-          {isUp ? (
-            <div
-              className="absolute top-0 left-1/2 h-full bg-red-500"
-              style={{ width: `${halfSpanPct}%`, transition: barTransition }}
-            />
-          ) : (
-            <div
-              className="absolute top-0 h-full bg-blue-500"
-              style={{
-                right: "50%",
-                width: `${halfSpanPct}%`,
-                transition: barTransition,
-              }}
-            />
-          )}
-          <div className="absolute left-1/2 top-0 z-10 h-full w-0.5 bg-[#333] -translate-x-1/2 pointer-events-none" />
+
+        <div className="relative flex items-center h-5">
           <div
-            className={`absolute top-1/2 z-20 -translate-y-1/2 w-6 h-6 rounded-full border-2 shadow-lg pointer-events-none ${isUp ? "bg-red-400 border-red-300" : "bg-blue-400 border-blue-300"}`}
-            style={{
-              left: `calc(${50 + value / 2}% - 12px)`,
-              transition: barTransition,
-            }}
-          />
+            className="relative h-4 w-full rounded-full overflow-hidden border border-[#3a3a3a]/90 bg-[#0a0a0c] shadow-[inset_0_2px_10px_rgba(0,0,0,.65),0_1px_0_rgba(255,255,255,.04)]"
+          >
+            {isUp ? (
+              <div
+                className="absolute inset-y-0 left-1/2 rounded-r-full bg-gradient-to-r from-red-950/80 via-red-600 to-red-400/95 shadow-[inset_0_0_12px_rgba(248,113,113,.25)]"
+                style={{ width: `${halfSpanPct}%`, transition: barTransition }}
+              />
+            ) : (
+              <div
+                className="absolute inset-y-0 right-1/2 rounded-l-full bg-gradient-to-l from-blue-950/80 via-blue-600 to-blue-400/95 shadow-[inset_0_0_12px_rgba(96,165,250,.25)]"
+                style={{ width: `${halfSpanPct}%`, transition: barTransition }}
+              />
+            )}
+            <div className="pointer-events-none absolute inset-y-0 left-1/2 w-px -translate-x-1/2 bg-gradient-to-b from-transparent via-white/25 to-transparent" />
+            <div className="pointer-events-none absolute left-1/2 top-1/2 z-[1] h-2.5 w-2.5 -translate-x-1/2 -translate-y-1/2 rotate-45 rounded-[2px] border border-white/20 bg-[#1a1a1a]" />
+          </div>
+
+          <div
+            className="pointer-events-none absolute top-1/2 z-20 -translate-x-1/2 -translate-y-1/2"
+            style={{ left: gaugePositionCss(value), transition: barTransition }}
+          >
+            <div
+              className={`relative flex h-7 w-7 items-center justify-center rounded-full border-[3px] bg-[#1a1a1a] shadow-[0_0_0_4px_rgba(0,0,0,.35),0_4px_14px_rgba(0,0,0,.45)] ${
+                isUp
+                  ? "border-red-300/90 shadow-red-500/20"
+                  : "border-blue-300/90 shadow-blue-500/20"
+              } ${dragging ? "scale-110" : ""}`}
+            >
+              <span
+                className={`block h-2.5 w-2.5 rounded-full ${isUp ? "bg-red-400" : "bg-blue-400"} shadow-[0_0_8px_currentColor]`}
+              />
+            </div>
+          </div>
         </div>
+
         {!disabled && (
-          <p className={`text-center ${surveyUi.hint} mt-2`}>
+          <p className={`text-center ${surveyUi.hint} mt-3`}>
             막대를 드래그해 방향·확신도를 정하면 배팅 칩이 함께 바뀝니다.
           </p>
         )}
