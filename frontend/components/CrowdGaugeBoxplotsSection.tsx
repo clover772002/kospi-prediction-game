@@ -252,7 +252,7 @@ function DirectionSharePie({
 
   const pieBg = directionPieBackground(f, r);
   const dominant =
-    r > f ? { label: "상승", pct: r, color: "text-red-400" } : r < f ? { label: "하락", pct: f, color: "text-blue-400" } : { label: "동률", pct: 50, color: "text-gray-300" };
+    r > f ? { label: "상승", pct: r } : r < f ? { label: "하락", pct: f } : { label: "동률", pct: 50 };
 
   return (
     <div
@@ -266,11 +266,10 @@ function DirectionSharePie({
             style={{ background: pieBg }}
             aria-hidden
           />
-          <div className="absolute inset-[22%] flex flex-col items-center justify-center rounded-full bg-[#141414] border border-[#2a2a2a]/80 text-center leading-tight">
-            <span className={`text-sm sm:text-base font-black tabular-nums ${dominant.color}`}>
-              {dominant.label} {dominant.pct}%
-            </span>
-            <span className="text-[10px] sm:text-xs text-gray-500 tabular-nums mt-0.5">{total}명</span>
+          <div className="absolute inset-[24%] flex flex-col items-center justify-center rounded-full bg-[#0d0d0d] border border-[#2a2a2a] text-center leading-tight shadow-[0_0_0_2px_#0d0d0d]">
+            <span className="text-xs sm:text-sm font-black text-white">{dominant.label}</span>
+            <span className="text-sm sm:text-base font-black text-white tabular-nums">{dominant.pct}%</span>
+            <span className="text-[10px] sm:text-xs text-white/85 tabular-nums mt-0.5">{total}명</span>
           </div>
         </div>
 
