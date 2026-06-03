@@ -220,13 +220,13 @@ function directionPieBackground(pctFall: number, pctRise: number): string {
   const f = Math.min(100, Math.max(0, pctFall));
   const r = Math.min(100, Math.max(0, pctRise));
   if (f <= 0 && r <= 0) return "#2a2a2a";
-  if (f >= 99.95) return "#2563eb";
   if (r >= 99.95) return "#dc2626";
-  const fallDeg = (f / 100) * 360;
-  return `conic-gradient(from -90deg, #3b82f6 0deg ${fallDeg}deg, #ef4444 ${fallDeg}deg 360deg)`;
+  if (f >= 99.95) return "#2563eb";
+  const riseDeg = (r / 100) * 360;
+  return `conic-gradient(from -90deg, #ef4444 0deg ${riseDeg}deg, #3b82f6 ${riseDeg}deg 360deg)`;
 }
 
-/** 방향 비율 — 도넛 파이(하락=파랑 · 상승=빨강, 12시부터 시계방향) */
+/** 방향 비율 — 도넛 파이(12시부터 상승=빨강 → 하락=파랑) */
 function DirectionSharePie({
   pctRise,
   pctFall,
@@ -257,7 +257,7 @@ function DirectionSharePie({
   return (
     <div
       className="rounded-xl border border-[#333] bg-gradient-to-br from-[#151515] to-[#101010] px-3 py-2.5 mb-3 ring-1 ring-white/[0.04]"
-      title={`예측 하락 ${f}% · 상승 ${r}%`}
+      title={`예측 상승 ${r}% · 하락 ${f}%`}
     >
       <div className="flex items-center gap-3 sm:gap-4">
         <div className="relative h-[4.75rem] w-[4.75rem] sm:h-20 sm:w-20 shrink-0">
@@ -274,12 +274,12 @@ function DirectionSharePie({
 
         <div className="flex-1 min-w-0 space-y-2">
           <div className="flex items-center gap-2 min-w-0">
-            <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-blue-500" aria-hidden />
-            <span className="text-sm font-black text-blue-400 tabular-nums">하락 {f}%</span>
-          </div>
-          <div className="flex items-center gap-2 min-w-0">
             <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-red-500" aria-hidden />
             <span className="text-sm font-black text-red-400 tabular-nums">상승 {r}%</span>
+          </div>
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-blue-500" aria-hidden />
+            <span className="text-sm font-black text-blue-400 tabular-nums">하락 {f}%</span>
           </div>
         </div>
       </div>
