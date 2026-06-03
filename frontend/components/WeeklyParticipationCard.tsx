@@ -34,7 +34,7 @@ function ParticipationStamp({
     <div className="flex flex-col items-center gap-0.5 sm:gap-1.5 w-full min-w-0">
       <span className="text-[9px] sm:text-xs font-bold text-gray-300 leading-none">{day}회</span>
       <div
-        className={`relative aspect-square w-full min-w-0 max-w-[3.1rem] mx-auto sm:max-w-none rounded-md sm:rounded-lg flex items-center justify-center border transition-colors ${
+        className={`relative aspect-square w-full min-w-0 max-w-[3.35rem] mx-auto sm:max-w-none rounded-md sm:rounded-lg flex items-center justify-center border transition-colors ${
           earned
             ? "border-red-500/90 bg-red-950/55 shadow-[0_0_8px_rgba(239,68,68,0.22)]"
             : "border-[#444] border-dashed bg-[#222] opacity-85"
@@ -46,12 +46,12 @@ function ParticipationStamp({
         }
       >
         <span
-          className={`inline-flex flex-col items-center leading-none tabular-nums ${
+          className={`inline-flex flex-col items-center gap-px leading-none tabular-nums ${
             !earned ? "opacity-55" : ""
           }`}
         >
-          <span className={`text-[10px] sm:text-sm font-black ${chipTone}`}>{chips}</span>
-          <span className="text-xs sm:text-base leading-none" aria-hidden>
+          <span className={`text-[11px] sm:text-sm font-black ${chipTone}`}>{chips}</span>
+          <span className="text-base sm:text-xl leading-none scale-110 sm:scale-100" aria-hidden>
             {CHIP_ICON}
           </span>
         </span>
