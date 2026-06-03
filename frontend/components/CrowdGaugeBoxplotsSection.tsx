@@ -43,7 +43,11 @@ function BoxplotCardWrap({ highlight, children }: { highlight: boolean; children
   return (
     <div className="relative h-full min-w-0">
       {highlight ? (
-        <span className="absolute top-1.5 right-2 z-[2] text-xs font-black text-amber-400">정답</span>
+        <span className="pointer-events-none absolute inset-0 z-[2] flex items-center justify-center">
+          <span className="rounded-md bg-[#0d0d0d]/80 px-2 py-0.5 text-xs font-black text-amber-400 ring-1 ring-amber-400/40">
+            정답
+          </span>
+        </span>
       ) : null}
       {children}
     </div>
