@@ -2,21 +2,18 @@
 
 import { useEffect, useState, useCallback, useRef, useLayoutEffect } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import { supabase } from "@/lib/supabase";
-import { getTodaySummary, getDashboardSummary, getDashboard, createChallenge, getMyChallenges, reactToChallenge, requestRematch, acceptChallenge, declineChallenge, getMyGroups, UserProfile, TodaySurvey, DashboardData, Challenge, Group, type ExpertChatEligibility } from "@/lib/api";
+import { getTodaySummary, getDashboardSummary, getDashboard, createChallenge, getMyChallenges, reactToChallenge, requestRematch, acceptChallenge, declineChallenge, getMyGroups, UserProfile, TodaySurvey, DashboardData, Challenge, Group } from "@/lib/api";
 import {
-  getExpertChatEligibilityCached,
   getMeCached,
   getMySurveyResponseCached,
 } from "@/lib/session-api-cache";
-import TopExpertNoticeBlock from "@/components/TopExpertNoticeBlock";
 import ShareSheet from "@/components/ShareSheet";
 import AppAmbientBackground from "@/components/AppAmbientBackground";
 import AppTabNav from "@/components/AppTabNav";
 import CrowdGaugeBoxplotsSection from "@/components/CrowdGaugeBoxplotsSection";
+import PredictionVsCrowdTable from "@/components/PredictionVsCrowdTable";
 import StaleRefreshIndicator from "@/components/StaleRefreshIndicator";
-import WeeklyParticipationCard from "@/components/WeeklyParticipationCard";
 import { ChipAmount } from "@/components/ChipAmount";
 import { OUR_ACCURACY_LABEL, OUR_PREDICTION_LABEL } from "@/lib/product-copy";
 import { clearAllTabSnapshots, peekAnsweredToday, peekDashboardSnapshot, saveAnsweredToday, saveDashboardSnapshot, saveGroupsSnapshot } from "@/lib/tab-session-cache";
@@ -80,128 +77,6 @@ function resolvedMarketDirection(
   return hc ? entry.kospi_answer : !entry.kospi_answer;
 }
 
-/** 이력 행 거래일이 현재 카드 기준 오늘 설문(survey_date)과 같으면 설문 탭과 동일 `getToday()` 스냅샷 재사용 */
-function historyUsesTodaySnapshot(entry: DashboardHist, todaySurvey: TodaySurvey | null): boolean {
-  return !!(todaySurvey?.survey_date && sameSurveyDate(entry.date, todaySurvey.survey_date));
-}
-
-function effectiveHistoryKospiChangePct(entry: DashboardHist, todaySurvey: TodaySurvey | null): unknown {
-  if (entry.kospi_change_pct != null && Number.isFinite(Number(entry.kospi_change_pct))) {
-    return entry.kospi_change_pct;
-  }
-  if (historyUsesTodaySnapshot(entry, todaySurvey) && todaySurvey?.kospi_change_pct != null) {
-    return todaySurvey.kospi_change_pct;
-  }
-  return null;
-}
-
-function marketDirectionRow(item: DashboardHist, todaySurvey: TodaySurvey | null): boolean | null {
-  const mk = coerceBool(item.kospi_market_result);
-  if (mk !== null) return mk;
-  if (historyUsesTodaySnapshot(item, todaySurvey)) {
-    const tr = coerceBool(todaySurvey?.kospi_result);
-    if (tr !== null) return tr;
-  }
-  const v = effectiveKospiCorrect(item);
-  if (v === true) return item.kospi_answer;
-  if (v === false) return !item.kospi_answer;
-  return null;
-}
-
-function formatKospiChangePct(pct: unknown): string | null {
-  if (pct === null || pct === undefined) return null;
-  const n = typeof pct === "number" ? pct : Number(pct);
-  if (!Number.isFinite(n)) return null;
-  const body = `${n >= 0 ? "+" : ""}${Number(n.toFixed(2))}`;
-  return `${body}%`;
-}
-
-/** 설문 게이지 확신도(코스피 등락률 아님) */
-function formatConfidenceGauge(gauge: number | null | undefined): string {
-  if (gauge === null || gauge === undefined) return "—";
-  const n = Number(gauge);
-  if (!Number.isFinite(n)) return "—";
-  return `${n > 0 ? "+" : ""}${Math.round(n)}`;
-}
-
-/** 최근이력 표: 가로 스크롤·칸 최소 너비 */
-const HISTORY_TH =
-  "py-3 px-3 font-bold align-middle text-sm leading-snug whitespace-nowrap";
-const HISTORY_TD = "py-3 px-3 align-middle text-sm leading-snug whitespace-nowrap";
-
-function HistoryRow({ item, todaySurvey }: { item: DashboardData["history"][0]; todaySurvey: TodaySurvey | null }) {
-  const verdict = effectiveKospiCorrect(item);
-  const hasResult = verdict !== null;
-  const gauge = item.gauge_position;
-  const directionUp = gauge !== null && gauge !== undefined ? gauge > 0 : item.kospi_answer;
-
-  const tokensBet = item.tokens_bet;
-
-  const hitLabel =
-    verdict === true ? "적중" : verdict === false ? "미적중" : "대기중";
-
-  const mk = marketDirectionRow(item, todaySurvey);
-  const pctStr = formatKospiChangePct(effectiveHistoryKospiChangePct(item, todaySurvey));
-
-  const kospiCell =
-    mk === null ? (
-      <div className="leading-tight text-white">
-        <span className="block">미정</span>
-        <span className="block tabular-nums text-sm text-white">—</span>
-      </div>
-    ) : (
-      <div className="leading-tight">
-        <span className={`font-bold ${mk ? "text-red-400" : "text-blue-400"}`}>{mk ? "상승" : "하락"}</span>
-        <span className="block tabular-nums text-amber-100/90 text-xs mt-0.5">
-          등락률 {pctStr ?? "—"}
-        </span>
-      </div>
-    );
-
-  const predictCls = directionUp ? "text-red-400" : "text-blue-400";
-  const confidenceLine = formatConfidenceGauge(gauge);
-
-  return (
-    <tr
-      className={`border-b border-[#2A2A2A] last:border-0 leading-tight ${
-        hasResult
-          ? verdict
-            ? "bg-green-500/[0.04]"
-            : "bg-red-500/[0.04]"
-          : ""
-      }`}
-    >
-      <td className={`${HISTORY_TD} min-w-[4.75rem] text-white tabular-nums pl-4`}>
-        {item.date.slice(5)}
-      </td>
-      <td className={`${HISTORY_TD} min-w-[6.5rem] border-l border-[#2a2a2a]/80 bg-[#0f0f0f]/35`}>
-        <div className="leading-snug">
-          <span className={`font-bold text-base ${predictCls}`}>{directionUp ? "상승" : "하락"}</span>
-          <span className="block tabular-nums text-white/90 text-sm mt-1">
-            확신도 {confidenceLine}
-          </span>
-        </div>
-      </td>
-      <td className={`${HISTORY_TD} min-w-[6.5rem] border-l border-amber-500/25 bg-[#0f0f0f]/35`}>
-        {kospiCell}
-      </td>
-      <td className={`${HISTORY_TD} min-w-[5rem] text-center font-bold text-base ${
-        !hasResult ? "text-white/90" : verdict ? "text-green-400/95" : "text-red-400/90"
-      }`}
-      >
-        {hitLabel}
-      </td>
-      <td className={`${HISTORY_TD} min-w-[5.5rem] pr-4 text-right text-white`}>
-        {tokensBet != null && tokensBet !== undefined ? (
-          <ChipAmount amount={tokensBet} compact className="justify-end" />
-        ) : (
-          "—"
-        )}
-      </td>
-    </tr>
-  );
-}
-
 export default function DashboardPage() {
   const router = useRouter();
   const [user, setUser]       = useState<UserProfile | null>(null);
@@ -218,7 +93,6 @@ export default function DashboardPage() {
   const [rematchLoading, setRematchLoading]        = useState<string | null>(null);
   const [acceptLoading, setAcceptLoading]          = useState<string | null>(null); // challenge_id
   const [revalidating, setRevalidating]            = useState(false);
-  const [expertEligibility, setExpertEligibility] = useState<ExpertChatEligibility | null>(null);
   /** null=미확인 — 로딩 중 설문 게이트 오표시 방지 */
   const [answeredToday, setAnsweredToday] = useState<boolean | null>(null);
   const dashboardFetchSeq = useRef(0);
@@ -353,14 +227,6 @@ export default function DashboardPage() {
           !!snapAtLoad?.dash && snapAtLoad.dash.history_truncated !== true;
 
         void (async () => {
-          if (sd) {
-            try {
-              const expertEl = await getExpertChatEligibilityCached(accessToken, sd);
-              if (seq === dashboardFetchSeq.current) setExpertEligibility(expertEl);
-            } catch {
-              if (seq === dashboardFetchSeq.current) setExpertEligibility(null);
-            }
-          }
           if (skipFullDash) return;
           try {
             const fullDash = await withTimeout(getDashboard(accessToken), 45_000);
@@ -1005,45 +871,6 @@ export default function DashboardPage() {
 
           {(status === "open" || status === "closed" || status === "result") && !isWeekendKST && today && (
               <>
-              {user && expertEligibility ? (
-                <div className="mt-3">
-                  <TopExpertNoticeBlock
-                    userId={user.id}
-                    isGlobalTopExpert={expertEligibility.is_global_top_expert}
-                    receivesToday={expertEligibility.receives_expert_questions_today}
-                    expertChatUnlocked={expertEligibility.can_access_expert_chat}
-                  />
-                </div>
-              ) : null}
-
-              {(() => {
-                const expertMin = 210;
-                const tokens = dash?.tokens;
-                const expertUnlocked = tokens != null && tokens >= expertMin;
-                return (
-                  <Link
-                    href="/expert-chat"
-                    className={`mt-3 flex w-full flex-col items-center justify-center gap-1 rounded-xl border px-3 py-2.5 text-base font-bold transition-colors active:scale-[0.99] ${
-                      expertUnlocked
-                        ? "border-amber-500/35 bg-gradient-to-r from-amber-500/12 to-orange-900/15 text-amber-100/95 hover:border-amber-400/50"
-                        : "border-[#444] bg-[#252525] text-white/80 hover:border-[#555]"
-                    }`}
-                  >
-                    <span className="flex items-center gap-2">
-                      <span aria-hidden>{expertUnlocked ? "💬" : "🔒"}</span>
-                      <span>초고수에게 질문 보내기</span>
-                    </span>
-                    {!expertUnlocked && tokens != null ? (
-                      <span className="text-sm font-normal text-white/70 flex flex-wrap items-center justify-center gap-1">
-                        <ChipAmount amount={expertMin} compact className="text-amber-200/90" />
-                        <span>이상이면 소통 열림 · 현재</span>
-                        <ChipAmount amount={tokens} compact className="text-amber-300" />
-                      </span>
-                    ) : null}
-                  </Link>
-                );
-              })()}
-
               {/* 📊 우리 예측 VS (상승 vs 하락) */}
               {today.kospi_yes_pct !== null && (() => {
                 const up = today.kospi_yes_pct;
@@ -1091,11 +918,11 @@ export default function DashboardPage() {
           )}
         </div>
 
-        {/* ── 내 통계 + 예측 이력 ──────────────────────────── */}
+        {/* ── 내 예측 ──────────────────────────── */}
         <div className="bg-[#1A1A1A] rounded-2xl p-5 border border-[#2A2A2A] fade-up-3">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
-              <p className="font-bold text-base">내 통계</p>
+              <p className="font-bold text-base">내 예측</p>
               {/* 결과 공유카드 재호출 버튼 */}
               {today?.status === "result" && isCorrectToday !== null && (
                 <button
@@ -1136,62 +963,8 @@ export default function DashboardPage() {
                 </div>
               )}
 
-              <WeeklyParticipationCard status={dash.participation} />
-
-              {/* 최근 이력 */}
               {dash.history.length > 0 && (
-                <div className="space-y-2">
-                  <div className="flex items-end justify-between gap-2">
-                    <p className="text-sm text-white font-bold">최근이력(5거래일)</p>
-                    <p className="text-xs text-white/65 shrink-0 pb-0.5">← 옆으로 밀어 보기</p>
-                  </div>
-                  <div className="rounded-xl border border-[#2A2A2A] bg-[#141414]/60 overflow-x-auto overscroll-x-contain [-webkit-overflow-scrolling:touch]">
-                    <table className="w-max min-w-full border-collapse text-sm">
-                      <thead>
-                        <tr className="text-left text-white border-b border-[#2A2A2A] bg-[#1A1A1A]/90">
-                          <th rowSpan={2} className={`${HISTORY_TH} min-w-[4.75rem] pl-4`}>
-                            거래일
-                          </th>
-                          <th
-                            rowSpan={2}
-                            title="내가 고른 방향과 확신도(게이지). 코스피 등락률이 아닙니다."
-                            className={`${HISTORY_TH} min-w-[6.5rem] border-l border-[#2a2a2a]/80`}
-                          >
-                            <span className="block">예측</span>
-                            <span className="block text-xs font-normal text-white/75 mt-0.5">(확신도)</span>
-                          </th>
-                          <th
-                            colSpan={3}
-                            className={`${HISTORY_TH} text-center border-l border-amber-500/30 text-amber-200`}
-                          >
-                            결과
-                          </th>
-                        </tr>
-                        <tr className="text-left text-white border-b border-[#2A2A2A] bg-[#1A1A1A]/95">
-                          <th
-                            title="코스피 종가 방향·실제 등락률"
-                            className={`${HISTORY_TH} min-w-[6.5rem] border-l border-amber-500/25`}
-                          >
-                            <span className="block">코스피</span>
-                            <span className="block text-xs font-normal text-amber-100/75 mt-0.5">(등락률)</span>
-                          </th>
-                          <th className={`${HISTORY_TH} min-w-[5rem] text-center`}>판정</th>
-                          <th
-                            title="해당일 배팅한 칩 (적중 시 같은 만큼 획득, 미적중 시 같은 만큼 손실)"
-                            className={`${HISTORY_TH} min-w-[5.5rem] pr-4 text-right`}
-                          >
-                            배팅칩
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {dash.history.slice(0, 5).map((item) => (
-                          <HistoryRow key={item.date} item={item} todaySurvey={today} />
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
+                <PredictionVsCrowdTable history={dash.history} today={today} />
               )}
             </div>
           ) : null}
