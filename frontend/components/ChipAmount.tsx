@@ -4,7 +4,7 @@ export const CHIP_ICON = "🪙";
 
 /** 접근성·알림용 짧은 문자열 */
 export function formatChipAmountText(amount: number): string {
-  return `${CHIP_ICON} X${amount.toLocaleString()}`;
+  return `${amount.toLocaleString()}${CHIP_ICON}`;
 }
 
 type ChipAmountProps = {
@@ -13,11 +13,11 @@ type ChipAmountProps = {
   large?: boolean;
   muted?: boolean;
   className?: string;
-  /** 금액 앞 + / − (없으면 숫자만 X{n}) */
+  /** 금액 앞 + / − */
   sign?: "+" | "-" | null;
 };
 
-/** 🪙 X120 — 탭 공통 칩 표기 */
+/** 370🪙 — 탭 공통 칩 표기 */
 export function ChipAmount({
   amount,
   compact,
@@ -37,23 +37,24 @@ export function ChipAmount({
 
   return (
     <span
-      className={`inline-flex items-center gap-0.5 sm:gap-1 leading-none tabular-nums ${className} ${
+      className={`inline-flex items-center gap-0.5 leading-none tabular-nums ${className} ${
         muted ? "opacity-55" : ""
       }`}
     >
-      <span className={`${iconSize} leading-none`} aria-hidden>
-        {CHIP_ICON}
-      </span>
       <span
         className={`font-black tracking-tight ${textSize} ${muted ? "text-gray-500" : ""}`}
       >
-        {prefix}X{amount.toLocaleString()}
+        {prefix}
+        {amount.toLocaleString()}
+      </span>
+      <span className={`${iconSize} leading-none`} aria-hidden>
+        {CHIP_ICON}
       </span>
     </span>
   );
 }
 
-/** 🪙 X10 / 🪙 X185 */
+/** 10🪙 / 185🪙 */
 export function ChipAmountFraction({
   current,
   max,
