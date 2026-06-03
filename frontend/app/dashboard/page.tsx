@@ -17,6 +17,7 @@ import AppTabNav from "@/components/AppTabNav";
 import DashboardInsightSection, { DashboardInsightSectionSkeleton } from "@/components/DashboardInsightSection";
 import CrowdGaugeBoxplotsSection from "@/components/CrowdGaugeBoxplotsSection";
 import StaleRefreshIndicator from "@/components/StaleRefreshIndicator";
+import WeeklyParticipationCard from "@/components/WeeklyParticipationCard";
 import { clearAllTabSnapshots, peekAnsweredToday, peekDashboardSnapshot, saveAnsweredToday, saveDashboardSnapshot, saveGroupsSnapshot } from "@/lib/tab-session-cache";
 import {
   isNotificationConnected,
@@ -1219,6 +1220,8 @@ export default function DashboardPage() {
                   </p>
                 </div>
               )}
+
+              <WeeklyParticipationCard status={dash.participation} />
 
               {/* 최근 이력 */}
               {dash.history.length > 0 && (

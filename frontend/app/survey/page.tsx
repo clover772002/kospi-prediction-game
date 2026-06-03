@@ -34,6 +34,7 @@ import AppAmbientBackground from "@/components/AppAmbientBackground";
 import PageLoadProgress from "@/components/PageLoadProgress";
 import AppTabNav from "@/components/AppTabNav";
 import StaleRefreshIndicator from "@/components/StaleRefreshIndicator";
+import WeeklyParticipationCard from "@/components/WeeklyParticipationCard";
 
 interface KospiPrice {
   price: number | null;
@@ -736,6 +737,15 @@ function SurveyPageInner() {
           resultUp={today?.kospi_result ?? null}
           live={kospiPrice}
         />
+      ) : null}
+
+      {!isWeekendKST ? (
+        <div className="mt-2 mb-1">
+          <WeeklyParticipationCard
+            status={peekDashboardSnapshot()?.dash?.participation}
+            compact
+          />
+        </div>
       ) : null}
 
       {/* 설문 없음 — 대기중 vs 휴장일 구분 */}

@@ -93,6 +93,10 @@ from direction_chat_service import (
     post_room_message as post_direction_chat_message,
 )
 from dashboard_service import build_user_dashboard
+from participation_rewards import (
+    run_weekly_grants_for_week,
+    try_grant_signup_bonus,
+)
 from accuracy_aggregate import clear_accuracy_cache, get_accuracy_data
 from expert_tier import (
     SEGMENT_PRED_COUNT_MIN,
@@ -198,6 +202,14 @@ async def job_21_30_admin_poll_request():
     next_str = next_trading_day_str()
     n = await notify_all_admins_poll_request(next_str)
     logger.info("21:30 관리자 투표 입력 요청 완료 (대상 %s명, 거래일 %s)", n, next_str)
+
+
+async def job_weekly_participation_rewards():
+    """매주 일요일 21:00 KST — 이번 주(월~일) 설문 참여 일수별 토큰 일괄 지급."""
+    try:
+        run_weekly_grants_for_week(_supabase_direct())
+    except Exception as e:
+        logger.exception("주간 참여 토큰 지급 작업 실패: %s", e)
 
 
 async def job_08_45():
@@ -400,6 +412,12 @@ async def lifespan(app_instance):
         id="admin_poll_request",
         replace_existing=True,
     )
+    scheduler.add_job(
+        job_weekly_participation_rewards,
+        CronTrigger(day_of_week="sun", hour=21, minute=0, timezone="Asia/Seoul"),
+        id="weekly_participation_rewards",
+        replace_existing=True,
+    )
     scheduler.add_job(job_22_00, CronTrigger(hour=22, minute=0,  timezone="Asia/Seoul"), id="survey_evening",   replace_existing=True)
     scheduler.add_job(job_08_45, CronTrigger(hour=8,  minute=45, timezone="Asia/Seoul"), id="survey_reminder",  replace_existing=True)
     scheduler.add_job(job_09_00, CronTrigger(hour=9,  minute=0,  timezone="Asia/Seoul"), id="survey_close",     replace_existing=True)
@@ -421,7 +439,7 @@ async def lifespan(app_instance):
     )
     scheduler.start()
     logger.info(
-        "스케줄러 시작: 16:10(FGI DM·매일·공휴일포함) / 21:30(관리자 투표) / 22:00(설문) / 08:45 / 09:00 / 15:35 / KOSPI 스냅샷"
+        "스케줄러 시작: 16:10(FGI) / 21:00(주간참여토큰) / 21:30(관리자투표) / 22:00(설문) / 08:45 / 09:00 / 15:35 / KOSPI 스냅샷"
     )
     yield
     scheduler.shutdown()
@@ -457,6 +475,16 @@ async def health():
     return {"ok": True}
 
 
+def _attach_tokens_to_me_row(supabase: Client, user_id: str, row: dict) -> dict:
+    try:
+        u = supabase.table("users").select("tokens").eq("id", user_id).limit(1).execute()
+        if u.data:
+            row["tokens"] = int(u.data[0].get("tokens") or 100)
+    except Exception as e:
+        logger.warning("get_me tokens 조회 스킵 user=%s: %s", user_id, e)
+    return row
+
+
 @app.get("/api/me")
 async def get_me(
     current_user=Depends(get_current_user),
@@ -465,18 +493,19 @@ async def get_me(
     """현재 로그인 유저 조회 (없으면 자동 생성)"""
     user_id = str(current_user.id)
     meta = current_user.user_metadata or {}
+    email = current_user.email or ""
 
     try:
         existing = supabase.table("users").select("*").eq("id", user_id).execute()
         if not existing.data:
             # 같은 이메일로 다른 OAuth 제공자로 가입한 계정이 있는지 확인
-            email_match = supabase.table("users").select("*").eq("email", current_user.email).execute()
+            email_match = supabase.table("users").select("*").eq("email", email).execute()
             if email_match.data:
                 # 기존 계정의 데이터(텔레그램, 푸시 등)를 새 계정에 복사
                 old = email_match.data[0]
                 supabase.table("users").insert({
                     "id": user_id,
-                    "email": current_user.email,
+                    "email": email,
                     "name": meta.get("full_name", old.get("name", "")),
                     "telegram_chat_id": old.get("telegram_chat_id"),
                     "push_subscription": old.get("push_subscription"),
@@ -484,21 +513,28 @@ async def get_me(
                 row = old.copy()
                 row["id"] = user_id
                 row["has_push"] = bool(row.get("push_subscription"))
-                logger.info(f"중복 이메일 감지 — 기존 계정 데이터 복사: {current_user.email}")
-                return row
+                logger.info(f"중복 이메일 감지 — 기존 계정 데이터 복사: {email}")
+                return _attach_tokens_to_me_row(supabase, user_id, row)
             else:
                 supabase.table("users").insert({
                     "id": user_id,
-                    "email": current_user.email,
+                    "email": email,
                     "name": meta.get("full_name", ""),
                 }).execute()
-                return {
+                bonus = try_grant_signup_bonus(supabase, user_id, email=email)
+                if bonus.get("granted"):
+                    logger.info("가입 보너스 지급 user=%s +%s", user_id, bonus.get("delta"))
+                row = {
                     "id": user_id,
-                    "email": current_user.email,
+                    "email": email,
                     "name": meta.get("full_name", ""),
                     "telegram_chat_id": None,
                     "has_push": False,
                 }
+                if bonus.get("granted"):
+                    row["signup_bonus_granted"] = True
+                    row["signup_bonus_delta"] = bonus.get("delta")
+                return _attach_tokens_to_me_row(supabase, user_id, row)
         else:
             # 이름 최신화
             supabase.table("users").update({
@@ -506,7 +542,7 @@ async def get_me(
             }).eq("id", user_id).execute()
             row = existing.data[0]
             row["has_push"] = bool(row.get("push_subscription"))
-            return row
+            return _attach_tokens_to_me_row(supabase, user_id, row)
 
     except Exception as e:
         logger.error(f"유저 처리 오류: {e}")
@@ -2099,6 +2135,24 @@ async def admin_run_15_35():
     """15:35 결과 집계 수동 트리거 (배포 후 테스트용)"""
     await job_15_35()
     return {"ok": True}
+
+
+@app.post("/api/admin/run-weekly-participation-rewards")
+async def admin_run_weekly_participation_rewards(request: Request):
+    """주간 설문 참여 토큰 수동 지급. 헤더: x-admin-secret. Body(선택): { \"week_end\": \"YYYY-MM-DD\" }"""
+    _require_admin_secret(request)
+    week_end = None
+    try:
+        payload = await request.json()
+        if isinstance(payload, dict) and payload.get("week_end"):
+            from datetime import date as date_cls
+
+            week_end = date_cls.fromisoformat(str(payload["week_end"])[:10])
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail="week_end 형식은 YYYY-MM-DD") from e
+    except Exception:
+        pass
+    return run_weekly_grants_for_week(_supabase_direct(), week_end=week_end)
 
 
 @app.post("/api/admin/set-kospi-result")

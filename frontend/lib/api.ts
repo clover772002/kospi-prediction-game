@@ -164,6 +164,20 @@ export interface HistoryItem {
   payout_multiplier?: number | null;
 }
 
+export interface ParticipationRewardsStatus {
+  week_id: string;
+  week_start: string;
+  week_end: string;
+  days_this_week: number;
+  max_days: number;
+  projected_weekly_bonus: number;
+  next_tier_days: number | null;
+  next_tier_bonus: number | null;
+  grant_schedule_label: string;
+  signup_bonus_received: boolean;
+  signup_bonus_amount: number;
+}
+
 export interface DashboardData {
   accuracy: {
     kospi: number | null;
@@ -177,6 +191,7 @@ export interface DashboardData {
   current_streak?: number;
   /** true면 /api/dashboard 로 전체 이력 로드 중 또는 미완료 */
   history_truncated?: boolean;
+  participation?: ParticipationRewardsStatus | null;
 }
 
 /** 전체 응답 일자별 박스플롯용(대시보드) */

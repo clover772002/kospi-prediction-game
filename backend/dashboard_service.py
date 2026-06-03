@@ -8,6 +8,7 @@ from typing import Any
 from supabase import Client
 
 from accuracy_aggregate import get_accuracy_data
+from participation_rewards import build_participation_status
 from survey_writes import apply_pending_presubmits
 
 logger = logging.getLogger(__name__)
@@ -190,6 +191,12 @@ def build_user_dashboard(
     history_with_result = sum(1 for h in history if h["kospi_correct"] is not None)
     history_correct = sum(1 for h in history if h["kospi_correct"])
 
+    try:
+        participation = build_participation_status(supabase, user_id)
+    except Exception as ex:
+        logger.warning("대시보드: 참여 보상 상태 스킵 — %s", ex)
+        participation = None
+
     base: dict[str, Any] = {
         "accuracy": {"kospi": None, "overall": None},
         "percentile": None,
@@ -199,6 +206,7 @@ def build_user_dashboard(
         "tokens": user_tokens,
         "current_streak": user_streak,
         "history_truncated": lim < 30,
+        "participation": participation,
     }
 
     if acc_stats_total > 0:
