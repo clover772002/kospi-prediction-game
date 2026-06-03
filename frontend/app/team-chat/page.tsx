@@ -10,6 +10,7 @@ import {
   type DirectionChatMessageRow,
   type DirectionChatStatus,
 } from "@/lib/api";
+import { getMeCached } from "@/lib/session-api-cache";
 import AppAmbientBackground from "@/components/AppAmbientBackground";
 import PushConnectBanner from "@/components/PushConnectBanner";
 import AppTabNav from "@/components/AppTabNav";
