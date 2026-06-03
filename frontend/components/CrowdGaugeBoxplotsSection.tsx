@@ -121,8 +121,9 @@ function HorizontalSignedBox({
       <BoxplotCardWrap highlight={highlight}>
         <div className={`${emptyShellCls} ${cardPad} flex flex-col ${ring}`}>
           <BoxplotColumnHeader variant={variant} count={respondentCount} emphasize={emphasize} />
-          <p className="text-xs text-center text-white/70 leading-snug py-3 min-h-[3.5rem] flex items-center justify-center">
-            해당 방향 응답 없음
+          <p className="text-[10px] sm:text-xs text-center text-white/70 leading-tight py-3 min-h-[3.5rem] flex flex-col items-center justify-center gap-0.5">
+            <span>해당방향</span>
+            <span>응답없음</span>
           </p>
         </div>
       </BoxplotCardWrap>
