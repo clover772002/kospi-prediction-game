@@ -50,14 +50,39 @@ function BoxplotCardWrap({ highlight, children }: { highlight: boolean; children
   );
 }
 
+function BoxplotColumnHeader({
+  variant,
+  count,
+  emphasize,
+}: {
+  variant: "rise" | "fall";
+  count: number;
+  emphasize: boolean;
+}) {
+  const label = variant === "fall" ? "하락선택" : "상승선택";
+  const color = variant === "fall" ? "text-blue-400" : "text-red-400";
+  const rowCls = emphasize ? `${surveyUi.body} mb-0.5` : "text-sm font-black mb-0.5";
+
+  return (
+    <div className={`flex items-center justify-center gap-1.5 ${rowCls}`}>
+      <span className={color}>{label}</span>
+      <span className={`tabular-nums ${emphasize ? surveyUi.label : "text-white/85"}`}>n={count}</span>
+    </div>
+  );
+}
+
 function HorizontalSignedBox({
   stats,
   highlight,
   variant,
+  respondentCount,
+  emphasize = false,
 }: {
   stats: CrowdGaugeBoxplotStats | null;
   highlight: boolean;
   variant: "rise" | "fall";
+  respondentCount: number;
+  emphasize?: boolean;
 }) {
   const isEmpty = !stats || stats.n === 0;
   const ring = highlight
@@ -80,14 +105,18 @@ function HorizontalSignedBox({
         };
 
   const toPct = variant === "rise" ? riseToPercent : fallToPercent;
+  const cardPad = emphasize ? "px-2.5 py-2" : "px-2 py-1.5";
 
   if (isEmpty) {
     return (
       <BoxplotCardWrap highlight={highlight}>
         <div
-          className={`rounded-xl border border-dashed border-[#333] bg-[#101010]/80 px-2.5 py-3 text-sm text-white min-h-[100px] flex flex-col justify-center ${ring}`}
+          className={`rounded-xl border border-dashed border-[#333] bg-[#101010]/80 ${cardPad} flex flex-col ${ring}`}
         >
-          <p className="leading-snug text-center text-white/80">이 날 해당 방향 응답이 없어요.</p>
+          <BoxplotColumnHeader variant={variant} count={respondentCount} emphasize={emphasize} />
+          <p className="text-xs text-center text-white/70 leading-snug py-3 min-h-[3.5rem] flex items-center justify-center">
+            해당 방향 응답 없음
+          </p>
         </div>
       </BoxplotCardWrap>
     );
@@ -104,8 +133,9 @@ function HorizontalSignedBox({
 
   return (
     <BoxplotCardWrap highlight={highlight}>
-      <div className={`rounded-xl border ${palette.border} bg-[#141414]/90 px-2.5 py-2.5 min-h-[100px] flex flex-col h-full ${ring}`}>
-        <div className="relative h-12 w-full flex-1 min-h-[48px]">
+      <div className={`rounded-xl border ${palette.border} bg-[#141414]/90 ${cardPad} flex flex-col h-full ${ring}`}>
+        <BoxplotColumnHeader variant={variant} count={respondentCount} emphasize={emphasize} />
+        <div className="relative h-10 w-full flex-1 min-h-[40px] mt-1">
           <div className="absolute bottom-0.5 left-0 right-0 h-px bg-gray-700/90" />
           <div
             className={`absolute bottom-2 h-2.5 w-px ${palette.whisker}`}
@@ -135,13 +165,13 @@ function HorizontalSignedBox({
           />
         </div>
         {variant === "fall" ? (
-          <div className="flex justify-between text-xs text-white/90 tabular-nums mt-1.5 px-0.5">
+          <div className="flex justify-between text-[10px] sm:text-xs text-white/80 tabular-nums mt-1 px-0.5">
             <span>-100</span>
             <span>-50</span>
             <span>0</span>
           </div>
         ) : (
-          <div className="flex justify-between text-xs text-white/90 tabular-nums mt-1.5 px-0.5">
+          <div className="flex justify-between text-[10px] sm:text-xs text-white/80 tabular-nums mt-1 px-0.5">
             <span>0</span>
             <span>50</span>
             <span>100</span>
@@ -271,9 +301,6 @@ function DayCard({
             ? "text-blue-400"
             : "text-white"
       }`;
-  const colHead = emphasize ? surveyUi.body : "text-sm font-black";
-  const colSub = emphasize ? surveyUi.label : "text-sm text-white/90 tabular-nums";
-
   return (
     <div
       className={`rounded-xl border bg-[#141414]/80 ${
@@ -292,16 +319,21 @@ function DayCard({
       )}
       <DirectionSharePie pctRise={pctRise} pctFall={pctFall} nRise={nRise} nFall={nFall} />
 
-      <div className="grid grid-cols-2 gap-x-3 sm:gap-x-4 gap-y-1 mb-1.5">
-        <p className={`${colHead} text-blue-400 text-center`}>하락선택</p>
-        <p className={`${colHead} text-red-400 text-center`}>상승선택</p>
-        <p className={`${colSub} text-center`}>n={nFall}</p>
-        <p className={`${colSub} text-center`}>n={nRise}</p>
-      </div>
-
-      <div className="grid grid-cols-2 items-stretch gap-x-3 sm:gap-x-4 gap-y-0">
-        <HorizontalSignedBox stats={day.fall} highlight={hiFall} variant="fall" />
-        <HorizontalSignedBox stats={day.rise} highlight={hiRise} variant="rise" />
+      <div className="grid grid-cols-2 items-stretch gap-x-2 sm:gap-x-3">
+        <HorizontalSignedBox
+          stats={day.fall}
+          highlight={hiFall}
+          variant="fall"
+          respondentCount={nFall}
+          emphasize={emphasize}
+        />
+        <HorizontalSignedBox
+          stats={day.rise}
+          highlight={hiRise}
+          variant="rise"
+          respondentCount={nRise}
+          emphasize={emphasize}
+        />
       </div>
     </div>
   );
