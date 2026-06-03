@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 const PHASE_MS = 640;
 const N_PHASE = 7;
 
-/** 로그인 랜딩: 토큰 → 고수 소통 시각 예시 */
+/** 로그인 랜딩: 토큰 → 초고수 소통 시각 예시 */
 export default function ExpertMessageConceptPlayground() {
   const [phase, setPhase] = useState(0);
 
@@ -24,7 +24,7 @@ export default function ExpertMessageConceptPlayground() {
   return (
     <div className="w-full rounded-3xl border-2 border-sky-500/35 bg-gradient-to-b from-[#0c1218]/95 to-[#0e0e10] overflow-hidden shadow-[inset_0_1px_0_rgba(56,189,248,0.08)]">
       <div className="flex items-center justify-center px-4 py-2.5 bg-sky-500/10 border-b border-sky-500/20">
-        <span className="text-base sm:text-lg font-black text-sky-200/95 tracking-wide">토큰 → 고수 채팅</span>
+        <span className="text-base sm:text-lg font-black text-sky-200/95 tracking-wide">토큰 → 초고수 채팅</span>
       </div>
 
       <div className="relative px-3 py-3 min-h-[11rem]">
@@ -54,7 +54,7 @@ export default function ExpertMessageConceptPlayground() {
             </div>
             {showGiftHint ? (
               <span className="text-base font-black text-amber-300 tabular-nums drop-shadow-[0_0_8px_rgba(251,191,36,.25)] animate-pulse mr-10">
-                고수에게 +3 💰
+                초고수에게 +3 💰
               </span>
             ) : null}
           </div>
@@ -64,7 +64,7 @@ export default function ExpertMessageConceptPlayground() {
             {showExpertTyping && !showExpertBubble ? (
               <div className="flex items-center gap-2 px-2">
                 <span className="text-xl">⭐</span>
-                <span className="text-base sm:text-lg text-gray-400 font-black tracking-tight animate-pulse">고수 작성 중…</span>
+                <span className="text-base sm:text-lg text-gray-400 font-black tracking-tight animate-pulse">초고수 작성 중…</span>
               </div>
             ) : null}
 
@@ -74,7 +74,7 @@ export default function ExpertMessageConceptPlayground() {
               }`}
             >
               <div className="flex items-center gap-1.5 flex-wrap">
-                <span className="text-sm sm:text-base font-black text-yellow-400/95 uppercase tracking-wide">⭐ 고수</span>
+                <span className="text-sm sm:text-base font-black text-yellow-400/95 uppercase tracking-wide">⭐ 초고수</span>
                 <span className="text-sm font-black rounded-full border border-emerald-500/35 bg-emerald-500/10 px-2.5 py-1 text-emerald-300/95">
                   답장 무료
                 </span>

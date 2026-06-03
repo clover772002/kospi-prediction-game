@@ -385,7 +385,7 @@ export default function SetupPage() {
               { key: "result",         icon: "📊", label: "실적·정확도 알림",  desc: "오후 15:35" },
               { key: "challenge",      icon: "⚔️", label: "대결 신청·결과 알림", desc: "수시" },
               { key: "group_nudge",    icon: "📣", label: "그룹 독촉 알림",    desc: "수시" },
-              { key: "expert_chat",    icon: "💬", label: "고수 소통 알림",    desc: "새 질문·답장" },
+              { key: "expert_chat",    icon: "🏆", label: "명예의 전당 알림",    desc: "초고수 질문·답장" },
               { key: "direction_chat", icon: "🗨️", label: "소통방 메시지 알림",  desc: "같은 방 새 메시지 · iPhone은 홈 화면 앱 또는 텔레그램" },
               { key: "fgi_digest", icon: "📊", label: "공포·탐욕 지수 알림", desc: "매일 16:10 · 시장 FGI + 인간지표" },
             ] as { key: keyof PushPreferences; icon: string; label: string; desc: string }[]).map(({ key, icon, label, desc }) => (

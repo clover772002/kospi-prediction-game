@@ -26,7 +26,7 @@ export default function GlobalTopExpertBanner({
         <span className="mr-1" aria-hidden>
           ⭐
         </span>
-        토큰 1위 — 고수로 지정됐어요
+        토큰 1위 — 초고수로 지정됐어요
       </p>
       <p className={`mt-1 leading-relaxed text-violet-200/90 ${compact ? "text-xs" : "text-sm"}`}>
         보유 토큰이 가장 많습니다. 다른 사람에게 질문을 받으면 토큰을 받을 수 있어요.
@@ -38,11 +38,11 @@ export default function GlobalTopExpertBanner({
             compact ? "text-xs" : "text-sm"
           }`}
         >
-          고수 탭에서 질문·답장 보기 →
+          명예의 전당에서 질문·답장 보기 →
         </Link>
       ) : receivesToday && !expertChatUnlocked ? (
         <p className={`mt-2 text-violet-300/70 ${compact ? "text-[11px]" : "text-xs"}`}>
-          고수 탭은 토큰 210개 이상일 때 열립니다.
+          명예의 전당·초고수 소통은 토큰 210개 이상일 때 열립니다.
         </p>
       ) : !receivesToday ? (
         <p className={`mt-2 text-violet-300/70 ${compact ? "text-[11px]" : "text-xs"}`}>
@@ -65,7 +65,7 @@ export function GlobalTopExpertDethronedBanner({ compact = false }: { compact?: 
         <span className="mr-1" aria-hidden>
           💔
         </span>
-        고수의 자리를 빼앗겼어요
+        초고수 자리를 빼앗겼어요
       </p>
       <p className={`mt-1 leading-relaxed text-zinc-400 ${compact ? "text-xs" : "text-sm"}`}>
         다른 참가자가 토큰을 더 많이 보유하게 되었습니다. 적중·참여로 토큰을 모으면 다시 1위가 될 수 있어요.

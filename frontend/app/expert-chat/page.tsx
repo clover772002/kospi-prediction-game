@@ -33,6 +33,7 @@ import {
 import AppAmbientBackground from "@/components/AppAmbientBackground";
 import AppTabNav from "@/components/AppTabNav";
 import ExpertChatTabGate from "@/components/ExpertChatTabGate";
+import TokenHallOfFameRankings from "@/components/TokenHallOfFameRankings";
 import TopExpertNoticeBlock from "@/components/TopExpertNoticeBlock";
 import PageLoadProgress from "@/components/PageLoadProgress";
 import StaleRefreshIndicator from "@/components/StaleRefreshIndicator";
@@ -329,7 +330,9 @@ export default function ExpertChatPage() {
         <StaleRefreshIndicator show={awaitingCore || revalidating} tone="violet" />
         <AppAmbientBackground />
         <main className="relative z-10 mx-auto min-h-screen max-w-md px-4 app-page-tab-pad pt-6">
-          <h1 className="mb-4 text-center text-2xl font-black text-white">고수 소통</h1>
+          <h1 className="mb-1 text-center text-2xl font-black text-white">명예의 전당</h1>
+          <p className="mb-4 text-center text-xs text-gray-500">토큰 순위 · 초고수 소통</p>
+          <TokenHallOfFameRankings accessToken={token} meId={me?.id ?? null} />
           {me && eligibility ? (
             <div className="mb-4">
               <TopExpertNoticeBlock
@@ -340,6 +343,7 @@ export default function ExpertChatPage() {
               />
             </div>
           ) : null}
+          <h2 className="mb-3 text-center text-lg font-black text-violet-200/95">초고수 소통</h2>
           <ExpertChatTabGate
             myBalance={eligibility.my_balance}
             minBalance={eligibility.min_balance_for_tab}
@@ -368,7 +372,11 @@ export default function ExpertChatPage() {
           ) : null}
         </div>
 
-        <h1 className="mb-1 text-2xl font-black text-white">고수 소통</h1>
+        <h1 className="mb-1 text-2xl font-black text-white">명예의 전당</h1>
+        <p className="mb-4 text-xs text-gray-500">토큰 순위 · 초고수 소통</p>
+
+        <TokenHallOfFameRankings accessToken={token} meId={me?.id ?? null} />
+
         {me && eligibility ? (
           <div className="mb-4">
             <TopExpertNoticeBlock
@@ -379,11 +387,13 @@ export default function ExpertChatPage() {
             />
           </div>
         ) : null}
+
+        <h2 className="mb-2 text-lg font-black text-violet-200/95">초고수 소통</h2>
         {eligibility && !eligibility.is_global_top_expert ? (
           <p className="mb-4 text-sm leading-relaxed text-white/90">
-            오늘 설문에 참여한 <strong className="text-white">토큰 1위 고수</strong>에게 질문을 보낼 수 있습니다. 질문 1통당{" "}
+            오늘 설문에 참여한 <strong className="text-white">토큰 1위 초고수</strong>에게 질문을 보낼 수 있습니다. 질문 1통당{" "}
             <span className="font-bold text-amber-200">{eligibility.tip_tokens_per_message}토큰</span>이
-            차감되며, 고수가 <strong className="text-white">팁을 수락할 때</strong> 해당 토큰이 전달됩니다.
+            차감되며, 초고수가 <strong className="text-white">팁을 수락할 때</strong> 해당 토큰이 전달됩니다.
           </p>
         ) : null}
 
@@ -416,7 +426,7 @@ export default function ExpertChatPage() {
               {threads.map((t) => {
                 const other = t.my_role === "participant" ? t.expert_user_id : t.participant_id;
                 const label =
-                  t.my_role === "expert" ? `질문 · ${displayName(other)}` : `고수 · ${displayName(other)}`;
+                  t.my_role === "expert" ? `질문 · ${displayName(other)}` : `초고수 · ${displayName(other)}`;
                 const active = t.thread_id === selectedId;
                 return (
                   <li key={t.thread_id}>
@@ -483,7 +493,7 @@ export default function ExpertChatPage() {
                               <>내가 받을 토큰 {m.tip_tokens} (수락 시 지급)</>
                             ) : (
                               <>
-                                내 토큰 {m.tip_tokens} 차감 · 고수 수락 시 상대에게 정산 대기
+                                내 토큰 {m.tip_tokens} 차감 · 초고수 수락 시 상대에게 정산 대기
                               </>
                             )}
                           </p>
@@ -538,7 +548,7 @@ export default function ExpertChatPage() {
 
         <section className="rounded-2xl border border-amber-500/20 bg-amber-500/[0.07] p-4">
           <h2 className="mb-2 text-sm font-bold text-amber-100">메시지 보내기</h2>
-          <span className="mb-1 block text-[10px] font-bold text-gray-500">받는 사람 (최고 고수)</span>
+          <span className="mb-1 block text-[10px] font-bold text-gray-500">받는 사람 (토큰 1위 초고수)</span>
           {pickerRecipients.length > 0 ? (
             <div className="mb-3 rounded-xl border border-[#333] bg-[#111] px-3 py-2.5 text-sm text-white">
               {pickerRecipients.map((r) => (
@@ -549,7 +559,7 @@ export default function ExpertChatPage() {
               ))}
             </div>
           ) : (
-            <p className="mb-3 text-sm text-gray-500">오늘 설문에 참여한 최고 고수가 없어요.</p>
+            <p className="mb-3 text-sm text-gray-500">오늘 설문에 참여한 초고수가 없어요.</p>
           )}
 
           <textarea
@@ -557,7 +567,7 @@ export default function ExpertChatPage() {
             onChange={(e) => setBody(e.target.value)}
             rows={5}
             className="mb-3 w-full resize-none rounded-xl border border-[#333] bg-[#111] px-3 py-2 text-sm text-white placeholder:text-gray-600"
-            placeholder="고수에게 보낼 메시지"
+            placeholder="초고수에게 보낼 메시지"
             disabled={actionLocked || !eligibility?.can_send_message}
           />
           <button
@@ -569,7 +579,7 @@ export default function ExpertChatPage() {
             보내기 · 토큰 {eligibility?.tip_tokens_per_message ?? "—"} (보내는 즉시 차감)
           </button>
           <p className="mt-2 text-[10px] text-gray-500">
-            고수에게 정산되는 시점은 그분이 해당 메시지에서 팁을 수락할 때예요. 같은 요청 재전송은 멱등 키로
+            초고수에게 정산되는 시점은 그분이 해당 메시지에서 팁을 수락할 때예요. 같은 요청 재전송은 멱등 키로
             막히며 거래일당 전송 수에 제한이 있을 수 있어요.
           </p>
         </section>

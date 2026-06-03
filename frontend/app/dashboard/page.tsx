@@ -1115,11 +1115,11 @@ export default function DashboardPage() {
                   >
                     <span className="flex items-center gap-2">
                       <span aria-hidden>{expertUnlocked ? "💬" : "🔒"}</span>
-                      <span>최고 고수에게 질문 보내기</span>
+                      <span>초고수에게 질문 보내기</span>
                     </span>
                     {!expertUnlocked && tokens != null ? (
                       <span className="text-sm font-normal text-white/70">
-                        토큰 {expertMin}개 이상이면 고수 탭이 열립니다 (현재 {tokens}개)
+                        토큰 {expertMin}개 이상이면 명예의 전당이 열립니다 (현재 {tokens}개)
                       </span>
                     ) : null}
                   </Link>

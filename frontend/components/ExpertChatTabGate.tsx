@@ -1,6 +1,6 @@
 "use client";
 
-/** 고수 탭·페이지: 최소 토큰 미만일 때 전체 화면 안내 */
+/** 명예의 전당(초고수 소통): 최소 토큰 미만일 때 안내 */
 export default function ExpertChatTabGate({
   myBalance,
   minBalance,
@@ -20,10 +20,10 @@ export default function ExpertChatTabGate({
         🔒
       </p>
       <h2 id="expert-tab-gate-title" className="text-xl font-black text-white leading-snug">
-        고수 소통은 아직 열리지 않았습니다
+        초고수 소통은 아직 열리지 않았습니다
       </h2>
       <p className="mt-3 text-base text-white/90 leading-relaxed">
-        {reason ?? `보유 토큰이 ${minBalance}개 이상이어야 고수 탭을 이용할 수 있습니다.`}
+        {reason ?? `보유 토큰이 ${minBalance}개 이상이어야 명예의 전당·초고수 소통을 이용할 수 있습니다.`}
       </p>
       <div className="mt-5 w-full rounded-2xl border border-amber-500/30 bg-amber-500/10 px-4 py-4 space-y-2 text-base">
         <p className="text-white">

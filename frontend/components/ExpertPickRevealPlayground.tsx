@@ -6,7 +6,7 @@ const PHASE_MS = 580;
 /** 8단계 루프: 잠금 → 안내 → 토큰 표시 → 지불 순간 → 해제 반짝 → 유지 ×2 → 다음 루프 */
 const N_PHASE = 8;
 
-/** 로그인 랜딩: 토큰으로 고수 선택픽 해제 카드 예시 */
+/** 로그인 랜딩: 토큰으로 초고수 선택픽 해제 카드 예시 */
 export default function ExpertPickRevealPlayground() {
   const [phase, setPhase] = useState(0);
   const [burstNonce, setBurstNonce] = useState(0);
@@ -42,7 +42,7 @@ export default function ExpertPickRevealPlayground() {
         />
 
         <div className="relative z-[1] flex flex-col items-center text-center">
-          <p className="text-base text-gray-500 font-bold mb-2">오늘 예측 · 고수 선택</p>
+          <p className="text-base text-gray-500 font-bold mb-2">오늘 예측 · 초고수 선택</p>
 
           <div className="relative w-full max-w-[15rem] mx-auto">
             {phase === 3 ? (

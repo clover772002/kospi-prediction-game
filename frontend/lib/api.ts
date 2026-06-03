@@ -882,7 +882,29 @@ export async function createStripePackCheckout(accessToken: string, packSlug: st
   });
 }
 
-/** 고수 소통: 리더보드 스냅샷 엔트리(`/api/expert-chat/eligibility` 등) */
+/** 명예의 전당 토큰 순위 항목 */
+export interface TokenRankingEntry {
+  user_id: string;
+  masked_name: string;
+  score: number;
+  rank: number;
+}
+
+export interface HallOfFameRankings {
+  week_id: string;
+  week_start: string;
+  week_end: string;
+  cumulative: TokenRankingEntry[];
+  weekly: TokenRankingEntry[];
+  my_cumulative_rank: number | null;
+  my_weekly_rank: number | null;
+}
+
+export async function getHallOfFameRankings(accessToken: string): Promise<HallOfFameRankings> {
+  return authFetch<HallOfFameRankings>("/api/hall-of-fame/rankings", accessToken);
+}
+
+/** 초고수 소통: 리더보드 스냅샷 엔트리(`/api/expert-chat/eligibility` 등) */
 export interface ExpertChatLeaderboardEntry {
   user_id: string;
   masked_name: string;

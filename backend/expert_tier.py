@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""전역 고수(토큰 1위) — 고수 탭·아이템·집계 카드 공통 정의."""
+"""전역 초고수(토큰 1위) — 명예의 전당·아이템·집계 카드 공통 정의."""
 from __future__ import annotations
 
 import logging
@@ -40,7 +40,7 @@ def global_top_expert_uid(supabase: Client) -> tuple[str | None, str | None]:
             .execute()
         )
     except Exception as e:
-        logger.warning("고수(토큰 1위) 조회 실패: %s", e)
+        logger.warning("초고수(토큰 1위) 조회 실패: %s", e)
         return None, "segment_empty"
 
     rows = res.data or []

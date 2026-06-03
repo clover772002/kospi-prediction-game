@@ -97,6 +97,7 @@ from participation_rewards import (
     run_weekly_grants_for_week,
     try_grant_signup_bonus,
 )
+from token_rankings import build_hall_of_fame_payload
 from accuracy_aggregate import clear_accuracy_cache, get_accuracy_data
 from expert_tier import (
     SEGMENT_PRED_COUNT_MIN,
@@ -2917,7 +2918,7 @@ async def post_consumable_purchase(
     return out
 
 
-# ─── 고수 소통 (설문 거래일 기준 리더보드 스냅샷 · 상위 N 수신 가능) ───
+# ─── 명예의 전당 · 초고수 소통 ───
 
 
 class ExpertChatMessageBody(BaseModel):
@@ -2934,6 +2935,23 @@ class ExpertChatReplyBody(BaseModel):
 
 class ExpertChatAcceptTipBody(BaseModel):
     message_id: str
+
+
+@app.get("/api/hall-of-fame/rankings")
+async def hall_of_fame_rankings(
+    current_user=Depends(get_current_user),
+    supabase: Client = Depends(get_supabase),
+):
+    """명예의 전당 — 보유 토큰 누적 순위 + 이번 주 설문 토큰 순위."""
+    user_id = str(current_user.id)
+    try:
+        return build_hall_of_fame_payload(supabase, current_user_id=user_id)
+    except Exception as e:
+        logger.exception("명예의 전당 순위 조회 실패 user=%s", user_id)
+        raise HTTPException(
+            status_code=500,
+            detail="순위를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.",
+        ) from e
 
 
 @app.get("/api/expert-chat/eligibility")
@@ -2956,7 +2974,7 @@ async def expert_chat_send_message(
     current_user=Depends(get_current_user),
     supabase: Client = Depends(get_supabase),
 ):
-    """참가자 토큰 차감 + 메시지 저장. 고수에게는 「팁 수락」받았을 때 정산합니다."""
+    """참가자 토큰 차감 + 메시지 저장. 초고수에게는 「팁 수락」받았을 때 정산합니다."""
     user_id = str(current_user.id)
     sd = (body.survey_date or "").strip() or today_kst()
     if len(sd) != 10:
@@ -2984,14 +3002,14 @@ async def expert_chat_send_message(
         tail = ""
         if isinstance(tip_n, int) and tip_n > 0:
             tail = f" · 팁 {tip_n}(수락 시 받음)"
-        push_body = (snippet + tail) if snippet else ("새 고수 소통 메시지" + tail)
+        push_body = (snippet + tail) if snippet else ("새 초고수 소통 메시지" + tail)
         if len(push_body) > 180:
             push_body = push_body[:177] + "…"
         try:
             send_web_push_to_user(
                 supabase,
                 expert_uid,
-                "💬 새 고수 소통 메시지",
+                "💬 새 초고수 소통 메시지",
                 push_body,
                 "/expert-chat",
                 "expert_chat",
@@ -3026,7 +3044,7 @@ async def expert_chat_accept_tip(
     current_user=Depends(get_current_user),
     supabase: Client = Depends(get_supabase),
 ):
-    """고수만: 참가자 메시지에 붙은 팁을 수락하면 토큰이 전달됩니다."""
+    """초고수만: 참가자 메시지에 붙은 팁을 수락하면 토큰이 전달됩니다."""
     expert_id = str(current_user.id)
     mid = (body.message_id or "").strip()
     if not mid:
@@ -3046,7 +3064,7 @@ async def expert_chat_reply(
     current_user=Depends(get_current_user),
     supabase: Client = Depends(get_supabase),
 ):
-    """고수 답장(토큰 0). 참가자에게 웹 푸시 가능 시 알림 시도."""
+    """초고수 답장(토큰 0). 참가자에게 웹 푸시 가능 시 알림 시도."""
     expert_id = str(current_user.id)
     tid = (ep.thread_id or "").strip()
     if not tid:
@@ -3070,7 +3088,7 @@ async def expert_chat_reply(
     send_web_push_to_user(
         supabase,
         out["participant_id"],
-        "⭐ 고수 답장이 왔어요",
+        "⭐ 초고수 답장이 왔어요",
         snippet or "메시지를 확인해 보세요.",
         "/expert-chat",
         "expert_chat",

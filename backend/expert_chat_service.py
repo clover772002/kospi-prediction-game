@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""고수 소통: 리더보드 스냅샷·스레드·토큰 전달(멱등)."""
+"""초고수 소통: 리더보드 스냅샷·스레드·토큰 전달(멱등)."""
 from __future__ import annotations
 
 import logging
@@ -24,7 +24,7 @@ TOP_N = 1
 MAX_BODY_LEN = int(os.getenv("EXPERT_CHAT_MAX_BODY", "1200"))
 MAX_MESSAGES_PER_PARTICIPANT_SURVEY = int(os.getenv("EXPERT_CHAT_MAX_MSG_PER_SURVEY", "30"))
 
-TAB_BLOCKED_REASON = f"고수 소통은 토큰 {MIN_TAB_BALANCE}개 이상부터 이용할 수 있습니다."
+TAB_BLOCKED_REASON = f"명예의 전당·초고수 소통은 토큰 {MIN_TAB_BALANCE}개 이상부터 이용할 수 있습니다."
 
 
 def user_token_balance(supabase: Client, user_id: str) -> int:
@@ -33,7 +33,7 @@ def user_token_balance(supabase: Client, user_id: str) -> int:
 
 
 def assert_expert_chat_tab_access(supabase: Client, user_id: str) -> int:
-    """고수 탭·API 전체 잠금(현재 잔액 기준)."""
+    """명예의 전당(초고수 소통) 탭·API 잠금(현재 잔액 기준)."""
     balance = user_token_balance(supabase, user_id)
     if balance < MIN_TAB_BALANCE:
         raise HTTPException(status_code=403, detail=TAB_BLOCKED_REASON)
@@ -167,14 +167,14 @@ def build_eligibility_payload(
         if not can_access_tab:
             return TAB_BLOCKED_REASON
         if leader_err == "segment_empty":
-            return "아직 토큰 1위 고수를 정할 참가자가 없어요"
+            return "아직 토큰 1위 초고수를 정할 참가자가 없어요"
         if not top_entry:
-            return "오늘 설문에 참여한 최고 고수가 없어요"
+            return "오늘 설문에 참여한 초고수가 없어요"
         if leader_uid == current_user_id:
-            return "최고 고수 본인은 질문을 보낼 수 없어요"
+            return "초고수 본인은 질문을 보낼 수 없어요"
         if my_balance < TIP_TOKENS:
             return f"질문 보내기에 토큰이 부족해요. (필요 {TIP_TOKENS}개)"
-        return "최고 고수에게 보낼 수 없어요"
+        return "초고수에게 보낼 수 없어요"
 
     send_blocked_reason: str | None = None if can_send else _blocked()
     tab_blocked_reason: str | None = None if can_access_tab else TAB_BLOCKED_REASON
@@ -256,7 +256,7 @@ def send_participant_message(
     if not expert_id:
         raise HTTPException(
             status_code=400,
-            detail="오늘 설문에 참여한 최고 고수에게만 보낼 수 있어요.",
+            detail="오늘 설문에 참여한 초고수에게만 보낼 수 있어요.",
         )
     if expert_id == participant_id:
         raise HTTPException(status_code=400, detail="본인에게는 보낼 수 없어요.")
@@ -364,7 +364,7 @@ def accept_participant_tip(
     expert_id: str,
     message_id: str,
 ) -> dict[str, Any]:
-    """고수가 참가자 메시지에 붙은 팁을 수락했을 때 정산합니다 (멱등)."""
+    """초고수가 참가자 메시지에 붙은 팁을 수락했을 때 정산합니다 (멱등)."""
     mid = (message_id or "").strip()
     if not mid:
         raise HTTPException(status_code=400, detail="message_id가 필요합니다.")
@@ -456,7 +456,7 @@ def accept_participant_tip(
             idempotency_key=f"expert_tip_accept:{mid}",
         )
     except Exception as e:
-        logger.exception("고수 팁 수락 지급 실패 msg=%s: %s", mid, e)
+        logger.exception("초고수 팁 수락 지급 실패 msg=%s: %s", mid, e)
         raise HTTPException(status_code=500, detail="토큰 정산에 실패했습니다. 잠시 후 다시 시도해 주세요.") from e
 
     now_iso = datetime.now(timezone.utc).isoformat()

@@ -25,7 +25,7 @@ const PRIMARY_TABS: TabDef[] = [
 /** 보조: 기록·도구·설정 */
 const SECONDARY_TABS: TabDef[] = [
   { href: "/dashboard", label: "대시", icon: "📊", activeClass: "app-tab-dashboard" },
-  { href: "/expert-chat", label: "고수", icon: "💬", activeClass: "app-tab-expert-chat", expertGate: true },
+  { href: "/expert-chat", label: "명예의 전당", icon: "🏆", activeClass: "app-tab-expert-chat", expertGate: true },
   { href: "/shop", label: "아이템", icon: "💎", activeClass: "app-tab-shop" },
   { href: "/groups", label: "그룹", icon: "👥", activeClass: "app-tab-groups" },
   { href: "/setup", label: "설정", icon: "⚙️", activeClass: "app-tab-setup" },
@@ -81,7 +81,7 @@ function TabButton({ tab, active, locked, variant, onLockedClick }: TabButtonPro
         type="button"
         onClick={onLockedClick}
         className={`${className} text-gray-600`}
-        aria-label="고수 탭 잠금 — 토큰 210개 이상 필요"
+        aria-label="명예의 전당 잠금 — 토큰 210개 이상 필요"
       >
         {inner}
       </button>
