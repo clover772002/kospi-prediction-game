@@ -214,7 +214,6 @@ function DayCard({
   emphasize?: boolean;
 }) {
   const resultLabel = formatMarketResultLabel(day.kospi_result, day.kospi_change_pct);
-  const pending = day.kospi_result === null || day.kospi_result === undefined;
 
   const hiRise = day.correct_team === "rise";
   const hiFall = day.correct_team === "fall";
