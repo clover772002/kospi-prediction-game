@@ -935,35 +935,38 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          {dash && dash.total_predictions === 0 ? (
-            <div className="text-center py-4 space-y-2">
-              <p className="text-3xl">📭</p>
-              <p className="text-sm text-white">
-                아직 예측 이력이 없어요.<br />
-                설문에 응답해보세요!
-              </p>
-            </div>
-          ) : dash ? (
+          {dash ? (
             <div className="space-y-4">
-              {/* 적중률 숫자 */}
-              <div className="flex items-end gap-2">
-                <p className="text-5xl font-black text-green-400 leading-none count-pop tabular-nums">
-                  {dash.accuracy.kospi != null ? `${dash.accuracy.kospi}` : "-"}
-                </p>
-                {dash.accuracy.kospi != null && (
-                  <p className="text-xl font-black text-green-400/70 pb-0.5">%</p>
-                )}
-                <p className="text-sm text-white pb-1 ml-1">내 적중률 · {dash.total_predictions}일 참여</p>
-              </div>
-
-              {dash.tokens != null && (
-                <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-xl px-4 py-3 flex items-center justify-between gap-2">
-                  <p className="text-sm text-white">보유</p>
-                  <ChipAmount amount={dash.tokens} large className="text-yellow-400" />
+              {dash.total_predictions === 0 ? (
+                <div className="text-center py-4 space-y-2">
+                  <p className="text-3xl">📭</p>
+                  <p className="text-sm text-white">
+                    아직 예측 이력이 없어요.<br />
+                    설문에 응답해보세요!
+                  </p>
                 </div>
+              ) : (
+                <>
+                  <div className="flex items-end gap-2">
+                    <p className="text-5xl font-black text-green-400 leading-none count-pop tabular-nums">
+                      {dash.accuracy.kospi != null ? `${dash.accuracy.kospi}` : "-"}
+                    </p>
+                    {dash.accuracy.kospi != null && (
+                      <p className="text-xl font-black text-green-400/70 pb-0.5">%</p>
+                    )}
+                    <p className="text-sm text-white pb-1 ml-1">내 적중률 · {dash.total_predictions}일 참여</p>
+                  </div>
+
+                  {dash.tokens != null && (
+                    <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-xl px-4 py-3 flex items-center justify-between gap-2">
+                      <p className="text-sm text-white">보유</p>
+                      <ChipAmount amount={dash.tokens} large className="text-yellow-400" />
+                    </div>
+                  )}
+                </>
               )}
 
-              <PredictionVsCrowdTable userHistory={dash.history} today={today} />
+              <PredictionVsCrowdTable userHistory={dash.history} />
             </div>
           ) : null}
         </div>

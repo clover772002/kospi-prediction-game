@@ -225,6 +225,18 @@ export interface CrowdGaugeBoxplotsResponse {
   days: CrowdGaugeBoxplotDay[];
 }
 
+/** KST 거래일 달력 기준 최근 n일(대시보드 비교 표 열) */
+export interface RecentTradingDayRow {
+  survey_date: string;
+  kospi_result: boolean | null;
+  kospi_change_pct?: number | null;
+}
+
+export interface RecentTradingDaysResponse {
+  dates: string[];
+  days: RecentTradingDayRow[];
+}
+
 // ─── API 함수 ────────────────────────────────────────────────
 
 export async function getMe(token: string): Promise<UserProfile> {
@@ -239,6 +251,20 @@ export async function getToday(): Promise<TodaySurvey> {
     return JSON.parse(text) as TodaySurvey;
   } catch {
     throw new Error("오늘 데이터 응답 형식 오류");
+  }
+}
+
+export async function getRecentTradingDays(n = 5): Promise<RecentTradingDaysResponse> {
+  const res = await fetch(
+    `${resolveApiBase()}/api/survey/recent-trading-days?n=${encodeURIComponent(String(n))}`,
+    { cache: "no-store" },
+  );
+  const text = await res.text();
+  if (!res.ok) throw new Error(formatApiErrorMessage(res.status, text));
+  try {
+    return JSON.parse(text) as RecentTradingDaysResponse;
+  } catch {
+    throw new Error("최근 거래일 응답 형식 오류");
   }
 }
 

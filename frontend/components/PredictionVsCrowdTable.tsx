@@ -3,13 +3,12 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   getCrowdGaugeBoxplots,
+  getRecentTradingDays,
   type CrowdGaugeBoxplotDay,
   type HistoryItem,
-  type TodaySurvey,
+  type RecentTradingDayRow,
 } from "@/lib/api";
 import { OUR_PREDICTION_LABEL } from "@/lib/product-copy";
-
-const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 type ColumnDay = {
   date: string;
@@ -39,44 +38,11 @@ function formatColDate(iso: string): string {
   return iso.slice(5).replace("-", ".");
 }
 
-function isActiveSurveyDay(today: TodaySurvey): boolean {
-  return (
-    today.status === "open" ||
-    today.status === "closed" ||
-    today.status === "result"
-  );
-}
-
-/** 최근 5거래일: 설문·응답이 있는 날 기준(실적 미확정일 포함) */
-function buildRecentTradingColumns(
-  crowdDays: CrowdGaugeBoxplotDay[],
-  today: TodaySurvey | null,
-): ColumnDay[] {
-  const byDate = new Map<string, boolean | null>();
-
-  for (const d of crowdDays) {
-    const k = dateKey(d.survey_date);
-    if (!DATE_RE.test(k)) continue;
-    byDate.set(k, coerceBool(d.kospi_result));
-  }
-
-  if (today && isActiveSurveyDay(today) && today.survey_date) {
-    const k = dateKey(today.survey_date);
-    if (DATE_RE.test(k)) {
-      const tr = coerceBool(today.kospi_result);
-      if (!byDate.has(k)) {
-        byDate.set(k, tr);
-      } else if (byDate.get(k) === null && tr !== null) {
-        byDate.set(k, tr);
-      }
-    }
-  }
-
-  return [...byDate.keys()]
-    .sort((a, b) => b.localeCompare(a))
-    .slice(0, 5)
-    .reverse()
-    .map((date) => ({ date, market: byDate.get(date) ?? null }));
+function columnsFromTradingDays(days: RecentTradingDayRow[]): ColumnDay[] {
+  return days.map((d) => ({
+    date: dateKey(d.survey_date),
+    market: coerceBool(d.kospi_result),
+  }));
 }
 
 type CellValue = "pending" | "tie" | boolean;
@@ -120,31 +86,34 @@ function DirectionCell({
 
 type Props = {
   userHistory: HistoryItem[];
-  today?: TodaySurvey | null;
 };
 
-export default function PredictionVsCrowdTable({ userHistory, today = null }: Props) {
+export default function PredictionVsCrowdTable({ userHistory }: Props) {
+  const [columns, setColumns] = useState<ColumnDay[]>([]);
   const [crowdDays, setCrowdDays] = useState<CrowdGaugeBoxplotDay[]>([]);
 
   useEffect(() => {
     let cancelled = false;
     void (async () => {
       try {
-        const crowdRes = await getCrowdGaugeBoxplots(15);
-        if (!cancelled) setCrowdDays(crowdRes.days ?? []);
+        const [tradingRes, crowdRes] = await Promise.all([
+          getRecentTradingDays(5),
+          getCrowdGaugeBoxplots(15),
+        ]);
+        if (cancelled) return;
+        setColumns(columnsFromTradingDays(tradingRes.days ?? []));
+        setCrowdDays(crowdRes.days ?? []);
       } catch {
-        if (!cancelled) setCrowdDays([]);
+        if (!cancelled) {
+          setColumns([]);
+          setCrowdDays([]);
+        }
       }
     })();
     return () => {
       cancelled = true;
     };
   }, []);
-
-  const columns = useMemo(
-    () => buildRecentTradingColumns(crowdDays, today),
-    [crowdDays, today],
-  );
 
   const userByDate = useMemo(() => {
     const m = new Map<string, HistoryItem>();
@@ -167,7 +136,7 @@ export default function PredictionVsCrowdTable({ userHistory, today = null }: Pr
     <div className="space-y-2">
       <div>
         <p className="text-sm font-bold text-white">내 예측 vs {OUR_PREDICTION_LABEL}</p>
-        <p className="text-xs text-white/50 mt-0.5">최근 5거래일 · 코스피 실적 미정은 공란</p>
+        <p className="text-xs text-white/50 mt-0.5">최근 5거래일(달력) · 실적 미정은 공란</p>
       </div>
       <div className="rounded-xl border border-[#2A2A2A] bg-[#141414]/60 overflow-hidden">
         <table className="w-full border-collapse table-fixed">

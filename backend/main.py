@@ -3930,6 +3930,53 @@ async def get_dashboard(
         ) from e
 
 
+@app.get("/api/survey/recent-trading-days")
+async def get_recent_trading_days(
+    n: int = 5,
+    supabase: Client = Depends(get_supabase),
+):
+    """
+    KST 기준 오늘(또는 직전 거래일)까지 포함한 최근 n개 **거래일** 목록.
+    대시보드 비교 표 열 축 — 실적·응답 유무와 무관하게 달력 거래일을 고정한다.
+    """
+    cnt = max(1, min(int(n), 10))
+    try:
+        cal_dates = last_n_trading_days_inclusive_through(today_date_kst(), cnt)
+        date_strs = [d.isoformat() for d in cal_dates]
+        if not date_strs:
+            return {"dates": [], "days": []}
+
+        ds = (
+            supabase.table("daily_surveys")
+            .select("survey_date, kospi_result, kospi_change_pct")
+            .in_("survey_date", date_strs)
+            .execute()
+        )
+        by_date: dict[str, dict] = {}
+        for row in ds.data or []:
+            dk = _survey_date_key(row.get("survey_date"))
+            if dk:
+                by_date[dk] = row
+
+        days_out: list[dict] = []
+        for dk in date_strs:
+            row = by_date.get(dk, {})
+            kr = row.get("kospi_result") if row else None
+            days_out.append({
+                "survey_date": dk,
+                "kospi_result": _cell_truthy_bool(kr) if kr is not None else None,
+                "kospi_change_pct": row.get("kospi_change_pct") if row else None,
+            })
+
+        return {"dates": date_strs, "days": days_out}
+    except Exception as e:
+        logger.exception("recent-trading-days 실패")
+        raise HTTPException(
+            status_code=500,
+            detail="최근 거래일 목록을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.",
+        ) from e
+
+
 @app.get("/api/survey/crowd-gauge-boxplots")
 async def get_crowd_gauge_boxplots(
     limit: int = 30,
