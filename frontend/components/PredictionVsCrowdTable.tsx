@@ -56,10 +56,12 @@ function crowdMajorityDirection(day: CrowdGaugeBoxplotDay | undefined): boolean 
   const nFall = day.respondents_fall ?? day.fall?.n ?? 0;
   const total = nRise + nFall;
   if (total === 0) return null;
+  if (nRise === nFall) return null;
   if (typeof day.pct_rise === "number" && Number.isFinite(day.pct_rise)) {
-    return day.pct_rise >= 50;
+    if (day.pct_rise === 50) return null;
+    return day.pct_rise > 50;
   }
-  return nRise >= nFall;
+  return nRise > nFall;
 }
 
 function DirectionArrow({
@@ -186,7 +188,7 @@ export default function PredictionVsCrowdTable({ history, today }: Props) {
         </table>
       </div>
       <p className="text-xs text-white/55 leading-snug">
-        ▲ 상승 · ▼ 하락 · 코스피와 같으면 색, 다르면 회색
+        ▲ 상승 · ▼ 하락 · — 동률(우리 예측) 또는 결과 미정(코스피) · 코스피와 같으면 색, 다르면 회색
       </p>
     </div>
   );
