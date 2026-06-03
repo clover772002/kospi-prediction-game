@@ -351,17 +351,17 @@ function DayCard({
 
       <div className="grid grid-cols-2 items-stretch gap-x-2 sm:gap-x-3">
         <HorizontalSignedBox
-          stats={day.fall}
-          highlight={hiFall}
-          variant="fall"
-          respondentCount={nFall}
-          emphasize={emphasize}
-        />
-        <HorizontalSignedBox
           stats={day.rise}
           highlight={hiRise}
           variant="rise"
           respondentCount={nRise}
+          emphasize={emphasize}
+        />
+        <HorizontalSignedBox
+          stats={day.fall}
+          highlight={hiFall}
+          variant="fall"
+          respondentCount={nFall}
           emphasize={emphasize}
         />
       </div>
