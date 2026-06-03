@@ -14,8 +14,6 @@ interface GaugeBarProps {
   /** 제출 완료 읽기 전용: 좌측 완료 뱃지 */
   surveyCompleted?: boolean;
   completedLabel?: string;
-  /** 완료 뱃지 아래 짧은 안내(예: 마감 전 확신도 조정) */
-  completedHint?: string;
 }
 
 function calcBet(gauge: number, tokens: number) {
@@ -78,7 +76,6 @@ export default function GaugeBar({
   beginnerTips,
   surveyCompleted = false,
   completedLabel = "설문 완료",
-  completedHint,
 }: GaugeBarProps) {
   const tipsEnabled = beginnerTips !== false;
   const tipsInteractive = tipsEnabled && !disabled;
@@ -177,17 +174,12 @@ export default function GaugeBar({
 
       <div className="flex items-center justify-between gap-3 min-h-[2rem]">
         {surveyCompleted ? (
-          <div className="min-w-0 flex flex-col gap-0.5">
-            <span className="inline-flex w-fit items-center gap-1.5 rounded-full border border-emerald-500/55 bg-emerald-500/15 px-2.5 py-1 text-sm font-black text-emerald-300">
-              <span aria-hidden className="text-emerald-400">
-                ✓
-              </span>
-              {completedLabel}
+          <span className="inline-flex w-fit items-center gap-1.5 rounded-full border border-emerald-500/55 bg-emerald-500/15 px-2.5 py-1 text-sm font-black text-emerald-300 min-w-0">
+            <span aria-hidden className="text-emerald-400">
+              ✓
             </span>
-            {completedHint ? (
-              <p className="text-xs text-gray-500 leading-snug pl-0.5">{completedHint}</p>
-            ) : null}
-          </div>
+            {completedLabel}
+          </span>
         ) : (
           <p className="text-sm sm:text-base font-bold text-amber-100/90 leading-snug min-w-0">
             방향과 확신도로 예측하세요
@@ -294,11 +286,6 @@ export default function GaugeBar({
         </div>
       </div>
 
-      {tipsEnabled ? (
-        <p className="text-xs text-gray-500 leading-snug pt-1 border-t border-[#2A2A2A]">
-          등락률이 아닌 <span className="text-gray-400">방향·확신도</span>입니다.
-        </p>
-      ) : null}
     </div>
   );
 }

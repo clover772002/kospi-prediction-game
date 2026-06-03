@@ -182,7 +182,6 @@ function SurveyCompletedPanel({
             beginnerTips={false}
             surveyCompleted
             completedLabel={completedLabel}
-            completedHint={subline}
           />
         </div>
         <button
@@ -285,7 +284,6 @@ function NextPreSurveyPanel({
         <SurveyCompletedPanel
           headline=""
           completedLabel="사전 예측 완료"
-          subline="09:00 마감 전까지 확신도만 조정할 수 있어요"
           gaugeValue={gaugeValue}
           userTokens={userTokens}
           editing={editingConfidence}
@@ -1021,7 +1019,6 @@ function SurveyPageInner() {
         <div className="flex flex-col gap-4 mt-6 fade-up">
           <SurveyCompletedPanel
             headline=""
-            subline="09:00 마감 전까지 확신도만 조정할 수 있어요"
             gaugeValue={gaugePosition}
             userTokens={userTokens}
             editing={editingTodayConfidence}

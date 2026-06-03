@@ -177,27 +177,27 @@ function DirectionShareRibbon({
     <div className="rounded-xl border border-[#333] bg-gradient-to-br from-[#151515] to-[#101010] px-3 py-2.5 mb-3 ring-1 ring-white/[0.04]">
       <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 mb-2">
         <div className="flex items-baseline gap-2 min-w-0">
-          <span className="text-sm font-black text-red-400 tabular-nums tracking-tight">상승 {r}%</span>
-          <span className="text-sm text-white tabular-nums">({nRise}명)</span>
-        </div>
-        <div className="flex items-baseline gap-2 min-w-0">
-          <span className="text-sm text-white tabular-nums">({nFall}명)</span>
           <span className="text-sm font-black text-blue-400 tabular-nums tracking-tight">하락 {f}%</span>
+          <span className="text-sm text-white tabular-nums">({nFall}명)</span>
+        </div>
+        <div className="flex items-baseline gap-2 min-w-0 justify-end">
+          <span className="text-sm text-white tabular-nums">({nRise}명)</span>
+          <span className="text-sm font-black text-red-400 tabular-nums tracking-tight">상승 {r}%</span>
         </div>
       </div>
       <div
         className="flex h-8 w-full rounded-lg overflow-hidden border border-[#2a2a2a] shadow-[inset_0_1px_3px_rgba(0,0,0,.4)]"
-        title={`예측 상승 ${r}% · 하락 ${f}% (유효 응답 ${total}명)`}
+        title={`예측 하락 ${f}% · 상승 ${r}% (유효 응답 ${total}명)`}
       >
         {showBar && (
           <>
             <div
-              className="h-full min-w-[8px] shrink-0 bg-gradient-to-b from-red-400/95 via-red-500/90 to-red-800/80"
-              style={{ flex: `${riseFlex} 1 0%` }}
-            />
-            <div
               className="h-full min-w-[8px] shrink-0 bg-gradient-to-b from-blue-400/95 via-blue-500/90 to-blue-800/85"
               style={{ flex: `${fallFlex} 1 0%` }}
+            />
+            <div
+              className="h-full min-w-[8px] shrink-0 bg-gradient-to-b from-red-400/95 via-red-500/90 to-red-800/80"
+              style={{ flex: `${riseFlex} 1 0%` }}
             />
           </>
         )}
@@ -270,12 +270,6 @@ function DayCard({
           <p className={resultCls}>{resultLabel}</p>
         </div>
       )}
-      {emphasize && pending ? (
-        <p className={`${surveyUi.hint} text-amber-200/80 mb-2`}>
-          장 마감 전까지 참가자들의 방향·확신도가 실시간으로 쌓입니다.
-        </p>
-      ) : null}
-
       <DirectionShareRibbon pctRise={pctRise} pctFall={pctFall} nRise={nRise} nFall={nFall} />
 
       <div className="grid grid-cols-2 gap-x-3 sm:gap-x-4 gap-y-1 mb-1.5">
