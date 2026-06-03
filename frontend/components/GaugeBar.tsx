@@ -244,22 +244,25 @@ export default function GaugeBar({
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-x-3 gap-y-1.5 rounded-lg border border-amber-500/30 bg-amber-950/25 px-3 py-2 text-sm">
-        <div className="flex justify-between items-center gap-1">
-          <span className="text-gray-500 font-bold">보유</span>
-          <ChipAmount amount={tokens} className="text-white font-black" />
-        </div>
-        <div className="flex justify-between items-center gap-1">
-          <span className="text-gray-500 font-bold">배팅</span>
-          <ChipAmount amount={bet} className={`font-black ${dirColor}`} />
-        </div>
-        <div className="flex justify-between items-center gap-1">
-          <span className="text-gray-500 font-bold">적중</span>
-          <ChipAmount amount={hitBalance} className="text-green-400 font-black" />
-        </div>
-        <div className="flex justify-between items-center gap-1">
-          <span className="text-gray-500 font-bold">실패</span>
-          <ChipAmount amount={Math.max(0, tokens - bet)} className="text-red-400 font-black" />
+      <div className="rounded-lg border border-amber-500/30 bg-amber-950/25 px-3 py-2">
+        <p className="text-xs font-bold text-amber-200/80 mb-1.5">자산</p>
+        <div className="grid grid-cols-2 gap-x-2 gap-y-1.5 text-sm">
+          <div className="flex justify-between items-center gap-1 min-w-0">
+            <span className="text-gray-500 font-bold text-xs sm:text-sm shrink-0">보유금액</span>
+            <ChipAmount amount={tokens} className="text-white font-black shrink-0" />
+          </div>
+          <div className="flex justify-between items-center gap-1 min-w-0">
+            <span className="text-gray-500 font-bold text-xs sm:text-sm shrink-0">배팅금액</span>
+            <ChipAmount amount={bet} className={`font-black shrink-0 ${dirColor}`} />
+          </div>
+          <div className="flex justify-between items-center gap-1 min-w-0">
+            <span className="text-gray-500 font-bold text-xs sm:text-sm shrink-0">적중시 자산</span>
+            <ChipAmount amount={hitBalance} className="text-green-400 font-black shrink-0" />
+          </div>
+          <div className="flex justify-between items-center gap-1 min-w-0">
+            <span className="text-gray-500 font-bold text-xs sm:text-sm shrink-0">실패시 자산</span>
+            <ChipAmount amount={Math.max(0, tokens - bet)} className="text-red-400 font-black shrink-0" />
+          </div>
         </div>
       </div>
 
