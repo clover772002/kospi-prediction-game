@@ -17,17 +17,17 @@ function RankingList({
   meId: string | null;
 }) {
   if (entries.length === 0) {
-    return <p className="text-xs text-gray-500 py-2">아직 순위 데이터가 없어요.</p>;
+    return <p className="text-xs text-gray-500 py-2">아직 실전 기록이 없어요.</p>;
   }
 
   return (
     <div className="space-y-1">
       {myRank != null ? (
         <p className="text-[11px] text-amber-200/90 mb-2">
-          내 순위 <span className="font-black tabular-nums">{myRank}</span>위
+          내 실전 순위 <span className="font-black tabular-nums">{myRank}</span>위
         </p>
       ) : meId ? (
-        <p className="text-[11px] text-gray-500 mb-2">이번 목록에 내 순위가 없어요.</p>
+        <p className="text-[11px] text-gray-500 mb-2">이번 주 실전 기록이 아직 없어요.</p>
       ) : null}
       <ol className="space-y-1.5">
         {entries.map((e) => {
@@ -102,11 +102,17 @@ export default function TokenHallOfFameRankings({
     <section className="mb-6 rounded-2xl border border-amber-500/20 bg-gradient-to-b from-amber-950/25 to-[#141414] p-4">
       <div className="mb-3 flex items-start justify-between gap-2">
         <div>
-          <h2 className="text-sm font-black text-amber-100">토큰 순위</h2>
+          <h2 className="text-sm font-black text-amber-100">실력 랭킹</h2>
           {data ? (
             <p className="mt-0.5 text-[10px] text-gray-500">
-              주간 {data.week_start.slice(5).replace("-", "/")} ~{" "}
-              {data.week_end.slice(5).replace("-", "/")} (KST)
+              {tab === "weekly" ? (
+                <>
+                  주간 실전 · {data.week_start.slice(5).replace("-", "/")} ~{" "}
+                  {data.week_end.slice(5).replace("-", "/")} (KST)
+                </>
+              ) : (
+                <>누적 전력 · 현재 보유 기준</>
+              )}
             </p>
           ) : null}
         </div>
@@ -117,8 +123,9 @@ export default function TokenHallOfFameRankings({
             className={`rounded-md px-2.5 py-1 font-bold transition-colors ${
               tab === "weekly" ? "bg-amber-600/40 text-amber-100" : "text-gray-500"
             }`}
+            title="가입·이벤트 보상 제외, 설문 적중·배팅만"
           >
-            주간
+            주간 실전
           </button>
           <button
             type="button"
@@ -127,25 +134,33 @@ export default function TokenHallOfFameRankings({
               tab === "cumulative" ? "bg-amber-600/40 text-amber-100" : "text-gray-500"
             }`}
           >
-            누적
+            누적 전력
           </button>
         </div>
       </div>
 
       <p className="mb-3 text-[11px] leading-relaxed text-white/75">
-        {tab === "weekly"
-          ? "이번 주 설문 정산으로 오른 토큰 합계(손실 포함) 기준입니다."
-          : "현재 보유 토큰 기준 전체 누적 순위입니다."}
+        {tab === "weekly" ? (
+          <>
+            이번 주 <strong className="text-amber-200/95">설문 적중·배팅</strong>으로만 번 점수예요.
+            가입·참여 보상 같은 기본 소득은 <strong className="text-white/90">넣지 않습니다</strong>.
+          </>
+        ) : (
+          <>
+            지금까지 쌓인 <strong className="text-amber-200/95">전투력</strong>(보유 토큰) 순위예요.
+            실전·소통·적중이 모두 반영된 결과입니다.
+          </>
+        )}
       </p>
 
       {loading && !data ? (
-        <p className="text-xs text-gray-500">순위 불러오는 중…</p>
+        <p className="text-xs text-gray-500">실력 랭킹 불러오는 중…</p>
       ) : err ? (
         <p className="text-xs text-red-300/90">{err}</p>
       ) : (
         <RankingList
           entries={entries}
-          scoreLabel={tab === "weekly" ? "주간" : "토큰"}
+          scoreLabel={tab === "weekly" ? "실전pt" : "전력"}
           myRank={myRank ?? null}
           meId={meId}
         />

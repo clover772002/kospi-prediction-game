@@ -331,7 +331,7 @@ export default function ExpertChatPage() {
         <AppAmbientBackground />
         <main className="relative z-10 mx-auto min-h-screen max-w-md px-4 app-page-tab-pad pt-6">
           <h1 className="mb-1 text-center text-2xl font-black text-white">명예의 전당</h1>
-          <p className="mb-4 text-center text-xs text-gray-500">토큰 순위 · 초고수 소통</p>
+          <p className="mb-4 text-center text-xs text-gray-500">실력 랭킹 · 초고수 소통</p>
           <TokenHallOfFameRankings accessToken={token} meId={me?.id ?? null} />
           {me && eligibility ? (
             <div className="mb-4">
@@ -373,7 +373,7 @@ export default function ExpertChatPage() {
         </div>
 
         <h1 className="mb-1 text-2xl font-black text-white">명예의 전당</h1>
-        <p className="mb-4 text-xs text-gray-500">토큰 순위 · 초고수 소통</p>
+        <p className="mb-4 text-center text-xs text-gray-500">실력 랭킹 · 초고수 소통</p>
 
         <TokenHallOfFameRankings accessToken={token} meId={me?.id ?? null} />
 
