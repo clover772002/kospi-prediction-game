@@ -35,12 +35,12 @@ function ParticipationStamp({
   earned: boolean;
 }) {
   return (
-    <div className="flex flex-col items-center gap-2 shrink-0">
-      <span className="text-sm sm:text-base font-bold text-gray-300">{day}회</span>
+    <div className="flex flex-col items-center gap-0.5 sm:gap-2 w-full min-w-0">
+      <span className="text-[10px] sm:text-sm font-bold text-gray-300 leading-none">{day}회</span>
       <div
-        className={`relative w-16 h-16 sm:w-[4.5rem] sm:h-[4.5rem] rounded-xl flex items-center justify-center border-2 transition-colors ${
+        className={`relative aspect-square w-full max-w-[3.5rem] sm:max-w-[4.5rem] mx-auto rounded-lg sm:rounded-xl flex items-center justify-center border-2 transition-colors ${
           earned
-            ? "border-red-500/90 bg-red-950/55 shadow-[0_0_14px_rgba(239,68,68,0.28)]"
+            ? "border-red-500/90 bg-red-950/55 shadow-[0_0_10px_rgba(239,68,68,0.25)]"
             : "border-[#444] border-dashed bg-[#222] opacity-85"
         }`}
         aria-label={
@@ -51,9 +51,15 @@ function ParticipationStamp({
       >
         <ChipAmount
           amount={chips}
-          xlarge
+          compact
           muted={!earned}
-          className={earned ? "text-red-200" : ""}
+          className={`sm:hidden ${earned ? "text-red-200" : ""}`}
+        />
+        <ChipAmount
+          amount={chips}
+          large
+          muted={!earned}
+          className={`hidden sm:inline-flex ${earned ? "text-red-200" : ""}`}
         />
         {earned ? (
           <span
@@ -69,17 +75,15 @@ function ParticipationStamp({
 function StampRow({ days }: { days: number }) {
   return (
     <div
-      className="flex justify-center w-full overflow-x-auto overscroll-x-contain [-webkit-overflow-scrolling:touch]"
+      className="grid w-full grid-cols-5 gap-1 sm:gap-2.5"
       role="list"
       aria-label="주간 설문 참여 도장"
     >
-      <div className="inline-flex items-end justify-center gap-2 sm:gap-2.5 px-0.5">
-        {WEEKLY_TIERS.map(({ day, chips }) => (
-          <div key={day} role="listitem">
-            <ParticipationStamp day={day} chips={chips} earned={days >= day} />
-          </div>
-        ))}
-      </div>
+      {WEEKLY_TIERS.map(({ day, chips }) => (
+        <div key={day} role="listitem" className="min-w-0">
+          <ParticipationStamp day={day} chips={chips} earned={days >= day} />
+        </div>
+      ))}
     </div>
   );
 }
@@ -95,7 +99,7 @@ export default function WeeklyParticipationCard({ status }: Props) {
   const allStamps = days >= max;
 
   return (
-    <div className={surveyUi.card}>
+    <div className={`${surveyUi.card} !px-3 sm:!px-5`}>
       <div className="flex items-center justify-between gap-2">
         <p className={surveyUi.cardTitle}>주간 참여 보상</p>
         <p className={`${surveyUi.cardMeta} shrink-0`}>월~일 거래일</p>
