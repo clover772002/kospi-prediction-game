@@ -21,6 +21,26 @@ function riseToPercent(v: number): number {
 /** 대결 구도 막대: 한쪽 0%여도 양쪽 색이 보이도록 최소 비중 */
 const DUEL_BAR_MIN_PCT = 3;
 
+function formatKospiChangePctText(pct: number | null | undefined): string | null {
+  if (pct == null || !Number.isFinite(Number(pct))) return null;
+  const n = Number(pct);
+  return `${n >= 0 ? "+" : ""}${n.toFixed(2)}%`;
+}
+
+function formatMarketResultLabel(
+  kospiResult: boolean | null,
+  kospiChangePct: number | null | undefined,
+): string {
+  const base =
+    kospiResult === true
+      ? "장 마감 상승"
+      : kospiResult === false
+        ? "장 마감 하락"
+        : "결과 미확정";
+  const pctText = formatKospiChangePctText(kospiChangePct);
+  return pctText ? `${base} (${pctText})` : base;
+}
+
 function BoxplotCardWrap({ highlight, children }: { highlight: boolean; children: ReactNode }) {
   return (
     <div className="relative h-full min-w-0">
@@ -186,12 +206,7 @@ function DirectionShareRibbon({
 }
 
 function DayCard({ day }: { day: CrowdGaugeBoxplotDay }) {
-  const resultLabel =
-    day.kospi_result === true
-      ? "장 마감 상승"
-      : day.kospi_result === false
-        ? "장 마감 하락"
-        : "결과 미확정";
+  const resultLabel = formatMarketResultLabel(day.kospi_result, day.kospi_change_pct);
 
   const hiRise = day.correct_team === "rise";
   const hiFall = day.correct_team === "fall";

@@ -3944,7 +3944,7 @@ async def get_crowd_gauge_boxplots(
     try:
         ds = (
             supabase.table("daily_surveys")
-            .select("survey_date, kospi_result")
+            .select("survey_date, kospi_result, kospi_change_pct")
             .order("survey_date", desc=True)
             .limit(lim)
             .execute()
@@ -4009,9 +4009,18 @@ async def get_crowd_gauge_boxplots(
             elif result_bool is False:
                 correct_team = "fall"
 
+            raw_pct = r.get("kospi_change_pct")
+            kospi_change_pct = None
+            if raw_pct is not None:
+                try:
+                    kospi_change_pct = round(float(raw_pct), 2)
+                except (TypeError, ValueError):
+                    kospi_change_pct = None
+
             out.append({
                 "survey_date": dk,
                 "kospi_result": result_bool,
+                "kospi_change_pct": kospi_change_pct,
                 "correct_team": correct_team,
                 "respondents_rise": n_rise,
                 "respondents_fall": n_fall,

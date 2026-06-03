@@ -207,6 +207,8 @@ export interface CrowdGaugeBoxplotStats {
 export interface CrowdGaugeBoxplotDay {
   survey_date: string;
   kospi_result: boolean | null;
+  /** 장 마감 후 코스피 등락률(%) */
+  kospi_change_pct?: number | null;
   correct_team: "rise" | "fall" | null;
   /** 방향·게이지가 모두 있는 응답 수 */
   respondents_rise?: number;
