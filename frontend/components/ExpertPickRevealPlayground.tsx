@@ -1,5 +1,7 @@
 "use client";
 
+import { ChipAmount } from "@/components/ChipAmount";
+
 import { useEffect, useState } from "react";
 
 const PHASE_MS = 580;
@@ -50,7 +52,7 @@ export default function ExpertPickRevealPlayground() {
                 key={burstNonce}
                 className="absolute -top-1 left-1/2 z-20 expert-spend-burst text-amber-300 font-black text-xl tabular-nums pointer-events-none whitespace-nowrap"
               >
-                −80<span className="text-base ml-0.5">💰</span>
+                <ChipAmount amount={80} sign="-" className="text-amber-300" />
               </div>
             ) : null}
 
@@ -122,8 +124,7 @@ export default function ExpertPickRevealPlayground() {
                     : "border-white/10 bg-[#1a1a1a] text-gray-400"
                 }`}
               >
-                <span className="text-yellow-400/90">💰</span>
-                해제 비용 예시 · 80
+                해제 비용 예시 · <ChipAmount amount={80} className="text-amber-200" />
               </span>
               {ribbonActive ? (
                 <span className="text-sm sm:text-base font-black text-emerald-400/90 expert-pick-ribbon">적중 재미 재화</span>

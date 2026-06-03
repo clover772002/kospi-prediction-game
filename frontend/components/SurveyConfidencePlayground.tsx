@@ -1,5 +1,7 @@
 "use client";
 
+import { ChipAmount } from "@/components/ChipAmount";
+
 import { useEffect, useState } from "react";
 
 const DEMO_HOLDING = 100;
@@ -142,11 +144,11 @@ export default function SurveyConfidencePlayground() {
           >
             {outcomePhase === "hit" ? (
               <>
-                맞추면 <span className="tabular-nums">+{payoutHit.toLocaleString()}</span> 칩
+                맞추면 <ChipAmount amount={payoutHit} sign="+" className="text-green-400" />
               </>
             ) : (
               <>
-                틀리면 <span className="tabular-nums">−{bet.toLocaleString()}</span> 칩
+                틀리면 <ChipAmount amount={bet} sign="-" className="text-red-400" />
               </>
             )}
           </p>

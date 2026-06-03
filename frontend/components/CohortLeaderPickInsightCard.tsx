@@ -1,5 +1,6 @@
 "use client";
 
+import { ChipAmount } from "@/components/ChipAmount";
 import { useCallback, useEffect, useState, useMemo } from "react";
 import { useConfirmShopOnInsufficientTokens } from "@/hooks/useConfirmShopOnInsufficientTokens";
 import InsightCardHeroGrid from "@/components/InsightCardHeroGrid";
@@ -205,7 +206,7 @@ export default function CohortLeaderPickInsightCard({
               <span
                 className={`rounded-lg font-black tabular-nums border px-2.5 py-1 text-[11px] whitespace-nowrap ${priceChipReadonly}`}
               >
-                {priceTokens} 칩
+                <ChipAmount amount={priceTokens} />
               </span>
             ) : null}
             <span className={ix.icon} aria-hidden>
@@ -242,9 +243,11 @@ export default function CohortLeaderPickInsightCard({
               <span className="text-gray-500 font-normal">{pick.leader_masked_name}</span>
               <span className="mx-2 text-gray-600">·</span>
               <span className="tabular-nums">
-                {cohort === "expert" && pick.leader_token_balance != null
-                  ? `${pick.leader_token_balance} 칩`
-                  : `${pick.leader_accuracy_pct ?? "—"}%`}
+                {cohort === "expert" && pick.leader_token_balance != null ? (
+                  <ChipAmount amount={pick.leader_token_balance} compact className="inline-flex" />
+                ) : (
+                  `${pick.leader_accuracy_pct ?? "—"}%`
+                )}
               </span>
             </p>
             <p className={`${ix.c ? "text-[11px]" : "text-base"} font-black text-white tracking-tight`}>{pick.direction_label_ko}</p>

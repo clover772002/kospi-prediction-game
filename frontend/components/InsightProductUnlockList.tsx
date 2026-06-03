@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { ChipAmount, formatChipAmountText } from "@/components/ChipAmount";
 import { useConfirmShopOnInsufficientTokens } from "@/hooks/useConfirmShopOnInsufficientTokens";
 import InsightAnimatedPreview from "@/components/InsightAnimatedPreview";
 import { isInsightProductSlug } from "@/lib/insight_card_meta";
@@ -91,7 +92,9 @@ export default function InsightProductUnlockList({
       } else if (out.already_unlocked) {
         setFlash("이미 이 거래일에 열람한 기록이 있어요. 대시보드에서 바로 볼 수 있어요.");
       } else if (bal != null && spent != null) {
-        setFlash(`잠금 해제했어요. 차감 ${spent.toLocaleString()} 칩 · 잔액 약 ${bal.toLocaleString()} 칩`);
+        setFlash(
+          `잠금 해제했어요. 차감 ${formatChipAmountText(spent)} · 잔액 약 ${formatChipAmountText(bal)}`,
+        );
       } else {
         setFlash("잠금 해제가 반영됐어요. 대시보드에서 확인해 보세요.");
       }
@@ -122,7 +125,7 @@ export default function InsightProductUnlockList({
           >
             <div className="flex items-start justify-between gap-2 flex-wrap">
               <p className="font-bold text-white min-w-0 flex-1">{p.title}</p>
-              <p className="text-xs text-amber-300 font-black tabular-nums shrink-0">{p.price_tokens} 칩</p>
+              <ChipAmount amount={p.price_tokens} className="text-amber-300 shrink-0" />
             </div>
             {isInsightProductSlug(p.slug) ? <InsightAnimatedPreview slug={p.slug} /> : null}
             <button
@@ -137,7 +140,12 @@ export default function InsightProductUnlockList({
                   ? "처리 중…"
                   : !surveyDate
                     ? "먼저 위에서 거래일을 선택해 주세요"
-                    : `${p.price_tokens} 칩으로 잠금 해제`}
+                    : (
+                        <span className="inline-flex items-center justify-center gap-1">
+                          <ChipAmount amount={p.price_tokens} compact className="text-white" />
+                          <span>으로 잠금 해제</span>
+                        </span>
+                      )}
             </button>
             {p.description ? (
               <details className="group border-t border-white/[0.06] pt-2 text-left">
@@ -150,7 +158,10 @@ export default function InsightProductUnlockList({
               </details>
             ) : null}
             {walletTokens != null ? (
-              <p className="text-[10px] text-gray-500 text-center tabular-nums">현재 보유 약 {walletTokens.toLocaleString()} 칩</p>
+              <p className="text-[10px] text-gray-500 text-center flex items-center justify-center gap-1">
+                <span>현재 보유 약</span>
+                <ChipAmount amount={walletTokens} compact muted />
+              </p>
             ) : null}
           </li>
         );

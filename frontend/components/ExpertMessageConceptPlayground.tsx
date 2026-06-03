@@ -1,5 +1,7 @@
 "use client";
 
+import { ChipAmount } from "@/components/ChipAmount";
+
 import { useEffect, useState } from "react";
 
 const PHASE_MS = 640;
@@ -54,7 +56,9 @@ export default function ExpertMessageConceptPlayground() {
             </div>
             {showGiftHint ? (
               <span className="text-base font-black text-amber-300 tabular-nums drop-shadow-[0_0_8px_rgba(251,191,36,.25)] animate-pulse mr-10">
-                초고수에게 +3 💰
+                <span className="inline-flex items-center gap-1">
+                  초고수에게 <ChipAmount amount={3} sign="+" className="text-amber-300" />
+                </span>
               </span>
             ) : null}
           </div>

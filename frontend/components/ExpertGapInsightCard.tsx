@@ -1,5 +1,6 @@
 "use client";
 
+import { ChipAmount } from "@/components/ChipAmount";
 import { useCallback, useEffect, useState } from "react";
 import { useConfirmShopOnInsufficientTokens } from "@/hooks/useConfirmShopOnInsufficientTokens";
 import InsightCardHeroGrid from "@/components/InsightCardHeroGrid";
@@ -162,7 +163,7 @@ export default function ExpertGapInsightCard({
               />
             ) : locked ? (
               <span className="rounded-lg font-black tabular-nums border px-2.5 py-1 text-[11px] whitespace-nowrap border-violet-500/35 bg-violet-500/10 text-violet-200/80">
-                {priceTokens} 칩
+                <ChipAmount amount={priceTokens} />
               </span>
             ) : null}
             <span className={d.icon} aria-hidden>

@@ -10,6 +10,7 @@ import AppTabNav from "@/components/AppTabNav";
 import PageLoadProgress from "@/components/PageLoadProgress";
 import StaleRefreshIndicator from "@/components/StaleRefreshIndicator";
 import { clearAllTabSnapshots, peekShopSnapshot, saveShopSnapshot } from "@/lib/tab-session-cache";
+import { ChipAmount } from "@/components/ChipAmount";
 import ConsumableShopCard from "@/components/ConsumableShopCard";
 import InsightProductUnlockList from "@/components/InsightProductUnlockList";
 import InsightCardsStack, { InsightsInView, InsightCardsStackSkeleton } from "@/components/InsightCardsStack";
@@ -165,7 +166,7 @@ function ShopInner() {
         <div className="flex items-start justify-between gap-2">
           <div>
             <h1 className="text-xl font-black text-white flex items-center gap-2">
-              💎 칩 상점
+              <span aria-hidden>🪙</span> 칩 상점
             </h1>
             <p className="text-xs text-gray-500 mt-1">
               게임 내 칩으로 집계 아이템
@@ -329,9 +330,7 @@ function ShopInner() {
                             {(c.description?.length ?? 0) > 140 ? "…" : ""}
                           </p>
                           <div className="flex items-center justify-between gap-2 flex-wrap">
-                            <p className="text-xs text-amber-300 font-black tabular-nums">
-                              {(Number(c.price_tokens) || 0).toLocaleString()} 칩
-                            </p>
+                            <ChipAmount amount={Number(c.price_tokens) || 0} className="text-amber-300" />
                             <span className="text-[11px] font-black rounded-lg bg-cyan-600/80 px-3 py-1.5 text-white/70">
                               구매
                             </span>
@@ -401,7 +400,7 @@ function ShopInner() {
                     className="rounded-2xl border border-amber-500/30 bg-gradient-to-b from-amber-950/30 to-[#141414]/90 px-4 py-4 flex flex-col gap-3"
                   >
                     <div className="flex items-baseline justify-between gap-2">
-                      <p className="text-lg font-black text-white tabular-nums">{pack.tokens} 칩</p>
+                      <ChipAmount amount={pack.tokens} large className="text-white" />
                       <p className="text-sm text-amber-200 font-bold">{pack.price_label ?? ""}</p>
                     </div>
                     {!pack.stripe_price_configured ? (

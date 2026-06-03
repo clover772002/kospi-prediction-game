@@ -1,5 +1,7 @@
 "use client";
 
+import { formatChipAmountText } from "@/components/ChipAmount";
+
 import { useRouter } from "next/navigation";
 import { useCallback } from "react";
 
@@ -14,7 +16,10 @@ export function useConfirmShopOnInsufficientTokens() {
       const have = detail.balance ?? "?";
       const ok =
         typeof window !== "undefined" &&
-        window.confirm(`칩이 부족합니다.\n필요 ${need}개 · 보유 ${have}개\n\n상점으로 이동하시겠습니까?`);
+        window.confirm(
+          `부족합니다.\n필요 ${typeof need === "number" ? formatChipAmountText(need) : "?"}` +
+            ` · 보유 ${typeof have === "number" ? formatChipAmountText(have) : "?"}\n\n상점으로 이동하시겠습니까?`,
+        );
       if (ok) router.push("/shop");
       return ok;
     },

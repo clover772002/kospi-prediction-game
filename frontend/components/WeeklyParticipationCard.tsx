@@ -1,6 +1,7 @@
 "use client";
 
 import type { ParticipationRewardsStatus } from "@/lib/api";
+import { ChipAmount, ChipAmountFraction, formatChipAmountText } from "@/components/ChipAmount";
 
 /** backend/participation_rewards.py WEEKLY_BONUS_BY_DAYS 와 동일 */
 const WEEKLY_TIERS: { day: number; chips: number }[] = [
@@ -13,8 +14,6 @@ const WEEKLY_TIERS: { day: number; chips: number }[] = [
 
 const MAX_STAMP_CHIP_TOTAL = WEEKLY_TIERS.reduce((s, t) => s + t.chips, 0);
 
-const CHIP_ICON = "🪙";
-
 function stampChipSumForDays(days: number): number {
   return WEEKLY_TIERS.filter((t) => days >= t.day).reduce((s, t) => s + t.chips, 0);
 }
@@ -23,69 +22,6 @@ type Props = {
   status: ParticipationRewardsStatus | null | undefined;
   compact?: boolean;
 };
-
-/** 🪙 X100 형식 */
-function ChipAmount({
-  amount,
-  compact,
-  large,
-  muted,
-  className = "",
-}: {
-  amount: number;
-  compact?: boolean;
-  large?: boolean;
-  muted?: boolean;
-  className?: string;
-}) {
-  const iconSize = large ? "text-2xl" : compact ? "text-sm" : "text-base";
-  const textSize = large
-    ? "text-lg sm:text-xl"
-    : compact
-      ? "text-[9px] sm:text-[10px]"
-      : "text-[10px] sm:text-xs";
-
-  return (
-    <span
-      className={`inline-flex items-center gap-0.5 sm:gap-1 leading-none tabular-nums ${className} ${
-        muted ? "opacity-55" : ""
-      }`}
-    >
-      <span className={`${iconSize} leading-none`} aria-hidden>
-        {CHIP_ICON}
-      </span>
-      <span
-        className={`font-black tracking-tight ${textSize} ${muted ? "text-gray-500" : ""}`}
-      >
-        X{amount.toLocaleString()}
-      </span>
-    </span>
-  );
-}
-
-/** 🪙 X10 / 🪙 X185 — 도장 합계 진행 */
-function ChipAmountFraction({
-  current,
-  max,
-  compact,
-  className = "",
-}: {
-  current: number;
-  max: number;
-  compact?: boolean;
-  className?: string;
-}) {
-  return (
-    <span
-      className={`inline-flex items-center gap-1 tabular-nums ${className}`}
-      aria-label={`도장 합계 ${current} / 최대 ${max}`}
-    >
-      <ChipAmount amount={current} compact={compact} className="text-amber-200" />
-      <span className={`font-black text-gray-500 ${compact ? "text-[10px]" : "text-xs"}`}>/</span>
-      <ChipAmount amount={max} compact={compact} muted />
-    </span>
-  );
-}
 
 function ParticipationStamp({
   day,
@@ -113,7 +49,9 @@ function ParticipationStamp({
             : "border-[#444] border-dashed bg-[#222] opacity-85"
         }`}
         aria-label={
-          earned ? `${day}회 참여 달성, ${chips}칩` : `${day}회 미달성, ${chips}칩 구간`
+          earned
+            ? `${day}회 참여 달성, ${formatChipAmountText(chips)}`
+            : `${day}회 미달성, ${formatChipAmountText(chips)} 구간`
         }
       >
         <ChipAmount

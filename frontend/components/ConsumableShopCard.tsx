@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
+import { ChipAmount, formatChipAmountText } from "@/components/ChipAmount";
 import { purchaseConsumable, type ShopConsumableProduct, InsightInsufficientTokensError } from "@/lib/api";
 
 type Props = {
@@ -88,12 +89,18 @@ export default function ConsumableShopCard({
       closePanel();
       const balRaw = out.balance_after ?? out.balance ?? out.spent;
       const balMsg = balRaw != null ? String(balRaw) : "";
-      setFlash(balMsg ? `구매가 완료됐습니다. 현재 보유 약 ${balMsg}칩` : "구매가 완료됐습니다.");
+      setFlash(
+        balMsg
+          ? `구매가 완료됐습니다. 현재 보유 약 ${formatChipAmountText(Number(balMsg))}`
+          : "구매가 완료됐습니다.",
+      );
     } catch (err: unknown) {
       if (err instanceof InsightInsufficientTokensError) {
         const req = err.detail.required;
         const hav = err.detail.balance;
-        setErr(`칩이 부족합니다. 필요 ${req ?? "?"} · 보유 ${hav ?? "?"} 칩`);
+        setErr(
+          `부족합니다. 필요 ${req != null ? formatChipAmountText(req) : "?"} · 보유 ${hav != null ? formatChipAmountText(hav) : "?"}`,
+        );
         await onBalanceRefresh();
       } else {
         setErr(err instanceof Error ? err.message : "구매하지 못했습니다.");
@@ -111,7 +118,7 @@ export default function ConsumableShopCard({
       {c.description ? <p className="text-[11px] text-gray-500 mt-1 leading-relaxed">{c.description}</p> : null}
 
       <div className="flex items-center justify-between gap-2 flex-wrap">
-        <p className="text-xs text-amber-300 font-black tabular-nums">{cost} 칩</p>
+        <ChipAmount amount={cost} className="text-amber-300" />
         {!panelOpen ? (
           <button
             type="button"
@@ -128,21 +135,25 @@ export default function ConsumableShopCard({
         <div className="mt-2 rounded-xl border border-white/[0.1] bg-black/35 p-3 space-y-3">
           <p className="text-[12px] font-bold text-white">구매하시겠습니까?</p>
           <ul className="text-[11px] text-gray-300 space-y-1 tabular-nums">
-            <li>
-              현재 보유:{" "}
-              <span className="font-bold text-cyan-200">
-                {hasBalanceInfo ? `${walletTokens} 칩` : "조회 중…"}
-              </span>
+            <li className="flex items-center justify-between gap-2">
+              <span>현재 보유</span>
+              {hasBalanceInfo ? (
+                <ChipAmount amount={walletTokens!} className="text-cyan-200" />
+              ) : (
+                <span className="text-gray-500">조회 중…</span>
+              )}
             </li>
-            <li>
-              차감: <span className="font-bold text-amber-200">{cost} 칩</span>
+            <li className="flex items-center justify-between gap-2">
+              <span>차감</span>
+              <ChipAmount amount={cost} className="text-amber-200" />
             </li>
             {afterPurchase !== null ? (
-              <li>
-                예상 보유:{" "}
-                <span className={sufficient ? "font-bold text-white" : "font-bold text-red-400"}>
-                  {afterPurchase} 칩
-                </span>
+              <li className="flex items-center justify-between gap-2">
+                <span>예상 보유</span>
+                <ChipAmount
+                  amount={afterPurchase}
+                  className={sufficient ? "text-white" : "text-red-400"}
+                />
               </li>
             ) : null}
           </ul>

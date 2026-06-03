@@ -1,5 +1,6 @@
 "use client";
 
+import { ChipAmount } from "@/components/ChipAmount";
 import { useCallback, useEffect, useState } from "react";
 import { useConfirmShopOnInsufficientTokens } from "@/hooks/useConfirmShopOnInsufficientTokens";
 import InsightCardHeroGrid from "@/components/InsightCardHeroGrid";
@@ -169,7 +170,7 @@ export default function TimeSliceAccuracyInsightCard({
               />
             ) : locked ? (
               <span className="rounded-lg font-black tabular-nums border px-2.5 py-1 text-[11px] whitespace-nowrap border-amber-500/35 bg-amber-500/10 text-amber-200/80">
-                {priceTokens} 칩
+                <ChipAmount amount={priceTokens} />
               </span>
             ) : null}
             <span className={d.icon} aria-hidden>
@@ -197,10 +198,18 @@ export default function TimeSliceAccuracyInsightCard({
               {(data.data.leader_token_balance ?? data.data.leader_accuracy_pct) != null ? (
                 <>
                   {" "}
-                  · 보유 칩{" "}
-                  <span className="text-gray-300 tabular-nums">
-                    {data.data.leader_token_balance ?? data.data.leader_accuracy_pct}개
-                  </span>
+                  · 보유{" "}
+                  {typeof data.data.leader_token_balance === "number" ? (
+                    <ChipAmount
+                      amount={data.data.leader_token_balance}
+                      compact
+                      className="inline-flex text-gray-300"
+                    />
+                  ) : (
+                    <span className="text-gray-300 tabular-nums">
+                      {data.data.leader_accuracy_pct ?? "—"}%
+                    </span>
+                  )}
                 </>
               ) : null}
               {" "}

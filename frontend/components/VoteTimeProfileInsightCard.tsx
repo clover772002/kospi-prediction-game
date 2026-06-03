@@ -1,5 +1,6 @@
 "use client";
 
+import { ChipAmount } from "@/components/ChipAmount";
 import { useCallback, useEffect, useState, useMemo } from "react";
 import { useConfirmShopOnInsufficientTokens } from "@/hooks/useConfirmShopOnInsufficientTokens";
 import InsightCardHeroGrid from "@/components/InsightCardHeroGrid";
@@ -215,7 +216,7 @@ export default function VoteTimeProfileInsightCard({
               <span
                 className={`rounded-lg font-black tabular-nums border px-2.5 py-1 text-[11px] whitespace-nowrap ${priceChipReadonly}`}
               >
-                {priceTokens} 칩
+                <ChipAmount amount={priceTokens} />
               </span>
             ) : null}
             <span className={ix.icon} aria-hidden>

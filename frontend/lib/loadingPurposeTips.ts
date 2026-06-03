@@ -8,7 +8,7 @@ export type LoadingPurposeTip = {
 
 export const LOADING_PURPOSE_TIPS: LoadingPurposeTip[] = [
   { id: "survey", emoji: "📝", text: "매일 설문에 참여하고 코스피 방향을 맞혀 보세요" },
-  { id: "tokens", emoji: "💰", text: "설문을 하면 칩을 받아요" },
+  { id: "tokens", emoji: "🪙", text: "설문을 하면 칩을 받아요" },
   { id: "tokens_hit", emoji: "🎯", text: "맞출수록 칩이 더 쌓여요" },
   { id: "expert", emoji: "⭐", text: "칩으로 초고수에게 질문을 보낼 수 있어요" },
   { id: "expert_reply", emoji: "💬", text: "초고수 답장으로 시장 인사이트를 얻어요" },

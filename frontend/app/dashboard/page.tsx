@@ -18,6 +18,7 @@ import DashboardInsightSection, { DashboardInsightSectionSkeleton } from "@/comp
 import CrowdGaugeBoxplotsSection from "@/components/CrowdGaugeBoxplotsSection";
 import StaleRefreshIndicator from "@/components/StaleRefreshIndicator";
 import WeeklyParticipationCard from "@/components/WeeklyParticipationCard";
+import { ChipAmount } from "@/components/ChipAmount";
 import { clearAllTabSnapshots, peekAnsweredToday, peekDashboardSnapshot, saveAnsweredToday, saveDashboardSnapshot, saveGroupsSnapshot } from "@/lib/tab-session-cache";
 import {
   isNotificationConnected,
@@ -190,8 +191,12 @@ function HistoryRow({ item, todaySurvey }: { item: DashboardData["history"][0]; 
       >
         {hitLabel}
       </td>
-      <td className={`${HISTORY_TD} min-w-[5.5rem] pr-4 text-right tabular-nums text-white`}>
-        {tokensBet != null && tokensBet !== undefined ? `${tokensBet}` : "—"}
+      <td className={`${HISTORY_TD} min-w-[5.5rem] pr-4 text-right text-white`}>
+        {tokensBet != null && tokensBet !== undefined ? (
+          <ChipAmount amount={tokensBet} compact className="justify-end" />
+        ) : (
+          "—"
+        )}
       </td>
     </tr>
   );
@@ -1118,8 +1123,10 @@ export default function DashboardPage() {
                       <span>초고수에게 질문 보내기</span>
                     </span>
                     {!expertUnlocked && tokens != null ? (
-                      <span className="text-sm font-normal text-white/70">
-                        칩 {expertMin}개 이상이면 초고수 소통이 열립니다 (현재 {tokens}개)
+                      <span className="text-sm font-normal text-white/70 flex flex-wrap items-center justify-center gap-1">
+                        <ChipAmount amount={expertMin} compact className="text-amber-200/90" />
+                        <span>이상이면 소통 열림 · 현재</span>
+                        <ChipAmount amount={tokens} compact className="text-amber-300" />
                       </span>
                     ) : null}
                   </Link>
@@ -1213,11 +1220,9 @@ export default function DashboardPage() {
               </div>
 
               {dash.tokens != null && (
-                <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-xl px-4 py-3">
-                  <p className="text-sm text-white mb-1">보유 칩</p>
-                  <p className="text-xl font-black text-yellow-400 tabular-nums">
-                    💰 {dash.tokens.toLocaleString()}
-                  </p>
+                <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-xl px-4 py-3 flex items-center justify-between gap-2">
+                  <p className="text-sm text-white">보유</p>
+                  <ChipAmount amount={dash.tokens} large className="text-yellow-400" />
                 </div>
               )}
 

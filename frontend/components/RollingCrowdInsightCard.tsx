@@ -1,5 +1,6 @@
 "use client";
 
+import { ChipAmount } from "@/components/ChipAmount";
 import { useCallback, useEffect, useState } from "react";
 import { useConfirmShopOnInsufficientTokens } from "@/hooks/useConfirmShopOnInsufficientTokens";
 import InsightCardHeroGrid from "@/components/InsightCardHeroGrid";
@@ -158,7 +159,7 @@ export default function RollingCrowdInsightCard({
               />
             ) : locked ? (
               <span className="rounded-lg font-black tabular-nums border px-2.5 py-1 text-[11px] whitespace-nowrap border-sky-500/35 bg-sky-500/10 text-sky-200/80">
-                {priceTokens} 칩
+                <ChipAmount amount={priceTokens} />
               </span>
             ) : null}
             <span className={d.icon} aria-hidden>

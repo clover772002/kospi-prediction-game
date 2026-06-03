@@ -1,5 +1,7 @@
 "use client";
 
+import { ChipAmount } from "@/components/ChipAmount";
+
 /** 명예의 전당(초고수 소통): 최소 칩 미만일 때 안내 */
 export default function ExpertChatTabGate({
   myBalance,
@@ -31,29 +33,31 @@ export default function ExpertChatTabGate({
       <p className="mt-3 text-base text-white/90 leading-relaxed">
         {reason ?? `보유 칩이 ${minBalance}개 이상이어야 초고수에게 질문·답장을 할 수 있습니다.`}
       </p>
-      <div className="mt-5 w-full rounded-2xl border border-amber-500/30 bg-amber-500/10 px-4 py-4 space-y-2 text-base">
-        <p className="text-white">
-          내 칩 <span className="font-black tabular-nums text-amber-300">{myBalance}</span>개
+      <div className="mt-5 w-full rounded-2xl border border-amber-500/30 bg-amber-500/10 px-4 py-4 space-y-3 text-base">
+        <p className="text-white flex items-center justify-between gap-2">
+          <span>내 보유</span>
+          <ChipAmount amount={myBalance} className="text-amber-300" />
         </p>
-        <p className="text-white/90">
-          필요 <span className="font-black tabular-nums text-amber-200">{minBalance}</span>개
-          {need > 0 ? (
-            <>
-              {" "}
-              · <span className="font-bold text-amber-100">약 {need}개 더</span>
-            </>
-          ) : null}
+        <p className="text-white/90 flex items-center justify-between gap-2">
+          <span>필요</span>
+          <ChipAmount amount={minBalance} className="text-amber-200" />
         </p>
+        {need > 0 ? (
+          <p className="text-white/90 flex items-center justify-between gap-2">
+            <span>부족</span>
+            <ChipAmount amount={need} className="text-amber-100" />
+          </p>
+        ) : null}
         {tipPerMessage != null ? (
-          <p className="text-sm text-white/80 pt-1 border-t border-amber-500/20">
-            열린 뒤 질문 1통당 <span className="font-bold text-amber-200">{tipPerMessage}칩</span>이
-            사용됩니다.
+          <p className="text-sm text-white/80 pt-1 border-t border-amber-500/20 flex items-center justify-between gap-2">
+            <span>질문 1통당</span>
+            <ChipAmount amount={tipPerMessage} className="text-amber-200" />
           </p>
         ) : null}
       </div>
-      <p className="mt-4 text-sm text-white/80 leading-relaxed">
-        시작 칩 100개에 더해, 설문 참여와 적중으로 칩을 모으면 됩니다. 보통{" "}
-        <span className="font-bold text-white">적중을 3번 정도</span> 쌓으면 열립니다.
+      <p className="mt-4 text-sm text-white/80 leading-relaxed flex flex-wrap items-center gap-1 justify-center">
+        시작 <ChipAmount amount={100} compact className="text-amber-200/90" /> 에 더해, 설문·적중으로 모으면 됩니다. 보통{" "}
+        <span className="font-bold text-white">적중 3번</span>이면 열립니다.
       </p>
     </div>
   );

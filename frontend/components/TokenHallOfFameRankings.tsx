@@ -1,5 +1,7 @@
 "use client";
 
+import { ChipAmount } from "@/components/ChipAmount";
+
 import { useEffect, useState } from "react";
 import {
   getHallOfFameRankings,
@@ -52,15 +54,13 @@ function RankingList({
                 <span className="text-[10px] font-normal text-gray-500">%</span>
               </>
             ) : (
-              e.score.toLocaleString()
+              <ChipAmount amount={e.score} compact className="text-amber-200" />
             );
           const scoreSub =
             variant === "accuracy" && e.correct != null && e.total != null ? (
               <span className="ml-1 text-[10px] font-normal text-gray-500 tabular-nums">
                 ({e.correct}/{e.total})
               </span>
-            ) : variant === "token" ? (
-              <span className="ml-0.5 text-[10px] font-normal text-gray-500">칩</span>
             ) : null;
 
           return (

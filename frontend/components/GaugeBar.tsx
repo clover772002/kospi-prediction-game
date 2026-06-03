@@ -1,6 +1,7 @@
 ﻿"use client";
 
 import { useCallback, useId, useRef, useState } from "react";
+import { ChipAmount } from "@/components/ChipAmount";
 
 interface GaugeBarProps {
   value: number; // -100 ~ +100 (0 제외)
@@ -270,24 +271,22 @@ export default function GaugeBar({
 
       {/* 배팅 정보 */}
       <div className="bg-[#111] border border-[#2A2A2A] rounded-xl p-3 space-y-1.5">
-        <div className="flex justify-between text-base">
-          <span className="text-gray-500">보유 칩</span>
-          <span className="text-white font-bold tabular-nums">💰 {tokens.toLocaleString()}</span>
+        <div className="flex justify-between text-base items-center">
+          <span className="text-gray-500">보유</span>
+          <ChipAmount amount={tokens} className="text-white" />
         </div>
-        <div className="flex justify-between text-base">
-          <span className="text-gray-500">배팅 칩</span>
-          <span className={`font-black tabular-nums ${dirColor}`}>{bet.toLocaleString()}</span>
+        <div className="flex justify-between text-base items-center">
+          <span className="text-gray-500">배팅</span>
+          <ChipAmount amount={bet} className={dirColor} />
         </div>
         <div className="h-px bg-[#222]" />
-        <div className="flex justify-between gap-2 text-base items-start flex-wrap">
-          <span className="text-gray-500 shrink-0">적중 시 보유</span>
-          <span className="text-green-400 font-bold text-right leading-snug tabular-nums">
-            약 {hitBalance.toLocaleString()} 칩
-          </span>
+        <div className="flex justify-between gap-2 text-base items-center flex-wrap">
+          <span className="text-gray-500 shrink-0">적중 시</span>
+          <ChipAmount amount={hitBalance} className="text-green-400" />
         </div>
-        <div className="flex justify-between text-base">
+        <div className="flex justify-between text-base items-center">
           <span className="text-gray-500">실패 시</span>
-          <span className="text-red-400 font-bold tabular-nums">약 {(tokens - bet).toLocaleString()} 칩</span>
+          <ChipAmount amount={Math.max(0, tokens - bet)} className="text-red-400" />
         </div>
       </div>
 

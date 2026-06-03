@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { ChipAmount } from "@/components/ChipAmount";
 
 type Props = {
   receivesToday: boolean;
@@ -41,8 +42,8 @@ export default function GlobalTopExpertBanner({
           명예의 전당에서 질문·답장 보기 →
         </Link>
       ) : receivesToday && !expertChatUnlocked ? (
-        <p className={`mt-2 text-violet-300/70 ${compact ? "text-[11px]" : "text-xs"}`}>
-          초고수 소통은 칩 210개 이상일 때 열립니다.
+        <p className={`mt-2 text-violet-300/70 flex flex-wrap items-center gap-1 ${compact ? "text-[11px]" : "text-xs"}`}>
+          초고수 소통은 <ChipAmount amount={210} compact className="text-violet-200" /> 이상일 때 열립니다.
         </p>
       ) : !receivesToday ? (
         <p className={`mt-2 text-violet-300/70 ${compact ? "text-[11px]" : "text-xs"}`}>

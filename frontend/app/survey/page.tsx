@@ -30,6 +30,7 @@ import { markWasTopExpert } from "@/lib/top-expert-notice";
 import { formatApiErrorMessage } from "@/lib/format-api-error";
 import KospiPriceStrip from "@/components/KospiPriceStrip";
 import GaugeBar from "@/components/GaugeBar";
+import { ChipAmount } from "@/components/ChipAmount";
 import AppAmbientBackground from "@/components/AppAmbientBackground";
 import PageLoadProgress from "@/components/PageLoadProgress";
 import AppTabNav from "@/components/AppTabNav";
@@ -194,7 +195,8 @@ function SurveyCompletedPanel({
             beginnerTips={false}
           />
           <p className="text-center text-sm font-bold text-white/90 mt-2 tabular-nums">
-            {dirEmoji} {dirLabel} · 확신도 {Math.abs(gaugeValue)} · 배팅 {bet}칩
+            {dirEmoji} {dirLabel} · 확신도 {Math.abs(gaugeValue)} · 배팅{" "}
+            <ChipAmount amount={bet} compact className="inline-flex text-red-200" />
           </p>
         </div>
         <button

@@ -1,5 +1,6 @@
 "use client";
 
+import { ChipAmount, formatChipAmountText } from "@/components/ChipAmount";
 import { useInsightDashboardCompact } from "@/contexts/InsightDashboardCompactContext";
 
 type Props = {
@@ -20,16 +21,18 @@ export default function InsightTokenPriceButton({ priceTokens, className, locked
         if (locked && !unlocking) void onActivate();
       }}
       disabled={unlocking}
-      aria-label={locked ? `${priceTokens} 칩 — 잠금 해제 요청` : `이미 열람됨(기준 ${priceTokens} 칩)`}
-      className={`rounded-lg font-black tabular-nums border transition-all whitespace-nowrap ${
-        compact ? "px-1.5 py-0.5 text-[9px]" : "px-2.5 py-1 text-[11px]"
+      aria-label={
+        locked ? `${formatChipAmountText(priceTokens)} — 잠금 해제 요청` : `이미 열람됨(기준 ${formatChipAmountText(priceTokens)})`
+      }
+      className={`rounded-lg font-black tabular-nums border transition-all whitespace-nowrap inline-flex items-center ${
+        compact ? "px-1.5 py-0.5" : "px-2.5 py-1"
       } ${
         locked
           ? `${className} active:scale-[0.97] disabled:opacity-50`
           : `${className} opacity-50 cursor-default`
       }`}
     >
-      {priceTokens} 칩
+      <ChipAmount amount={priceTokens} compact={compact} />
     </button>
   );
 }

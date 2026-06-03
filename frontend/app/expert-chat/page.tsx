@@ -32,6 +32,7 @@ import {
 } from "@/lib/tab-session-cache";
 import AppAmbientBackground from "@/components/AppAmbientBackground";
 import AppTabNav from "@/components/AppTabNav";
+import { ChipAmount } from "@/components/ChipAmount";
 import ExpertChatTabGate from "@/components/ExpertChatTabGate";
 import TokenHallOfFameRankings from "@/components/TokenHallOfFameRankings";
 import TopExpertNoticeBlock from "@/components/TopExpertNoticeBlock";
@@ -356,8 +357,9 @@ export default function ExpertChatPage() {
         ) : null}
 
         <h2 className="mb-2 text-lg font-black text-violet-200/95">초고수 소통</h2>
-        <p className="mb-4 text-xs text-gray-500">
-          칩 {eligibility?.min_balance_for_tab ?? 210}개 이상이면 질문·답장을 이용할 수 있어요. 순위는 누구나 볼 수 있습니다.
+        <p className="mb-4 text-xs text-gray-500 flex flex-wrap items-center gap-1">
+          <ChipAmount amount={eligibility?.min_balance_for_tab ?? 210} compact className="text-amber-200/90" />
+          <span>이상이면 질문·답장 이용 · 순위는 누구나 볼 수 있어요</span>
         </p>
 
         {awaitingCore ? (
@@ -374,9 +376,9 @@ export default function ExpertChatPage() {
           <>
             {eligibility && !eligibility.is_global_top_expert ? (
               <p className="mb-4 text-sm leading-relaxed text-white/90">
-                오늘 설문에 참여한 <strong className="text-white">칩 1위 초고수</strong>에게 질문을 보낼 수 있습니다. 질문 1통당{" "}
-                <span className="font-bold text-amber-200">{eligibility.tip_tokens_per_message}칩</span>이
-                차감되며, 초고수가 <strong className="text-white">팁을 수락할 때</strong> 해당 칩이 전달됩니다.
+                오늘 설문에 참여한 <strong className="text-white">🪙 1위 초고수</strong>에게 질문을 보낼 수 있습니다.
+                질문 1통당 <ChipAmount amount={eligibility.tip_tokens_per_message} compact className="text-amber-200" />
+                차감되며, 초고수가 <strong className="text-white">팁을 수락할 때</strong> 전달됩니다.
               </p>
             ) : null}
 
@@ -388,8 +390,8 @@ export default function ExpertChatPage() {
 
             {eligibility ? (
               <div className="mb-4 flex flex-wrap items-center gap-2 text-[11px] text-gray-400">
-                <span>
-                  내 잔액 <b className="tabular-nums text-amber-200">{eligibility.my_balance}</b>
+                <span className="inline-flex items-center gap-1">
+                  내 잔액 <ChipAmount amount={eligibility.my_balance} compact className="text-amber-200" />
                 </span>
                 {eligibility.my_rank != null ? (
                   <span className="rounded-full border border-white/10 px-2 py-0.5">내 순위 {eligibility.my_rank}위</span>
@@ -471,13 +473,17 @@ export default function ExpertChatPage() {
                         {fromParticipant && m.tip_tokens > 0 ? (
                           <p className="mb-1 text-[10px] text-amber-200/80">
                             {accepted ? (
-                              <>칩 {m.tip_tokens} — 전달·수락 완료</>
+                              <span className="inline-flex items-center gap-1">
+                                <ChipAmount amount={m.tip_tokens} compact /> 전달·수락 완료
+                              </span>
                             ) : selectedThread?.my_role === "expert" ? (
-                              <>내가 받을 칩 {m.tip_tokens} (수락 시 지급)</>
+                              <span className="inline-flex items-center gap-1">
+                                수락 시 <ChipAmount amount={m.tip_tokens} compact />
+                              </span>
                             ) : (
-                              <>
-                                내 칩 {m.tip_tokens} 차감 · 초고수 수락 시 상대에게 정산 대기
-                              </>
+                              <span className="inline-flex items-center gap-1 flex-wrap">
+                                <ChipAmount amount={m.tip_tokens} compact /> 차감 · 수락 시 상대 정산
+                              </span>
                             )}
                           </p>
                         ) : null}
@@ -493,7 +499,9 @@ export default function ExpertChatPage() {
                   onClick={() => void handleAcceptTip(m.id)}
                           className="max-w-[85%] rounded-lg border border-amber-500/35 bg-amber-600/25 px-3 py-1.5 text-[11px] font-bold text-amber-100 transition-colors hover:bg-amber-600/35 disabled:opacity-45"
                         >
-                          팁 {m.tip_tokens}칩 수락하기
+                          <span className="inline-flex items-center justify-center gap-1">
+                            팁 <ChipAmount amount={m.tip_tokens} compact /> 수락
+                          </span>
                         </button>
                       ) : showExpertTipDone ? (
                         <span className="max-w-[85%] text-[10px] text-emerald-400/85">
@@ -559,7 +567,15 @@ export default function ExpertChatPage() {
             onClick={() => void handleSend()}
             className="w-full rounded-xl bg-gradient-to-r from-amber-600 to-orange-600 py-2.5 text-sm font-black text-white disabled:opacity-50"
           >
-            보내기 · 칩 {eligibility?.tip_tokens_per_message ?? "—"} (보내는 즉시 차감)
+            <span className="inline-flex items-center justify-center gap-1 flex-wrap">
+              보내기 ·
+              {typeof eligibility?.tip_tokens_per_message === "number" ? (
+                <ChipAmount amount={eligibility.tip_tokens_per_message} compact className="text-white" />
+              ) : (
+                "—"
+              )}
+              (즉시 차감)
+            </span>
           </button>
           <p className="mt-2 text-[10px] text-gray-500">
             초고수에게 정산되는 시점은 그분이 해당 메시지에서 팁을 수락할 때예요. 같은 요청 재전송은 멱등 키로
