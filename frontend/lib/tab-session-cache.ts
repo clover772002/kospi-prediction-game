@@ -1,6 +1,8 @@
 import type {
   Challenge,
   DashboardData,
+  DirectionChatMessageRow,
+  DirectionChatStatus,
   Group,
   ShopCatalog,
   TodaySurvey,
@@ -34,7 +36,15 @@ export type GroupsTabSnapshot = {
   savedAt: number;
 };
 
+export type TeamChatTabSnapshot = {
+  surveyDate: string;
+  status: DirectionChatStatus;
+  messages: DirectionChatMessageRow[];
+  savedAt: number;
+};
+
 const STORAGE_KEY = "kp_dash_snap_v1";
+const TEAM_CHAT_KEY = "kp_team_chat_snap_v1";
 const SHOP_KEY = "kp_shop_snap_v1";
 const SURVEY_TODAY_KEY = "kp_survey_today_snap_v1";
 const GROUPS_KEY = "kp_groups_snap_v1";
@@ -412,6 +422,76 @@ export function clearGroupsSnapshot(): void {
   }
 }
 
+// ── 소통방 (/team-chat) ───────────────────────────────────────
+
+let teamChatMemory: TeamChatTabSnapshot | null = null;
+
+function readTeamChatFromStorage(): TeamChatTabSnapshot | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = sessionStorage.getItem(TEAM_CHAT_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as TeamChatTabSnapshot;
+    if (!parsed?.savedAt || Date.now() - parsed.savedAt > DASHBOARD_SNAPSHOT_TTL_MS) {
+      sessionStorage.removeItem(TEAM_CHAT_KEY);
+      return null;
+    }
+    return parsed;
+  } catch {
+    try {
+      sessionStorage.removeItem(TEAM_CHAT_KEY);
+    } catch {
+      /* noop */
+    }
+    return null;
+  }
+}
+
+export function peekTeamChatSnapshot(): TeamChatTabSnapshot | null {
+  if (teamChatMemory && Date.now() - teamChatMemory.savedAt <= DASHBOARD_SNAPSHOT_TTL_MS) {
+    return teamChatMemory;
+  }
+  teamChatMemory = null;
+  const s = readTeamChatFromStorage();
+  if (s) {
+    teamChatMemory = s;
+    return s;
+  }
+  return null;
+}
+
+export function saveTeamChatSnapshot(
+  surveyDate: string,
+  status: DirectionChatStatus,
+  messages: DirectionChatMessageRow[],
+): void {
+  const full: TeamChatTabSnapshot = {
+    surveyDate: surveyDate.slice(0, 10),
+    status,
+    messages,
+    savedAt: Date.now(),
+  };
+  teamChatMemory = full;
+  if (typeof window !== "undefined") {
+    try {
+      sessionStorage.setItem(TEAM_CHAT_KEY, JSON.stringify(full));
+    } catch {
+      /* noop */
+    }
+  }
+}
+
+export function clearTeamChatSnapshot(): void {
+  teamChatMemory = null;
+  if (typeof window !== "undefined") {
+    try {
+      sessionStorage.removeItem(TEAM_CHAT_KEY);
+    } catch {
+      /* noop */
+    }
+  }
+}
+
 /** 로그아웃 시 탭 스냅샷 전부 제거 */
 export function clearAllTabSnapshots(): void {
   clearDashboardSnapshot();
@@ -419,6 +499,7 @@ export function clearAllTabSnapshots(): void {
   clearSurveyTodaySnapshot();
   clearSurveyNextSnapshot();
   clearGroupsSnapshot();
+  clearTeamChatSnapshot();
   clearAnsweredTodaySnapshot();
   clearSessionApiCache();
 }

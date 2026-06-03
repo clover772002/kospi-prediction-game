@@ -9,13 +9,14 @@ import {
   getMyGroups,
   getShopCatalog,
 } from "@/lib/api";
-import { getMeCached, getTodaySummaryCached } from "@/lib/session-api-cache";
+import { getDirectionChatRoomCached, getMeCached, getTodaySummaryCached } from "@/lib/session-api-cache";
 import {
   saveDashboardSnapshot,
   saveGroupsSnapshot,
   saveShopSnapshot,
   saveSurveyNextSnapshot,
   saveSurveyTodaySnapshot,
+  saveTeamChatSnapshot,
 } from "@/lib/tab-session-cache";
 
 export const APP_TAB_BOOT_MESSAGES = [
@@ -108,6 +109,16 @@ export async function runAppTabPrefetch(
         },
         walletTokens,
       });
+    }
+
+    const sdTeam = todayData.survey_date?.slice(0, 10);
+    if (sdTeam) {
+      void withTimeout(getDirectionChatRoomCached(accessToken, sdTeam), 25_000)
+        .then((room) => {
+          const { messages, ...st } = room;
+          saveTeamChatSnapshot(room.survey_date, st, messages);
+        })
+        .catch(() => {});
     }
 
     onProgress?.("준비 완료!");

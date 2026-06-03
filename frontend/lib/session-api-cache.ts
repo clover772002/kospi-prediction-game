@@ -1,9 +1,11 @@
 import {
+  getDirectionChatRoom,
   getExpertChatEligibility,
   getMe,
   getMySurveyResponse,
   getPendingGrant,
   getTodaySummary,
+  type DirectionChatRoom,
   type ExpertChatEligibility,
   type MySurveyResponse,
   type NextSurveyInfo,
@@ -17,6 +19,7 @@ const MY_RESP_TTL_MS = 90_000;
 const PENDING_GRANT_TTL_MS = 60_000;
 const NEXT_SURVEY_TTL_MS = 120_000;
 const TODAY_SUMMARY_TTL_MS = 90_000;
+const DIRECTION_ROOM_TTL_MS = 45_000;
 
 let meCache: { token: string; data: UserProfile; savedAt: number } | null = null;
 let meInflight: { token: string; promise: Promise<UserProfile> } | null = null;
@@ -35,6 +38,14 @@ let nextSurveyInflight: Promise<NextSurveyInfo | null> | null = null;
 
 let todaySummaryCache: { data: TodaySurvey; savedAt: number } | null = null;
 let todaySummaryInflight: Promise<TodaySurvey> | null = null;
+
+const directionRoomCache = new Map<string, { data: DirectionChatRoom; savedAt: number }>();
+const directionRoomInflight = new Map<string, Promise<DirectionChatRoom>>();
+
+function directionRoomKey(token: string, surveyDate?: string): string {
+  const d = surveyDate?.trim().slice(0, 10) ?? "";
+  return `${token}|${d}`;
+}
 
 function eligKey(token: string, surveyDate?: string): string {
   const d = surveyDate?.trim().slice(0, 10) ?? "";
@@ -171,6 +182,37 @@ export function invalidateTodaySummaryCache(): void {
   todaySummaryInflight = null;
 }
 
+/** 소통방 탭 — room 1회 조회 dedupe */
+export async function getDirectionChatRoomCached(
+  token: string,
+  surveyDate?: string,
+): Promise<DirectionChatRoom> {
+  const key = directionRoomKey(token, surveyDate);
+  const now = Date.now();
+  const hit = directionRoomCache.get(key);
+  if (hit && now - hit.savedAt < DIRECTION_ROOM_TTL_MS) {
+    return hit.data;
+  }
+  const inflight = directionRoomInflight.get(key);
+  if (inflight) return inflight;
+
+  const promise = getDirectionChatRoom(token, surveyDate).then((data) => {
+    directionRoomCache.set(key, { data, savedAt: Date.now() });
+    directionRoomInflight.delete(key);
+    return data;
+  });
+  directionRoomInflight.set(key, promise);
+  promise.catch(() => {
+    directionRoomInflight.delete(key);
+  });
+  return promise;
+}
+
+export function invalidateDirectionChatRoomCache(): void {
+  directionRoomCache.clear();
+  directionRoomInflight.clear();
+}
+
 /** summary에 next_survey 없을 때만 — 별도 /api/next-survey 1회 */
 export async function fetchNextSurveyCached(): Promise<NextSurveyInfo | null> {
   const now = Date.now();
@@ -225,6 +267,7 @@ export function clearSessionApiCache(): void {
   invalidateMySurveyResponseCache();
   invalidatePendingGrantCache();
   invalidateTodaySummaryCache();
+  invalidateDirectionChatRoomCache();
   nextSurveyCache = null;
   nextSurveyInflight = null;
 }

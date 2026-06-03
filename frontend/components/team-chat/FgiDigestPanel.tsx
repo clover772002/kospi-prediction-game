@@ -70,7 +70,7 @@ function humanVoteLine(human: FgiDigestResponse["human"]): ReactNode {
 }
 
 /** 소통방 상단 — 공포·탐욕·인간지표 */
-export default function FgiDigestPanel() {
+export default function FgiDigestPanel({ deferLoadMs = 0 }: { deferLoadMs?: number }) {
   const [open, setOpen] = useState(true);
   const [data, setData] = useState<FgiDigestResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -93,8 +93,13 @@ export default function FgiDigestPanel() {
   }, []);
 
   useEffect(() => {
-    void load(false);
-  }, [load]);
+    if (deferLoadMs <= 0) {
+      void load(false);
+      return;
+    }
+    const id = window.setTimeout(() => void load(false), deferLoadMs);
+    return () => window.clearTimeout(id);
+  }, [load, deferLoadMs]);
 
   useEffect(() => {
     const tick = () => {

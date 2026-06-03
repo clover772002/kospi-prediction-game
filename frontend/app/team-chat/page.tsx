@@ -1,20 +1,28 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import { postDirectionChatMessage, type DirectionChatMessageRow, type DirectionChatStatus } from "@/lib/api";
 import {
-  getDirectionChatRoom,
-  postDirectionChatMessage,
-  type DirectionChatMessageRow,
-  type DirectionChatStatus,
-} from "@/lib/api";
-import { getMeCached } from "@/lib/session-api-cache";
+  getDirectionChatRoomCached,
+  getMeCached,
+  invalidateDirectionChatRoomCache,
+} from "@/lib/session-api-cache";
+import { buildKstSurveyTodayPlaceholder } from "@/lib/survey-today-placeholder";
+import { buildTeamChatPlaceholder } from "@/lib/team-chat-placeholder";
+import {
+  peekDashboardSnapshot,
+  peekSurveyTodaySnapshot,
+  peekTeamChatSnapshot,
+  saveTeamChatSnapshot,
+} from "@/lib/tab-session-cache";
 import AppAmbientBackground from "@/components/AppAmbientBackground";
 import PushConnectBanner from "@/components/PushConnectBanner";
 import AppTabNav from "@/components/AppTabNav";
 import PageLoadProgress from "@/components/PageLoadProgress";
+import StaleRefreshIndicator from "@/components/StaleRefreshIndicator";
 import FgiDigestPanel from "@/components/team-chat/FgiDigestPanel";
 import RoomCloseCountdown from "@/components/team-chat/RoomCloseCountdown";
 import TeamChatCrownFxLayer from "@/components/team-chat/TeamChatCrownFxLayer";
@@ -37,77 +45,131 @@ function bubbleClass(isMine: boolean, side: "up" | "down"): string {
   return side === "up" ? "bg-market-up" : "bg-market-down";
 }
 
+function resolveInitialSurveyDate(): string {
+  const team = peekTeamChatSnapshot();
+  if (team?.surveyDate) return team.surveyDate;
+  const survey = peekSurveyTodaySnapshot();
+  if (survey?.today?.survey_date) return survey.today.survey_date.slice(0, 10);
+  const dash = peekDashboardSnapshot();
+  if (dash?.today?.survey_date) return dash.today.survey_date.slice(0, 10);
+  return buildKstSurveyTodayPlaceholder().survey_date;
+}
+
 export default function TeamChatPage() {
   const router = useRouter();
+  const [authChecking, setAuthChecking] = useState(true);
   const [token, setToken] = useState<string | null>(null);
   const [surveyDate, setSurveyDate] = useState<string | null>(null);
   const [status, setStatus] = useState<DirectionChatStatus | null>(null);
   const [messages, setMessages] = useState<DirectionChatMessageRow[]>([]);
   const [draft, setDraft] = useState("");
   const [err, setErr] = useState<string | null>(null);
-  const [boot, setBoot] = useState(true);
+  const [awaitingRoom, setAwaitingRoom] = useState(true);
+  const [revalidating, setRevalidating] = useState(false);
   const [sending, setSending] = useState(false);
   const [hasPush, setHasPush] = useState(false);
   const [hasTelegram, setHasTelegram] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const hadSnapOnMount = useRef(false);
 
   const scrollToBottom = useCallback(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, []);
 
-  const refresh = useCallback(async (accessToken: string, sd: string | null, silent = false) => {
-    if (!silent) setErr(null);
-    const room = await getDirectionChatRoom(accessToken, sd ?? undefined);
-    const { messages: msgs, ...st } = room;
-    setStatus(st);
-    setMessages(msgs);
-    setSurveyDate(room.survey_date);
+  const applyRoom = useCallback(
+    (room: { survey_date: string; messages: DirectionChatMessageRow[] } & DirectionChatStatus) => {
+      const { messages: msgs, ...st } = room;
+      setStatus(st);
+      setMessages(msgs);
+      setSurveyDate(room.survey_date);
+      saveTeamChatSnapshot(room.survey_date, st, msgs);
+    },
+    [],
+  );
+
+  const refresh = useCallback(
+    async (accessToken: string, sd: string | null, silent = false) => {
+      if (!silent) setErr(null);
+      if (silent) setRevalidating(true);
+      try {
+        const room = await getDirectionChatRoomCached(accessToken, sd ?? undefined);
+        applyRoom(room);
+        setAwaitingRoom(false);
+      } catch (e) {
+        if (!silent) setErr(e instanceof Error ? e.message : String(e));
+      } finally {
+        if (silent) setRevalidating(false);
+      }
+    },
+    [applyRoom],
+  );
+
+  useLayoutEffect(() => {
+    const sd = resolveInitialSurveyDate();
+    const snap = peekTeamChatSnapshot();
+    if (snap && snap.surveyDate === sd.slice(0, 10)) {
+      hadSnapOnMount.current = true;
+      setSurveyDate(snap.surveyDate);
+      setStatus(snap.status);
+      setMessages(snap.messages);
+      setAwaitingRoom(false);
+    } else {
+      hadSnapOnMount.current = false;
+      setSurveyDate(sd);
+      setStatus(buildTeamChatPlaceholder(sd));
+      setMessages([]);
+      setAwaitingRoom(true);
+    }
   }, []);
 
   useEffect(() => {
     let cancelled = false;
-    void supabase.auth.getSession().then(({ data: { session } }) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (cancelled) return;
-      if (!session) {
+      setAuthChecking(false);
+      if (!session?.access_token) {
         router.replace("/");
         return;
       }
-      setToken(session.access_token);
-    });
-    const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => {
-      if (!session) router.replace("/");
-      else setToken(session.access_token);
+      if (event === "INITIAL_SESSION" || event === "SIGNED_IN") {
+        setToken(session.access_token);
+      }
     });
     return () => {
       cancelled = true;
-      sub.subscription.unsubscribe();
+      subscription.unsubscribe();
     };
   }, [router]);
 
   useEffect(() => {
     if (!token) return;
     let cancelled = false;
+    const sd = surveyDate;
     void (async () => {
-      setBoot(true);
       try {
-        const [me] = await Promise.all([getMeCached(token), refresh(token, null)]);
-        if (!cancelled) {
-          setHasPush(Boolean(me.has_push));
-          setHasTelegram(me.telegram_chat_id != null);
-        }
-      } catch (e) {
-        if (!cancelled) setErr(e instanceof Error ? e.message : String(e));
-      } finally {
-        if (!cancelled) setBoot(false);
+        await refresh(token, sd, hadSnapOnMount.current);
+      } catch {
+        /* refresh sets err */
       }
+      if (cancelled) return;
+      window.setTimeout(() => {
+        void getMeCached(token)
+          .then((me) => {
+            if (!cancelled) {
+              setHasPush(Boolean(me.has_push));
+              setHasTelegram(me.telegram_chat_id != null);
+            }
+          })
+          .catch(() => {});
+      }, 60);
     })();
     return () => {
       cancelled = true;
     };
-  }, [token, refresh]);
+  }, [token, refresh, surveyDate]);
 
   useEffect(() => {
-    if (!token || !surveyDate || boot) return;
+    if (!token || !surveyDate || awaitingRoom) return;
     const tick = () => {
       if (typeof document !== "undefined" && document.visibilityState !== "visible") return;
       void refresh(token, surveyDate, true).catch(() => {});
@@ -121,14 +183,14 @@ export default function TeamChatPage() {
       window.clearInterval(id);
       document.removeEventListener("visibilitychange", onVis);
     };
-  }, [token, surveyDate, boot, refresh]);
+  }, [token, surveyDate, awaitingRoom, refresh]);
 
   useEffect(() => {
     scrollToBottom();
   }, [messages.length, scrollToBottom]);
 
   const handleSend = async () => {
-    if (!token || !surveyDate || !status?.can_send) return;
+    if (!token || !surveyDate || !status?.can_send || awaitingRoom) return;
     const text = draft.trim();
     if (!text) return;
     setSending(true);
@@ -140,6 +202,7 @@ export default function TeamChatPage() {
       });
       setDraft("");
       setMessages((prev) => [...prev, out.message]);
+      invalidateDirectionChatRoomCache();
       scrollToBottom();
     } catch (e) {
       setErr(e instanceof Error ? e.message : String(e));
@@ -150,10 +213,11 @@ export default function TeamChatPage() {
 
   const total = status?.member_counts.total ?? 0;
   const mySide = status?.my_side;
-  const crownFx = useTeamChatCrownFx(status?.accuracy_leader_user_id, boot, messages);
+  const crownFx = useTeamChatCrownFx(status?.accuracy_leader_user_id, awaitingRoom, messages);
+  const sendLocked = awaitingRoom || sending;
 
-  if (boot) {
-    return <PageLoadProgress label="소통방 불러오는 중…" accent="blue" />;
+  if (authChecking) {
+    return <PageLoadProgress label="확인 중…" accent="blue" />;
   }
 
   return (
@@ -162,6 +226,7 @@ export default function TeamChatPage() {
         crownFx.screenZoom ? "team-chat-room-zoom" : ""
       }`}
     >
+      <StaleRefreshIndicator show={awaitingRoom || revalidating} tone="sky" />
       <AppAmbientBackground />
       <TeamChatCrownFxLayer fx={crownFx} />
 
@@ -190,7 +255,7 @@ export default function TeamChatPage() {
         ) : null}
       </header>
 
-      {!boot ? <FgiDigestPanel /> : null}
+      <FgiDigestPanel deferLoadMs={280} />
 
       {err ? (
         <p className="relative z-10 mx-4 mt-2 shrink-0 rounded-lg border border-rose-500/40 bg-rose-950/40 px-3 py-2 text-sm text-rose-200">
@@ -198,7 +263,7 @@ export default function TeamChatPage() {
         </p>
       ) : null}
 
-      {!boot && status?.answered ? (
+      {status?.answered ? (
         <PushConnectBanner
           accessToken={token}
           hasPush={hasPush}
@@ -207,7 +272,7 @@ export default function TeamChatPage() {
         />
       ) : null}
 
-      {!boot && status && !status.answered ? (
+      {status && !status.answered ? (
         <div className="relative z-10 flex flex-1 flex-col items-center justify-center gap-4 px-6 text-center">
           <p className="text-sm text-gray-300 leading-relaxed">
             오늘 설문 또는 다음 거래일 사전 예측에 참여하면
@@ -224,12 +289,14 @@ export default function TeamChatPage() {
       ) : (
         <>
           <div className="relative z-10 min-h-0 flex-1 space-y-2 overflow-y-auto px-3 py-3">
-            {messages.length === 0 && !boot ? (
+            {messages.length === 0 && !awaitingRoom ? (
               <p className="py-12 text-center text-sm text-gray-500">
                 아직 메시지가 없어요.
                 <br />
                 첫 메시지를 남겨 보세요.
               </p>
+            ) : messages.length === 0 && awaitingRoom ? (
+              <p className="py-12 text-center text-sm text-gray-500">메시지 불러오는 중…</p>
             ) : (
               messages.map((m) => (
                 <div
@@ -271,15 +338,15 @@ export default function TeamChatPage() {
                       void handleSend();
                     }
                   }}
-                  placeholder="메시지 입력"
+                  placeholder={awaitingRoom ? "방 정보 확인 중…" : "메시지 입력"}
                   className="min-w-0 flex-1 rounded-xl border border-white/15 bg-[#1a1a1a] px-3 py-2.5 text-sm text-white placeholder:text-gray-600"
-                  disabled={sending}
-                  autoFocus
+                  disabled={sendLocked}
+                  autoFocus={!awaitingRoom}
                 />
                 <button
                   type="button"
                   onClick={() => void handleSend()}
-                  disabled={sending || !draft.trim()}
+                  disabled={sendLocked || !draft.trim()}
                   className="shrink-0 rounded-xl bg-white px-4 py-2.5 text-sm font-bold text-black disabled:opacity-40"
                 >
                   전송
