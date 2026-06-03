@@ -221,13 +221,25 @@ function HorizontalSignedBox({
   );
 }
 
+/** 0%여도 도넛에 반대 색을 아주 얇게 표시 (12시=상승 빨강 → 시계방향 하락 파랑) */
+const PIE_MIN_ZERO_PCT = 3;
+
 function directionPieBackground(pctFall: number, pctRise: number): string {
   const f = Math.min(100, Math.max(0, pctFall));
   const r = Math.min(100, Math.max(0, pctRise));
   if (f <= 0 && r <= 0) return "#2a2a2a";
-  if (r >= 99.95) return "#dc2626";
-  if (f >= 99.95) return "#2563eb";
-  const riseDeg = (r / 100) * 360;
+
+  let visR = r;
+  let visF = f;
+  if (r > 0 && f <= 0) {
+    visR = 100 - PIE_MIN_ZERO_PCT;
+    visF = PIE_MIN_ZERO_PCT;
+  } else if (f > 0 && r <= 0) {
+    visF = 100 - PIE_MIN_ZERO_PCT;
+    visR = PIE_MIN_ZERO_PCT;
+  }
+
+  const riseDeg = (visR / 100) * 360;
   return `conic-gradient(from -90deg, #ef4444 0deg ${riseDeg}deg, #3b82f6 ${riseDeg}deg 360deg)`;
 }
 
@@ -265,6 +277,17 @@ function DirectionSharePie({
       title={`예측 상승 ${r}% · 하락 ${f}%`}
     >
       <div className="flex items-center gap-3 sm:gap-4">
+        <div className="flex-1 min-w-0 space-y-2">
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-red-500" aria-hidden />
+            <span className="text-sm font-black text-red-400 tabular-nums">상승 {r}%</span>
+          </div>
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-blue-500" aria-hidden />
+            <span className="text-sm font-black text-blue-400 tabular-nums">하락 {f}%</span>
+          </div>
+        </div>
+
         <div className="relative h-[4.75rem] w-[4.75rem] sm:h-20 sm:w-20 shrink-0">
           <div
             className="h-full w-full rounded-full border border-[#2a2a2a] shadow-[inset_0_2px_8px_rgba(0,0,0,.45)]"
@@ -274,17 +297,6 @@ function DirectionSharePie({
           <div className="absolute inset-[24%] flex flex-col items-center justify-center rounded-full bg-[#0d0d0d] border border-[#2a2a2a] text-center leading-tight shadow-[0_0_0_2px_#0d0d0d]">
             <span className="text-xs sm:text-sm font-black text-white">{dominant.label}</span>
             <span className="text-sm sm:text-base font-black text-white tabular-nums">{dominant.pct}%</span>
-          </div>
-        </div>
-
-        <div className="flex-1 min-w-0 space-y-2">
-          <div className="flex items-center gap-2 min-w-0">
-            <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-red-500" aria-hidden />
-            <span className="text-sm font-black text-red-400 tabular-nums">상승 {r}%</span>
-          </div>
-          <div className="flex items-center gap-2 min-w-0">
-            <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-blue-500" aria-hidden />
-            <span className="text-sm font-black text-blue-400 tabular-nums">하락 {f}%</span>
           </div>
         </div>
       </div>
