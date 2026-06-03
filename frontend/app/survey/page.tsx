@@ -105,6 +105,155 @@ function SurveyHeadingTitle({ label }: { label: string }) {
   );
 }
 
+function tokensBetFromGauge(gauge: number, tokens: number) {
+  return Math.max(1, Math.round((Math.abs(gauge) / 100) * tokens));
+}
+
+/** 제출 완료 후 요약 · 확신도 변경 진입 */
+function SurveyCompletedPanel({
+  headline,
+  subline,
+  gaugeValue,
+  userTokens,
+  editing,
+  onStartEdit,
+  onCancelEdit,
+  justSaved,
+  pendingGrantRedo,
+  submitting,
+  submitDisabled,
+  onSubmit,
+  onGaugeChange,
+  error,
+  showTeamChatLink = false,
+  submitBtnClass = "bg-emerald-600 hover:bg-emerald-500 disabled:bg-[#333] disabled:text-gray-500 text-white",
+}: {
+  headline: string;
+  subline?: string;
+  gaugeValue: number;
+  userTokens: number;
+  editing: boolean;
+  onStartEdit: () => void;
+  onCancelEdit: () => void;
+  justSaved: boolean;
+  pendingGrantRedo: boolean;
+  submitting: boolean;
+  submitDisabled: boolean;
+  onSubmit: () => void | Promise<void>;
+  onGaugeChange: (v: number) => void;
+  error: string | null;
+  showTeamChatLink?: boolean;
+  submitBtnClass?: string;
+}) {
+  if (pendingGrantRedo) {
+    return (
+      <>
+        <p className="text-center text-sm text-amber-300 mb-2">재투표 1회 가능</p>
+        <SurveyGaugeSubmit
+          gaugeValue={gaugeValue}
+          onGaugeChange={onGaugeChange}
+          userTokens={userTokens}
+          submitting={submitting}
+          submitDisabled={submitDisabled}
+          submitBtnClass="bg-emerald-600 hover:bg-emerald-500 disabled:bg-[#333] disabled:text-gray-500 text-white"
+          submitLabel="재투표 제출하기"
+          onSubmit={onSubmit}
+        />
+        {error ? (
+          <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4 text-red-400 text-base text-center">
+            {error}
+          </div>
+        ) : null}
+      </>
+    );
+  }
+
+  if (!editing) {
+    const dirLabel = gaugeValue > 0 ? "상승" : "하락";
+    const dirEmoji = gaugeValue > 0 ? "📈" : "📉";
+    const bet = tokensBetFromGauge(gaugeValue, userTokens);
+
+    return (
+      <div className="flex flex-col gap-3">
+        <p className="text-center text-lg font-black text-emerald-400">{headline}</p>
+        {subline ? <p className="text-center text-xs text-gray-500">{subline}</p> : null}
+        {justSaved ? (
+          <div
+            className="rounded-xl border border-emerald-500/45 bg-emerald-500/20 px-3 py-2.5 text-center text-sm font-bold text-emerald-200"
+            role="status"
+          >
+            ✓ 확신도가 저장되었어요
+          </div>
+        ) : null}
+        <div className="rounded-2xl border border-emerald-500/30 bg-emerald-950/25 px-2 py-3">
+          <GaugeBar
+            value={gaugeValue}
+            onChange={() => {}}
+            tokens={userTokens}
+            disabled
+            beginnerTips={false}
+          />
+          <p className="text-center text-sm font-bold text-white/90 mt-2 tabular-nums">
+            {dirEmoji} {dirLabel} · 확신도 {Math.abs(gaugeValue)} · 배팅 {bet}토큰
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={onStartEdit}
+          disabled={submitDisabled}
+          className="w-full rounded-2xl border border-[#3d3d3d] bg-[#252525] py-3.5 text-sm font-bold text-white transition-colors hover:border-emerald-500/45 hover:bg-[#2d2d2d] disabled:opacity-45"
+        >
+          확신도 변경하기
+        </button>
+        {showTeamChatLink ? (
+          <Link
+            href="/team-chat"
+            className="block rounded-2xl border border-violet-500/35 bg-violet-500/10 px-4 py-3.5 text-center text-sm font-bold text-violet-200 hover:bg-violet-500/15"
+          >
+            소통방 보기 →
+          </Link>
+        ) : null}
+        {error ? (
+          <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4 text-red-400 text-base text-center">
+            {error}
+          </div>
+        ) : null}
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-3">
+      <p className="text-center text-sm font-bold text-amber-200/95">확신도 조정 중</p>
+      <p className="text-center text-xs text-gray-500">방향 유지 · 09:00 마감 전에 저장해 주세요</p>
+      <SurveyGaugeSubmit
+        gaugeValue={gaugeValue}
+        onGaugeChange={onGaugeChange}
+        userTokens={userTokens}
+        submitting={submitting}
+        submitDisabled={submitDisabled}
+        lockDirection
+        submitBtnClass={submitBtnClass}
+        submitLabel="확신도 저장"
+        onSubmit={onSubmit}
+      />
+      <button
+        type="button"
+        onClick={onCancelEdit}
+        disabled={submitting}
+        className="w-full rounded-xl border border-[#333] bg-[#1A1A1A] py-2.5 text-sm font-bold text-gray-400 hover:text-white disabled:opacity-45"
+      >
+        취소
+      </button>
+      {error ? (
+        <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4 text-red-400 text-base text-center">
+          {error}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 /** 사전 예측 — 참여 여부 확인 중에도 게이지를 바로 보여 줌 */
 function NextPreSurveyPanel({
   surveyDate,
@@ -119,6 +268,10 @@ function NextPreSurveyPanel({
   onSubmit,
   error,
   submitDisabled = false,
+  editingConfidence,
+  onStartEditConfidence,
+  onCancelEditConfidence,
+  confidenceJustSaved,
 }: {
   surveyDate: string;
   responseKnown: boolean;
@@ -132,55 +285,33 @@ function NextPreSurveyPanel({
   onSubmit: () => void | Promise<void>;
   error: string | null;
   submitDisabled?: boolean;
+  editingConfidence: boolean;
+  onStartEditConfidence: () => void;
+  onCancelEditConfidence: () => void;
+  confidenceJustSaved: boolean;
 }) {
   const target = formatPreSurveyTarget(surveyDate);
   if (submitted || alreadyAnswered) {
-    if (pendingGrantRedo) {
-      return (
-        <>
-          <PreSurveyTargetBanner surveyDate={surveyDate} />
-          <p className="text-center text-sm text-amber-300 mb-2">재투표 1회 가능</p>
-          <SurveyGaugeSubmit
-            gaugeValue={gaugeValue}
-            onGaugeChange={onGaugeChange}
-            userTokens={userTokens}
-            submitting={submitting}
-            submitDisabled={submitDisabled}
-            submitBtnClass="bg-amber-500 hover:bg-amber-400 disabled:bg-[#333] disabled:text-gray-500 text-white"
-            submitLabel="재투표 제출하기"
-            onSubmit={onSubmit}
-          />
-          {error ? (
-            <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4 text-red-400 text-base text-center mt-2">
-              {error}
-            </div>
-          ) : null}
-        </>
-      );
-    }
     return (
       <>
         <PreSurveyTargetBanner surveyDate={surveyDate} />
-        <p className="text-center text-base text-emerald-400 font-bold mb-1">
-          {target.dateIso} 거래일 사전 예측 제출 완료
-        </p>
-        <p className="text-center text-xs text-gray-400 mb-2">09:00 마감 전까지 확신도 수정 가능 (방향 유지)</p>
-        <SurveyGaugeSubmit
+        <SurveyCompletedPanel
+          headline={`✓ ${target.dateIso} 사전 예측 설문 완료`}
+          subline="09:00 마감 전까지 확신도만 조정할 수 있어요"
           gaugeValue={gaugeValue}
-          onGaugeChange={onGaugeChange}
           userTokens={userTokens}
+          editing={editingConfidence}
+          onStartEdit={onStartEditConfidence}
+          onCancelEdit={onCancelEditConfidence}
+          justSaved={confidenceJustSaved}
+          pendingGrantRedo={pendingGrantRedo}
           submitting={submitting}
           submitDisabled={submitDisabled}
-          lockDirection
-          submitBtnClass="bg-amber-500 hover:bg-amber-400 disabled:bg-[#333] disabled:text-gray-500 text-white"
-          submitLabel="확신도 저장"
           onSubmit={onSubmit}
+          onGaugeChange={onGaugeChange}
+          error={error}
+          submitBtnClass="bg-amber-500 hover:bg-amber-400 disabled:bg-[#333] disabled:text-gray-500 text-white"
         />
-        {error ? (
-          <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4 text-red-400 text-base text-center mt-2">
-            {error}
-          </div>
-        ) : null}
       </>
     );
   }
@@ -297,6 +428,12 @@ function SurveyPageInner() {
   /** 상점 소모품 grant 조회용 */
   const [pendingGrantToday, setPendingGrantToday] = useState<string | null>(null);
   const [pendingGrantNext, setPendingGrantNext] = useState<string | null>(null);
+  const [editingTodayConfidence, setEditingTodayConfidence] = useState(false);
+  const [editingNextConfidence, setEditingNextConfidence] = useState(false);
+  const [confidenceSavedFlash, setConfidenceSavedFlash] = useState(false);
+  const [nextConfidenceSavedFlash, setNextConfidenceSavedFlash] = useState(false);
+  const confidenceFlashTimerRef = useRef<number | null>(null);
+  const nextConfidenceFlashTimerRef = useRef<number | null>(null);
 
   const applyNextSurvey = useCallback(
     (d: { survey_date: string; is_open: boolean } | null | undefined) => {
@@ -376,6 +513,8 @@ function SurveyPageInner() {
   const applyTodayResponse = useCallback((data: MySurveyResponse) => {
     if (data.answered) {
       setAlreadyAnswered(true);
+      setSubmitted(true);
+      setEditingTodayConfidence(false);
       setPreviousAnswer(data.kospi_answer);
       const gp =
         typeof data.gauge_position === "number"
@@ -387,6 +526,8 @@ function SurveyPageInner() {
       setGaugePosition(gp);
     } else {
       setAlreadyAnswered(false);
+      setSubmitted(false);
+      setEditingTodayConfidence(false);
       setPreviousAnswer(null);
       setKospiAnswer(null);
       setGaugePosition(10);
@@ -396,6 +537,8 @@ function SurveyPageInner() {
   const applyNextResponse = useCallback((data: MySurveyResponse) => {
     if (data.answered) {
       setNextAlreadyAnswered(true);
+      setNextSubmitted(true);
+      setEditingNextConfidence(false);
       setNextPreviousAnswer(data.kospi_answer);
       setNextKospiAnswer(data.kospi_answer);
       const gp =
@@ -409,6 +552,7 @@ function SurveyPageInner() {
       setNextAlreadyAnswered(false);
       setNextPreviousAnswer(null);
       setNextSubmitted(false);
+      setEditingNextConfidence(false);
       setNextGaugePosition(10);
       setNextKospiAnswer(true);
     }
@@ -463,8 +607,10 @@ function SurveyPageInner() {
     if (!token || !today?.survey_date) return;
     const sd = today.survey_date.slice(0, 10);
     const answeredCache = peekAnsweredToday(sd);
-    if (answeredCache === true) setAlreadyAnswered(true);
-    else if (answeredCache === false) setAlreadyAnswered(false);
+    if (answeredCache === true) {
+      setAlreadyAnswered(true);
+      setSubmitted(true);
+    } else if (answeredCache === false) setAlreadyAnswered(false);
     void checkMyResponse(token, sd);
   }, [token, today?.survey_date, checkMyResponse]);
 
@@ -556,6 +702,13 @@ function SurveyPageInner() {
   }, [token, today?.survey_date, nextSurvey?.survey_date]);
 
   useEffect(() => {
+    return () => {
+      if (confidenceFlashTimerRef.current) clearTimeout(confidenceFlashTimerRef.current);
+      if (nextConfidenceFlashTimerRef.current) clearTimeout(nextConfidenceFlashTimerRef.current);
+    };
+  }, []);
+
+  useEffect(() => {
     if (!token || awaitingToday) return;
     const id = window.setTimeout(() => void refreshPendingGrants(), 80);
     return () => window.clearTimeout(id);
@@ -609,7 +762,16 @@ function SurveyPageInner() {
       }
       setAlreadyAnswered(true);
       setPreviousAnswer(kospiAnswer);
-      if (!wasAlreadyAnswered) setSubmitted(true);
+      setSubmitted(true);
+      setEditingTodayConfidence(false);
+      if (wasAlreadyAnswered) {
+        setConfidenceSavedFlash(true);
+        if (confidenceFlashTimerRef.current) clearTimeout(confidenceFlashTimerRef.current);
+        confidenceFlashTimerRef.current = window.setTimeout(() => {
+          setConfidenceSavedFlash(false);
+          confidenceFlashTimerRef.current = null;
+        }, 3500);
+      }
       const sd = today?.survey_date?.slice(0, 10);
       if (sd) {
         saveAnsweredToday(sd, true);
@@ -660,7 +822,16 @@ function SurveyPageInner() {
       }
       setNextAlreadyAnswered(true);
       setNextPreviousAnswer(nextKospiAnswer);
-      if (!wasNextAnswered) setNextSubmitted(true);
+      setNextSubmitted(true);
+      setEditingNextConfidence(false);
+      if (wasNextAnswered) {
+        setNextConfidenceSavedFlash(true);
+        if (nextConfidenceFlashTimerRef.current) clearTimeout(nextConfidenceFlashTimerRef.current);
+        nextConfidenceFlashTimerRef.current = window.setTimeout(() => {
+          setNextConfidenceSavedFlash(false);
+          nextConfidenceFlashTimerRef.current = null;
+        }, 3500);
+      }
       if (nextSurvey.survey_date) {
         invalidateMySurveyResponseCache();
         const nextData = await getMySurveyResponseCached(token, nextSurvey.survey_date);
@@ -790,6 +961,18 @@ function SurveyPageInner() {
               onSubmit={handleNextSubmit}
               error={error}
               submitDisabled={surveyUiLocked}
+              editingConfidence={editingNextConfidence}
+              onStartEditConfidence={() => {
+                setEditingNextConfidence(true);
+                setNextConfidenceSavedFlash(false);
+              }}
+              onCancelEditConfidence={() => {
+                setEditingNextConfidence(false);
+                if (token && nextSurvey.survey_date) {
+                  void loadNextMyResponse(token, nextSurvey.survey_date);
+                }
+              }}
+              confidenceJustSaved={nextConfidenceSavedFlash}
             />
           </div>
         </div>
@@ -840,56 +1023,36 @@ function SurveyPageInner() {
         );
       })()}
 
-      {/* 설문 진행 중 — 이미 제출함 */}
-      {status === "open" && !isWeekendKST && alreadyAnswered && !submitted && (
+      {/* 설문 진행 중 — 제출 완료(요약 · 확신도 변경) */}
+      {status === "open" && !isWeekendKST && alreadyAnswered && (
         <div className="flex flex-col gap-4 mt-6 fade-up">
-          <p className="text-center text-emerald-400 font-bold">오늘 예측 제출 완료 · 09:00 마감</p>
-          {pendingGrantToday === "redo_full" ? (
-            <>
-              <p className="text-center text-sm text-emerald-300">재투표 1회 가능</p>
-              <SurveyGaugeSubmit
-                gaugeValue={gaugePosition}
-                onGaugeChange={(v) => {
-                  setGaugePosition(v);
-                  setKospiAnswer(v > 0);
-                }}
-                userTokens={userTokens}
-                submitting={submitting}
-                submitDisabled={surveyUiLocked}
-                submitBtnClass="bg-emerald-600 hover:bg-emerald-500 disabled:bg-[#333] disabled:text-gray-500 text-white"
-                submitLabel="재투표 제출하기"
-                onSubmit={handleSubmit}
-              />
-              {error ? (
-                <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4 text-red-400 text-base text-center">
-                  {error}
-                </div>
-              ) : null}
-            </>
-          ) : (
-            <>
-              <p className="text-center text-xs text-gray-400">09:00 마감 전까지 확신도 수정 가능 (방향 유지)</p>
-              <SurveyGaugeSubmit
-                gaugeValue={gaugePosition}
-                onGaugeChange={(v) => {
-                  setGaugePosition(v);
-                  setKospiAnswer(v > 0);
-                }}
-                userTokens={userTokens}
-                submitting={submitting}
-                submitDisabled={surveyUiLocked}
-                lockDirection
-                submitBtnClass="bg-emerald-600 hover:bg-emerald-500 disabled:bg-[#333] disabled:text-gray-500 text-white"
-                submitLabel="확신도 저장"
-                onSubmit={handleSubmit}
-              />
-              {error ? (
-                <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4 text-red-400 text-base text-center">
-                  {error}
-                </div>
-              ) : null}
-            </>
-          )}
+          <SurveyCompletedPanel
+            headline="✓ 설문 완료"
+            subline="09:00 마감 · 확신도는 마감 전까지 바꿀 수 있어요"
+            gaugeValue={gaugePosition}
+            userTokens={userTokens}
+            editing={editingTodayConfidence}
+            onStartEdit={() => {
+              setEditingTodayConfidence(true);
+              setConfidenceSavedFlash(false);
+            }}
+            onCancelEdit={() => {
+              setEditingTodayConfidence(false);
+              const sd = today?.survey_date?.slice(0, 10);
+              if (token && sd) void checkMyResponse(token, sd);
+            }}
+            justSaved={confidenceSavedFlash}
+            pendingGrantRedo={pendingGrantToday === "redo_full"}
+            submitting={submitting}
+            submitDisabled={surveyUiLocked}
+            onSubmit={handleSubmit}
+            onGaugeChange={(v) => {
+              setGaugePosition(v);
+              setKospiAnswer(v > 0);
+            }}
+            error={error}
+            showTeamChatLink={!editingTodayConfidence}
+          />
           {showNextPreSurvey && nextSurvey?.survey_date && (
             <div className="mt-4 border-t border-[#2A2A2A] pt-5">
               <NextPreSurveyPanel
@@ -908,6 +1071,18 @@ function SurveyPageInner() {
                 submitDisabled={surveyUiLocked}
                 onSubmit={handleNextSubmit}
                 error={error}
+                editingConfidence={editingNextConfidence}
+                onStartEditConfidence={() => {
+                  setEditingNextConfidence(true);
+                  setNextConfidenceSavedFlash(false);
+                }}
+                onCancelEditConfidence={() => {
+                  setEditingNextConfidence(false);
+                  if (token && nextSurvey.survey_date) {
+                    void loadNextMyResponse(token, nextSurvey.survey_date);
+                  }
+                }}
+                confidenceJustSaved={nextConfidenceSavedFlash}
               />
             </div>
           )}
@@ -936,51 +1111,6 @@ function SurveyPageInner() {
               {error}
             </div>
           )}
-        </div>
-      )}
-
-      {status === "open" && !isWeekendKST && submitted && (
-        <div className="flex flex-col gap-4 mt-6 fade-up">
-          <p className="text-center text-emerald-400 font-bold">제출 완료</p>
-          {pendingGrantToday === "redo_full" ? (
-            <SurveyGaugeSubmit
-              gaugeValue={gaugePosition}
-              onGaugeChange={(v) => {
-                setGaugePosition(v);
-                setKospiAnswer(v > 0);
-              }}
-              userTokens={userTokens}
-              submitting={submitting}
-              submitDisabled={surveyUiLocked}
-              submitBtnClass="bg-emerald-600 hover:bg-emerald-500 disabled:bg-[#333] disabled:text-gray-500 text-white"
-              submitLabel="재투표 제출하기"
-              onSubmit={handleSubmit}
-            />
-          ) : (
-            <>
-              <p className="text-center text-xs text-gray-400">09:00 마감 전까지 확신도 수정 가능 (방향 유지)</p>
-              <SurveyGaugeSubmit
-                gaugeValue={gaugePosition}
-                onGaugeChange={(v) => {
-                  setGaugePosition(v);
-                  setKospiAnswer(v > 0);
-                }}
-                userTokens={userTokens}
-                submitting={submitting}
-                submitDisabled={surveyUiLocked}
-                lockDirection
-                submitBtnClass="bg-emerald-600 hover:bg-emerald-500 disabled:bg-[#333] disabled:text-gray-500 text-white"
-                submitLabel="확신도 저장"
-                onSubmit={handleSubmit}
-              />
-            </>
-          )}
-          <Link
-            href="/team-chat"
-            className="block rounded-2xl border border-violet-500/35 bg-violet-500/10 px-4 py-3.5 text-center text-sm font-bold text-violet-200 hover:bg-violet-500/15"
-          >
-            소통방 보기 →
-          </Link>
         </div>
       )}
 
@@ -1041,6 +1171,18 @@ function SurveyPageInner() {
                   submitDisabled={surveyUiLocked}
                   onSubmit={handleNextSubmit}
                   error={error}
+                  editingConfidence={editingNextConfidence}
+                  onStartEditConfidence={() => {
+                    setEditingNextConfidence(true);
+                    setNextConfidenceSavedFlash(false);
+                  }}
+                  onCancelEditConfidence={() => {
+                    setEditingNextConfidence(false);
+                    if (token && nextSurvey.survey_date) {
+                      void loadNextMyResponse(token, nextSurvey.survey_date);
+                    }
+                  }}
+                  confidenceJustSaved={nextConfidenceSavedFlash}
                 />
               </div>
             </div>
