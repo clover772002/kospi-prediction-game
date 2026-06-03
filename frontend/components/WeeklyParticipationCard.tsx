@@ -36,17 +36,17 @@ function ParticipationStamp({
   compact?: boolean;
 }) {
   const box = compact
-    ? "w-16 h-16 sm:w-[4.5rem] sm:h-[4.5rem]"
-    : "w-[4.75rem] h-[4.75rem] sm:w-24 sm:h-24";
+    ? "w-[3.25rem] h-[3.25rem] sm:w-14 sm:h-14"
+    : "w-[3.5rem] h-[3.5rem] sm:w-[4rem] sm:h-[4rem]";
   const labelClass = compact
-    ? "text-xs sm:text-sm font-bold text-gray-500"
-    : "text-sm sm:text-base font-bold text-gray-300";
+    ? "text-[11px] sm:text-xs font-bold text-gray-500"
+    : "text-xs sm:text-sm font-bold text-gray-300";
 
   return (
-    <div className="flex flex-col items-center gap-2 flex-1 min-w-0 max-w-[5.5rem] sm:max-w-[6rem]">
+    <div className="flex flex-col items-center gap-1.5 shrink-0 w-[3.5rem] sm:w-[4.25rem]">
       <span className={labelClass}>{day}회</span>
       <div
-        className={`relative ${box} rounded-xl flex items-center justify-center border-2 transition-colors ${
+        className={`relative ${box} rounded-lg flex items-center justify-center border-2 transition-colors ${
           earned
             ? "border-red-500/90 bg-red-950/55 shadow-[0_0_14px_rgba(239,68,68,0.28)]"
             : "border-[#444] border-dashed bg-[#222] opacity-85"
@@ -59,8 +59,8 @@ function ParticipationStamp({
       >
         <ChipAmount
           amount={chips}
-          xlarge={!compact}
-          large={compact}
+          large={!compact}
+          compact={compact}
           muted={!earned}
           className={earned ? "text-red-200" : ""}
         />
@@ -78,12 +78,12 @@ function ParticipationStamp({
 function StampRow({ days, compact }: { days: number; compact?: boolean }) {
   return (
     <div
-      className={`flex items-end justify-between gap-1.5 sm:gap-2 ${compact ? "px-0" : "px-0.5"}`}
+      className={`flex items-end justify-between gap-2 sm:gap-2.5 ${compact ? "px-0.5" : "px-1"}`}
       role="list"
       aria-label="주간 설문 참여 도장"
     >
       {WEEKLY_TIERS.map(({ day, chips }) => (
-        <div key={day} role="listitem" className="flex flex-1 justify-center min-w-0">
+        <div key={day} role="listitem" className="flex justify-center shrink-0">
           <ParticipationStamp day={day} chips={chips} earned={days >= day} compact={compact} />
         </div>
       ))}
