@@ -5,9 +5,15 @@ import {
   getCrowdGaugeBoxplots,
   type CrowdGaugeBoxplotDay,
   type HistoryItem,
-  type TodaySurvey,
 } from "@/lib/api";
 import { OUR_PREDICTION_LABEL } from "@/lib/product-copy";
+
+const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+
+type PublicMarketDay = {
+  date: string;
+  actual_up: unknown;
+};
 
 function coerceBool(v: unknown): boolean | null {
   if (typeof v === "boolean") return v;
@@ -25,29 +31,11 @@ function dateKey(d: string): string {
   return d.trim().slice(0, 10);
 }
 
-function sameSurveyDate(a: string | undefined, b: string | undefined): boolean {
-  if (!a || !b) return false;
-  return dateKey(a) === dateKey(b);
-}
-
 function formatColDate(iso: string): string {
   const k = dateKey(iso);
   const parts = k.split("-");
   if (parts.length >= 3) return `${parts[1]}.${parts[2]}`;
   return iso.slice(5).replace("-", ".");
-}
-
-function marketDirection(item: HistoryItem, today: TodaySurvey | null): boolean | null {
-  const mk = coerceBool(item.kospi_market_result);
-  if (mk !== null) return mk;
-  if (today?.survey_date && sameSurveyDate(item.date, today.survey_date)) {
-    const tr = coerceBool(today.kospi_result);
-    if (tr !== null) return tr;
-  }
-  if (typeof item.kospi_correct === "boolean") {
-    return item.kospi_correct ? item.kospi_answer : !item.kospi_answer;
-  }
-  return null;
 }
 
 type CellValue = "pending" | "tie" | boolean;
@@ -66,9 +54,9 @@ function crowdCellValue(day: CrowdGaugeBoxplotDay | undefined): CellValue {
   return nRise > nFall;
 }
 
-function marketCellValue(item: HistoryItem, today: TodaySurvey | null): CellValue {
-  const mk = marketDirection(item, today);
-  return mk === null ? "pending" : mk;
+function myCellValue(userItem: HistoryItem | undefined): CellValue {
+  if (!userItem) return "pending";
+  return userItem.kospi_answer;
 }
 
 function DirectionCell({
@@ -90,21 +78,36 @@ function DirectionCell({
 }
 
 type Props = {
-  history: HistoryItem[];
-  today: TodaySurvey | null;
+  /** 내가 응답한 날만 포함 — 열(거래일)과 무관하게 날짜로 매칭 */
+  userHistory: HistoryItem[];
 };
 
-export default function PredictionVsCrowdTable({ history, today }: Props) {
+export default function PredictionVsCrowdTable({ userHistory }: Props) {
+  const [marketDays, setMarketDays] = useState<PublicMarketDay[]>([]);
   const [crowdDays, setCrowdDays] = useState<CrowdGaugeBoxplotDay[]>([]);
 
   useEffect(() => {
     let cancelled = false;
     void (async () => {
       try {
-        const res = await getCrowdGaugeBoxplots(12);
-        if (!cancelled) setCrowdDays(res.days ?? []);
+        const [histRes, crowdRes] = await Promise.all([
+          fetch("/api/public/history", { cache: "no-store" }).then((r) => r.json()),
+          getCrowdGaugeBoxplots(12),
+        ]);
+        if (cancelled) return;
+        const rows = (histRes.history ?? [])
+          .filter(
+            (row: { date?: string }) =>
+              typeof row.date === "string" && DATE_RE.test(row.date),
+          )
+          .slice(0, 5) as PublicMarketDay[];
+        setMarketDays(rows);
+        setCrowdDays(crowdRes.days ?? []);
       } catch {
-        if (!cancelled) setCrowdDays([]);
+        if (!cancelled) {
+          setMarketDays([]);
+          setCrowdDays([]);
+        }
       }
     })();
     return () => {
@@ -112,9 +115,13 @@ export default function PredictionVsCrowdTable({ history, today }: Props) {
     };
   }, []);
 
-  const columns = useMemo(() => {
-    return [...history.slice(0, 5)].reverse();
-  }, [history]);
+  const columns = useMemo(() => [...marketDays].reverse(), [marketDays]);
+
+  const userByDate = useMemo(() => {
+    const m = new Map<string, HistoryItem>();
+    for (const h of userHistory) m.set(dateKey(h.date), h);
+    return m;
+  }, [userHistory]);
 
   const crowdByDate = useMemo(() => {
     const m = new Map<string, CrowdGaugeBoxplotDay>();
@@ -129,18 +136,21 @@ export default function PredictionVsCrowdTable({ history, today }: Props) {
 
   return (
     <div className="space-y-2">
-      <p className="text-sm font-bold text-white">내 예측 vs {OUR_PREDICTION_LABEL}</p>
+      <div>
+        <p className="text-sm font-bold text-white">내 예측 vs {OUR_PREDICTION_LABEL}</p>
+        <p className="text-xs text-white/50 mt-0.5">최근 코스피 실적이 나온 5거래일</p>
+      </div>
       <div className="rounded-xl border border-[#2A2A2A] bg-[#141414]/60 overflow-hidden">
         <table className="w-full border-collapse table-fixed">
           <thead>
             <tr className="border-b border-[#2A2A2A] bg-[#1A1A1A]/90">
               <th className="w-[4.5rem] py-2.5 pl-3 pr-1" />
-              {columns.map((item) => (
+              {columns.map((day) => (
                 <th
-                  key={item.date}
+                  key={day.date}
                   className={`${cellCls} py-2.5 text-xs sm:text-sm font-bold text-white tabular-nums`}
                 >
-                  {formatColDate(item.date)}
+                  {formatColDate(day.date)}
                 </th>
               ))}
             </tr>
@@ -148,40 +158,40 @@ export default function PredictionVsCrowdTable({ history, today }: Props) {
           <tbody>
             <tr className="border-b border-[#2A2A2A]/80">
               <td className={`${rowLabelCls} pl-3`}>코스피</td>
-              {columns.map((item) => (
-                <td key={`m-${item.date}`} className={cellCls}>
-                  <DirectionCell
-                    value={marketCellValue(item, today)}
-                    compareToMarket={null}
-                  />
-                </td>
-              ))}
+              {columns.map((day) => {
+                const mk = coerceBool(day.actual_up);
+                return (
+                  <td key={`m-${day.date}`} className={cellCls}>
+                    <DirectionCell
+                      value={mk === null ? "pending" : mk}
+                      compareToMarket={null}
+                    />
+                  </td>
+                );
+              })}
             </tr>
             <tr className="border-b border-[#2A2A2A]/80 bg-[#0f0f0f]/30">
               <td className={`${rowLabelCls} pl-3`}>내 예측</td>
-              {columns.map((item) => {
-                const mk = marketDirection(item, today);
+              {columns.map((day) => {
+                const dk = dateKey(day.date);
+                const mk = coerceBool(day.actual_up);
+                const mine = myCellValue(userByDate.get(dk));
                 return (
-                  <td key={`my-${item.date}`} className={cellCls}>
-                    <DirectionCell
-                      value={item.kospi_answer}
-                      compareToMarket={mk}
-                    />
+                  <td key={`my-${day.date}`} className={cellCls}>
+                    <DirectionCell value={mine} compareToMarket={mk} />
                   </td>
                 );
               })}
             </tr>
             <tr>
               <td className={`${rowLabelCls} pl-3`}>{OUR_PREDICTION_LABEL}</td>
-              {columns.map((item) => {
-                const mk = marketDirection(item, today);
-                const crowd = crowdCellValue(crowdByDate.get(dateKey(item.date)));
+              {columns.map((day) => {
+                const dk = dateKey(day.date);
+                const mk = coerceBool(day.actual_up);
+                const crowd = crowdCellValue(crowdByDate.get(dk));
                 return (
-                  <td key={`c-${item.date}`} className={cellCls}>
-                    <DirectionCell
-                      value={crowd}
-                      compareToMarket={mk}
-                    />
+                  <td key={`c-${day.date}`} className={cellCls}>
+                    <DirectionCell value={crowd} compareToMarket={mk} />
                   </td>
                 );
               })}
