@@ -963,7 +963,7 @@ export default function DashboardPage() {
                 </div>
               )}
 
-              <PredictionVsCrowdTable userHistory={dash.history} />
+              <PredictionVsCrowdTable userHistory={dash.history} today={today} />
             </div>
           ) : null}
         </div>
