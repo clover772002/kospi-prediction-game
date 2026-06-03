@@ -107,12 +107,17 @@ function HorizontalSignedBox({
   const toPct = variant === "rise" ? riseToPercent : fallToPercent;
   const cardPad = emphasize ? "px-2.5 py-2" : "px-2 py-1.5";
 
+  const filledShellCls = emphasize
+    ? "rounded-xl border-0 bg-[#181818]/70"
+    : `rounded-xl border ${palette.border} bg-[#141414]/90`;
+  const emptyShellCls = emphasize
+    ? "rounded-xl border border-dashed border-[#333]/60 bg-[#101010]/50"
+    : "rounded-xl border border-dashed border-[#333] bg-[#101010]/80";
+
   if (isEmpty) {
     return (
       <BoxplotCardWrap highlight={highlight}>
-        <div
-          className={`rounded-xl border border-dashed border-[#333] bg-[#101010]/80 ${cardPad} flex flex-col ${ring}`}
-        >
+        <div className={`${emptyShellCls} ${cardPad} flex flex-col ${ring}`}>
           <BoxplotColumnHeader variant={variant} count={respondentCount} emphasize={emphasize} />
           <p className="text-xs text-center text-white/70 leading-snug py-3 min-h-[3.5rem] flex items-center justify-center">
             해당 방향 응답 없음
@@ -139,7 +144,7 @@ function HorizontalSignedBox({
 
   return (
     <BoxplotCardWrap highlight={highlight}>
-      <div className={`rounded-xl border ${palette.border} bg-[#141414]/90 ${cardPad} flex flex-col h-full ${ring}`}>
+      <div className={`${filledShellCls} ${cardPad} flex flex-col h-full ${ring}`}>
         <BoxplotColumnHeader variant={variant} count={respondentCount} emphasize={emphasize} />
         <div className="relative w-full mt-1">
           <svg
@@ -256,7 +261,7 @@ function DirectionSharePie({
 
   return (
     <div
-      className="rounded-xl border border-[#333] bg-gradient-to-br from-[#151515] to-[#101010] px-3 py-2.5 mb-3 ring-1 ring-white/[0.04]"
+      className="rounded-xl bg-gradient-to-br from-[#151515]/90 to-[#101010]/90 px-3 py-2.5 mb-3"
       title={`예측 상승 ${r}% · 하락 ${f}%`}
     >
       <div className="flex items-center gap-3 sm:gap-4">
@@ -333,9 +338,11 @@ function DayCard({
       }`;
   return (
     <div
-      className={`rounded-xl border bg-[#141414]/80 ${
-        emphasize ? "border-amber-500/35 px-4 py-3.5 sm:py-4" : "border-[#2A2A2A] px-3 py-2.5"
-      }`}
+      className={
+        emphasize
+          ? "px-1 pb-1 pt-0"
+          : "rounded-xl border border-[#2A2A2A] bg-[#141414]/80 px-3 py-2.5"
+      }
     >
       {emphasize ? (
         <div className="flex justify-end mb-2">
@@ -425,7 +432,7 @@ export default function CrowdGaugeBoxplotsSection({
   }));
 
   const shellClass = isSurvey
-    ? `${surveyUi.card} fade-up-3`
+    ? "fade-up-3 space-y-3"
     : "bg-[#1A1A1A] rounded-2xl p-5 border border-[#2A2A2A] fade-up-3 space-y-4";
 
   return (
@@ -460,10 +467,7 @@ export default function CrowdGaugeBoxplotsSection({
       {isSurvey && !err && days !== null && liveEntries.length > 0 ? (
         <div className="space-y-4">
           {liveEntries.map(({ key, day }) => (
-            <div
-              key={key}
-              className="rounded-xl border-2 border-violet-500/30 bg-violet-950/20 px-1 py-1 sm:px-1.5"
-            >
+            <div key={key} className="rounded-xl bg-violet-950/10 px-2 py-2 sm:px-3">
               <div className="flex items-center gap-2 px-2 pt-2 pb-1">
                 <span className="relative flex h-2.5 w-2.5">
                   <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-amber-400/70 opacity-75" />
