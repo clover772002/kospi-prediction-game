@@ -200,7 +200,7 @@ export default function InsightAnimatedPreview({
       svgInner = (
         <>
           <SvgBackdrop theme={theme} />
-          <SvgTitle>고수층 7일 적중률</SvgTitle>
+          <SvgTitle>우리 적중률 7일</SvgTitle>
           <path
             d={dLine}
             fill="none"

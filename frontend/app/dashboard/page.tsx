@@ -18,6 +18,7 @@ import CrowdGaugeBoxplotsSection from "@/components/CrowdGaugeBoxplotsSection";
 import StaleRefreshIndicator from "@/components/StaleRefreshIndicator";
 import WeeklyParticipationCard from "@/components/WeeklyParticipationCard";
 import { ChipAmount } from "@/components/ChipAmount";
+import { OUR_ACCURACY_LABEL, OUR_PREDICTION_LABEL } from "@/lib/product-copy";
 import { clearAllTabSnapshots, peekAnsweredToday, peekDashboardSnapshot, saveAnsweredToday, saveDashboardSnapshot, saveGroupsSnapshot } from "@/lib/tab-session-cache";
 import {
   isNotificationConnected,
@@ -884,7 +885,7 @@ export default function DashboardPage() {
                 <div className="text-5xl">📝</div>
                 <p className="font-black text-xl text-white">오늘 설문을 해야 볼 수 있어요</p>
                 <p className="text-sm text-white leading-relaxed">
-                  오늘의 코스피 예측에 먼저 참여해야<br />집계 결과와 고수강화예측을 확인할 수 있어요.
+                  오늘의 코스피 예측에 먼저 참여해야<br />집계 결과와 {OUR_ACCURACY_LABEL}을 확인할 수 있어요.
                 </p>
                 <p className="text-sm text-white/90 leading-relaxed">
                   설문에 참여하지 않으셨나요?<br />
@@ -1014,9 +1015,9 @@ export default function DashboardPage() {
                 <span className="text-amber-200/95"> 실적</span>만 코스피 등락률이에요.
               </p>
               <div className="grid grid-cols-4 gap-1.5">
-                {/* 고수강화예측 */}
+                {/* 우리 적중률 (가중 집계) */}
                 <div className="bg-yellow-500/5 border border-yellow-500/20 rounded-xl py-3 px-1 flex flex-col items-center gap-0.5 text-center">
-                  <p className="text-sm text-yellow-400/80 leading-tight">고수강화예측</p>
+                  <p className="text-sm text-yellow-400/80 leading-tight">{OUR_ACCURACY_LABEL}</p>
                   {today.kospi_weighted_pct !== null ? (
                     <>
                       <p className={`text-sm font-black ${today.kospi_weighted_pct >= 50 ? "text-red-400" : "text-blue-400"}`}>
@@ -1132,14 +1133,14 @@ export default function DashboardPage() {
                 );
               })()}
 
-              {/* 📊 집단 예측 VS (상승 vs 하락) */}
+              {/* 📊 우리 예측 VS (상승 vs 하락) */}
               {today.kospi_yes_pct !== null && (() => {
                 const up = today.kospi_yes_pct;
                 const dn = Math.max(0, Math.min(100, 100 - up));
                 return (
                   <div className="mt-4 space-y-2">
                     <div className="text-center">
-                      <p className="text-base font-bold text-white tracking-wide">집단 예측</p>
+                      <p className="text-base font-bold text-white tracking-wide">{OUR_PREDICTION_LABEL}</p>
                       <p className="text-xs text-white/75 mt-0.5">참여자 중 상승·하락 선택 비율 (등락률 아님)</p>
                     </div>
                     <div className="flex items-stretch gap-2 min-h-[100px]">
@@ -1215,7 +1216,7 @@ export default function DashboardPage() {
                 {dash.accuracy.kospi != null && (
                   <p className="text-xl font-black text-green-400/70 pb-0.5">%</p>
                 )}
-                <p className="text-sm text-white pb-1 ml-1">적중률 · {dash.total_predictions}일 참여</p>
+                <p className="text-sm text-white pb-1 ml-1">내 적중률 · {dash.total_predictions}일 참여</p>
               </div>
 
               {dash.tokens != null && (

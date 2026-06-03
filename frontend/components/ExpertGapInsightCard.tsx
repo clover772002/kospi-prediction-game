@@ -9,6 +9,7 @@ import InsightTokenPriceButton from "@/components/InsightTokenPriceButton";
 import InsightUnlockShopHint from "@/components/InsightUnlockShopHint";
 import InsightDetailDisclosure from "@/components/InsightDetailDisclosure";
 import { insightMeta } from "@/lib/insight_card_meta";
+import { OUR_ACCURACY_COMPARE_LABEL, OUR_ACCURACY_LABEL } from "@/lib/product-copy";
 import { useInsightDashLayout } from "@/hooks/useInsightDashLayout";
 import {
   getExpertGapInsight,
@@ -27,7 +28,7 @@ interface Props {
   hideUnlockControl?: boolean;
 }
 
-/** 대시보드용: 해당 거래일 고수·다수결 차이 아이템 (칩 잠금) */
+/** 대시보드용: 해당 거래일 우리 적중률 비교 아이템 (칩 잠금) */
 export default function ExpertGapInsightCard({
   accessToken,
   surveyDate,
@@ -120,7 +121,7 @@ export default function ExpertGapInsightCard({
       <InsightUnavailableCard
         variant="violet"
         slug="daily_expert_gap"
-        title={data.title ?? "고수·다수결 차이"}
+        title={data.title ?? OUR_ACCURACY_COMPARE_LABEL}
         surveyDate={data.survey_date}
       >
         <p className="text-xs text-gray-400 leading-relaxed">
@@ -147,7 +148,7 @@ export default function ExpertGapInsightCard({
         headline={
           <>
             <p className={`${d.badge} font-black text-violet-300 uppercase tracking-wide`}>아이템</p>
-            <p className={`${d.titleClass} text-white mt-0.5`}>{data.title ?? "고수·다수결 차이"}</p>
+            <p className={`${d.titleClass} text-white mt-0.5`}>{data.title ?? OUR_ACCURACY_COMPARE_LABEL}</p>
             <p className={`${d.subDate} text-gray-600 mt-0.5`}>{data.survey_date}</p>
           </>
         }
@@ -178,7 +179,7 @@ export default function ExpertGapInsightCard({
           <>
             <p className="text-gray-500">
               {data.description ??
-                "누적 적중 반영 가중예측과 단순 다수결의 차이를 한 장으로 정리합니다. 개인별 응답은 포함하지 않습니다."}
+                `${OUR_ACCURACY_LABEL}과 참여 집계의 차이를 한 장으로 정리합니다. 개인별 응답은 포함하지 않습니다.`}
             </p>
             {hideUnlockControl ? <InsightUnlockShopHint /> : null}
           </>
@@ -197,8 +198,8 @@ export default function ExpertGapInsightCard({
             ))}
           </ul>
           <div className={`flex ${d.dash} tabular-nums text-gray-500 pt-1 border-t border-white/[0.06]`}>
-            <span>단순 {data.data?.simple_pct ?? "–"}%</span>
-            <span>가중 {data.data?.weighted_pct ?? "–"}%</span>
+            <span>참여 {data.data?.simple_pct ?? "–"}%</span>
+            <span>{OUR_ACCURACY_LABEL} {data.data?.weighted_pct ?? "–"}%</span>
             <span>차이 {data.data?.gap_points != null ? `${data.data.gap_points > 0 ? "+" : ""}${data.data.gap_points}` : "–"}pt</span>
           </div>
         </>

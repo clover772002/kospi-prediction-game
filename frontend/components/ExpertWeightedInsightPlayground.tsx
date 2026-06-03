@@ -1,5 +1,7 @@
 "use client";
 
+import { OUR_ACCURACY_LABEL } from "@/lib/product-copy";
+
 import { useEffect, useState } from "react";
 
 const PHASE_MS = 720;
@@ -31,7 +33,7 @@ const CROWD_FACES: {
   { x: "76%", y: "52%", d: 420, showFrom: 5, emoji: "👵", grad: "from-purple-500/90 to-purple-800/95", floatSec: 2.1 },
 ];
 
-/** 로그인 랜딩: 투표 집계 → 고수 가중·하수 축소 → 고수강화예측 지표 예시 */
+/** 로그인 랜딩: 투표 집계 → 가중·하수 축소 → 우리 적중률 지표 예시 */
 export default function ExpertWeightedInsightPlayground() {
   const [phase, setPhase] = useState(0);
 
@@ -54,8 +56,8 @@ export default function ExpertWeightedInsightPlayground() {
   const captions = [
     "참가자가 모일수록 예측이 강해져요",
     "맞춘 사람은 가중 ↑ · 틀린 사람은 가중 ↓",
-    "단순 다수결 vs 고수 가중 예측",
-    "새 지표 「고수강화예측」을 확인해 보세요",
+    "참여 집계 vs 우리 적중률",
+    `「${OUR_ACCURACY_LABEL}」 지표를 확인해 보세요`,
   ];
   const captionIdx = phase <= 1 ? 0 : phase === 2 ? 1 : phase === 3 ? 2 : 3;
 
@@ -151,7 +153,7 @@ export default function ExpertWeightedInsightPlayground() {
         {/* 단순 vs 가중 막대 */}
         <div className="space-y-2.5 rounded-2xl border border-violet-500/20 bg-[#0c0c0e]/90 px-3 py-3">
           <div className="flex items-center justify-between text-sm sm:text-base font-bold text-gray-500">
-            <span>단순 다수결</span>
+            <span>참여 집계</span>
             <span className="tabular-nums text-sky-300/90">{simplePct}%</span>
           </div>
           <div className="h-3 rounded-full bg-[#1a1a1a] overflow-hidden">
@@ -163,7 +165,7 @@ export default function ExpertWeightedInsightPlayground() {
 
           <div className="flex items-center justify-between text-sm sm:text-base font-bold pt-1">
             <span className={highlight ? "text-amber-200 login-weighted-label-glow" : "text-violet-200/90"}>
-              고수강화예측
+              {OUR_ACCURACY_LABEL}
             </span>
             <span className={`tabular-nums font-black transition-colors duration-500 ${highlight ? "text-amber-300" : "text-violet-300"}`}>
               {weightedPct}%

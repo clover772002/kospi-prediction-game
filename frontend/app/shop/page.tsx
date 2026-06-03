@@ -216,8 +216,8 @@ function ShopInner() {
             </p>
           ) : (
             <p className="text-[10px] text-gray-500 leading-relaxed">
-              <strong className="text-gray-400">고수보정, 일반통계</strong>는 이름만 두 가지로 보이지만{" "}
-              <strong className="text-gray-300">한 장의 카드(고수 가중 vs 다수결)</strong>예요. 잠금이 켜져 있으면 아래 「칩으로 잠금 해제」에서 해제한 뒤 같은 내용이{" "}
+              <strong className="text-gray-400">우리 적중률 · 비교</strong>는 참여 집계와 우리 적중률을 한 장에서 보지만{" "}
+              <strong className="text-gray-300">한 장의 카드(우리 적중률 · 비교)</strong>예요. 잠금이 켜져 있으면 아래 「칩으로 잠금 해제」에서 해제한 뒤 같은 내용이{" "}
               <Link href="/dashboard" className="text-violet-400 hover:text-violet-300 underline underline-offset-2">
                 대시보드
               </Link>

@@ -9,6 +9,7 @@ import ExpertMessageConceptPlayground from "@/components/ExpertMessageConceptPla
 import LoadingPurposeSplash from "@/components/LoadingPurposeSplash";
 import ExpertPickRevealPlayground from "@/components/ExpertPickRevealPlayground";
 import ExpertWeightedInsightPlayground from "@/components/ExpertWeightedInsightPlayground";
+import { OUR_ACCURACY_LABEL } from "@/lib/product-copy";
 
 function detectBrowser(): "kakao" | "inapp" | "normal" {
   if (typeof navigator === "undefined") return "normal";
@@ -154,7 +155,7 @@ export default function LoginPage() {
           </h2>
           <p className="text-lg sm:text-xl text-gray-400 font-medium leading-relaxed mb-6 sm:mb-8">
             많은 참가자가 모일수록 집계가 강해지고, 잘 맞춘 사람은 가중을 키우고 틀린 사람은 낮춰{" "}
-            <span className="text-violet-200/95 font-bold">고수강화예측</span> 지표로 확인해요.
+            <span className="text-violet-200/95 font-bold">{OUR_ACCURACY_LABEL}</span> 지표로 확인해요.
           </p>
           <ExpertWeightedInsightPlayground />
         </section>
@@ -225,15 +226,15 @@ export default function LoginPage() {
             },
             {
               q: "정확도가 낮으면 어떻게 되나요?",
-              a: "서비스 이용에는 아무 제한이 없어요. 다만 정확도가 낮으면 고수 강화예측에 반영되는 내 가중치가 낮아지고, 높으면 커뮤니티 예측에 내 의견이 더 많이 반영됩니다. 잘 못 맞춰도 계속 참여하는 것 자체가 의미 있어요.",
+              a: `서비스 이용에는 아무 제한이 없어요. 다만 정확도가 낮으면 ${OUR_ACCURACY_LABEL}에 반영되는 내 가중치가 낮아지고, 높으면 무리 예측에 내 의견이 더 많이 반영됩니다. 잘 못 맞춰도 계속 참여하는 것 자체가 의미 있어요.`,
             },
             {
               q: "이걸로 실제 투자 결정을 해도 되나요?",
-              a: "본 서비스는 투자 조언이 아닙니다. 집단 예측 데이터를 재미로 확인하는 서비스예요. 실제 투자 결정은 반드시 본인의 판단과 책임 하에 하세요.",
+              a: "본 서비스는 투자 조언이 아닙니다. 무리 예측 데이터를 재미로 확인하는 서비스예요. 실제 투자 결정은 반드시 본인의 판단과 책임 하에 하세요.",
             },
             {
-              q: "고수 강화예측은 언제부터 믿을 수 있나요?",
-              a: "참여자가 많고 누적 데이터가 쌓일수록 신뢰도가 올라갑니다. 잘 맞추는 사람의 의견은 더 크게, 항상 틀리는 사람의 의견은 반대 방향으로 반영되기 때문에 단순 다수결보다 정교해요.",
+              q: `${OUR_ACCURACY_LABEL}은 언제부터 믿을 수 있나요?`,
+              a: "참여자가 많고 누적 데이터가 쌓일수록 신뢰도가 올라갑니다. 잘 맞추는 사람의 의견은 더 크게, 항상 틀리는 사람의 의견은 반대 방향으로 반영되기 때문에 단순 참여 집계보다 정교해요.",
             },
             {
               q: "초고수랑 어떻게 소통하나요?",

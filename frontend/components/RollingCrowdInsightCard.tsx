@@ -9,6 +9,7 @@ import InsightTokenPriceButton from "@/components/InsightTokenPriceButton";
 import InsightUnlockShopHint from "@/components/InsightUnlockShopHint";
 import InsightDetailDisclosure from "@/components/InsightDetailDisclosure";
 import { insightMeta } from "@/lib/insight_card_meta";
+import { OUR_ACCURACY_7D_LABEL } from "@/lib/product-copy";
 import { useInsightDashLayout } from "@/hooks/useInsightDashLayout";
 import {
   getRollingCrowdInsight,
@@ -118,7 +119,7 @@ export default function RollingCrowdInsightCard({
       <InsightUnavailableCard
         variant="sky"
         slug="rolling_crowd_summary"
-        title={data.title ?? "고수의 7일간 적중률"}
+        title={data.title ?? OUR_ACCURACY_7D_LABEL}
         surveyDate={data.survey_date}
         surveyDatePrefix="종료 "
       >
@@ -143,7 +144,7 @@ export default function RollingCrowdInsightCard({
         headline={
           <>
             <p className={`${d.badge} font-black text-sky-300 uppercase tracking-wide`}>아이템</p>
-            <p className={`${d.titleClass} text-white mt-0.5`}>{data.title ?? "고수의 7일간 적중률"}</p>
+            <p className={`${d.titleClass} text-white mt-0.5`}>{data.title ?? OUR_ACCURACY_7D_LABEL}</p>
             <p className={`${d.subDate} text-gray-600 mt-0.5 tabular-nums`}>종료 {data.survey_date}</p>
           </>
         }
@@ -174,7 +175,7 @@ export default function RollingCrowdInsightCard({
           <>
             <p className="text-gray-500">
               {data.description ??
-                "종료 거래일 기준 최근 거래일 7일 동안 최고 고수가 참여한 날의 코스피 적중 여부(0%·100%)입니다."}
+                "종료 거래일 기준 최근 거래일 7일 동안 우리 적중률 추이(일별 0%·100%)입니다."}
             </p>
             {hideUnlockControl ? <InsightUnlockShopHint /> : null}
           </>

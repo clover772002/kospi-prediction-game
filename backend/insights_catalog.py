@@ -5,9 +5,9 @@
 
 INSIGHT_PRODUCTS = {
     "daily_expert_gap": {
-        "title": "고수보정, 일반통계",
+        "title": "우리 적중률 · 비교",
         "price_tokens": 120,
-        "description": "한 장의 카드에서 누적 적중을 반영한 가중예측(고수보정)과 단순 다수결(일반통계)을 함께 봅니다. 해당 거래일에 설문 응답이 있어야 열립니다.",
+        "description": "한 장의 카드에서 우리 적중률(누적 적중 반영)과 참여 집계를 함께 봅니다. 해당 거래일에 설문 응답이 있어야 열립니다.",
     },
     "crowd_conviction_spread": {
         "title": "확신도 분포",
@@ -15,9 +15,9 @@ INSIGHT_PRODUCTS = {
         "description": "그날 코스피 상승을 선택한 무리와 하락을 선택한 무리로 나누어, 각각의 게이지(확신도) 분포를 요약합니다. 개별 응답은 포함하지 않습니다.",
     },
     "rolling_crowd_summary": {
-        "title": "고수의 7일간 적중률",
+        "title": "우리 적중률 · 7거래일",
         "price_tokens": 140,
-        "description": "선택한 날을 끝으로 최근 거래일 7일 구간에서, 칩 1위 고수가 그날 설문에 참여한 날의 적중 여부(0%·100%)를 봅니다.",
+        "description": "선택한 날을 끝으로 최근 거래일 7일 구간에서, 우리 적중률이 맞았는지(0%·100%)를 거래일별로 봅니다.",
     },
     "time_slice_accuracy": {
         "title": "최고 고수 최근 7일 응답 시간",

@@ -10,13 +10,13 @@ const PREVIEW_ROWS: {
 }[] = [
   {
     slug: "daily_expert_gap",
-    title: "고수·다수결 차이",
+    title: "우리 적중률 · 비교",
     cardClass: "border-violet-500/30 bg-gradient-to-b from-violet-950/25 to-[#141414]/90",
     badgeClass: "text-violet-300",
   },
   {
     slug: "rolling_crowd_summary",
-    title: "고수의 7일간 적중률",
+    title: "우리 적중률 · 7거래일",
     cardClass: "border-sky-500/30 bg-gradient-to-b from-sky-950/20 to-[#141414]/90",
     badgeClass: "text-sky-300",
   },

@@ -704,9 +704,9 @@ def _build_daily_expert_gap_payload(supabase: Client, survey_date_str: str) -> d
 
     bullets = [
         f"표본 크기는 {total}명의 응답 기준입니다.",
-        f"단순 다수결은 「{direction_simple}」 쪽 {simple_pct}% 형태입니다.",
-        f"누적 적중 반영 가중예측은 「{direction_weighted}」 쪽 지지 형태 {(w)}% 근처로 정렬됩니다.",
-        f"(가중예측 − 단순) 괴리는 {gap:+d} 포인트입니다.",
+        f"참여 집계는 「{direction_simple}」 쪽 {simple_pct}% 형태입니다.",
+        f"우리 적중률은 「{direction_weighted}」 쪽 지지 형태 {(w)}% 근처로 정렬됩니다.",
+        f"(우리 적중률 − 참여 집계) 괴리는 {gap:+d} 포인트입니다.",
         "표본이 작거나 정확도 기록이 짧으면 두 축은 자연히 가까워질 수 있습니다.",
         "본 리포트는 투자·매매 의사결정이 아닙니다.",
     ]
@@ -980,7 +980,7 @@ def _build_rolling_crowd_summary_payload(supabase: Client, end_date_str: str) ->
         f"종료 거래일 {end_date_str} 기준, 직전 포함 {_ROLLING_CROWD_WINDOW_TRADING_DAYS}거래일({first_s} ~ {last_s})입니다.",
         "각 날짜는 칩 1위(고수)가 그날 설문에 참여했을 때만, 코스피 결과가 확정된 날의 적중 여부(0%·100%)를 셉니다.",
         "최고 고수가 그날 미참여이거나 아직 결과가 없는 날은 수치를 숨깁니다.",
-        f"적중률을 채운 칸은 {ok_cells}개입니다.",
+        f"우리 적중률을 채운 칸은 {ok_cells}개입니다.",
         "투자·매매 의사결정이 아니며 수익을 보장하지 않습니다.",
     ]
 
