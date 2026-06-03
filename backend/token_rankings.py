@@ -405,6 +405,31 @@ def _full_accuracy_ranked(
     return _assign_ranks(candidates)
 
 
+def _my_accuracy_entry_with_placeholder(
+    supabase: Client,
+    user_id: str,
+    stats: dict[str, dict[str, int]],
+) -> dict[str, Any] | None:
+    """상위 N 밖·이번 주/누적 집계 0일이어도 내 순위 행 반환(칩 순위와 동일 UX)."""
+    uids = list({*stats.keys(), user_id})
+    name_map = _fetch_name_map(supabase, uids)
+    masked = name_map.get(user_id)
+    if not masked:
+        return None
+    full = _full_accuracy_ranked(stats, name_map)
+    found = _my_entry_from_ranked(full, user_id)
+    if found:
+        return found
+    return {
+        "user_id": user_id,
+        "masked_name": masked,
+        "score": 0,
+        "correct": 0,
+        "total": 0,
+        "rank": len(full) + 1,
+    }
+
+
 def find_my_cumulative_accuracy_entry(
     supabase: Client,
     user_id: str,
@@ -414,11 +439,7 @@ def find_my_cumulative_accuracy_entry(
     except Exception as e:
         logger.warning("내 누적 적중률 순위 실패: %s", e)
         return None
-    if user_id not in user_scores:
-        return None
-    name_map = _fetch_name_map(supabase, list(user_scores.keys()))
-    full = _full_accuracy_ranked(user_scores, name_map)
-    return _my_entry_from_ranked(full, user_id)
+    return _my_accuracy_entry_with_placeholder(supabase, user_id, user_scores)
 
 
 def find_my_weekly_accuracy_entry(
@@ -450,11 +471,7 @@ def find_my_weekly_accuracy_entry(
         stats[uid]["total"] += 1
         if kc:
             stats[uid]["correct"] += 1
-    if user_id not in stats:
-        return None
-    name_map = _fetch_name_map(supabase, list(stats.keys()))
-    full = _full_accuracy_ranked(dict(stats), name_map)
-    return _my_entry_from_ranked(full, user_id)
+    return _my_accuracy_entry_with_placeholder(supabase, user_id, dict(stats))
 
 
 def build_hall_of_fame_payload(

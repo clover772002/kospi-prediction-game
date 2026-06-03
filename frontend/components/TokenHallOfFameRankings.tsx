@@ -144,8 +144,20 @@ function RankingList({
       ) : null}
 
       {meId && myEntry ? (
-        <div className="rounded-xl border border-amber-500/25 bg-amber-950/20 px-3.5 py-3 sm:px-4 sm:py-3.5">
-          <p className="text-sm sm:text-base font-black text-amber-200/95 mb-2.5">내 순위</p>
+        <div
+          className={`rounded-xl border px-3.5 py-3 sm:px-4 sm:py-3.5 ${
+            variant === "accuracy"
+              ? "border-emerald-500/25 bg-emerald-950/20"
+              : "border-amber-500/25 bg-amber-950/20"
+          }`}
+        >
+          <p
+            className={`text-sm sm:text-base font-black mb-2.5 ${
+              variant === "accuracy" ? "text-emerald-200/95" : "text-amber-200/95"
+            }`}
+          >
+            내 순위
+          </p>
           <RankingRow
             entry={myEntry}
             variant={variant}
