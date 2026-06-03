@@ -50,40 +50,43 @@ function marketDirection(item: HistoryItem, today: TodaySurvey | null): boolean 
   return null;
 }
 
-function crowdMajorityDirection(day: CrowdGaugeBoxplotDay | undefined): boolean | null {
-  if (!day) return null;
+type CellValue = "pending" | "tie" | boolean;
+
+function crowdCellValue(day: CrowdGaugeBoxplotDay | undefined): CellValue {
+  if (!day) return "pending";
   const nRise = day.respondents_rise ?? day.rise?.n ?? 0;
   const nFall = day.respondents_fall ?? day.fall?.n ?? 0;
   const total = nRise + nFall;
-  if (total === 0) return null;
-  if (nRise === nFall) return null;
+  if (total === 0) return "pending";
+  if (nRise === nFall) return "tie";
   if (typeof day.pct_rise === "number" && Number.isFinite(day.pct_rise)) {
-    if (day.pct_rise === 50) return null;
+    if (day.pct_rise === 50) return "tie";
     return day.pct_rise > 50;
   }
   return nRise > nFall;
 }
 
-function DirectionArrow({
-  up,
+function marketCellValue(item: HistoryItem, today: TodaySurvey | null): CellValue {
+  const mk = marketDirection(item, today);
+  return mk === null ? "pending" : mk;
+}
+
+function DirectionCell({
+  value,
   compareToMarket,
 }: {
-  up: boolean | null;
-  /** 코스피 행: null → 항상 색. 예측 행: 시장과 다르면 회색 */
+  value: CellValue;
   compareToMarket: boolean | null;
 }) {
-  if (up === null) {
-    return <span className="text-white/35 text-lg font-bold">—</span>;
+  if (value === "pending") return null;
+  if (value === "tie") {
+    return <span className="text-white/45 text-lg font-bold">—</span>;
   }
+  const up = value;
   const sym = up ? "▲" : "▼";
-  const matches =
-    compareToMarket === null ? true : compareToMarket === up;
+  const matches = compareToMarket === null ? true : compareToMarket === up;
   const cls = matches ? (up ? "text-red-400" : "text-blue-400") : "text-gray-500";
-  return (
-    <span className={`text-2xl font-black leading-none ${cls}`} aria-label={up ? "상승" : "하락"}>
-      {sym}
-    </span>
-  );
+  return <span className={`text-2xl font-black leading-none ${cls}`}>{sym}</span>;
 }
 
 type Props = {
@@ -145,25 +148,24 @@ export default function PredictionVsCrowdTable({ history, today }: Props) {
           <tbody>
             <tr className="border-b border-[#2A2A2A]/80">
               <td className={`${rowLabelCls} pl-3`}>코스피</td>
-              {columns.map((item) => {
-                const mk = marketDirection(item, today);
-                return (
-                  <td key={`m-${item.date}`} className={cellCls}>
-                    <DirectionArrow up={mk} compareToMarket={null} />
-                  </td>
-                );
-              })}
+              {columns.map((item) => (
+                <td key={`m-${item.date}`} className={cellCls}>
+                  <DirectionCell
+                    value={marketCellValue(item, today)}
+                    compareToMarket={null}
+                  />
+                </td>
+              ))}
             </tr>
             <tr className="border-b border-[#2A2A2A]/80 bg-[#0f0f0f]/30">
               <td className={`${rowLabelCls} pl-3`}>내 예측</td>
               {columns.map((item) => {
                 const mk = marketDirection(item, today);
-                const mine = item.kospi_answer;
                 return (
                   <td key={`my-${item.date}`} className={cellCls}>
-                    <DirectionArrow
-                      up={mine}
-                      compareToMarket={mk === null ? null : mk}
+                    <DirectionCell
+                      value={item.kospi_answer}
+                      compareToMarket={mk}
                     />
                   </td>
                 );
@@ -173,12 +175,12 @@ export default function PredictionVsCrowdTable({ history, today }: Props) {
               <td className={`${rowLabelCls} pl-3`}>{OUR_PREDICTION_LABEL}</td>
               {columns.map((item) => {
                 const mk = marketDirection(item, today);
-                const crowd = crowdMajorityDirection(crowdByDate.get(dateKey(item.date)));
+                const crowd = crowdCellValue(crowdByDate.get(dateKey(item.date)));
                 return (
                   <td key={`c-${item.date}`} className={cellCls}>
-                    <DirectionArrow
-                      up={crowd}
-                      compareToMarket={mk === null ? null : mk}
+                    <DirectionCell
+                      value={crowd}
+                      compareToMarket={mk}
                     />
                   </td>
                 );
@@ -187,9 +189,7 @@ export default function PredictionVsCrowdTable({ history, today }: Props) {
           </tbody>
         </table>
       </div>
-      <p className="text-xs text-white/55 leading-snug">
-        ▲ 상승 · ▼ 하락 · — 동률(우리 예측) 또는 결과 미정(코스피) · 코스피와 같으면 색, 다르면 회색
-      </p>
+      <p className="text-xs text-white/50">동률 —</p>
     </div>
   );
 }
