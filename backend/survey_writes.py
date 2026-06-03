@@ -58,6 +58,13 @@ def has_pending_grant(supabase: Client, user_id: str, survey_date: str) -> bool:
     return fetch_pending_grant(supabase, user_id, survey_date) is not None
 
 
+def _row_gauge(row: dict[str, Any]) -> int:
+    gp = row.get("gauge_position")
+    if gp is None:
+        return 50 if row.get("kospi_answer") else -50
+    return int(gp)
+
+
 def _bet_and_payload(
     supabase: Client, user_id: str, survey_date: str, gauge_position: int
 ) -> dict[str, Any]:
@@ -84,7 +91,7 @@ def persist_survey_answer(
     *,
     survey_closed: bool,
 ) -> dict[str, Any]:
-    """첫 응답은 INSERT; 이미 있으면 redo_full grant 필수."""
+    """첫 응답은 INSERT. 이후 같은 방향 확신도 변경은 마감·정산 전 무료. 방향 변경은 redo_full grant."""
     if survey_closed:
         raise ValueError("설문이 마감됐습니다.")
 
@@ -94,7 +101,7 @@ def persist_survey_answer(
 
     existing = (
         supabase.table("survey_responses")
-        .select("user_id")
+        .select("user_id, gauge_position, kospi_answer, tokens_won")
         .eq("user_id", user_id)
         .eq("survey_date", target_date)
         .limit(1)
@@ -102,16 +109,28 @@ def persist_survey_answer(
     )
 
     if existing.data:
-        grant = fetch_pending_grant(supabase, user_id, target_date)
-        if not grant or grant["grant_kind"] != "redo_full":
-            raise SurveySubmissionLocked(
-                "이 거래일에는 이미 응답했습니다. 오늘의 설문(당일 픽)이라면 상점 「재투표 1회」「게이지만 조정」「방향만 반전」 중 "
-                "구매한 권한으로 다시 제출·수정할 수 있습니다(모두 날짜 지정 없이 당일 설문 한정)."
-            )
-        supabase.table("survey_responses").update(payload).eq("user_id", user_id).eq(
-            "survey_date", target_date
-        ).execute()
-        consume_grant_by_id(supabase, grant["id"])
+        row = existing.data[0]
+        if row.get("tokens_won") is not None:
+            raise SurveySubmissionLocked("이미 결과가 정산된 거래일은 확신도를 수정할 수 없습니다.")
+
+        old_gp = _row_gauge(row)
+        same_direction = (old_gp < 0) == (gauge_position < 0)
+
+        if same_direction:
+            supabase.table("survey_responses").update(payload).eq("user_id", user_id).eq(
+                "survey_date", target_date
+            ).execute()
+        else:
+            grant = fetch_pending_grant(supabase, user_id, target_date)
+            if not grant or grant["grant_kind"] != "redo_full":
+                raise SurveySubmissionLocked(
+                    "상승/하락 방향을 바꾸려면 상점 「재투표 1회」 또는 「방향만 반전」 권한이 필요해요. "
+                    "확신도만 바꿀 때는 같은 방향에서 게이지를 조정한 뒤 「확신도 저장」을 눌러 주세요."
+                )
+            supabase.table("survey_responses").update(payload).eq("user_id", user_id).eq(
+                "survey_date", target_date
+            ).execute()
+            consume_grant_by_id(supabase, grant["id"])
     else:
         supabase.table("survey_responses").insert(payload).execute()
         cancel_active_presubmit_for_date(supabase, user_id, target_date)
@@ -134,7 +153,7 @@ def apply_gauge_adjust_once(
 
     res = (
         supabase.table("survey_responses")
-        .select("gauge_position, kospi_answer")
+        .select("gauge_position, kospi_answer, tokens_won")
         .eq("user_id", user_id)
         .eq("survey_date", survey_date)
         .limit(1)
@@ -144,21 +163,21 @@ def apply_gauge_adjust_once(
         raise ValueError("먼저 설문에 응답해 주세요.")
 
     row = res.data[0]
-    old_gp = row.get("gauge_position")
-    if old_gp is None:
-        old_gp = 50 if row["kospi_answer"] else -50
-    old_gp = int(old_gp)
+    if row.get("tokens_won") is not None:
+        raise ValueError("이미 결과가 정산된 거래일은 확신도를 수정할 수 없습니다.")
+
+    old_gp = _row_gauge(row)
 
     if (old_gp < 0) != (new_gauge < 0):
         raise ValueError("방향이 같은 경우에만 게이지만 조정할 수 있습니다.")
 
-    grant = fetch_pending_grant(supabase, user_id, survey_date)
-    if not grant or grant["grant_kind"] != "gauge_only":
-        raise ValueError('「게이지만 1회 조정」권한이 필요합니다. 상점에서 구매 후 다시 시도해 주세요.')
-
     payload = _bet_and_payload(supabase, user_id, survey_date, new_gauge)
     supabase.table("survey_responses").update(payload).eq("user_id", user_id).eq("survey_date", survey_date).execute()
-    consume_grant_by_id(supabase, grant["id"])
+
+    grant = fetch_pending_grant(supabase, user_id, survey_date)
+    if grant and grant["grant_kind"] == "gauge_only":
+        consume_grant_by_id(supabase, grant["id"])
+
     return {"tokens_bet": payload["tokens_bet"], "current_tokens": payload["tokens_before"], "survey_date": survey_date}
 
 

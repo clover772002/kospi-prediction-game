@@ -161,10 +161,26 @@ function NextPreSurveyPanel({
     return (
       <>
         <PreSurveyTargetBanner surveyDate={surveyDate} />
-        <p className="text-center text-base text-emerald-400 font-bold mb-2">
+        <p className="text-center text-base text-emerald-400 font-bold mb-1">
           {target.dateIso} 거래일 사전 예측 제출 완료
         </p>
-        <GaugeBar value={gaugeValue} onChange={() => {}} tokens={userTokens} disabled beginnerTips />
+        <p className="text-center text-xs text-gray-400 mb-2">09:00 마감 전까지 확신도 수정 가능 (방향 유지)</p>
+        <SurveyGaugeSubmit
+          gaugeValue={gaugeValue}
+          onGaugeChange={onGaugeChange}
+          userTokens={userTokens}
+          submitting={submitting}
+          submitDisabled={submitDisabled}
+          lockDirection
+          submitBtnClass="bg-amber-500 hover:bg-amber-400 disabled:bg-[#333] disabled:text-gray-500 text-white"
+          submitLabel="확신도 저장"
+          onSubmit={onSubmit}
+        />
+        {error ? (
+          <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4 text-red-400 text-base text-center mt-2">
+            {error}
+          </div>
+        ) : null}
       </>
     );
   }
@@ -203,6 +219,7 @@ function SurveyGaugeSubmit({
   submitBtnClass,
   submitLabel,
   onSubmit,
+  lockDirection = false,
 }: {
   gaugeValue: number;
   onGaugeChange: (v: number) => void;
@@ -212,6 +229,7 @@ function SurveyGaugeSubmit({
   submitBtnClass: string;
   submitLabel: string;
   onSubmit: () => void | Promise<void>;
+  lockDirection?: boolean;
 }) {
   const locked = submitting || submitDisabled;
   return (
@@ -221,6 +239,7 @@ function SurveyGaugeSubmit({
         onChange={onGaugeChange}
         tokens={userTokens}
         disabled={locked}
+        lockDirection={lockDirection}
         beginnerTips
       />
       <button
@@ -553,6 +572,7 @@ function SurveyPageInner() {
 
   const handleSubmit = async () => {
     if (!token || kospiAnswer === null) return;
+    const wasAlreadyAnswered = alreadyAnswered;
     setSubmitting(true);
     setError(null);
     try {
@@ -587,9 +607,9 @@ function SurveyPageInner() {
           markWasTopExpert(uid);
         }
       }
-      setSubmitted(true);
       setAlreadyAnswered(true);
       setPreviousAnswer(kospiAnswer);
+      if (!wasAlreadyAnswered) setSubmitted(true);
       const sd = today?.survey_date?.slice(0, 10);
       if (sd) {
         saveAnsweredToday(sd, true);
@@ -613,6 +633,7 @@ function SurveyPageInner() {
 
   const handleNextSubmit = async () => {
     if (!token || nextKospiAnswer === null || !nextSurvey) return;
+    const wasNextAnswered = nextAlreadyAnswered;
     setNextSubmitting(true);
     setError(null);
     try {
@@ -637,13 +658,13 @@ function SurveyPageInner() {
           markWasTopExpert(uid);
         }
       }
-      setNextSubmitted(true);
       setNextAlreadyAnswered(true);
       setNextPreviousAnswer(nextKospiAnswer);
+      if (!wasNextAnswered) setNextSubmitted(true);
       if (nextSurvey.survey_date) {
         invalidateMySurveyResponseCache();
-        const data = await getMySurveyResponseCached(token, nextSurvey.survey_date);
-        applyNextResponse(data);
+        const nextData = await getMySurveyResponseCached(token, nextSurvey.survey_date);
+        applyNextResponse(nextData);
       }
       invalidatePendingGrantCache();
       void refreshPendingGrants();
@@ -846,13 +867,28 @@ function SurveyPageInner() {
               ) : null}
             </>
           ) : (
-            <GaugeBar
-              value={gaugePosition}
-              onChange={() => {}}
-              tokens={userTokens}
-              disabled
-              beginnerTips
-            />
+            <>
+              <p className="text-center text-xs text-gray-400">09:00 마감 전까지 확신도 수정 가능 (방향 유지)</p>
+              <SurveyGaugeSubmit
+                gaugeValue={gaugePosition}
+                onGaugeChange={(v) => {
+                  setGaugePosition(v);
+                  setKospiAnswer(v > 0);
+                }}
+                userTokens={userTokens}
+                submitting={submitting}
+                submitDisabled={surveyUiLocked}
+                lockDirection
+                submitBtnClass="bg-emerald-600 hover:bg-emerald-500 disabled:bg-[#333] disabled:text-gray-500 text-white"
+                submitLabel="확신도 저장"
+                onSubmit={handleSubmit}
+              />
+              {error ? (
+                <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4 text-red-400 text-base text-center">
+                  {error}
+                </div>
+              ) : null}
+            </>
           )}
           {showNextPreSurvey && nextSurvey?.survey_date && (
             <div className="mt-4 border-t border-[#2A2A2A] pt-5">
@@ -921,13 +957,23 @@ function SurveyPageInner() {
               onSubmit={handleSubmit}
             />
           ) : (
-            <GaugeBar
-              value={gaugePosition}
-              onChange={() => {}}
-              tokens={userTokens}
-              disabled
-              beginnerTips
-            />
+            <>
+              <p className="text-center text-xs text-gray-400">09:00 마감 전까지 확신도 수정 가능 (방향 유지)</p>
+              <SurveyGaugeSubmit
+                gaugeValue={gaugePosition}
+                onGaugeChange={(v) => {
+                  setGaugePosition(v);
+                  setKospiAnswer(v > 0);
+                }}
+                userTokens={userTokens}
+                submitting={submitting}
+                submitDisabled={surveyUiLocked}
+                lockDirection
+                submitBtnClass="bg-emerald-600 hover:bg-emerald-500 disabled:bg-[#333] disabled:text-gray-500 text-white"
+                submitLabel="확신도 저장"
+                onSubmit={handleSubmit}
+              />
+            </>
           )}
           <Link
             href="/team-chat"

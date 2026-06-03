@@ -7,6 +7,8 @@ interface GaugeBarProps {
   onChange: (v: number) => void;
   tokens: number; // 현재 보유 토큰
   disabled?: boolean;
+  /** true면 상승/하락 방향 유지(확신도만 조정) */
+  lockDirection?: boolean;
   /** false면 안내 숨김 · 생략 시 조작/읽기 전용 각각 맞는 짧은 안내 표시 */
   beginnerTips?: boolean;
 }
@@ -50,11 +52,24 @@ function valueFromTrackFraction(f: number): number {
   return v;
 }
 
+function clampGaugeToDirection(v: number, anchor: number): number {
+  if (anchor > 0) {
+    if (v <= 0) return Math.max(1, Math.abs(v) || 1);
+    return v;
+  }
+  if (anchor < 0) {
+    if (v >= 0) return -Math.max(1, Math.abs(v) || 1);
+    return v;
+  }
+  return v;
+}
+
 export default function GaugeBar({
   value,
   onChange,
   tokens,
   disabled = false,
+  lockDirection = false,
   beginnerTips,
 }: GaugeBarProps) {
   const tipsEnabled = beginnerTips !== false;
@@ -76,10 +91,11 @@ export default function GaugeBar({
       const w = rect.width;
       if (w <= 0) return;
       const f = (clientX - rect.left) / w;
-      const next = valueFromTrackFraction(f);
+      let next = valueFromTrackFraction(f);
+      if (lockDirection) next = clampGaugeToDirection(next, value);
       onChange(next);
     },
-    [disabled, onChange],
+    [disabled, lockDirection, onChange, value],
   );
 
   const onPointerDown = useCallback(
