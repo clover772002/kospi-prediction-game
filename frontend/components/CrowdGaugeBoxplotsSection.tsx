@@ -136,33 +136,35 @@ function HorizontalSignedBox({
       <div className={`rounded-xl border ${palette.border} bg-[#141414]/90 ${cardPad} flex flex-col h-full ${ring}`}>
         <BoxplotColumnHeader variant={variant} count={respondentCount} emphasize={emphasize} />
         <div className="relative h-10 w-full flex-1 min-h-[40px] mt-1">
-          <div className="absolute bottom-0.5 left-0 right-0 h-px bg-gray-700/90" />
-          <div
-            className={`absolute bottom-2 h-2.5 w-px ${palette.whisker}`}
-            style={{ left: `${pMin}%`, transform: "translateX(-50%)" }}
-          />
-          <div
-            className={`absolute bottom-2 h-2.5 w-px ${palette.whisker}`}
-            style={{ left: `${pMax}%`, transform: "translateX(-50%)" }}
-          />
-          <div
-            className={`absolute bottom-2.5 h-0.5 ${palette.whisker} rounded-full opacity-80`}
-            style={{
-              left: `${Math.min(pMin, pMax)}%`,
-              width: `${Math.abs(pMax - pMin)}%`,
-            }}
-          />
-          <div
-            className={`absolute bottom-2.5 h-6 rounded-md border ${palette.box}`}
-            style={{
-              left: `${boxLeft}%`,
-              width: `${boxW}%`,
-            }}
-          />
-          <div
-            className={`absolute bottom-2 w-0.5 h-7 ${palette.med} z-[1]`}
-            style={{ left: `${pMed}%`, transform: "translateX(-50%)" }}
-          />
+          <div className="absolute inset-x-0 bottom-0 h-px bg-gray-700/90" />
+          <div className="absolute inset-x-0 top-0 bottom-2">
+            <div
+              className={`absolute top-1/2 left-0 h-2.5 w-px -translate-x-1/2 -translate-y-1/2 ${palette.whisker}`}
+              style={{ left: `${pMin}%` }}
+            />
+            <div
+              className={`absolute top-1/2 left-0 h-2.5 w-px -translate-x-1/2 -translate-y-1/2 ${palette.whisker}`}
+              style={{ left: `${pMax}%` }}
+            />
+            <div
+              className={`absolute top-1/2 h-0.5 -translate-y-1/2 ${palette.whisker} rounded-full opacity-80`}
+              style={{
+                left: `${Math.min(pMin, pMax)}%`,
+                width: `${Math.abs(pMax - pMin)}%`,
+              }}
+            />
+            <div
+              className={`absolute top-1/2 h-5 -translate-y-1/2 rounded-md border ${palette.box}`}
+              style={{
+                left: `${boxLeft}%`,
+                width: `${boxW}%`,
+              }}
+            />
+            <div
+              className={`absolute top-1/2 left-0 z-[1] h-5 w-0.5 -translate-x-1/2 -translate-y-1/2 ${palette.med}`}
+              style={{ left: `${pMed}%` }}
+            />
+          </div>
         </div>
         {variant === "fall" ? (
           <div className="flex justify-between text-[10px] sm:text-xs text-white/80 tabular-nums mt-1 px-0.5">
