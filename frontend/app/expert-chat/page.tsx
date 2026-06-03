@@ -341,7 +341,7 @@ export default function ExpertChatPage() {
         </div>
 
         <h1 className="mb-1 text-2xl font-black text-white">명예의 전당</h1>
-        <p className="mb-4 text-center text-xs text-gray-500">칩·적중률 순위 · 초고수 소통</p>
+        <p className="mb-4 text-center text-sm sm:text-base text-gray-500">칩·적중률 순위 · 초고수 소통</p>
 
         <TokenHallOfFameRankings accessToken={token} meId={me?.id ?? null} />
 
@@ -357,8 +357,8 @@ export default function ExpertChatPage() {
         ) : null}
 
         <h2 className="mb-2 text-lg font-black text-violet-200/95">초고수 소통</h2>
-        <p className="mb-4 text-xs text-gray-500 flex flex-wrap items-center gap-1">
-          <ChipAmount amount={eligibility?.min_balance_for_tab ?? 210} compact className="text-amber-200/90" />
+        <p className="mb-4 text-sm sm:text-base text-gray-400 flex flex-wrap items-center gap-1.5 leading-relaxed">
+          <ChipAmount amount={eligibility?.min_balance_for_tab ?? 210} large className="text-amber-200/95" />
           <span>이상이면 질문·답장 이용 · 순위는 누구나 볼 수 있어요</span>
         </p>
 
@@ -377,7 +377,7 @@ export default function ExpertChatPage() {
             {eligibility && !eligibility.is_global_top_expert ? (
               <p className="mb-4 text-sm leading-relaxed text-white/90">
                 오늘 설문에 참여한 <strong className="text-white">🪙 1위 초고수</strong>에게 질문을 보낼 수 있습니다.
-                질문 1통당 <ChipAmount amount={eligibility.tip_tokens_per_message} compact className="text-amber-200" />
+                질문 1통당 <ChipAmount amount={eligibility.tip_tokens_per_message} large className="text-amber-200" />
                 차감되며, 초고수가 <strong className="text-white">팁을 수락할 때</strong> 전달됩니다.
               </p>
             ) : null}
@@ -389,15 +389,21 @@ export default function ExpertChatPage() {
             ) : null}
 
             {eligibility ? (
-              <div className="mb-4 flex flex-wrap items-center gap-2 text-[11px] text-gray-400">
-                <span className="inline-flex items-center gap-1">
-                  내 잔액 <ChipAmount amount={eligibility.my_balance} compact className="text-amber-200" />
-                </span>
-                {eligibility.my_rank != null ? (
-                  <span className="rounded-full border border-white/10 px-2 py-0.5">내 순위 {eligibility.my_rank}위</span>
-                ) : null}
+              <div className="mb-4 space-y-2">
+                <div className="flex flex-wrap items-center gap-2.5 text-sm sm:text-base text-gray-300">
+                  <span className="inline-flex items-center gap-1.5 font-medium">
+                    내 잔액 <ChipAmount amount={eligibility.my_balance} large className="text-amber-200" />
+                  </span>
+                  {eligibility.my_rank != null ? (
+                    <span className="rounded-full border border-white/15 bg-white/5 px-3 py-1 text-sm sm:text-base font-bold tabular-nums">
+                      내 순위 {eligibility.my_rank}위
+                    </span>
+                  ) : null}
+                </div>
                 {!eligibility.can_send_message && eligibility.send_blocked_reason ? (
-                  <span className="text-amber-300/80">{eligibility.send_blocked_reason}</span>
+                  <p className="text-sm sm:text-base font-bold leading-snug text-amber-200/95">
+                    {eligibility.send_blocked_reason}
+                  </p>
                 ) : null}
               </div>
             ) : null}
@@ -550,7 +556,7 @@ export default function ExpertChatPage() {
               ))}
             </div>
           ) : (
-            <p className="mb-3 text-sm text-gray-500">오늘 설문에 참여한 초고수가 없어요.</p>
+            <p className="mb-3 text-sm sm:text-base font-bold text-amber-200/90">오늘 설문에 참여한 초고수가 없어요.</p>
           )}
 
           <textarea
