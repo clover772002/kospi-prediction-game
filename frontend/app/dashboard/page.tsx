@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useState, useCallback, useRef, useLayoutEffect } from "react";
+import { useEffect, useState, useCallback, useRef, useLayoutEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
@@ -14,7 +14,6 @@ import TopExpertNoticeBlock from "@/components/TopExpertNoticeBlock";
 import ShareSheet from "@/components/ShareSheet";
 import AppAmbientBackground from "@/components/AppAmbientBackground";
 import AppTabNav from "@/components/AppTabNav";
-import DashboardInsightSection, { DashboardInsightSectionSkeleton } from "@/components/DashboardInsightSection";
 import CrowdGaugeBoxplotsSection from "@/components/CrowdGaugeBoxplotsSection";
 import StaleRefreshIndicator from "@/components/StaleRefreshIndicator";
 import WeeklyParticipationCard from "@/components/WeeklyParticipationCard";
@@ -1632,21 +1631,6 @@ export default function DashboardPage() {
             </div>
           );
         })()}
-
-        {/* ── 아이템 섹션 · 잠금 해제 후 열람 ── */}
-        {token && (
-          <div className="space-y-4 pt-2">
-            <h2 className="font-black text-base text-white leading-snug">
-              칩을 더 빨리 모으고 싶다면?
-            </h2>
-            <Suspense fallback={<DashboardInsightSectionSkeleton />}>
-              <DashboardInsightSection
-                accessToken={token}
-                onBalanceUpdated={() => void refreshDashboard()}
-              />
-            </Suspense>
-          </div>
-        )}
 
       </div>
       </div>
