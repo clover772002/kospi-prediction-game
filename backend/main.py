@@ -2605,10 +2605,23 @@ async def _build_today_payload(supabase: Client, *, detail: bool) -> dict:
     return base
 
 
+_today_summary_cache: dict = {"at": 0.0, "payload": None}
+_TODAY_SUMMARY_CACHE_SEC = 12
+
+
 @app.get("/api/today/summary")
 async def get_today_summary(supabase: Client = Depends(get_supabase)):
     """설문 탭 빠른 첫 페인트용. 참여자·가중·다수결 패딩 없음 — 대시보드는 /api/today 사용."""
-    return await _build_today_payload(supabase, detail=False)
+    import time
+
+    now = time.time()
+    cached = _today_summary_cache.get("payload")
+    if cached is not None and now - float(_today_summary_cache.get("at") or 0) < _TODAY_SUMMARY_CACHE_SEC:
+        return cached
+    payload = await _build_today_payload(supabase, detail=False)
+    _today_summary_cache["payload"] = payload
+    _today_summary_cache["at"] = now
+    return payload
 
 
 @app.get("/api/today")
@@ -2684,6 +2697,9 @@ async def web_survey_respond(
     leader_uid, leader_err = global_top_expert_uid(supabase)
     is_global_top_expert = bool(leader_uid == user_id and not leader_err)
     receives_expert_questions_today = is_global_top_expert
+
+    _today_summary_cache["payload"] = None
+    _today_summary_cache["at"] = 0.0
 
     return {
         "success": True,

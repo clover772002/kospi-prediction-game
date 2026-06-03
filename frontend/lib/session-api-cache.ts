@@ -3,9 +3,11 @@ import {
   getMe,
   getMySurveyResponse,
   getPendingGrant,
+  getTodaySummary,
   type ExpertChatEligibility,
   type MySurveyResponse,
   type NextSurveyInfo,
+  type TodaySurvey,
   type UserProfile,
 } from "@/lib/api";
 
@@ -14,6 +16,7 @@ const ELIG_TTL_MS = 120_000;
 const MY_RESP_TTL_MS = 90_000;
 const PENDING_GRANT_TTL_MS = 60_000;
 const NEXT_SURVEY_TTL_MS = 120_000;
+const TODAY_SUMMARY_TTL_MS = 90_000;
 
 let meCache: { token: string; data: UserProfile; savedAt: number } | null = null;
 let meInflight: { token: string; promise: Promise<UserProfile> } | null = null;
@@ -29,6 +32,9 @@ const pendingGrantInflight = new Map<string, Promise<string | null>>();
 
 let nextSurveyCache: { data: NextSurveyInfo | null; savedAt: number } | null = null;
 let nextSurveyInflight: Promise<NextSurveyInfo | null> | null = null;
+
+let todaySummaryCache: { data: TodaySurvey; savedAt: number } | null = null;
+let todaySummaryInflight: Promise<TodaySurvey> | null = null;
 
 function eligKey(token: string, surveyDate?: string): string {
   const d = surveyDate?.trim().slice(0, 10) ?? "";
@@ -140,6 +146,31 @@ export async function getPendingGrantCached(
   return promise;
 }
 
+/** 설문 탭·프리패치 — 동시 호출 dedupe (HAR: summary 2회 → 1회) */
+export async function getTodaySummaryCached(): Promise<TodaySurvey> {
+  const now = Date.now();
+  if (todaySummaryCache && now - todaySummaryCache.savedAt < TODAY_SUMMARY_TTL_MS) {
+    return todaySummaryCache.data;
+  }
+  if (todaySummaryInflight) return todaySummaryInflight;
+
+  const promise = getTodaySummary().then((data) => {
+    todaySummaryCache = { data, savedAt: Date.now() };
+    todaySummaryInflight = null;
+    return data;
+  });
+  todaySummaryInflight = promise;
+  promise.catch(() => {
+    todaySummaryInflight = null;
+  });
+  return promise;
+}
+
+export function invalidateTodaySummaryCache(): void {
+  todaySummaryCache = null;
+  todaySummaryInflight = null;
+}
+
 /** summary에 next_survey 없을 때만 — 별도 /api/next-survey 1회 */
 export async function fetchNextSurveyCached(): Promise<NextSurveyInfo | null> {
   const now = Date.now();
@@ -193,6 +224,7 @@ export function clearSessionApiCache(): void {
   invalidateExpertEligibilityCache();
   invalidateMySurveyResponseCache();
   invalidatePendingGrantCache();
+  invalidateTodaySummaryCache();
   nextSurveyCache = null;
   nextSurveyInflight = null;
 }

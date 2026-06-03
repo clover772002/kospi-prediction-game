@@ -4,16 +4,19 @@ import { useEffect, useState, useCallback, useRef, Suspense, useLayoutEffect } f
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
-import { getTodaySummary, type MySurveyResponse, TodaySurvey } from "@/lib/api";
+import type { MySurveyResponse, TodaySurvey } from "@/lib/api";
+import { buildKstSurveyTodayPlaceholder } from "@/lib/survey-today-placeholder";
 import {
   fetchNextSurveyCached,
   getMeCached,
   getMySurveyResponseCached,
   getPendingGrantCached,
+  getTodaySummaryCached,
   invalidateMySurveyResponseCache,
   invalidatePendingGrantCache,
+  invalidateTodaySummaryCache,
 } from "@/lib/session-api-cache";
-import { peekDashboardSnapshot } from "@/lib/tab-session-cache";
+import { peekAnsweredToday, peekDashboardSnapshot, peekSurveyTodaySnapshot } from "@/lib/tab-session-cache";
 import { markWasTopExpert } from "@/lib/top-expert-notice";
 import { formatApiErrorMessage } from "@/lib/format-api-error";
 import KospiPriceStrip from "@/components/KospiPriceStrip";
@@ -113,6 +116,7 @@ function NextPreSurveyPanel({
   submitting,
   onSubmit,
   error,
+  submitDisabled = false,
 }: {
   surveyDate: string;
   responseKnown: boolean;
@@ -125,6 +129,7 @@ function NextPreSurveyPanel({
   submitting: boolean;
   onSubmit: () => void | Promise<void>;
   error: string | null;
+  submitDisabled?: boolean;
 }) {
   const target = formatPreSurveyTarget(surveyDate);
   if (submitted || alreadyAnswered) {
@@ -138,6 +143,7 @@ function NextPreSurveyPanel({
             onGaugeChange={onGaugeChange}
             userTokens={userTokens}
             submitting={submitting}
+            submitDisabled={submitDisabled}
             submitBtnClass="bg-amber-500 hover:bg-amber-400 disabled:bg-[#333] disabled:text-gray-500 text-white"
             submitLabel="재투표 제출하기"
             onSubmit={onSubmit}
@@ -172,6 +178,7 @@ function NextPreSurveyPanel({
         onGaugeChange={onGaugeChange}
         userTokens={userTokens}
         submitting={submitting || !responseKnown}
+        submitDisabled={submitDisabled}
         submitBtnClass="bg-amber-500 hover:bg-amber-400 disabled:bg-[#333] disabled:text-gray-500 text-white"
         submitLabel={`${target.dateIso} 사전 예측 제출`}
         onSubmit={onSubmit}
@@ -190,6 +197,7 @@ function SurveyGaugeSubmit({
   onGaugeChange,
   userTokens,
   submitting,
+  submitDisabled = false,
   submitBtnClass,
   submitLabel,
   onSubmit,
@@ -198,23 +206,25 @@ function SurveyGaugeSubmit({
   onGaugeChange: (v: number) => void;
   userTokens: number;
   submitting: boolean;
+  submitDisabled?: boolean;
   submitBtnClass: string;
   submitLabel: string;
   onSubmit: () => void | Promise<void>;
 }) {
+  const locked = submitting || submitDisabled;
   return (
     <div className="space-y-4 w-full min-w-0 box-border">
       <GaugeBar
         value={gaugeValue}
         onChange={onGaugeChange}
         tokens={userTokens}
-        disabled={submitting}
+        disabled={locked}
         beginnerTips
       />
       <button
         type="button"
         onClick={() => void onSubmit()}
-        disabled={submitting || gaugeValue === 0}
+        disabled={locked || gaugeValue === 0}
         className={`w-full py-5 font-black text-lg rounded-2xl transition-all active:scale-95 ${submitBtnClass}`}
       >
         {submitting ? (
@@ -236,7 +246,9 @@ function SurveyPageInner() {
   const [nudgeToast, setNudgeToast] = useState<string | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [today, setToday] = useState<TodaySurvey | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [authChecking, setAuthChecking] = useState(true);
+  /** true면 서버 today/summary 미수신 — 제출만 잠금 */
+  const [awaitingToday, setAwaitingToday] = useState(true);
   const [revalidating, setRevalidating] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
@@ -278,7 +290,7 @@ function SurveyPageInner() {
   const loadToday = useCallback(async () => {
     setRevalidating(true);
     try {
-      const summary = await getTodaySummary();
+      const summary = await getTodaySummaryCached();
       const nextFallback =
         summary.next_survey?.survey_date != null
           ? summary.next_survey
@@ -287,10 +299,9 @@ function SurveyPageInner() {
       saveSurveyTodaySnapshot(summary);
       applyNextSurvey(nextFallback);
       setError(null);
-      setLoading(false);
+      setAwaitingToday(false);
     } catch {
       setError("설문 정보를 불러오지 못했습니다.");
-      setLoading(false);
     } finally {
       setRevalidating(false);
     }
@@ -415,28 +426,36 @@ function SurveyPageInner() {
       return;
     }
     let cancelled = false;
-    void loadNextMyResponse(token, nextSurvey.survey_date).then(() => {
-      if (cancelled) setNextMyResponseKnown(false);
-    });
+    const surveyDate = nextSurvey.survey_date;
+    const id = window.setTimeout(() => {
+      void loadNextMyResponse(token, surveyDate).then(() => {
+        if (cancelled) setNextMyResponseKnown(false);
+      });
+    }, 120);
     return () => {
       cancelled = true;
+      window.clearTimeout(id);
     };
   }, [token, nextSurvey?.survey_date, nextSurvey?.is_open, loadNextMyResponse]);
 
   useEffect(() => {
     if (!token || !today?.survey_date) return;
-    void checkMyResponse(token, today.survey_date.slice(0, 10));
+    const sd = today.survey_date.slice(0, 10);
+    const answeredCache = peekAnsweredToday(sd);
+    if (answeredCache === true) setAlreadyAnswered(true);
+    else if (answeredCache === false) setAlreadyAnswered(false);
+    void checkMyResponse(token, sd);
   }, [token, today?.survey_date, checkMyResponse]);
 
   useLayoutEffect(() => {
     const s = peekSurveyTodaySnapshot();
-    if (s) {
-      setToday(s.today);
-      setLoading(false);
-      if (s.today.next_survey?.survey_date) {
-        setNextSurvey(s.today.next_survey);
-        saveSurveyNextSnapshot(s.today.next_survey);
-      }
+    const dash = peekDashboardSnapshot();
+    const fromServer = s?.today ?? dash?.today ?? null;
+    setToday(fromServer ?? buildKstSurveyTodayPlaceholder());
+    setAwaitingToday(!fromServer);
+    if (fromServer?.next_survey?.survey_date) {
+      setNextSurvey(fromServer.next_survey);
+      saveSurveyNextSnapshot(fromServer.next_survey);
     }
     const n = peekSurveyNextSnapshot();
     if (n?.survey_date) setNextSurvey(n);
@@ -466,10 +485,10 @@ function SurveyPageInner() {
 
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (cancelled) return;
+      setAuthChecking(false);
       if (!session) {
         clearAllTabSnapshots();
         router.replace("/");
-        setLoading(false);
         return;
       }
       bootstrapSession(session);
@@ -477,11 +496,15 @@ function SurveyPageInner() {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === "SIGNED_OUT" || (event === "INITIAL_SESSION" && !session)) {
+        setAuthChecking(false);
         clearAllTabSnapshots();
         router.replace("/");
         return;
       }
-      if (event === "SIGNED_IN" && session) bootstrapSession(session);
+      if (event === "SIGNED_IN" && session) {
+        setAuthChecking(false);
+        bootstrapSession(session);
+      }
     });
 
     return () => {
@@ -512,8 +535,19 @@ function SurveyPageInner() {
   }, [token, today?.survey_date, nextSurvey?.survey_date]);
 
   useEffect(() => {
-    void refreshPendingGrants();
-  }, [refreshPendingGrants, today?.status, alreadyAnswered, submitted, nextAlreadyAnswered, nextSubmitted]);
+    if (!token || awaitingToday) return;
+    const id = window.setTimeout(() => void refreshPendingGrants(), 80);
+    return () => window.clearTimeout(id);
+  }, [
+    refreshPendingGrants,
+    token,
+    awaitingToday,
+    today?.status,
+    alreadyAnswered,
+    submitted,
+    nextAlreadyAnswered,
+    nextSubmitted,
+  ]);
 
   const handleSubmit = async () => {
     if (!token || kospiAnswer === null) return;
@@ -558,6 +592,7 @@ function SurveyPageInner() {
       if (sd) {
         saveAnsweredToday(sd, true);
         invalidateMySurveyResponseCache();
+        invalidateTodaySummaryCache();
         void checkMyResponse(token, sd);
       }
       invalidatePendingGrantCache();
@@ -617,11 +652,12 @@ function SurveyPageInner() {
     }
   };
 
-  if (loading && !today) {
-    return <PageLoadProgress label="설문 정보 불러오는 중…" accent="violet" />;
+  if (authChecking) {
+    return <PageLoadProgress label="확인 중…" accent="violet" />;
   }
 
   const status = today?.status ?? "no_survey";
+  const surveyUiLocked = awaitingToday || submitting || nextSubmitting;
 
   // API status와 무관하게 클라이언트에서 주말 여부 직접 판단
   const _kstNow = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Seoul" }));
@@ -633,7 +669,7 @@ function SurveyPageInner() {
 
   return (
     <main className="relative w-full min-h-screen app-page-tab-pad min-w-0 box-border text-[1.0625rem] sm:text-lg px-4 sm:px-5">
-      <StaleRefreshIndicator show={revalidating && !!today} tone="violet" />
+      <StaleRefreshIndicator show={(awaitingToday || revalidating) && !!today} tone="violet" />
       <AppAmbientBackground />
       <div className="relative z-10">
       {/* 독촉 토스트 */}
@@ -721,6 +757,7 @@ function SurveyPageInner() {
               submitting={nextSubmitting}
               onSubmit={handleNextSubmit}
               error={error}
+              submitDisabled={surveyUiLocked}
             />
           </div>
         </div>
@@ -786,7 +823,8 @@ function SurveyPageInner() {
                 }}
                 userTokens={userTokens}
                 submitting={submitting}
-                                    submitBtnClass="bg-emerald-600 hover:bg-emerald-500 disabled:bg-[#333] disabled:text-gray-500 text-white"
+                submitDisabled={surveyUiLocked}
+                submitBtnClass="bg-emerald-600 hover:bg-emerald-500 disabled:bg-[#333] disabled:text-gray-500 text-white"
                 submitLabel="재투표 제출하기"
                 onSubmit={handleSubmit}
               />
@@ -820,6 +858,7 @@ function SurveyPageInner() {
                 }}
                 userTokens={userTokens}
                 submitting={nextSubmitting}
+                submitDisabled={surveyUiLocked}
                 onSubmit={handleNextSubmit}
                 error={error}
               />
@@ -838,6 +877,7 @@ function SurveyPageInner() {
               onGaugeChange={(v) => { setGaugePosition(v); setKospiAnswer(v > 0); }}
               userTokens={userTokens}
               submitting={submitting}
+              submitDisabled={surveyUiLocked}
               submitBtnClass="bg-blue-600 hover:bg-blue-500 disabled:bg-[#333] disabled:text-gray-500 text-white"
               submitLabel="예측 제출하기"
               onSubmit={handleSubmit}
@@ -864,7 +904,8 @@ function SurveyPageInner() {
               }}
               userTokens={userTokens}
               submitting={submitting}
-                                  submitBtnClass="bg-emerald-600 hover:bg-emerald-500 disabled:bg-[#333] disabled:text-gray-500 text-white"
+              submitDisabled={surveyUiLocked}
+              submitBtnClass="bg-emerald-600 hover:bg-emerald-500 disabled:bg-[#333] disabled:text-gray-500 text-white"
               submitLabel="재투표 제출하기"
               onSubmit={handleSubmit}
             />
@@ -940,6 +981,7 @@ function SurveyPageInner() {
                   }}
                   userTokens={userTokens}
                   submitting={nextSubmitting}
+                  submitDisabled={surveyUiLocked}
                   onSubmit={handleNextSubmit}
                   error={error}
                 />
