@@ -161,16 +161,21 @@ export default function GaugeBar({
         </div>
       )}
 
-      <div className="flex items-center justify-between gap-2 min-h-[2rem]">
-        <p className={`text-base sm:text-lg font-black tabular-nums ${dirColor}`}>
-          <span className="text-gray-500 font-bold text-sm mr-1.5">방향</span>
-          {dirLabel}
+      <div className="flex items-center justify-between gap-3 min-h-[2rem]">
+        <p className="text-sm sm:text-base font-bold text-amber-100/90 leading-snug min-w-0">
+          방향과 확신도로 예측하세요
         </p>
-        <p className={`text-xl sm:text-2xl font-black tabular-nums leading-none ${dirColor}`}>
-          <span className="text-gray-500 font-bold text-sm mr-1">확신</span>
-          {isUp ? "+" : ""}
-          {value}
-        </p>
+        <div className={`flex items-baseline gap-2.5 shrink-0 tabular-nums ${dirColor}`}>
+          <span className="text-base sm:text-lg font-black whitespace-nowrap">
+            <span className="text-gray-500 font-bold text-xs mr-1">방향</span>
+            {dirLabel}
+          </span>
+          <span className="text-xl sm:text-2xl font-black leading-none whitespace-nowrap">
+            <span className="text-gray-500 font-bold text-xs mr-0.5">확신</span>
+            {isUp ? "+" : ""}
+            {value}
+          </span>
+        </div>
       </div>
 
       <div
