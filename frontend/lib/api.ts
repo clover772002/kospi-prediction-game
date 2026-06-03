@@ -311,6 +311,20 @@ export async function getMySurveyResponse(
   return authFetch<MySurveyResponse>(`/api/survey/my-response${q}`, token);
 }
 
+export interface PendingGrantResponse {
+  grant_kind: string | null;
+}
+
+export async function getPendingGrant(
+  token: string,
+  surveyDate: string,
+): Promise<PendingGrantResponse> {
+  return authFetch<PendingGrantResponse>(
+    `/api/survey/pending-grant?survey_date=${encodeURIComponent(surveyDate)}`,
+    token,
+  );
+}
+
 export async function getDashboardSummary(token: string): Promise<DashboardData> {
   return authFetch<DashboardData>("/api/dashboard/summary", token);
 }

@@ -1,12 +1,19 @@
 import {
   getExpertChatEligibility,
   getMe,
+  getMySurveyResponse,
+  getPendingGrant,
   type ExpertChatEligibility,
+  type MySurveyResponse,
+  type NextSurveyInfo,
   type UserProfile,
 } from "@/lib/api";
 
 const ME_TTL_MS = 90_000;
 const ELIG_TTL_MS = 120_000;
+const MY_RESP_TTL_MS = 90_000;
+const PENDING_GRANT_TTL_MS = 60_000;
+const NEXT_SURVEY_TTL_MS = 120_000;
 
 let meCache: { token: string; data: UserProfile; savedAt: number } | null = null;
 let meInflight: { token: string; promise: Promise<UserProfile> } | null = null;
@@ -14,7 +21,21 @@ let meInflight: { token: string; promise: Promise<UserProfile> } | null = null;
 const eligCache = new Map<string, { data: ExpertChatEligibility; savedAt: number }>();
 const eligInflight = new Map<string, Promise<ExpertChatEligibility>>();
 
+const myRespCache = new Map<string, { data: MySurveyResponse; savedAt: number }>();
+const myRespInflight = new Map<string, Promise<MySurveyResponse>>();
+
+const pendingGrantCache = new Map<string, { grantKind: string | null; savedAt: number }>();
+const pendingGrantInflight = new Map<string, Promise<string | null>>();
+
+let nextSurveyCache: { data: NextSurveyInfo | null; savedAt: number } | null = null;
+let nextSurveyInflight: Promise<NextSurveyInfo | null> | null = null;
+
 function eligKey(token: string, surveyDate?: string): string {
+  const d = surveyDate?.trim().slice(0, 10) ?? "";
+  return `${token}|${d}`;
+}
+
+function myRespKey(token: string, surveyDate?: string): string {
   const d = surveyDate?.trim().slice(0, 10) ?? "";
   return `${token}|${d}`;
 }
@@ -66,6 +87,87 @@ export async function getExpertChatEligibilityCached(
   return promise;
 }
 
+/** 설문·대시 — 거래일별 my-response 중복 방지 (HAR: Next 라우트 3회+프록시) */
+export async function getMySurveyResponseCached(
+  token: string,
+  surveyDate?: string,
+): Promise<MySurveyResponse> {
+  const key = myRespKey(token, surveyDate);
+  const now = Date.now();
+  const hit = myRespCache.get(key);
+  if (hit && now - hit.savedAt < MY_RESP_TTL_MS) {
+    return hit.data;
+  }
+  const inflight = myRespInflight.get(key);
+  if (inflight) return inflight;
+
+  const promise = getMySurveyResponse(token, surveyDate).then((data) => {
+    myRespCache.set(key, { data, savedAt: Date.now() });
+    myRespInflight.delete(key);
+    return data;
+  });
+  myRespInflight.set(key, promise);
+  promise.catch(() => {
+    myRespInflight.delete(key);
+  });
+  return promise;
+}
+
+/** 상점 소모품 grant — 설문 탭 refreshPendingGrants 중복 완화 */
+export async function getPendingGrantCached(
+  token: string,
+  surveyDate: string,
+): Promise<string | null> {
+  const key = `${token}|${surveyDate.trim().slice(0, 10)}`;
+  const now = Date.now();
+  const hit = pendingGrantCache.get(key);
+  if (hit && now - hit.savedAt < PENDING_GRANT_TTL_MS) {
+    return hit.grantKind;
+  }
+  const inflight = pendingGrantInflight.get(key);
+  if (inflight) return inflight;
+
+  const promise = getPendingGrant(token, surveyDate).then((data) => {
+    const grantKind = typeof data.grant_kind === "string" ? data.grant_kind : null;
+    pendingGrantCache.set(key, { grantKind, savedAt: Date.now() });
+    pendingGrantInflight.delete(key);
+    return grantKind;
+  });
+  pendingGrantInflight.set(key, promise);
+  promise.catch(() => {
+    pendingGrantInflight.delete(key);
+  });
+  return promise;
+}
+
+/** summary에 next_survey 없을 때만 — 별도 /api/next-survey 1회 */
+export async function fetchNextSurveyCached(): Promise<NextSurveyInfo | null> {
+  const now = Date.now();
+  if (nextSurveyCache && now - nextSurveyCache.savedAt < NEXT_SURVEY_TTL_MS) {
+    return nextSurveyCache.data;
+  }
+  if (nextSurveyInflight) return nextSurveyInflight;
+
+  nextSurveyInflight = (async () => {
+    try {
+      const res = await fetch("/api/next-survey", { cache: "no-store" });
+      if (!res.ok) {
+        nextSurveyCache = { data: null, savedAt: Date.now() };
+        return null;
+      }
+      const data = (await res.json()) as NextSurveyInfo;
+      nextSurveyCache = { data, savedAt: Date.now() };
+      return data;
+    } catch {
+      return null;
+    } finally {
+      nextSurveyInflight = null;
+    }
+  })();
+
+  return nextSurveyInflight;
+}
+
 export function invalidateMeCache(): void {
   meCache = null;
   meInflight = null;
@@ -76,7 +178,21 @@ export function invalidateExpertEligibilityCache(): void {
   eligInflight.clear();
 }
 
+export function invalidateMySurveyResponseCache(): void {
+  myRespCache.clear();
+  myRespInflight.clear();
+}
+
+export function invalidatePendingGrantCache(): void {
+  pendingGrantCache.clear();
+  pendingGrantInflight.clear();
+}
+
 export function clearSessionApiCache(): void {
   invalidateMeCache();
   invalidateExpertEligibilityCache();
+  invalidateMySurveyResponseCache();
+  invalidatePendingGrantCache();
+  nextSurveyCache = null;
+  nextSurveyInflight = null;
 }

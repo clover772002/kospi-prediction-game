@@ -4,8 +4,12 @@ import { Suspense, useEffect, useState, useCallback, useRef, useLayoutEffect } f
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
-import { getTodaySummary, getDashboardSummary, getDashboard, getMySurveyResponse, createChallenge, getMyChallenges, reactToChallenge, requestRematch, acceptChallenge, declineChallenge, getMyGroups, UserProfile, TodaySurvey, DashboardData, Challenge, Group, type ExpertChatEligibility } from "@/lib/api";
-import { getExpertChatEligibilityCached, getMeCached } from "@/lib/session-api-cache";
+import { getTodaySummary, getDashboardSummary, getDashboard, createChallenge, getMyChallenges, reactToChallenge, requestRematch, acceptChallenge, declineChallenge, getMyGroups, UserProfile, TodaySurvey, DashboardData, Challenge, Group, type ExpertChatEligibility } from "@/lib/api";
+import {
+  getExpertChatEligibilityCached,
+  getMeCached,
+  getMySurveyResponseCached,
+} from "@/lib/session-api-cache";
 import TopExpertNoticeBlock from "@/components/TopExpertNoticeBlock";
 import ShareSheet from "@/components/ShareSheet";
 import AppAmbientBackground from "@/components/AppAmbientBackground";
@@ -251,13 +255,35 @@ export default function DashboardPage() {
             ),
           ]);
 
+        const snapAtLoad = peekDashboardSnapshot();
+        const sdPrefetch = snapAtLoad?.today?.survey_date?.slice(0, 10);
+        const answeredFromCache =
+          sdPrefetch != null ? peekAnsweredToday(sdPrefetch) : null;
+
         const [meR, todayR, dashSumR, chR, grpR, myRespR] = await Promise.allSettled([
           withTimeout(getMeCached(accessToken), 30_000),
-          withTimeout(getTodaySummary(), 25_000),
-          withTimeout(getDashboardSummary(accessToken), 20_000),
-          withTimeout(getMyChallenges(accessToken), 25_000),
-          withTimeout(getMyGroups(accessToken), 25_000),
-          withTimeout(getMySurveyResponse(accessToken), 12_000),
+          snapAtLoad?.today
+            ? Promise.resolve(snapAtLoad.today)
+            : withTimeout(getTodaySummary(), 25_000),
+          snapAtLoad?.dash
+            ? Promise.resolve(snapAtLoad.dash)
+            : withTimeout(getDashboardSummary(accessToken), 20_000),
+          snapAtLoad?.challenges
+            ? Promise.resolve(snapAtLoad.challenges)
+            : withTimeout(getMyChallenges(accessToken), 25_000),
+          snapAtLoad?.groups
+            ? Promise.resolve(snapAtLoad.groups)
+            : withTimeout(getMyGroups(accessToken), 25_000),
+          answeredFromCache !== null
+            ? Promise.resolve({
+                answered: answeredFromCache,
+                kospi_answer: null,
+                gauge_position: null,
+                tokens_bet: null,
+              })
+            : sdPrefetch
+              ? withTimeout(getMySurveyResponseCached(accessToken, sdPrefetch), 12_000)
+              : withTimeout(getMySurveyResponseCached(accessToken), 12_000),
         ]);
 
         if (seq !== dashboardFetchSeq.current) return;
@@ -317,6 +343,9 @@ export default function DashboardPage() {
           });
         }
 
+        const skipFullDash =
+          !!snapAtLoad?.dash && snapAtLoad.dash.history_truncated !== true;
+
         void (async () => {
           if (sd) {
             try {
@@ -326,6 +355,7 @@ export default function DashboardPage() {
               if (seq === dashboardFetchSeq.current) setExpertEligibility(null);
             }
           }
+          if (skipFullDash) return;
           try {
             const fullDash = await withTimeout(getDashboard(accessToken), 45_000);
             if (seq !== dashboardFetchSeq.current) return;

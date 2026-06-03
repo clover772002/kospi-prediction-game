@@ -4,8 +4,15 @@ import { useEffect, useState, useCallback, useRef, Suspense, useLayoutEffect } f
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
-import { getTodaySummary, TodaySurvey } from "@/lib/api";
-import { getMeCached } from "@/lib/session-api-cache";
+import { getTodaySummary, type MySurveyResponse, TodaySurvey } from "@/lib/api";
+import {
+  fetchNextSurveyCached,
+  getMeCached,
+  getMySurveyResponseCached,
+  getPendingGrantCached,
+  invalidateMySurveyResponseCache,
+  invalidatePendingGrantCache,
+} from "@/lib/session-api-cache";
 import { peekDashboardSnapshot } from "@/lib/tab-session-cache";
 import { markWasTopExpert } from "@/lib/top-expert-notice";
 import { formatApiErrorMessage } from "@/lib/format-api-error";
@@ -91,16 +98,6 @@ function SurveyHeadingTitle({ label }: { label: string }) {
       {label}
     </h1>
   );
-}
-
-async function fetchNextSurveyApi(): Promise<{ survey_date: string; is_open: boolean } | null> {
-  try {
-    const res = await fetch("/api/next-survey", { cache: "no-store" });
-    if (!res.ok) return null;
-    return (await res.json()) as { survey_date: string; is_open: boolean };
-  } catch {
-    return null;
-  }
 }
 
 /** 사전 예측 — 참여 여부 확인 중에도 게이지를 바로 보여 줌 */
@@ -281,13 +278,14 @@ function SurveyPageInner() {
   const loadToday = useCallback(async () => {
     setRevalidating(true);
     try {
-      const [summary, nextFallback] = await Promise.all([
-        getTodaySummary(),
-        fetchNextSurveyApi(),
-      ]);
+      const summary = await getTodaySummary();
+      const nextFallback =
+        summary.next_survey?.survey_date != null
+          ? summary.next_survey
+          : await fetchNextSurveyCached();
       setToday(summary);
       saveSurveyTodaySnapshot(summary);
-      applyNextSurvey(summary.next_survey ?? nextFallback);
+      applyNextSurvey(nextFallback);
       setError(null);
       setLoading(false);
     } catch {
@@ -343,86 +341,87 @@ function SurveyPageInner() {
     };
   }, [fetchKospiPrice, today?.kospi_change_pct]);
 
-  const checkMyResponse = useCallback(async (tok: string, surveyDate?: string) => {
-    const q = surveyDate ? `?survey_date=${encodeURIComponent(surveyDate)}` : "";
+  const applyTodayResponse = useCallback((data: MySurveyResponse) => {
+    if (data.answered) {
+      setAlreadyAnswered(true);
+      setPreviousAnswer(data.kospi_answer);
+      const gp =
+        typeof data.gauge_position === "number"
+          ? data.gauge_position
+          : data.kospi_answer
+            ? 50
+            : -50;
+      setKospiAnswer(data.kospi_answer);
+      setGaugePosition(gp);
+    } else {
+      setAlreadyAnswered(false);
+      setPreviousAnswer(null);
+      setKospiAnswer(null);
+      setGaugePosition(10);
+    }
+  }, []);
+
+  const applyNextResponse = useCallback((data: MySurveyResponse) => {
+    if (data.answered) {
+      setNextAlreadyAnswered(true);
+      setNextPreviousAnswer(data.kospi_answer);
+      setNextKospiAnswer(data.kospi_answer);
+      const gp =
+        typeof data.gauge_position === "number"
+          ? data.gauge_position
+          : data.kospi_answer
+            ? 50
+            : -50;
+      setNextGaugePosition(gp);
+    } else {
+      setNextAlreadyAnswered(false);
+      setNextPreviousAnswer(null);
+      setNextSubmitted(false);
+      setNextGaugePosition(10);
+      setNextKospiAnswer(true);
+    }
+  }, []);
+
+  const checkMyResponse = useCallback(async (tok: string, surveyDate: string) => {
+    const sd = surveyDate.slice(0, 10);
     try {
-      const res = await fetch(`/api/survey/my-response${q}`, {
-        cache: "no-store",
-        headers: { Authorization: `Bearer ${tok}` },
-      });
-      if (!res.ok) return false;
-      const data = await res.json();
-      const sd = (surveyDate ?? today?.survey_date)?.slice(0, 10);
-      if (sd) saveAnsweredToday(sd, Boolean(data.answered));
-      if (surveyDate) return Boolean(data.answered);
-      if (data.answered) {
-        setAlreadyAnswered(true);
-        setPreviousAnswer(data.kospi_answer);
-        const gp =
-          typeof data.gauge_position === "number"
-            ? data.gauge_position
-            : data.kospi_answer
-              ? 50
-              : -50;
-        setKospiAnswer(data.kospi_answer);
-        setGaugePosition(gp);
-      } else {
-        setAlreadyAnswered(false);
-        setPreviousAnswer(null);
-        setKospiAnswer(null);
-        setGaugePosition(10);
-      }
+      const data = await getMySurveyResponseCached(tok, sd);
+      saveAnsweredToday(sd, Boolean(data.answered));
+      applyTodayResponse(data);
       return Boolean(data.answered);
     } catch {
       return false;
     }
-  }, []);
+  }, [applyTodayResponse]);
 
-  // 다음 거래일 미리설문 내 응답 조회 — nextSurvey를 의존성에 넣지 않고 분리해야
-  // 인증 리스너가 반복 재구독되며 잘못된 순서로 상태가 바뀌지 않도록 함.
-  useEffect(() => {
-    if (!token) return;
-    void fetchNextSurveyApi().then((d) => applyNextSurvey(d));
-  }, [token, applyNextSurvey]);
+  const loadNextMyResponse = useCallback(
+    async (tok: string, surveyDate: string) => {
+      setNextMyResponseKnown(false);
+      try {
+        const data = await getMySurveyResponseCached(tok, surveyDate.slice(0, 10));
+        applyNextResponse(data);
+      } catch {
+        /* 사전 예측 UI는 기본값 유지 */
+      } finally {
+        setNextMyResponseKnown(true);
+      }
+    },
+    [applyNextResponse],
+  );
 
   useEffect(() => {
     if (!token || !nextSurvey?.is_open || !nextSurvey.survey_date) {
       setNextMyResponseKnown(false);
       return;
     }
-    const surveyDate = nextSurvey.survey_date;
     let cancelled = false;
-    setNextMyResponseKnown(false);
-    (async () => {
-      try {
-        const res = await fetch(
-          `/api/survey/my-response?survey_date=${encodeURIComponent(surveyDate)}`,
-          { cache: "no-store", headers: { Authorization: `Bearer ${token}` } },
-        );
-        if (!res.ok || cancelled) return;
-        const data = await res.json();
-        if (cancelled) return;
-        if (data.answered) {
-          setNextAlreadyAnswered(true);
-          setNextPreviousAnswer(data.kospi_answer);
-          setNextKospiAnswer(data.kospi_answer);
-          const gp = typeof data.gauge_position === "number" ? data.gauge_position : (data.kospi_answer ? 50 : -50);
-          setNextGaugePosition(gp);
-        } else {
-          setNextAlreadyAnswered(false);
-          setNextPreviousAnswer(null);
-          setNextSubmitted(false);
-          setNextGaugePosition(10);
-          setNextKospiAnswer(true);
-        }
-      } finally {
-        if (!cancelled) setNextMyResponseKnown(true);
-      }
-    })();
+    void loadNextMyResponse(token, nextSurvey.survey_date).then(() => {
+      if (cancelled) setNextMyResponseKnown(false);
+    });
     return () => {
       cancelled = true;
     };
-  }, [token, nextSurvey?.survey_date, nextSurvey?.is_open]);
+  }, [token, nextSurvey?.survey_date, nextSurvey?.is_open, loadNextMyResponse]);
 
   useEffect(() => {
     if (!token || !today?.survey_date) return;
@@ -452,7 +451,6 @@ function SurveyPageInner() {
       if (session.user?.id) setUserId(session.user.id);
       void loadToday();
       void (async () => {
-        await checkMyResponse(session.access_token);
         const snap = peekDashboardSnapshot();
         if (typeof snap?.dash?.tokens === "number") {
           setUserTokens(snap.dash.tokens);
@@ -490,7 +488,7 @@ function SurveyPageInner() {
       cancelled = true;
       subscription.unsubscribe();
     };
-  }, [router, loadToday, checkMyResponse]);
+  }, [router, loadToday]);
 
   const refreshPendingGrants = useCallback(async () => {
     if (!token) return;
@@ -498,31 +496,13 @@ function SurveyPageInner() {
     const todayStr = `${kst.getFullYear()}-${String(kst.getMonth() + 1).padStart(2, "0")}-${String(kst.getDate()).padStart(2, "0")}`;
     const sdToday = today?.survey_date ?? todayStr;
     try {
-      const r = await fetch(`/api/survey/pending-grant?survey_date=${encodeURIComponent(sdToday)}`, {
-        headers: { Authorization: `Bearer ${token}` },
-        cache: "no-store",
-      });
-      if (r.ok) {
-        const d = (await r.json()) as { grant_kind?: string | null };
-        setPendingGrantToday(typeof d.grant_kind === "string" ? d.grant_kind : null);
-      } else {
-        setPendingGrantToday(null);
-      }
+      setPendingGrantToday(await getPendingGrantCached(token, sdToday));
     } catch {
       setPendingGrantToday(null);
     }
     if (nextSurvey?.survey_date) {
       try {
-        const r2 = await fetch(
-          `/api/survey/pending-grant?survey_date=${encodeURIComponent(nextSurvey.survey_date)}`,
-          { headers: { Authorization: `Bearer ${token}` }, cache: "no-store" },
-        );
-        if (r2.ok) {
-          const d2 = (await r2.json()) as { grant_kind?: string | null };
-          setPendingGrantNext(typeof d2.grant_kind === "string" ? d2.grant_kind : null);
-        } else {
-          setPendingGrantNext(null);
-        }
+        setPendingGrantNext(await getPendingGrantCached(token, nextSurvey.survey_date));
       } catch {
         setPendingGrantNext(null);
       }
@@ -577,8 +557,10 @@ function SurveyPageInner() {
       const sd = today?.survey_date?.slice(0, 10);
       if (sd) {
         saveAnsweredToday(sd, true);
+        invalidateMySurveyResponseCache();
         void checkMyResponse(token, sd);
       }
+      invalidatePendingGrantCache();
       void refreshPendingGrants();
     } catch (e: unknown) {
       const raw = e instanceof Error ? e.message : String(e);
@@ -622,25 +604,11 @@ function SurveyPageInner() {
       setNextAlreadyAnswered(true);
       setNextPreviousAnswer(nextKospiAnswer);
       if (nextSurvey.survey_date) {
-        const res = await fetch(
-          `/api/survey/my-response?survey_date=${encodeURIComponent(nextSurvey.survey_date)}`,
-          { cache: "no-store", headers: { Authorization: `Bearer ${token}` } },
-        );
-        if (res.ok) {
-          const data = await res.json();
-          if (data.answered) {
-            setNextAlreadyAnswered(true);
-            setNextPreviousAnswer(data.kospi_answer);
-            const gp =
-              typeof data.gauge_position === "number"
-                ? data.gauge_position
-                : data.kospi_answer
-                  ? 50
-                  : -50;
-            setNextGaugePosition(gp);
-          }
-        }
+        invalidateMySurveyResponseCache();
+        const data = await getMySurveyResponseCached(token, nextSurvey.survey_date);
+        applyNextResponse(data);
       }
+      invalidatePendingGrantCache();
       void refreshPendingGrants();
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "오류가 발생했습니다.");
