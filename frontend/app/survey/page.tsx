@@ -970,7 +970,9 @@ function SurveyPageInner() {
       <AppAmbientBackground />
       <div className="relative z-10">
       {!isWeekendKST ? (
-        <div className="mb-4 fade-up-1">
+        <div
+          className="sticky top-0 z-30 -mx-4 sm:-mx-5 px-4 sm:px-5 pt-[max(0px,env(safe-area-inset-top))] pb-2 mb-3 bg-[#0a0a0a]/92 backdrop-blur-md border-b border-white/[0.06] shadow-[0_8px_24px_rgba(0,0,0,0.45)]"
+        >
           <WeeklyParticipationCard status={peekDashboardSnapshot()?.dash?.participation} />
         </div>
       ) : null}
