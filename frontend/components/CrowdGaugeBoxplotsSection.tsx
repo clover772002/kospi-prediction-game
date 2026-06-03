@@ -260,10 +260,16 @@ function DayCard({
         emphasize ? "border-amber-500/35 px-4 py-3.5 sm:py-4" : "border-[#2A2A2A] px-3 py-2.5"
       }`}
     >
-      <div className="flex flex-wrap items-baseline justify-between gap-2 mb-2">
-        <p className={`${dateCls} tabular-nums`}>{day.survey_date}</p>
-        <p className={resultCls}>{resultLabel}</p>
-      </div>
+      {emphasize ? (
+        <div className="flex justify-end mb-2">
+          <p className={resultCls}>{resultLabel}</p>
+        </div>
+      ) : (
+        <div className="flex flex-wrap items-baseline justify-between gap-2 mb-2">
+          <p className={`${dateCls} tabular-nums`}>{day.survey_date}</p>
+          <p className={resultCls}>{resultLabel}</p>
+        </div>
+      )}
       {emphasize && pending ? (
         <p className={`${surveyUi.hint} text-amber-200/80 mb-2`}>
           장 마감 전까지 참가자들의 방향·확신도가 실시간으로 쌓입니다.
