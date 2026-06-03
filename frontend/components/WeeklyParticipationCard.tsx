@@ -148,19 +148,6 @@ export default function WeeklyParticipationCard({ status, compact }: Props) {
           <ChipAmount amount={projected} large className="text-yellow-400" />
         </div>
       </div>
-
-      {!allStamps && status.next_tier_days != null && status.next_tier_bonus != null ? (
-        <p className="text-center text-[11px] text-white/55 flex items-center justify-center gap-1 flex-wrap">
-          <span>도장 하나 더 →</span>
-          <ChipAmount amount={status.next_tier_bonus} compact className="text-amber-300" />
-          <span>구간 · 합계</span>
-          <ChipAmount
-            amount={stampChipSumForDays(status.next_tier_days)}
-            compact
-            className="text-amber-200/80"
-          />
-        </p>
-      ) : null}
     </div>
   );
 }
