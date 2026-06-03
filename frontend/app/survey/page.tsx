@@ -67,6 +67,40 @@ function getSurveyDayLabel(surveyDate: string): { isNextDay: boolean; label: str
   return { isNextDay: true, label: `다음 거래일 예측 (${mm}/${dd} ${dayKor})`, shortLabel: `${mm}/${dd}(${dayKor})` };
 }
 
+/** 섹션 제목용 — 연도 없이 M월 D일 (요일) */
+function formatSurveySectionDate(surveyDate: string): string {
+  const dateKey = surveyDate.trim().slice(0, 10);
+  const parts = dateKey.split("-");
+  const m = parts[1] ? String(Number(parts[1])) : "";
+  const day = parts[2] ? String(Number(parts[2])) : "";
+  const d = new Date(`${dateKey}T12:00:00+09:00`);
+  const weekdays = ["일", "월", "화", "수", "목", "금", "토"];
+  const wd = weekdays[d.getDay()] ?? "";
+  return `${m}월 ${day}일 (${wd})`;
+}
+
+function SurveySectionDateHeader({
+  dateLabel,
+  roleLabel,
+  hint,
+  accent = "emerald",
+}: {
+  dateLabel: string;
+  roleLabel: string;
+  hint?: string;
+  accent?: "emerald" | "amber";
+}) {
+  const titleCls = accent === "amber" ? "text-amber-300" : "text-emerald-400";
+  return (
+    <div className="text-center mb-3 space-y-1">
+      <p className={`${surveyUi.cardTitle} ${titleCls} tabular-nums`}>
+        {dateLabel} · {roleLabel}
+      </p>
+      {hint ? <p className={`${surveyUi.cardMeta} leading-snug`}>{hint}</p> : null}
+    </div>
+  );
+}
+
 /** 사전 예측이 적용되는 거래일 표시용 */
 function formatPreSurveyTarget(surveyDate: string) {
   const dateKey = surveyDate.trim().slice(0, 10);
@@ -267,8 +301,17 @@ function NextPreSurveyPanel({
   confidenceJustSaved: boolean;
 }) {
   const target = formatPreSurveyTarget(surveyDate);
-  if (submitted || alreadyAnswered) {
-    return (
+  const sectionDate = formatSurveySectionDate(surveyDate);
+
+  return (
+    <div className="flex flex-col gap-3">
+      <SurveySectionDateHeader
+        dateLabel={sectionDate}
+        roleLabel="사전 예측"
+        hint="다음 거래일 방향·확신도 (오늘 설문과 별도)"
+        accent="amber"
+      />
+      {submitted || alreadyAnswered ? (
       <>
         <SurveyCompletedPanel
           headline=""
@@ -288,10 +331,7 @@ function NextPreSurveyPanel({
           submitBtnClass="bg-amber-500 hover:bg-amber-400 disabled:bg-[#333] disabled:text-gray-500 text-white"
         />
       </>
-    );
-  }
-
-  return (
+      ) : (
     <>
       {!responseKnown ? (
         <p className={`text-center ${surveyUi.hint} mb-2`}>참여 여부 확인 중… (아래에서 바로 넣을 수 있어요)</p>
@@ -312,6 +352,8 @@ function NextPreSurveyPanel({
         </div>
       ) : null}
     </>
+      )}
+    </div>
   );
 }
 
@@ -989,8 +1031,14 @@ function SurveyPageInner() {
       })()}
 
       {/* 설문 진행 중 — 제출 완료(요약 · 확신도 변경) */}
-      {status === "open" && !isWeekendKST && alreadyAnswered && (
+      {status === "open" && !isWeekendKST && alreadyAnswered && today?.survey_date && (
         <div className="flex flex-col gap-4 mt-6 fade-up">
+          <SurveySectionDateHeader
+            dateLabel={formatSurveySectionDate(today.survey_date)}
+            roleLabel="오늘 설문"
+            hint="제출 완료 · 확신도만 변경 가능"
+            accent="emerald"
+          />
           <SurveyCompletedPanel
             headline=""
             gaugeValue={gaugePosition}
@@ -1053,9 +1101,14 @@ function SurveyPageInner() {
       )}
 
       {/* 설문 진행 중 — 투표 폼 */}
-      {status === "open" && !isWeekendKST && !alreadyAnswered && !submitted && (
+      {status === "open" && !isWeekendKST && !alreadyAnswered && !submitted && today?.survey_date && (
         <div className="space-y-4 mt-4 fade-up">
-          <p className={`text-center ${surveyUi.hint}`}>09:00 마감 · 게이지로 방향·확신도 선택</p>
+          <SurveySectionDateHeader
+            dateLabel={formatSurveySectionDate(today.survey_date)}
+            roleLabel="오늘 설문"
+            hint="09:00 마감 · 게이지로 방향·확신도 선택"
+            accent="emerald"
+          />
           <div className="w-full min-w-0">
             <SurveyGaugeSubmit
               gaugeValue={gaugePosition}
@@ -1087,8 +1140,14 @@ function SurveyPageInner() {
               </p>
             </div>
           )}
-          {(previousAnswer !== null || alreadyAnswered) && (
+          {(previousAnswer !== null || alreadyAnswered) && today?.survey_date && (
             <div className="space-y-2">
+              <SurveySectionDateHeader
+                dateLabel={formatSurveySectionDate(today.survey_date)}
+                roleLabel="오늘 설문"
+                hint={status === "result" ? "제출한 예측 · 결과 확정" : "제출한 예측 · 결과 대기"}
+                accent="emerald"
+              />
               <GaugeBar
                 value={gaugePosition}
                 onChange={() => {}}
