@@ -1,5 +1,6 @@
 "use client";
 
+import { isKospiMarketSessionOpenKST } from "@/lib/kospi-market-hours";
 import { surveyUi } from "@/lib/survey-ui-tokens";
 
 export type KospiLiveQuoteData = {
@@ -10,17 +11,12 @@ export type KospiLiveQuoteData = {
 
 /** 결과 미확정 행 옆 인라인 시세 */
 export function KospiLiveQuote({ live }: { live: KospiLiveQuoteData }) {
-  if (live.price == null) return null;
+  if (!isKospiMarketSessionOpenKST() || live.price == null) return null;
   const up = live.is_up ?? (live.change_pct ?? 0) >= 0;
-  const kst = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Seoul" }));
-  const mins = kst.getHours() * 60 + kst.getMinutes();
-  const isMarketOpen = mins >= 9 * 60 && mins < 15 * 60 + 35;
 
   return (
     <span className="inline-flex flex-wrap items-center justify-end gap-x-2 gap-y-0.5 tabular-nums">
-      <span className="text-xs sm:text-sm text-gray-500">
-        {isMarketOpen ? "코스피(장중)" : "코스피"}
-      </span>
+      <span className="text-xs sm:text-sm text-gray-500">코스피(장중)</span>
       <span className="text-sm sm:text-base font-black text-white">{live.price.toLocaleString()}</span>
       {live.change_pct !== null && live.change_pct !== undefined ? (
         <span className={`text-sm sm:text-base font-bold ${up ? "text-market-up" : "text-market-down"}`}>
@@ -51,8 +47,7 @@ export default function KospiPriceStrip({
   const kst = new Date(
     new Date().toLocaleString("en-US", { timeZone: "Asia/Seoul" }),
   );
-  const mins = kst.getHours() * 60 + kst.getMinutes();
-  const isMarketOpen = mins >= 9 * 60 && mins < 15 * 60 + 35;
+  const isMarketOpen = isKospiMarketSessionOpenKST(kst);
 
   if (
     (status === "result" || status === "closed") &&
@@ -75,13 +70,11 @@ export default function KospiPriceStrip({
     );
   }
 
-  if (live?.price) {
+  if (isMarketOpen && live?.price) {
     const up = live.is_up ?? (live.change_pct ?? 0) >= 0;
     return (
       <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 py-1 tabular-nums">
-        <span className={surveyUi.cardMeta}>
-          {isMarketOpen ? "코스피(장중)" : "코스피"}
-        </span>
+        <span className={surveyUi.cardMeta}>코스피(장중)</span>
         <span className={`${surveyUi.numEmphasis} text-white`}>
           {live.price.toLocaleString()}
         </span>

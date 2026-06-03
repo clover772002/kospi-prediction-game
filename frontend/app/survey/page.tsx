@@ -35,6 +35,7 @@ import AppTabNav from "@/components/AppTabNav";
 import StaleRefreshIndicator from "@/components/StaleRefreshIndicator";
 import WeeklyParticipationCard from "@/components/WeeklyParticipationCard";
 import CrowdGaugeBoxplotsSection from "@/components/CrowdGaugeBoxplotsSection";
+import { isKospiMarketSessionOpenKST } from "@/lib/kospi-market-hours";
 import { surveyUi } from "@/lib/survey-ui-tokens";
 
 interface KospiPrice {
@@ -480,14 +481,14 @@ function SurveyPageInner() {
     return () => clearTimeout(t);
   }, [searchParams]);
 
-  // 확정 등락률 전 — 시세 1회 조회, 장 중이면 60초마다 갱신
+  // 확정 등락률 전 — 정규장(09:00~15:35)에만 시세 조회·갱신
   useEffect(() => {
     if (today?.kospi_change_pct != null) return;
+    if (!isKospiMarketSessionOpenKST()) {
+      setKospiPrice(null);
+      return;
+    }
     void fetchKospiPrice();
-    const kst = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Seoul" }));
-    const mins = kst.getHours() * 60 + kst.getMinutes();
-    const isMarketOpen = mins >= 9 * 60 && mins < 15 * 60 + 35;
-    if (!isMarketOpen) return;
     priceTimerRef.current = setInterval(fetchKospiPrice, 60000);
     return () => {
       if (priceTimerRef.current) clearInterval(priceTimerRef.current);
@@ -930,7 +931,7 @@ function SurveyPageInner() {
             variant="survey"
             openDates={crowdOpenDates}
             liveKospi={
-              kospiPrice
+              isKospiMarketSessionOpenKST() && kospiPrice
                 ? {
                     price: kospiPrice.price,
                     change_pct: kospiPrice.change_pct,
