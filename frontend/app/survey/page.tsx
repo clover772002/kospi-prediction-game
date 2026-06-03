@@ -966,12 +966,6 @@ function SurveyPageInner() {
         />
       ) : null}
 
-      {!isWeekendKST ? (
-        <div className="mt-2 mb-3">
-          <WeeklyParticipationCard status={peekDashboardSnapshot()?.dash?.participation} />
-        </div>
-      ) : null}
-
       {/* 설문 없음 — 대기중 vs 휴장일 구분 */}
       {/* 주말·no_survey 상태에서 다음 거래일 예측 섹션 */}
       {(status === "no_survey" || isWeekendKST) && showNextPreSurvey && nextSurvey?.survey_date && (
@@ -1015,10 +1009,9 @@ function SurveyPageInner() {
         const day = kst.getDay();
         const mins = kst.getHours() * 60 + kst.getMinutes();
         const isWeekend = day === 0 || day === 6;
-        // 09:00~22:00 사이만 "설문 시작 전" (그 외 시간은 전날 22:00에 이미 열림)
-        const isPreSurvey = !isWeekend && mins >= 9 * 60 && mins < 22 * 60;
-        // 00:00~09:00 사이인데 no_survey → 설문 레코드가 아직 없는 경우
         const isEarlyMorning = !isWeekend && mins < 9 * 60;
+        const isPreSurvey = !isWeekend && mins >= 9 * 60 && mins < 22 * 60;
+        if (isPreSurvey) return null;
         return (
           <div className="flex flex-col gap-5 mt-10">
             <div className="flex flex-col items-center gap-3 text-center">
@@ -1028,14 +1021,6 @@ function SurveyPageInner() {
                   <p className="text-2xl sm:text-3xl font-bold text-white leading-snug">설문 준비 중입니다</p>
                   <p className="text-base text-gray-400 px-2">
                     잠시 후 화면을 새로 고침해 주십시오.
-                  </p>
-                </>
-              ) : isPreSurvey ? (
-                <>
-                  <div className="text-5xl">⏳</div>
-                  <p className="text-2xl sm:text-3xl font-bold text-white leading-snug">설문 시작 전입니다</p>
-                  <p className="text-base text-gray-400 px-2">
-                    당일 22:00에 차기 거래일 설문이 시작됩니다.
                   </p>
                 </>
               ) : (
@@ -1222,6 +1207,12 @@ function SurveyPageInner() {
 
         </div>
       )}
+
+      {!isWeekendKST ? (
+        <div className="mt-8 mb-3">
+          <WeeklyParticipationCard status={peekDashboardSnapshot()?.dash?.participation} />
+        </div>
+      ) : null}
 
       </div>
 
