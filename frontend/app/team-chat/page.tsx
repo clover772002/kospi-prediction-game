@@ -6,7 +6,6 @@ import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import {
   getDirectionChatRoom,
-  getMe,
   postDirectionChatMessage,
   type DirectionChatMessageRow,
   type DirectionChatStatus,
@@ -90,7 +89,7 @@ export default function TeamChatPage() {
     void (async () => {
       setBoot(true);
       try {
-        const [me] = await Promise.all([getMe(token), refresh(token, null)]);
+        const [me] = await Promise.all([getMeCached(token), refresh(token, null)]);
         if (!cancelled) {
           setHasPush(Boolean(me.has_push));
           setHasTelegram(me.telegram_chat_id != null);

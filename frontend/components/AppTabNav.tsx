@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { getExpertChatEligibility, type ExpertChatEligibility } from "@/lib/api";
+import type { ExpertChatEligibility } from "@/lib/api";
+import { getExpertChatEligibilityCached } from "@/lib/session-api-cache";
 import { supabase } from "@/lib/supabase";
 import ExpertChatTabGate from "@/components/ExpertChatTabGate";
 
@@ -112,31 +113,27 @@ export default function AppTabNav() {
 
   useEffect(() => {
     let cancelled = false;
-    void supabase.auth.getSession().then(({ data: { session } }) => {
-      if (cancelled || !session?.access_token) {
-        setExpertEligibility(null);
-        return;
-      }
-      void getExpertChatEligibility(session.access_token)
+    const loadEligibility = (accessToken: string) => {
+      void getExpertChatEligibilityCached(accessToken)
         .then((e) => {
           if (!cancelled) setExpertEligibility(e);
         })
         .catch(() => {
           if (!cancelled) setExpertEligibility(null);
         });
-    });
-    const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => {
+    };
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (!session?.access_token) {
         setExpertEligibility(null);
         return;
       }
-      void getExpertChatEligibility(session.access_token)
-        .then((e) => setExpertEligibility(e))
-        .catch(() => setExpertEligibility(null));
+      if (event === "INITIAL_SESSION" || event === "SIGNED_IN") {
+        loadEligibility(session.access_token);
+      }
     });
     return () => {
       cancelled = true;
-      sub.subscription.unsubscribe();
+      subscription.unsubscribe();
     };
   }, []);
 

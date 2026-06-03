@@ -3,7 +3,8 @@
 import { useEffect, useLayoutEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
-import { getMe, unlinkTelegram, deletePushSubscription, savePushPreferences, createGroup, joinGroup, getMyGroups, leaveGroup, UserProfile, Group, PushPreferences } from "@/lib/api";
+import { unlinkTelegram, deletePushSubscription, savePushPreferences, createGroup, joinGroup, getMyGroups, leaveGroup, UserProfile, Group, PushPreferences } from "@/lib/api";
+import { getMeCached, invalidateMeCache } from "@/lib/session-api-cache";
 import { subscribeWebPush } from "@/lib/webPush";
 import HomeScreenAddGuide from "@/components/HomeScreenAddGuide";
 import AppAmbientBackground from "@/components/AppAmbientBackground";
@@ -115,7 +116,7 @@ export default function SetupPage() {
 
     const loadProfile = async (accessToken: string) => {
       try {
-        const profile = await getMe(accessToken);
+        const profile = await getMeCached(accessToken);
         if (!mounted) return;
         applyProfile(profile);
       } catch (e) {
@@ -224,7 +225,8 @@ export default function SetupPage() {
     setChecking(true);
     setCheckFailed(false);
     try {
-      const profile = await getMe(token);
+      invalidateMeCache();
+      const profile = await getMeCached(token);
       if (profile.telegram_chat_id) {
         setLinked(true);
         setUser(profile);

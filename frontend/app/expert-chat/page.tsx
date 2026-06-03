@@ -5,10 +5,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import {
-  getExpertChatEligibility,
   getExpertChatThreadMessages,
   getExpertChatThreads,
-  getMe,
   getToday,
   postExpertChatMessage,
   postExpertChatAcceptTip,
@@ -19,6 +17,11 @@ import {
   type ExpertChatThreadSummary,
   type UserProfile,
 } from "@/lib/api";
+import {
+  getExpertChatEligibilityCached,
+  getMeCached,
+  invalidateExpertEligibilityCache,
+} from "@/lib/session-api-cache";
 import AppAmbientBackground from "@/components/AppAmbientBackground";
 import AppTabNav from "@/components/AppTabNav";
 import ExpertChatTabGate from "@/components/ExpertChatTabGate";
@@ -82,7 +85,8 @@ export default function ExpertChatPage() {
   }, []);
 
   const refreshEligibility = useCallback(async (accessToken: string, sd: string) => {
-    const e = await getExpertChatEligibility(accessToken, sd);
+    invalidateExpertEligibilityCache();
+    const e = await getExpertChatEligibilityCached(accessToken, sd);
     setEligibility(e);
   }, []);
 
@@ -113,13 +117,13 @@ export default function ExpertChatPage() {
       setBoot(true);
       setErr(null);
       try {
-        const [prof, today] = await Promise.all([getMe(token), getToday()]);
+        const [prof, today] = await Promise.all([getMeCached(token), getToday()]);
         if (cancelled) return;
         setMe(prof);
         const sd = today.survey_date?.slice(0, 10) ?? null;
         setSurveyDate(sd);
         if (sd) {
-          const e = await getExpertChatEligibility(token, sd);
+          const e = await getExpertChatEligibilityCached(token, sd);
           if (cancelled) return;
           setEligibility(e);
           if (e.can_access_expert_chat) {

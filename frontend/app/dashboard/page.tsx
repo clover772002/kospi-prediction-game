@@ -4,7 +4,8 @@ import { Suspense, useEffect, useState, useCallback, useRef, useLayoutEffect } f
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
-import { getMe, getTodaySummary, getDashboardSummary, getDashboard, getMySurveyResponse, getExpertChatEligibility, createChallenge, getMyChallenges, reactToChallenge, requestRematch, acceptChallenge, declineChallenge, getMyGroups, UserProfile, TodaySurvey, DashboardData, Challenge, Group, type ExpertChatEligibility } from "@/lib/api";
+import { getTodaySummary, getDashboardSummary, getDashboard, getMySurveyResponse, createChallenge, getMyChallenges, reactToChallenge, requestRematch, acceptChallenge, declineChallenge, getMyGroups, UserProfile, TodaySurvey, DashboardData, Challenge, Group, type ExpertChatEligibility } from "@/lib/api";
+import { getExpertChatEligibilityCached, getMeCached } from "@/lib/session-api-cache";
 import TopExpertNoticeBlock from "@/components/TopExpertNoticeBlock";
 import ShareSheet from "@/components/ShareSheet";
 import AppAmbientBackground from "@/components/AppAmbientBackground";
@@ -251,7 +252,7 @@ export default function DashboardPage() {
           ]);
 
         const [meR, todayR, dashSumR, chR, grpR, myRespR] = await Promise.allSettled([
-          withTimeout(getMe(accessToken), 30_000),
+          withTimeout(getMeCached(accessToken), 30_000),
           withTimeout(getTodaySummary(), 25_000),
           withTimeout(getDashboardSummary(accessToken), 20_000),
           withTimeout(getMyChallenges(accessToken), 25_000),
@@ -319,7 +320,7 @@ export default function DashboardPage() {
         void (async () => {
           if (sd) {
             try {
-              const expertEl = await getExpertChatEligibility(accessToken, sd);
+              const expertEl = await getExpertChatEligibilityCached(accessToken, sd);
               if (seq === dashboardFetchSeq.current) setExpertEligibility(expertEl);
             } catch {
               if (seq === dashboardFetchSeq.current) setExpertEligibility(null);
@@ -418,7 +419,7 @@ export default function DashboardPage() {
     if (!token) return;
     let cancelled = false;
     const refreshConnection = () => {
-      void getMe(token)
+      void getMeCached(token)
         .then((profile) => {
           if (cancelled) return;
           setUser((prev) => mergeNotificationFields(prev, profile));

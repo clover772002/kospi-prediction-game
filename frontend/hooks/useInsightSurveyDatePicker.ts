@@ -2,6 +2,7 @@
 
 import { useMemo, useEffect, useState } from "react";
 import { getToday, getDashboard, type DashboardData, type TodaySurvey } from "@/lib/api";
+import { peekDashboardSnapshot, peekSurveyTodaySnapshot } from "@/lib/tab-session-cache";
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -33,6 +34,13 @@ export function useInsightSurveyDatePicker(accessToken: string | null) {
 
   useEffect(() => {
     let alive = true;
+    const snap = peekSurveyTodaySnapshot();
+    if (snap?.today) {
+      setToday(snap.today);
+      return () => {
+        alive = false;
+      };
+    }
     void getToday()
       .then((t) => {
         if (alive) setToday(t);
@@ -46,6 +54,13 @@ export function useInsightSurveyDatePicker(accessToken: string | null) {
   useEffect(() => {
     if (!accessToken) return;
     let alive = true;
+    const snap = peekDashboardSnapshot();
+    if (snap?.dash?.history?.length) {
+      setDash(snap.dash);
+      return () => {
+        alive = false;
+      };
+    }
     void getDashboard(accessToken)
       .then((d) => {
         if (alive) setDash(d);

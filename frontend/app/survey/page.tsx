@@ -4,7 +4,8 @@ import { useEffect, useState, useCallback, useRef, Suspense, useLayoutEffect } f
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
-import { getTodaySummary, getMe, TodaySurvey } from "@/lib/api";
+import { getTodaySummary, TodaySurvey } from "@/lib/api";
+import { getMeCached } from "@/lib/session-api-cache";
 import { peekDashboardSnapshot } from "@/lib/tab-session-cache";
 import { markWasTopExpert } from "@/lib/top-expert-notice";
 import { formatApiErrorMessage } from "@/lib/format-api-error";
@@ -457,7 +458,7 @@ function SurveyPageInner() {
           setUserTokens(snap.dash.tokens);
         }
         try {
-          const me = await getMe(session.access_token);
+          const me = await getMeCached(session.access_token);
           if (typeof me.tokens === "number") setUserTokens(me.tokens);
         } catch {
           /* 토큰 표시는 기본값 유지 */

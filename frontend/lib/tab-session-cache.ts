@@ -6,6 +6,7 @@ import type {
   TodaySurvey,
   UserProfile,
 } from "@/lib/api";
+import { clearSessionApiCache } from "@/lib/session-api-cache";
 
 /** 탭 왕복·새로고침 직후에도 즉시 그리기용 스냅샷 (백그라운드에서 최신화) */
 export type DashboardTabSnapshot = {
@@ -419,6 +420,7 @@ export function clearAllTabSnapshots(): void {
   clearSurveyNextSnapshot();
   clearGroupsSnapshot();
   clearAnsweredTodaySnapshot();
+  clearSessionApiCache();
 }
 
 /**
