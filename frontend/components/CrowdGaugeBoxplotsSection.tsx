@@ -257,7 +257,7 @@ function DirectionSharePie({
   return (
     <div
       className="rounded-xl border border-[#333] bg-gradient-to-br from-[#151515] to-[#101010] px-3 py-2.5 mb-3 ring-1 ring-white/[0.04]"
-      title={`예측 하락 ${f}%(${nFall}명) · 상승 ${r}%(${nRise}명)`}
+      title={`예측 하락 ${f}% · 상승 ${r}%`}
     >
       <div className="flex items-center gap-3 sm:gap-4">
         <div className="relative h-[4.75rem] w-[4.75rem] sm:h-20 sm:w-20 shrink-0">
@@ -276,12 +276,10 @@ function DirectionSharePie({
           <div className="flex items-center gap-2 min-w-0">
             <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-blue-500" aria-hidden />
             <span className="text-sm font-black text-blue-400 tabular-nums">하락 {f}%</span>
-            <span className="text-sm text-white/85 tabular-nums">({nFall}명)</span>
           </div>
           <div className="flex items-center gap-2 min-w-0">
             <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-red-500" aria-hidden />
             <span className="text-sm font-black text-red-400 tabular-nums">상승 {r}%</span>
-            <span className="text-sm text-white/85 tabular-nums">({nRise}명)</span>
           </div>
         </div>
       </div>
@@ -375,6 +373,13 @@ function normalizeSurveyDateKey(d: string | null | undefined): string {
   return (d ?? "").trim().slice(0, 10);
 }
 
+/** 실시간 집계 헤더용 — 연도 없이 MM.DD */
+function formatLiveDateLabel(dateKey: string): string {
+  const parts = dateKey.trim().slice(0, 10).split("-");
+  if (parts.length >= 3) return `${parts[1]}.${parts[2]}`;
+  return dateKey.replace(/-/g, ".");
+}
+
 function isPendingResult(day: CrowdGaugeBoxplotDay): boolean {
   return day.kospi_result === null || day.kospi_result === undefined;
 }
@@ -465,7 +470,7 @@ export default function CrowdGaugeBoxplotsSection({
                   <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-amber-400" />
                 </span>
                 <p className={`${surveyUi.body} text-violet-100 tabular-nums`}>
-                  {key.replace(/-/g, ".")} · {day ? "진행 중 · 실시간 집계" : "진행 중 · 응답 대기"}
+                  {formatLiveDateLabel(key)} · {day ? "진행 중 · 실시간 집계" : "진행 중 · 응답 대기"}
                 </p>
               </div>
               {day ? (
