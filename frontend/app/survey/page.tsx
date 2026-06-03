@@ -969,6 +969,12 @@ function SurveyPageInner() {
       <StaleRefreshIndicator show={(awaitingToday || revalidating) && !!today} tone="violet" />
       <AppAmbientBackground />
       <div className="relative z-10">
+      {!isWeekendKST ? (
+        <div className="mb-4 fade-up-1">
+          <WeeklyParticipationCard status={peekDashboardSnapshot()?.dash?.participation} />
+        </div>
+      ) : null}
+
       {/* 독촉 토스트 */}
       {nudgeToast && (
         <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[100] px-5 py-4 bg-orange-500 text-white text-base font-bold rounded-2xl shadow-xl animate-bounce-in max-w-sm text-center">
@@ -1278,12 +1284,6 @@ function SurveyPageInner() {
 
         </div>
       )}
-
-      {!isWeekendKST ? (
-        <div className="mt-8 mb-3">
-          <WeeklyParticipationCard status={peekDashboardSnapshot()?.dash?.participation} />
-        </div>
-      ) : null}
 
       </div>
 
