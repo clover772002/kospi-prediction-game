@@ -59,21 +59,33 @@ export function ChipAmountFraction({
   current,
   max,
   compact,
+  large,
   className = "",
 }: {
   current: number;
   max: number;
   compact?: boolean;
+  large?: boolean;
   className?: string;
 }) {
+  const slashSize = large
+    ? "text-base sm:text-lg"
+    : compact
+      ? "text-[10px]"
+      : "text-xs sm:text-sm";
   return (
     <span
-      className={`inline-flex items-center gap-1 tabular-nums ${className}`}
+      className={`inline-flex items-center gap-1 sm:gap-1.5 tabular-nums ${className}`}
       aria-label={`${current} / ${max}`}
     >
-      <ChipAmount amount={current} compact={compact} className="text-amber-200" />
-      <span className={`font-black text-gray-500 ${compact ? "text-[10px]" : "text-xs"}`}>/</span>
-      <ChipAmount amount={max} compact={compact} muted />
+      <ChipAmount
+        amount={current}
+        compact={compact && !large}
+        large={large}
+        className="text-amber-200"
+      />
+      <span className={`font-black text-gray-500 ${slashSize}`}>/</span>
+      <ChipAmount amount={max} compact={compact && !large} large={large} muted />
     </span>
   );
 }
