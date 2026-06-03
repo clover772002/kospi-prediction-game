@@ -22,14 +22,32 @@ function rankMedal(rank: number): string | null {
   return null;
 }
 
+/** 주간 칩 합계(순증감) — +120 / −46 */
+function tokenWeeklyChipDisplay(score: number) {
+  if (score > 0) {
+    return (
+      <ChipAmount amount={score} large sign="+" className="text-emerald-300" />
+    );
+  }
+  if (score < 0) {
+    return (
+      <ChipAmount amount={Math.abs(score)} large sign="-" className="text-red-400" />
+    );
+  }
+  return <ChipAmount amount={0} large sign="+" className="text-gray-400" />;
+}
+
 function RankingRow({
   entry,
   variant,
   highlight,
+  tokenWeeklyDelta,
 }: {
   entry: HallOfFameRankingEntry;
   variant: "token" | "accuracy";
   highlight?: boolean;
+  /** 주간 칩 순위: 이번 주 순증감(+/−) 표기 */
+  tokenWeeklyDelta?: boolean;
 }) {
   const medal = rankMedal(entry.rank);
   const scoreMain =
@@ -38,6 +56,8 @@ function RankingRow({
         <span className="text-xl sm:text-2xl">{entry.score}</span>
         <span className="text-sm sm:text-base font-bold text-gray-500">%</span>
       </>
+    ) : tokenWeeklyDelta ? (
+      tokenWeeklyChipDisplay(entry.score)
     ) : (
       <ChipAmount amount={entry.score} large className="text-amber-200" />
     );
@@ -84,11 +104,13 @@ function RankingList({
   variant,
   myEntry,
   meId,
+  tokenWeeklyDelta,
 }: {
   entries: HallOfFameRankingEntry[];
   variant: "token" | "accuracy";
   myEntry: HallOfFameRankingEntry | null | undefined;
   meId: string | null;
+  tokenWeeklyDelta?: boolean;
 }) {
   if (entries.length === 0 && !myEntry) {
     return (
@@ -109,7 +131,12 @@ function RankingList({
             const mine = meId != null && e.user_id === meId;
             return (
               <li key={e.user_id}>
-                <RankingRow entry={e} variant={variant} highlight={mine} />
+                <RankingRow
+                  entry={e}
+                  variant={variant}
+                  highlight={mine}
+                  tokenWeeklyDelta={tokenWeeklyDelta}
+                />
               </li>
             );
           })}
@@ -123,6 +150,7 @@ function RankingList({
             entry={myEntry}
             variant={variant}
             highlight={!myInTopList}
+            tokenWeeklyDelta={tokenWeeklyDelta}
           />
         </div>
       ) : null}
@@ -164,7 +192,7 @@ function RankBlock({
   const description =
     tab === "weekly"
       ? variant === "token"
-        ? "이번 주 설문 적중·배팅으로만 번 칩 합계예요(손실 포함). 가입·참여 보상 같은 기본 소득은 넣지 않습니다."
+        ? "이번 주 설문 적중·배팅 순증감이에요. +는 이득, −는 손실(가입·참여 보상은 제외)."
         : "이번 주 확정된 코스피 예측만 집계한 적중률이에요. 아직 결과가 없는 날은 빼고 계산합니다."
       : variant === "token"
         ? "현재 보유 칩 순위예요. 설문·적중·소통·보상이 모두 반영된 잔액입니다."
@@ -210,7 +238,13 @@ function RankBlock({
       ) : err ? (
         <p className="text-sm text-red-300/90">{err}</p>
       ) : (
-        <RankingList entries={entries} variant={variant} myEntry={myEntry} meId={meId} />
+        <RankingList
+          entries={entries}
+          variant={variant}
+          myEntry={myEntry}
+          meId={meId}
+          tokenWeeklyDelta={variant === "token" && tab === "weekly"}
+        />
       )}
     </section>
   );
