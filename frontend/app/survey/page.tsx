@@ -1,7 +1,6 @@
 ﻿"use client";
 
 import { useEffect, useState, useCallback, useRef, Suspense, useLayoutEffect, useMemo } from "react";
-import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import type { MySurveyResponse, TodaySurvey } from "@/lib/api";
@@ -114,7 +113,6 @@ function SurveyCompletedPanel({
   onSubmit,
   onGaugeChange,
   error,
-  showTeamChatLink = false,
   submitBtnClass = "bg-emerald-600 hover:bg-emerald-500 disabled:bg-[#333] disabled:text-gray-500 text-white",
   completedLabel = "설문 완료",
 }: {
@@ -133,7 +131,6 @@ function SurveyCompletedPanel({
   onSubmit: () => void | Promise<void>;
   onGaugeChange: (v: number) => void;
   error: string | null;
-  showTeamChatLink?: boolean;
   submitBtnClass?: string;
 }) {
   if (pendingGrantRedo) {
