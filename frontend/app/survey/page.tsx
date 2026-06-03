@@ -857,21 +857,6 @@ function SurveyPageInner() {
     }
   };
 
-  if (authChecking) {
-    return <PageLoadProgress label="확인 중…" accent="violet" />;
-  }
-
-  const status = today?.status ?? "no_survey";
-  const surveyUiLocked = awaitingToday || submitting || nextSubmitting;
-
-  // API status와 무관하게 클라이언트에서 주말 여부 직접 판단
-  const _kstNow = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Seoul" }));
-  const _kstDay = _kstNow.getDay();
-  const isWeekendKST = _kstDay === 0 || _kstDay === 6;
-  /** 당일 설문 제출 전에는 사전설문 UI를 가리고, 마감·결과·휴장·당일 완료 후에만 표시 */
-  const showNextPreSurvey =
-    !!nextSurvey?.is_open && (status !== "open" || alreadyAnswered || submitted);
-
   const crowdOpenDates = useMemo(() => {
     const out: string[] = [];
     const todayKey = today?.survey_date?.trim().slice(0, 10);
@@ -889,6 +874,21 @@ function SurveyPageInner() {
     }
     return out;
   }, [today?.survey_date, today?.status, nextSurvey?.survey_date, nextSurvey?.is_open]);
+
+  if (authChecking) {
+    return <PageLoadProgress label="확인 중…" accent="violet" />;
+  }
+
+  const status = today?.status ?? "no_survey";
+  const surveyUiLocked = awaitingToday || submitting || nextSubmitting;
+
+  // API status와 무관하게 클라이언트에서 주말 여부 직접 판단
+  const _kstNow = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Seoul" }));
+  const _kstDay = _kstNow.getDay();
+  const isWeekendKST = _kstDay === 0 || _kstDay === 6;
+  /** 당일 설문 제출 전에는 사전설문 UI를 가리고, 마감·결과·휴장·당일 완료 후에만 표시 */
+  const showNextPreSurvey =
+    !!nextSurvey?.is_open && (status !== "open" || alreadyAnswered || submitted);
 
   return (
     <main className="relative w-full min-h-screen app-page-tab-pad min-w-0 box-border text-[1.0625rem] sm:text-lg px-4 sm:px-5">

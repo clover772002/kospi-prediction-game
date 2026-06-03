@@ -317,7 +317,7 @@ export default function CrowdGaugeBoxplotsSection({
     void (async () => {
       try {
         const d = await getCrowdGaugeBoxplots(isSurvey ? 8 : 30);
-        if (!cancelled) setDays(d.days);
+        if (!cancelled) setDays(Array.isArray(d.days) ? d.days : []);
       } catch (e: unknown) {
         if (!cancelled) setErr(e instanceof Error ? e.message : String(e));
       }
