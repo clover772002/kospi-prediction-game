@@ -117,37 +117,62 @@ export default function FgiDigestPanel({ deferLoadMs = 0 }: { deferLoadMs?: numb
     };
   }, [load]);
 
+  const panelId = "fgi-digest-panel-body";
+
   return (
     <section className="relative z-10 shrink-0 border-b border-violet-500/20 bg-[#0c0812]/90 px-3 py-2.5">
       <div className="flex items-center justify-between gap-2">
-        <button
-          type="button"
-          onClick={() => setOpen((v) => !v)}
-          className="flex min-w-0 flex-1 items-center gap-2 text-left"
-        >
+        <div className="flex min-w-0 flex-1 items-center gap-2">
           <span className="text-base shrink-0" aria-hidden>
             📊
           </span>
-          <span className="min-w-0 truncate text-sm font-black text-violet-100">
-            공포·탐욕 지수
+          <div className="min-w-0">
+            <h2 className="truncate text-sm font-black text-violet-100">공포·탐욕 지수</h2>
             {data?.as_of ? (
-              <span className="ml-1.5 text-xs font-bold text-gray-500">{data.as_of} KST</span>
+              <p className="text-xs font-bold text-gray-500 tabular-nums">{data.as_of} KST</p>
             ) : null}
-          </span>
-          <span className="text-gray-500 text-xs shrink-0">{open ? "▾" : "▸"}</span>
-        </button>
-        <button
-          type="button"
-          onClick={() => void load(true)}
-          disabled={loading || refreshing}
-          className="shrink-0 rounded-lg border border-violet-500/30 px-2.5 py-1 text-xs font-bold text-violet-200/90 disabled:opacity-40"
-        >
-          {refreshing ? "…" : "새로고침"}
-        </button>
+          </div>
+        </div>
+        <div className="flex shrink-0 items-center gap-1.5">
+          <button
+            type="button"
+            onClick={() => setOpen((v) => !v)}
+            aria-expanded={open}
+            aria-controls={panelId}
+            className="flex items-center gap-1 rounded-lg border border-violet-500/40 bg-violet-500/15 px-2.5 py-1.5 text-xs font-bold text-violet-100 hover:bg-violet-500/25 active:scale-[0.98] transition-colors"
+          >
+            <svg
+              className={`h-4 w-4 shrink-0 text-violet-200 transition-transform duration-200 ${
+                open ? "rotate-0" : "-rotate-90"
+              }`}
+              viewBox="0 0 20 20"
+              fill="currentColor"
+              aria-hidden
+            >
+              <path
+                fillRule="evenodd"
+                d="M5.23 7.21a.75.75 0 011.06.02L10 11.188l3.71-3.96a.75.75 0 111.08 1.04l-4.24 4.52a.75.75 0 01-1.08 0L5.21 8.27a.75.75 0 01.02-1.06z"
+                clipRule="evenodd"
+              />
+            </svg>
+            {open ? "접기" : "펼치기"}
+          </button>
+          <button
+            type="button"
+            onClick={() => void load(true)}
+            disabled={loading || refreshing}
+            className="rounded-lg border border-violet-500/30 px-2.5 py-1.5 text-xs font-bold text-violet-200/90 hover:bg-violet-500/10 disabled:opacity-40"
+          >
+            {refreshing ? "…" : "새로고침"}
+          </button>
+        </div>
       </div>
 
       {open ? (
-        <div className="mt-2.5 space-y-3 rounded-xl border border-violet-500/15 bg-[#100a14]/80 px-3 py-3">
+        <div
+          id={panelId}
+          className="mt-2.5 space-y-3 rounded-xl border border-violet-500/15 bg-[#100a14]/80 px-3 py-3"
+        >
           {loading && !data ? (
             <p className="text-sm text-gray-500 animate-pulse">지표 수집 중…</p>
           ) : null}
