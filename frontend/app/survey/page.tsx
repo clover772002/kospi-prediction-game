@@ -189,14 +189,6 @@ function SurveyCompletedPanel({
         >
           확신도 변경하기
         </button>
-        {showTeamChatLink ? (
-          <Link
-            href="/team-chat"
-            className={`block rounded-xl border border-violet-500/35 bg-violet-500/10 px-4 text-center ${surveyUi.btnPrimary} text-violet-200 hover:bg-violet-500/15`}
-          >
-            소통방 보기 →
-          </Link>
-        ) : null}
         {error ? (
           <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4 text-red-400 text-base text-center">
             {error}
@@ -1023,7 +1015,6 @@ function SurveyPageInner() {
               setKospiAnswer(v > 0);
             }}
             error={error}
-            showTeamChatLink={!editingTodayConfidence}
           />
           {showNextPreSurvey && nextSurvey?.survey_date && (
             <div className="mt-4 border-t border-[#2A2A2A] pt-5">
