@@ -36,6 +36,7 @@ import PageLoadProgress from "@/components/PageLoadProgress";
 import AppTabNav from "@/components/AppTabNav";
 import StaleRefreshIndicator from "@/components/StaleRefreshIndicator";
 import WeeklyParticipationCard from "@/components/WeeklyParticipationCard";
+import CrowdGaugeBoxplotsSection from "@/components/CrowdGaugeBoxplotsSection";
 import { surveyUi } from "@/lib/survey-ui-tokens";
 
 interface KospiPrice {
@@ -871,6 +872,13 @@ function SurveyPageInner() {
   const showNextPreSurvey =
     !!nextSurvey?.is_open && (status !== "open" || alreadyAnswered || submitted);
 
+  const crowdFocusDate = (() => {
+    const kst = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Seoul" }));
+    const fallback = `${kst.getFullYear()}-${String(kst.getMonth() + 1).padStart(2, "0")}-${String(kst.getDate()).padStart(2, "0")}`;
+    const fromToday = today?.survey_date?.trim().slice(0, 10);
+    return fromToday && fromToday.length >= 8 ? fromToday : fallback;
+  })();
+
   return (
     <main className="relative w-full min-h-screen app-page-tab-pad min-w-0 box-border text-[1.0625rem] sm:text-lg px-4 sm:px-5">
       <StaleRefreshIndicator show={(awaitingToday || revalidating) && !!today} tone="violet" />
@@ -931,6 +939,12 @@ function SurveyPageInner() {
           );
         })()}
       </div>
+
+      {!isWeekendKST ? (
+        <div className="mb-4 fade-up-2">
+          <CrowdGaugeBoxplotsSection variant="survey" focusDate={crowdFocusDate} />
+        </div>
+      ) : null}
 
       {!isWeekendKST && status !== "no_survey" ? (
         <KospiPriceStrip

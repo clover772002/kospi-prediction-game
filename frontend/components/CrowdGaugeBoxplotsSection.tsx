@@ -6,6 +6,7 @@ import {
   type CrowdGaugeBoxplotDay,
   type CrowdGaugeBoxplotStats,
 } from "@/lib/api";
+import { surveyUi } from "@/lib/survey-ui-tokens";
 
 /** 하락축 -100~0 → 플롯 0~100% (왼쪽이 -100, 오른쪽이 0) */
 function fallToPercent(v: number): number {
@@ -205,8 +206,15 @@ function DirectionShareRibbon({
   );
 }
 
-function DayCard({ day }: { day: CrowdGaugeBoxplotDay }) {
+function DayCard({
+  day,
+  emphasize = false,
+}: {
+  day: CrowdGaugeBoxplotDay;
+  emphasize?: boolean;
+}) {
   const resultLabel = formatMarketResultLabel(day.kospi_result, day.kospi_change_pct);
+  const pending = day.kospi_result === null || day.kospi_result === undefined;
 
   const hiRise = day.correct_team === "rise";
   const hiFall = day.correct_team === "fall";
@@ -227,30 +235,48 @@ function DayCard({ day }: { day: CrowdGaugeBoxplotDay }) {
         ? Math.round((1000 * nFall) / totalDir) / 10
         : 0;
 
+  const dateCls = emphasize ? `${surveyUi.body} text-white` : "text-sm font-bold text-white tabular-nums";
+  const resultCls = emphasize
+    ? `${surveyUi.body} ${
+        day.kospi_result === true
+          ? "text-red-400"
+          : day.kospi_result === false
+            ? "text-blue-400"
+            : "text-amber-200"
+      }`
+    : `text-sm font-bold ${
+        day.kospi_result === true
+          ? "text-red-400"
+          : day.kospi_result === false
+            ? "text-blue-400"
+            : "text-white"
+      }`;
+  const colHead = emphasize ? surveyUi.body : "text-sm font-black";
+  const colSub = emphasize ? surveyUi.label : "text-sm text-white/90 tabular-nums";
+
   return (
-    <div className="rounded-xl border border-[#2A2A2A] bg-[#141414]/80 px-3 py-2.5">
+    <div
+      className={`rounded-xl border bg-[#141414]/80 ${
+        emphasize ? "border-amber-500/35 px-4 py-3.5 sm:py-4" : "border-[#2A2A2A] px-3 py-2.5"
+      }`}
+    >
       <div className="flex flex-wrap items-baseline justify-between gap-2 mb-2">
-        <p className="text-sm font-bold text-white tabular-nums">{day.survey_date}</p>
-        <p
-          className={`text-sm font-bold ${
-            day.kospi_result === true
-              ? "text-red-400"
-              : day.kospi_result === false
-                ? "text-blue-400"
-                : "text-white"
-          }`}
-        >
-          {resultLabel}
-        </p>
+        <p className={`${dateCls} tabular-nums`}>{day.survey_date}</p>
+        <p className={resultCls}>{resultLabel}</p>
       </div>
+      {emphasize && pending ? (
+        <p className={`${surveyUi.hint} text-amber-200/80 mb-2`}>
+          장 마감 전까지 참가자들의 방향·확신도가 실시간으로 쌓입니다.
+        </p>
+      ) : null}
 
       <DirectionShareRibbon pctRise={pctRise} pctFall={pctFall} nRise={nRise} nFall={nFall} />
 
       <div className="grid grid-cols-2 gap-x-3 sm:gap-x-4 gap-y-1 mb-1.5">
-        <p className="text-sm font-black text-blue-400 text-center">하락선택</p>
-        <p className="text-sm font-black text-red-400 text-center">상승선택</p>
-        <p className="text-sm text-white/90 tabular-nums text-center">n={nFall}</p>
-        <p className="text-sm text-white/90 tabular-nums text-center">n={nRise}</p>
+        <p className={`${colHead} text-blue-400 text-center`}>하락선택</p>
+        <p className={`${colHead} text-red-400 text-center`}>상승선택</p>
+        <p className={`${colSub} text-center`}>n={nFall}</p>
+        <p className={`${colSub} text-center`}>n={nRise}</p>
       </div>
 
       <div className="grid grid-cols-2 items-stretch gap-x-3 sm:gap-x-4 gap-y-0">
@@ -261,16 +287,32 @@ function DayCard({ day }: { day: CrowdGaugeBoxplotDay }) {
   );
 }
 
-export default function CrowdGaugeBoxplotsSection() {
+function normalizeSurveyDateKey(d: string | null | undefined): string {
+  return (d ?? "").trim().slice(0, 10);
+}
+
+type SectionProps = {
+  /** 설문 탭: 오늘(진행 중) 강조 · 대시보드: 전체 목록 */
+  variant?: "dashboard" | "survey";
+  /** 설문 탭에서 강조할 거래일 (YYYY-MM-DD) */
+  focusDate?: string | null;
+};
+
+export default function CrowdGaugeBoxplotsSection({
+  variant = "dashboard",
+  focusDate = null,
+}: SectionProps) {
   const [days, setDays] = useState<CrowdGaugeBoxplotDay[] | null>(null);
   const [err, setErr] = useState<string | null>(null);
+  const isSurvey = variant === "survey";
+  const focusKey = normalizeSurveyDateKey(focusDate);
 
   useEffect(() => {
     let cancelled = false;
     setErr(null);
     void (async () => {
       try {
-        const d = await getCrowdGaugeBoxplots(30);
+        const d = await getCrowdGaugeBoxplots(isSurvey ? 14 : 30);
         if (!cancelled) setDays(d.days);
       } catch (e: unknown) {
         if (!cancelled) setErr(e instanceof Error ? e.message : String(e));
@@ -279,28 +321,90 @@ export default function CrowdGaugeBoxplotsSection() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [isSurvey]);
+
+  const focusDay =
+    days && focusKey
+      ? days.find((d) => normalizeSurveyDateKey(d.survey_date) === focusKey) ?? null
+      : null;
+  const historyDays =
+    days && focusKey
+      ? days.filter((d) => normalizeSurveyDateKey(d.survey_date) !== focusKey)
+      : days ?? [];
+
+  const shellClass = isSurvey
+    ? `${surveyUi.card} fade-up-3`
+    : "bg-[#1A1A1A] rounded-2xl p-5 border border-[#2A2A2A] fade-up-3 space-y-4";
 
   return (
-    <div className="bg-[#1A1A1A] rounded-2xl p-5 border border-[#2A2A2A] fade-up-3 space-y-4">
-      <p className="font-bold text-base text-white">전체 예측 방향/확신분포</p>
+    <div className={shellClass}>
+      <div className="space-y-1">
+        <p className={isSurvey ? surveyUi.cardTitle : "font-bold text-base text-white"}>
+          전체 예측 방향/확신분포
+        </p>
+        {isSurvey ? (
+          <p className={surveyUi.bodyMuted}>
+            다른 참가자들이 지금 이 거래일을 상승·하락으로 어떻게 보는지, 확신도 분포까지 한눈에
+            확인할 수 있어요.
+          </p>
+        ) : null}
+      </div>
 
       {err ? (
-        <p className="text-sm text-red-400 rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-2">{err}</p>
+        <p className="text-sm text-red-400 rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-2">
+          {err}
+        </p>
       ) : null}
 
       {!err && days === null ? (
         <div className="grid grid-cols-2 gap-3 animate-pulse">
-          <div className="h-24 rounded-xl bg-[#252525]" />
-          <div className="h-24 rounded-xl bg-[#252525]" />
+          <div className="h-28 rounded-xl bg-[#252525]" />
+          <div className="h-28 rounded-xl bg-[#252525]" />
         </div>
       ) : null}
 
       {!err && days && days.length === 0 ? (
-        <p className="text-base text-white">아직 집계할 거래일이 없어요.</p>
+        <p className={isSurvey ? surveyUi.bodyMuted : "text-base text-white"}>
+          아직 집계할 거래일이 없어요.
+        </p>
       ) : null}
 
-      {!err && days && days.length > 0 ? (
+      {isSurvey && !err && days && days.length > 0 ? (
+        <div className="space-y-4">
+          <div className="rounded-xl border-2 border-violet-500/30 bg-violet-950/20 px-1 py-1 sm:px-1.5">
+            <div className="flex items-center gap-2 px-2 pt-2 pb-1">
+              <span className="relative flex h-2.5 w-2.5">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-amber-400/70 opacity-75" />
+                <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-amber-400" />
+              </span>
+              <p className={`${surveyUi.body} text-violet-100`}>
+                {focusDay ? "오늘 · 실시간 집계" : "이 거래일 · 집계 준비 중"}
+              </p>
+            </div>
+            {focusDay ? (
+              <DayCard day={focusDay} emphasize />
+            ) : (
+              <div className={`mx-2 mb-2 rounded-xl border border-dashed border-[#444] px-4 py-6 text-center ${surveyUi.hint}`}>
+                아직 이 날짜 예측이 모이지 않았어요. 첫 설문을 넣으면 여기에 무리 분포가
+                보입니다.
+              </div>
+            )}
+          </div>
+
+          {historyDays.length > 0 ? (
+            <div className="space-y-2">
+              <p className={surveyUi.label}>지난 거래일</p>
+              <div className="space-y-2.5 max-h-[min(360px,45vh)] overflow-y-auto pr-1">
+                {historyDays.map((d) => (
+                  <DayCard key={d.survey_date} day={d} />
+                ))}
+              </div>
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+
+      {!isSurvey && !err && days && days.length > 0 ? (
         <div className="space-y-3 max-h-[min(520px,60vh)] overflow-y-auto pr-1">
           {days.map((d) => (
             <DayCard key={d.survey_date} day={d} />
