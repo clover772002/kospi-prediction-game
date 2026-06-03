@@ -1119,7 +1119,7 @@ export default function DashboardPage() {
                     </span>
                     {!expertUnlocked && tokens != null ? (
                       <span className="text-sm font-normal text-white/70">
-                        토큰 {expertMin}개 이상이면 명예의 전당이 열립니다 (현재 {tokens}개)
+                        토큰 {expertMin}개 이상이면 초고수 소통이 열립니다 (현재 {tokens}개)
                       </span>
                     ) : null}
                   </Link>

@@ -1,25 +1,19 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import type { ExpertChatEligibility } from "@/lib/api";
-import { getExpertChatEligibilityCached } from "@/lib/session-api-cache";
-import { supabase } from "@/lib/supabase";
-import ExpertChatTabGate from "@/components/ExpertChatTabGate";
-
 type TabDef = {
   href: string;
   label: string;
   icon: string;
   activeClass: string;
-  expertGate?: boolean;
 };
 
 /** 메인: 오늘 할 일 */
 const PRIMARY_TABS: TabDef[] = [
   { href: "/survey", label: "설문", icon: "📝", activeClass: "app-tab-survey" },
-  { href: "/expert-chat", label: "명예의 전당", icon: "🏆", activeClass: "app-tab-expert-chat", expertGate: true },
+  { href: "/expert-chat", label: "명예의 전당", icon: "🏆", activeClass: "app-tab-expert-chat" },
 ];
 
 /** 보조: 기록·도구·설정 */
@@ -38,10 +32,9 @@ type TabButtonProps = {
   active: boolean;
   locked: boolean;
   variant: "primary" | "secondary";
-  onLockedClick?: () => void;
 };
 
-function TabButton({ tab, active, locked, variant, onLockedClick }: TabButtonProps) {
+function TabButton({ tab, active, locked, variant }: TabButtonProps) {
   const isPrimary = variant === "primary";
 
   const inner = (
@@ -75,19 +68,6 @@ function TabButton({ tab, active, locked, variant, onLockedClick }: TabButtonPro
     ? "relative flex min-h-[54px] flex-1 flex-col items-center justify-center gap-1 rounded-2xl py-2 transition-colors active:scale-[0.98]"
     : "relative flex min-h-[36px] flex-1 flex-col items-center justify-center gap-0.5 rounded-lg py-1 transition-colors active:scale-[0.97]";
 
-  if (locked && onLockedClick) {
-    return (
-      <button
-        type="button"
-        onClick={onLockedClick}
-        className={`${className} text-gray-600`}
-        aria-label="명예의 전당 잠금 — 토큰 210개 이상 필요"
-      >
-        {inner}
-      </button>
-    );
-  }
-
   return (
     <Link
       href={tab.href}
@@ -104,73 +84,15 @@ function TabButton({ tab, active, locked, variant, onLockedClick }: TabButtonPro
 export default function AppTabNav() {
   const pathname = usePathname();
   const router = useRouter();
-  const [expertEligibility, setExpertEligibility] = useState<ExpertChatEligibility | null>(null);
-  const [gateOpen, setGateOpen] = useState(false);
 
   useEffect(() => {
     ALL_TABS.forEach((t) => router.prefetch(t.href));
   }, [router]);
 
-  useEffect(() => {
-    let cancelled = false;
-    const loadEligibility = (accessToken: string) => {
-      void getExpertChatEligibilityCached(accessToken)
-        .then((e) => {
-          if (!cancelled) setExpertEligibility(e);
-        })
-        .catch(() => {
-          if (!cancelled) setExpertEligibility(null);
-        });
-    };
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (!session?.access_token) {
-        setExpertEligibility(null);
-        return;
-      }
-      if (event === "INITIAL_SESSION" || event === "SIGNED_IN") {
-        loadEligibility(session.access_token);
-      }
-    });
-    return () => {
-      cancelled = true;
-      subscription.unsubscribe();
-    };
-  }, []);
-
-  const expertLocked =
-    expertEligibility != null && !expertEligibility.can_access_expert_chat;
-
   const secondaryActive = SECONDARY_TABS.some((t) => pathname === t.href);
 
   return (
     <>
-      {gateOpen && expertEligibility && expertLocked ? (
-        <div
-          className="fixed inset-0 z-[70] flex items-end justify-center px-4 pb-[calc(6.5rem+env(safe-area-inset-bottom))] pt-8"
-          style={{ backgroundColor: "rgba(0,0,0,0.75)" }}
-          role="dialog"
-          aria-modal
-          aria-labelledby="expert-tab-gate-title"
-          onClick={() => setGateOpen(false)}
-        >
-          <div className="w-full max-w-sm" onClick={(e) => e.stopPropagation()}>
-            <ExpertChatTabGate
-              myBalance={expertEligibility.my_balance}
-              minBalance={expertEligibility.min_balance_for_tab}
-              tipPerMessage={expertEligibility.tip_tokens_per_message}
-              reason={expertEligibility.tab_blocked_reason}
-            />
-            <button
-              type="button"
-              onClick={() => setGateOpen(false)}
-              className="mt-3 w-full rounded-xl border border-[#333] bg-[#252525] py-2.5 text-sm font-bold text-white"
-            >
-              닫기
-            </button>
-          </div>
-        </div>
-      ) : null}
-
       <nav
         className="app-nav-shell fixed bottom-0 left-0 right-0 z-50 border-t border-white/[0.07] pb-[max(4px,env(safe-area-inset-bottom))]"
         aria-label="앱 하단 메뉴"
@@ -201,19 +123,15 @@ export default function AppTabNav() {
             }`}
           >
             <span className="sr-only">기록·도구·설정</span>
-            {SECONDARY_TABS.map((tab) => {
-              const locked = Boolean(tab.expertGate && expertLocked);
-              return (
-                <TabButton
-                  key={tab.href}
-                  tab={tab}
-                  active={pathname === tab.href}
-                  locked={locked}
-                  variant="secondary"
-                  onLockedClick={locked ? () => setGateOpen(true) : undefined}
-                />
-              );
-            })}
+            {SECONDARY_TABS.map((tab) => (
+              <TabButton
+                key={tab.href}
+                tab={tab}
+                active={pathname === tab.href}
+                locked={false}
+                variant="secondary"
+              />
+            ))}
           </div>
         </div>
       </nav>

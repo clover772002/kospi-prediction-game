@@ -42,7 +42,7 @@ export default function GlobalTopExpertBanner({
         </Link>
       ) : receivesToday && !expertChatUnlocked ? (
         <p className={`mt-2 text-violet-300/70 ${compact ? "text-[11px]" : "text-xs"}`}>
-          명예의 전당·초고수 소통은 토큰 210개 이상일 때 열립니다.
+          초고수 소통은 토큰 210개 이상일 때 열립니다.
         </p>
       ) : !receivesToday ? (
         <p className={`mt-2 text-violet-300/70 ${compact ? "text-[11px]" : "text-xs"}`}>

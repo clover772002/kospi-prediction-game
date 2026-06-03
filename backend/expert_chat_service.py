@@ -24,7 +24,7 @@ TOP_N = 1
 MAX_BODY_LEN = int(os.getenv("EXPERT_CHAT_MAX_BODY", "1200"))
 MAX_MESSAGES_PER_PARTICIPANT_SURVEY = int(os.getenv("EXPERT_CHAT_MAX_MSG_PER_SURVEY", "30"))
 
-TAB_BLOCKED_REASON = f"명예의 전당·초고수 소통은 토큰 {MIN_TAB_BALANCE}개 이상부터 이용할 수 있습니다."
+TAB_BLOCKED_REASON = f"초고수 소통은 토큰 {MIN_TAB_BALANCE}개 이상부터 이용할 수 있습니다."
 
 
 def user_token_balance(supabase: Client, user_id: str) -> int:

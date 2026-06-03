@@ -320,41 +320,8 @@ export default function ExpertChatPage() {
     return <PageLoadProgress label="확인 중…" accent="blue" />;
   }
 
-  const tabLocked =
-    !awaitingCore && eligibility != null && !eligibility.can_access_expert_chat;
+  const chatUnlocked = Boolean(eligibility?.can_access_expert_chat);
   const actionLocked = awaitingCore || busy;
-
-  if (tabLocked && eligibility) {
-    return (
-      <>
-        <StaleRefreshIndicator show={awaitingCore || revalidating} tone="violet" />
-        <AppAmbientBackground />
-        <main className="relative z-10 mx-auto min-h-screen max-w-md px-4 app-page-tab-pad pt-6">
-          <h1 className="mb-1 text-center text-2xl font-black text-white">명예의 전당</h1>
-          <p className="mb-4 text-center text-xs text-gray-500">토큰·적중률 순위 · 초고수 소통</p>
-          <TokenHallOfFameRankings accessToken={token} meId={me?.id ?? null} />
-          {me && eligibility ? (
-            <div className="mb-4">
-              <TopExpertNoticeBlock
-                userId={me.id}
-                isGlobalTopExpert={eligibility.is_global_top_expert}
-                receivesToday={eligibility.receives_expert_questions_today}
-                expertChatUnlocked={eligibility.can_access_expert_chat}
-              />
-            </div>
-          ) : null}
-          <h2 className="mb-3 text-center text-lg font-black text-violet-200/95">초고수 소통</h2>
-          <ExpertChatTabGate
-            myBalance={eligibility.my_balance}
-            minBalance={eligibility.min_balance_for_tab}
-            tipPerMessage={eligibility.tip_tokens_per_message}
-            reason={eligibility.tab_blocked_reason}
-          />
-        </main>
-        <AppTabNav />
-      </>
-    );
-  }
 
   return (
     <>
@@ -389,35 +356,51 @@ export default function ExpertChatPage() {
         ) : null}
 
         <h2 className="mb-2 text-lg font-black text-violet-200/95">초고수 소통</h2>
-        {eligibility && !eligibility.is_global_top_expert ? (
-          <p className="mb-4 text-sm leading-relaxed text-white/90">
-            오늘 설문에 참여한 <strong className="text-white">토큰 1위 초고수</strong>에게 질문을 보낼 수 있습니다. 질문 1통당{" "}
-            <span className="font-bold text-amber-200">{eligibility.tip_tokens_per_message}토큰</span>이
-            차감되며, 초고수가 <strong className="text-white">팁을 수락할 때</strong> 해당 토큰이 전달됩니다.
-          </p>
-        ) : null}
+        <p className="mb-4 text-xs text-gray-500">
+          토큰 {eligibility?.min_balance_for_tab ?? 210}개 이상이면 질문·답장을 이용할 수 있어요. 순위는 누구나 볼 수 있습니다.
+        </p>
 
-        {err ? (
-          <div className="mb-3 rounded-xl border border-red-500/30 bg-red-950/40 px-3 py-2 text-xs text-red-200">
-            {err}
-          </div>
-        ) : null}
-
-        {eligibility ? (
-          <div className="mb-4 flex flex-wrap items-center gap-2 text-[11px] text-gray-400">
-            <span>
-              내 잔액 <b className="tabular-nums text-amber-200">{eligibility.my_balance}</b>
-            </span>
-            {eligibility.my_rank != null ? (
-              <span className="rounded-full border border-white/10 px-2 py-0.5">내 순위 {eligibility.my_rank}위</span>
+        {awaitingCore ? (
+          <p className="mb-6 text-center text-xs text-gray-500">초고수 소통 정보 불러오는 중…</p>
+        ) : eligibility && !chatUnlocked ? (
+          <ExpertChatTabGate
+            myBalance={eligibility.my_balance}
+            minBalance={eligibility.min_balance_for_tab}
+            tipPerMessage={eligibility.tip_tokens_per_message}
+            reason={eligibility.tab_blocked_reason}
+            compact
+          />
+        ) : (
+          <>
+            {eligibility && !eligibility.is_global_top_expert ? (
+              <p className="mb-4 text-sm leading-relaxed text-white/90">
+                오늘 설문에 참여한 <strong className="text-white">토큰 1위 초고수</strong>에게 질문을 보낼 수 있습니다. 질문 1통당{" "}
+                <span className="font-bold text-amber-200">{eligibility.tip_tokens_per_message}토큰</span>이
+                차감되며, 초고수가 <strong className="text-white">팁을 수락할 때</strong> 해당 토큰이 전달됩니다.
+              </p>
             ) : null}
-            {!eligibility.can_send_message && eligibility.send_blocked_reason ? (
-              <span className="text-amber-300/80">{eligibility.send_blocked_reason}</span>
-            ) : null}
-          </div>
-        ) : null}
 
-        <section className="mb-6 rounded-2xl border border-[#2A2A2A] bg-[#141414] p-4">
+            {err ? (
+              <div className="mb-3 rounded-xl border border-red-500/30 bg-red-950/40 px-3 py-2 text-xs text-red-200">
+                {err}
+              </div>
+            ) : null}
+
+            {eligibility ? (
+              <div className="mb-4 flex flex-wrap items-center gap-2 text-[11px] text-gray-400">
+                <span>
+                  내 잔액 <b className="tabular-nums text-amber-200">{eligibility.my_balance}</b>
+                </span>
+                {eligibility.my_rank != null ? (
+                  <span className="rounded-full border border-white/10 px-2 py-0.5">내 순위 {eligibility.my_rank}위</span>
+                ) : null}
+                {!eligibility.can_send_message && eligibility.send_blocked_reason ? (
+                  <span className="text-amber-300/80">{eligibility.send_blocked_reason}</span>
+                ) : null}
+              </div>
+            ) : null}
+
+            <section className="mb-6 rounded-2xl border border-[#2A2A2A] bg-[#141414] p-4">
           <h2 className="mb-2 text-sm font-bold text-white">스레드</h2>
           {threads.length === 0 ? (
             <p className="text-xs text-gray-500">아직 대화가 없어요.</p>
@@ -583,6 +566,8 @@ export default function ExpertChatPage() {
             막히며 거래일당 전송 수에 제한이 있을 수 있어요.
           </p>
         </section>
+          </>
+        )}
       </main>
       <AppTabNav />
     </>

@@ -6,24 +6,30 @@ export default function ExpertChatTabGate({
   minBalance,
   tipPerMessage,
   reason,
+  compact = false,
 }: {
   myBalance: number;
   minBalance: number;
   tipPerMessage?: number;
   reason?: string | null;
+  compact?: boolean;
 }) {
   const need = Math.max(0, minBalance - myBalance);
 
   return (
-    <div className="mx-auto flex min-h-[min(70vh,520px)] max-w-sm flex-col items-center justify-center rounded-3xl border border-[#2A2A2A] bg-[#1A1A1A] px-6 py-10 text-center shadow-2xl">
-      <p className="text-5xl mb-4" aria-hidden>
+    <div
+      className={`mx-auto flex max-w-sm flex-col items-center justify-center rounded-3xl border border-[#2A2A2A] bg-[#1A1A1A] px-6 text-center shadow-2xl ${
+        compact ? "mb-6 min-h-0 py-8" : "min-h-[min(70vh,520px)] py-10"
+      }`}
+    >
+      <p className={`${compact ? "text-4xl mb-3" : "text-5xl mb-4"}`} aria-hidden>
         🔒
       </p>
       <h2 id="expert-tab-gate-title" className="text-xl font-black text-white leading-snug">
         초고수 소통은 아직 열리지 않았습니다
       </h2>
       <p className="mt-3 text-base text-white/90 leading-relaxed">
-        {reason ?? `보유 토큰이 ${minBalance}개 이상이어야 명예의 전당·초고수 소통을 이용할 수 있습니다.`}
+        {reason ?? `보유 토큰이 ${minBalance}개 이상이어야 초고수에게 질문·답장을 할 수 있습니다.`}
       </p>
       <div className="mt-5 w-full rounded-2xl border border-amber-500/30 bg-amber-500/10 px-4 py-4 space-y-2 text-base">
         <p className="text-white">
