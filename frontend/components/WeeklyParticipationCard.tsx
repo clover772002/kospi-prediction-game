@@ -11,14 +11,20 @@ const WEEKLY_TIERS: { day: number; chips: number }[] = [
   { day: 5, chips: 70 },
 ];
 
+const MAX_STAMP_CHIP_TOTAL = WEEKLY_TIERS.reduce((s, t) => s + t.chips, 0);
+
 const CHIP_ICON = "🪙";
+
+function stampChipSumForDays(days: number): number {
+  return WEEKLY_TIERS.filter((t) => days >= t.day).reduce((s, t) => s + t.chips, 0);
+}
 
 type Props = {
   status: ParticipationRewardsStatus | null | undefined;
   compact?: boolean;
 };
 
-/** 🪙 X100 형식 — 한글 「칩」 대신 */
+/** 🪙 X100 형식 */
 function ChipAmount({
   amount,
   compact,
@@ -57,6 +63,30 @@ function ChipAmount({
   );
 }
 
+/** 🪙 X10 / 🪙 X185 — 도장 합계 진행 */
+function ChipAmountFraction({
+  current,
+  max,
+  compact,
+  className = "",
+}: {
+  current: number;
+  max: number;
+  compact?: boolean;
+  className?: string;
+}) {
+  return (
+    <span
+      className={`inline-flex items-center gap-1 tabular-nums ${className}`}
+      aria-label={`도장 합계 ${current} / 최대 ${max}`}
+    >
+      <ChipAmount amount={current} compact={compact} className="text-amber-200" />
+      <span className={`font-black text-gray-500 ${compact ? "text-[10px]" : "text-xs"}`}>/</span>
+      <ChipAmount amount={max} compact={compact} muted />
+    </span>
+  );
+}
+
 function ParticipationStamp({
   day,
   chips,
@@ -77,23 +107,21 @@ function ParticipationStamp({
     <div className="flex flex-col items-center gap-1 flex-1 min-w-0 max-w-[4.25rem]">
       <span className={labelClass}>{day}회</span>
       <div
-        className={`relative ${box} rounded-lg flex items-center justify-center border-2 transition-all ${
+        className={`relative ${box} rounded-lg flex items-center justify-center border-2 transition-colors ${
           earned
-            ? "border-red-500/90 bg-red-950/55 shadow-[0_0_14px_rgba(239,68,68,0.28)] -rotate-6"
-            : "border-[#444] border-dashed bg-[#222] rotate-0 opacity-85"
+            ? "border-red-500/90 bg-red-950/55 shadow-[0_0_14px_rgba(239,68,68,0.28)]"
+            : "border-[#444] border-dashed bg-[#222] opacity-85"
         }`}
         aria-label={
           earned ? `${day}회 참여 달성, ${chips}칩` : `${day}회 미달성, ${chips}칩 구간`
         }
       >
-        <div className={`flex flex-col items-center ${earned ? "-rotate-0" : ""}`}>
-          <ChipAmount
-            amount={chips}
-            compact={compact}
-            muted={!earned}
-            className={earned ? "text-red-200" : ""}
-          />
-        </div>
+        <ChipAmount
+          amount={chips}
+          compact={compact}
+          muted={!earned}
+          className={earned ? "text-red-200" : ""}
+        />
         {earned ? (
           <span
             className="pointer-events-none absolute inset-1 rounded-md border border-red-400/35"
@@ -130,18 +158,23 @@ export default function WeeklyParticipationCard({ status, compact }: Props) {
   const schedule = status.grant_schedule_label ?? "일요일 21:00";
   const showSignup =
     !status.signup_bonus_received && (status.signup_bonus_amount ?? 0) > 0;
+  const stampSum = stampChipSumForDays(days);
+  const allStamps = days >= max;
 
   if (compact) {
     return (
       <div className="px-1 space-y-1.5">
         <StampRow days={days} compact />
-        <p className="text-[10px] text-center text-amber-200/90 flex items-center justify-center gap-1 flex-wrap">
-          <span className="font-bold tabular-nums text-amber-300">
-            {days}/{max}
+        <p className="text-[10px] text-center text-amber-200/90 flex flex-col items-center gap-0.5">
+          <ChipAmountFraction current={stampSum} max={MAX_STAMP_CHIP_TOTAL} compact />
+          <span className="flex items-center justify-center gap-1 flex-wrap">
+            <span className="font-bold tabular-nums text-amber-300">
+              {days}/{max}
+            </span>
+            <span>일 ·</span>
+            <span className="font-bold">{schedule}</span>
+            <ChipAmount amount={projected} compact className="text-yellow-400" />
           </span>
-          <span>일 ·</span>
-          <span className="font-bold">{schedule}</span>
-          <ChipAmount amount={projected} compact className="text-yellow-400" />
         </p>
       </div>
     );
@@ -154,44 +187,52 @@ export default function WeeklyParticipationCard({ status, compact }: Props) {
         <p className="text-[10px] text-gray-500 shrink-0">월~일 거래일</p>
       </div>
 
+      <StampRow days={days} />
+
+      <div className="flex flex-col items-center gap-1.5">
+        <p className="text-[10px] text-gray-500">도장 합계 (5회 만점 기준)</p>
+        <ChipAmountFraction
+          current={stampSum}
+          max={MAX_STAMP_CHIP_TOTAL}
+          className={allStamps ? "text-emerald-300" : ""}
+        />
+        {allStamps ? (
+          <p className="text-[11px] font-bold text-emerald-400/95">5회 도장 모두 찍음!</p>
+        ) : null}
+      </div>
+
       <div className="flex justify-center">
-        <div className="rounded-xl border border-amber-500/30 bg-amber-950/25 px-3 py-2 text-center">
-          <p className="text-[10px] text-amber-200/75 mb-0.5">이번 주 지급 예정</p>
+        <div className="rounded-xl border border-amber-500/30 bg-amber-950/25 px-3 py-2 text-center w-full max-w-xs">
+          <p className="text-[10px] text-amber-200/75 mb-0.5">
+            <span className="font-black text-amber-300 tabular-nums">
+              {days}/{max}
+            </span>
+            일 참여 · <span className="font-bold">{schedule}</span> 실제 지급
+          </p>
           <ChipAmount amount={projected} large className="text-yellow-400" />
         </div>
       </div>
 
-      <StampRow days={days} />
-
-      <p className="text-center text-xs text-white/80 leading-snug flex items-center justify-center gap-1 flex-wrap">
-        <span className="font-black text-amber-300 tabular-nums">
-          {days}/{max}
-        </span>
-        <span>일 참여 ·</span>
-        <span className="font-bold text-amber-200">{schedule}</span>
-        <span>지급</span>
-      </p>
-
-      {days >= max ? (
-        <p className="text-center text-[11px] text-emerald-400/90 font-bold">이번 주 만점 도장!</p>
-      ) : status.next_tier_days != null && status.next_tier_bonus != null ? (
+      {!allStamps && status.next_tier_days != null && status.next_tier_bonus != null ? (
         <p className="text-center text-[11px] text-white/55 flex items-center justify-center gap-1 flex-wrap">
           <span>도장 하나 더 →</span>
           <ChipAmount amount={status.next_tier_bonus} compact className="text-amber-300" />
-          <span>구간</span>
+          <span>구간 · 합계</span>
+          <ChipAmount
+            amount={stampChipSumForDays(status.next_tier_days)}
+            compact
+            className="text-amber-200/80"
+          />
         </p>
       ) : null}
 
       {showSignup ? (
         <div className="flex items-center gap-3 border-t border-[#2A2A2A] pt-2.5">
           <div
-            className="shrink-0 w-14 h-14 rounded-lg border-2 border-sky-500/55 bg-sky-950/45 flex items-center justify-center -rotate-6 shadow-[0_0_10px_rgba(56,189,248,0.2)]"
+            className="shrink-0 w-14 h-14 rounded-lg border-2 border-sky-500/55 bg-sky-950/45 flex items-center justify-center shadow-[0_0_10px_rgba(56,189,248,0.2)]"
             aria-hidden
           >
-            <ChipAmount
-              amount={status.signup_bonus_amount ?? 0}
-              className="text-sky-200 [&_span:last-child]:text-xs"
-            />
+            <ChipAmount amount={status.signup_bonus_amount ?? 0} className="text-sky-200" />
           </div>
           <p className="text-xs text-sky-300/90 leading-snug">
             신규 가입 1회 보너스 · 가입 직후 자동 지급
