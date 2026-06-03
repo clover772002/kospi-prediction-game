@@ -19,13 +19,13 @@ type TabDef = {
 /** 메인: 오늘 할 일 */
 const PRIMARY_TABS: TabDef[] = [
   { href: "/survey", label: "설문", icon: "📝", activeClass: "app-tab-survey" },
-  { href: "/team-chat", label: "소통방", icon: "🗨️", activeClass: "app-tab-team-chat" },
+  { href: "/expert-chat", label: "명예의 전당", icon: "🏆", activeClass: "app-tab-expert-chat", expertGate: true },
 ];
 
 /** 보조: 기록·도구·설정 */
 const SECONDARY_TABS: TabDef[] = [
   { href: "/dashboard", label: "대시", icon: "📊", activeClass: "app-tab-dashboard" },
-  { href: "/expert-chat", label: "명예의 전당", icon: "🏆", activeClass: "app-tab-expert-chat", expertGate: true },
+  { href: "/team-chat", label: "소통방", icon: "🗨️", activeClass: "app-tab-team-chat" },
   { href: "/shop", label: "아이템", icon: "💎", activeClass: "app-tab-shop" },
   { href: "/groups", label: "그룹", icon: "👥", activeClass: "app-tab-groups" },
   { href: "/setup", label: "설정", icon: "⚙️", activeClass: "app-tab-setup" },
@@ -181,7 +181,7 @@ export default function AppTabNav() {
             aria-hidden
           />
 
-          {/* 메인: 설문 · 소통방 */}
+          {/* 메인: 설문 · 명예의 전당 */}
           <div className="flex gap-1.5 px-2 pt-2 pb-1">
             {PRIMARY_TABS.map((tab) => (
               <TabButton
@@ -194,7 +194,7 @@ export default function AppTabNav() {
             ))}
           </div>
 
-          {/* 보조: 대시보드 · 고수 · … */}
+          {/* 보조: 대시 · 소통방 · … */}
           <div
             className={`flex items-stretch gap-0.5 border-t px-1.5 py-1 ${
               secondaryActive ? "border-white/10 bg-white/[0.03]" : "border-white/[0.05] bg-black/20"
