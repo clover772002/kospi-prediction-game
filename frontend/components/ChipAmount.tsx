@@ -11,6 +11,8 @@ type ChipAmountProps = {
   amount: number;
   compact?: boolean;
   large?: boolean;
+  /** 주간 도장 등 강조 영역용 */
+  xlarge?: boolean;
   muted?: boolean;
   className?: string;
   /** 금액 앞 + / − */
@@ -22,16 +24,25 @@ export function ChipAmount({
   amount,
   compact,
   large,
+  xlarge,
   muted,
   className = "",
   sign = null,
 }: ChipAmountProps) {
-  const iconSize = large ? "text-2xl" : compact ? "text-sm" : "text-base";
-  const textSize = large
-    ? "text-lg sm:text-xl"
-    : compact
-      ? "text-[9px] sm:text-[10px]"
-      : "text-[10px] sm:text-xs";
+  const iconSize = xlarge
+    ? "text-3xl sm:text-4xl"
+    : large
+      ? "text-2xl sm:text-3xl"
+      : compact
+        ? "text-sm"
+        : "text-base";
+  const textSize = xlarge
+    ? "text-xl sm:text-2xl"
+    : large
+      ? "text-lg sm:text-xl"
+      : compact
+        ? "text-[9px] sm:text-[10px]"
+        : "text-[10px] sm:text-xs";
   const prefix =
     sign === "+" ? "+" : sign === "-" ? "−" : "";
 
@@ -60,32 +71,45 @@ export function ChipAmountFraction({
   max,
   compact,
   large,
+  xlarge,
   className = "",
 }: {
   current: number;
   max: number;
   compact?: boolean;
   large?: boolean;
+  xlarge?: boolean;
   className?: string;
 }) {
-  const slashSize = large
-    ? "text-base sm:text-lg"
-    : compact
-      ? "text-[10px]"
-      : "text-xs sm:text-sm";
+  const slashSize = xlarge
+    ? "text-lg sm:text-xl"
+    : large
+      ? "text-base sm:text-lg"
+      : compact
+        ? "text-[10px]"
+        : "text-xs sm:text-sm";
+  const useCompact = compact && !large && !xlarge;
+  const useLarge = large && !xlarge;
   return (
     <span
-      className={`inline-flex items-center gap-1 sm:gap-1.5 tabular-nums ${className}`}
+      className={`inline-flex items-center gap-1.5 sm:gap-2 tabular-nums ${className}`}
       aria-label={`${current} / ${max}`}
     >
       <ChipAmount
         amount={current}
-        compact={compact && !large}
-        large={large}
+        compact={useCompact}
+        large={useLarge}
+        xlarge={xlarge}
         className="text-amber-200"
       />
       <span className={`font-black text-gray-500 ${slashSize}`}>/</span>
-      <ChipAmount amount={max} compact={compact && !large} large={large} muted />
+      <ChipAmount
+        amount={max}
+        compact={useCompact}
+        large={useLarge}
+        xlarge={xlarge}
+        muted
+      />
     </span>
   );
 }

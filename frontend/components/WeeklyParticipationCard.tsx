@@ -35,17 +35,17 @@ function ParticipationStamp({
   compact?: boolean;
 }) {
   const box = compact
-    ? "w-14 h-14 sm:w-16 sm:h-16"
-    : "w-[4.25rem] h-[4.25rem] sm:w-20 sm:h-20";
+    ? "w-16 h-16 sm:w-[4.5rem] sm:h-[4.5rem]"
+    : "w-[4.75rem] h-[4.75rem] sm:w-24 sm:h-24";
   const labelClass = compact
-    ? "text-[11px] sm:text-xs font-bold text-gray-500"
-    : "text-xs sm:text-sm font-bold text-gray-400";
+    ? "text-xs sm:text-sm font-bold text-gray-500"
+    : "text-sm sm:text-base font-bold text-gray-300";
 
   return (
-    <div className="flex flex-col items-center gap-1.5 flex-1 min-w-0 max-w-[5rem] sm:max-w-[5.5rem]">
+    <div className="flex flex-col items-center gap-2 flex-1 min-w-0 max-w-[5.5rem] sm:max-w-[6rem]">
       <span className={labelClass}>{day}회</span>
       <div
-        className={`relative ${box} rounded-lg flex items-center justify-center border-2 transition-colors ${
+        className={`relative ${box} rounded-xl flex items-center justify-center border-2 transition-colors ${
           earned
             ? "border-red-500/90 bg-red-950/55 shadow-[0_0_14px_rgba(239,68,68,0.28)]"
             : "border-[#444] border-dashed bg-[#222] opacity-85"
@@ -58,14 +58,14 @@ function ParticipationStamp({
       >
         <ChipAmount
           amount={chips}
-          large={!compact}
-          compact={compact}
+          xlarge={!compact}
+          large={compact}
           muted={!earned}
           className={earned ? "text-red-200" : ""}
         />
         {earned ? (
           <span
-            className="pointer-events-none absolute inset-1 rounded-md border border-red-400/35"
+            className="pointer-events-none absolute inset-1 rounded-lg border border-red-400/35"
             aria-hidden
           />
         ) : null}
@@ -77,7 +77,7 @@ function ParticipationStamp({
 function StampRow({ days, compact }: { days: number; compact?: boolean }) {
   return (
     <div
-      className={`flex items-end justify-between gap-1 sm:gap-2 ${compact ? "px-0" : "px-0.5"}`}
+      className={`flex items-end justify-between gap-1.5 sm:gap-2 ${compact ? "px-0" : "px-0.5"}`}
       role="list"
       aria-label="주간 설문 참여 도장"
     >
@@ -102,17 +102,17 @@ export default function WeeklyParticipationCard({ status, compact }: Props) {
 
   if (compact) {
     return (
-      <div className="px-1 space-y-2">
+      <div className="px-1 space-y-2.5">
         <StampRow days={days} compact />
-        <p className="text-xs sm:text-sm text-center text-amber-200/90 flex flex-col items-center gap-1">
-          <ChipAmountFraction current={stampSum} max={MAX_STAMP_CHIP_TOTAL} />
-          <span className="flex items-center justify-center gap-1.5 flex-wrap text-sm font-bold">
-            <span className="tabular-nums text-amber-300">
+        <p className="text-sm sm:text-base text-center text-amber-200/90 flex flex-col items-center gap-1.5">
+          <ChipAmountFraction current={stampSum} max={MAX_STAMP_CHIP_TOTAL} large />
+          <span className="flex items-center justify-center gap-2 flex-wrap text-base font-bold">
+            <span className="tabular-nums text-amber-300 text-lg">
               {days}/{max}
             </span>
             <span>일 ·</span>
             <span>{schedule}</span>
-            <ChipAmount amount={projected} className="text-yellow-400" />
+            <ChipAmount amount={projected} large className="text-yellow-400" />
           </span>
         </p>
       </div>
@@ -120,38 +120,38 @@ export default function WeeklyParticipationCard({ status, compact }: Props) {
   }
 
   return (
-    <div className="bg-[#1A1A1A] border border-amber-500/25 rounded-xl px-3 sm:px-4 py-4 space-y-4">
+    <div className="bg-[#1A1A1A] border border-amber-500/25 rounded-xl px-4 sm:px-5 py-5 space-y-5">
       <div className="flex items-center justify-between gap-2">
-        <p className="text-base sm:text-lg font-bold text-amber-200/95">주간 참여 보상</p>
-        <p className="text-xs sm:text-sm text-gray-500 shrink-0">월~일 거래일</p>
+        <p className="text-lg sm:text-xl font-black text-amber-200/95">주간 참여 보상</p>
+        <p className="text-sm sm:text-base text-gray-500 shrink-0">월~일 거래일</p>
       </div>
 
       <StampRow days={days} />
 
-      <div className="flex flex-col items-center gap-2">
-        <p className="text-xs sm:text-sm text-gray-500">도장 합계 (5회 만점 기준)</p>
+      <div className="flex flex-col items-center gap-2.5">
+        <p className="text-sm sm:text-base text-gray-400">도장 합계 (5회 만점 기준)</p>
         <ChipAmountFraction
           current={stampSum}
           max={MAX_STAMP_CHIP_TOTAL}
-          large
+          xlarge
           className={allStamps ? "text-emerald-300" : ""}
         />
         {allStamps ? (
-          <p className="text-sm sm:text-base font-bold text-emerald-400/95">5회 도장 모두 찍음!</p>
+          <p className="text-base sm:text-lg font-bold text-emerald-400/95">5회 도장 모두 찍음!</p>
         ) : null}
       </div>
 
       <div className="flex justify-center">
-        <div className="rounded-xl border border-amber-500/30 bg-amber-950/25 px-4 py-3 text-center w-full max-w-xs">
-          <p className="text-sm sm:text-base text-amber-200/85 mb-1">
-            <span className="font-black text-amber-300 tabular-nums text-base sm:text-lg">
+        <div className="rounded-xl border border-amber-500/30 bg-amber-950/25 px-4 py-4 sm:py-5 text-center w-full max-w-sm">
+          <p className="text-base sm:text-lg text-amber-200/90 mb-2 leading-snug">
+            <span className="font-black text-amber-300 tabular-nums text-xl sm:text-2xl">
               {days}/{max}
             </span>
             <span className="font-bold"> 일 참여 · </span>
             <span className="font-bold">{schedule}</span>
             <span className="font-bold"> 실제 지급</span>
           </p>
-          <ChipAmount amount={projected} large className="text-yellow-400 justify-center" />
+          <ChipAmount amount={projected} xlarge className="text-yellow-400 justify-center" />
         </div>
       </div>
     </div>
