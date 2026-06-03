@@ -94,8 +94,6 @@ export default function WeeklyParticipationCard({ status, compact }: Props) {
   const max = status.max_days ?? 5;
   const projected = status.projected_weekly_bonus ?? 0;
   const schedule = status.grant_schedule_label ?? "일요일 21:00";
-  const showSignup =
-    !status.signup_bonus_received && (status.signup_bonus_amount ?? 0) > 0;
   const stampSum = stampChipSumForDays(days);
   const allStamps = days >= max;
 
@@ -162,20 +160,6 @@ export default function WeeklyParticipationCard({ status, compact }: Props) {
             className="text-amber-200/80"
           />
         </p>
-      ) : null}
-
-      {showSignup ? (
-        <div className="flex items-center gap-3 border-t border-[#2A2A2A] pt-2.5">
-          <div
-            className="shrink-0 w-14 h-14 rounded-lg border-2 border-sky-500/55 bg-sky-950/45 flex items-center justify-center shadow-[0_0_10px_rgba(56,189,248,0.2)]"
-            aria-hidden
-          >
-            <ChipAmount amount={status.signup_bonus_amount ?? 0} className="text-sky-200" />
-          </div>
-          <p className="text-xs text-sky-300/90 leading-snug">
-            신규 가입 1회 보너스 · 가입 직후 자동 지급
-          </p>
-        </div>
       ) : null}
     </div>
   );
