@@ -21,6 +21,7 @@ function stampChipSumForDays(days: number): number {
 
 type Props = {
   status: ParticipationRewardsStatus | null | undefined;
+  /** @deprecated 설문·대시 동일 카드 사용. true여도 동일 레이아웃 */
   compact?: boolean;
 };
 
@@ -28,25 +29,16 @@ function ParticipationStamp({
   day,
   chips,
   earned,
-  compact,
 }: {
   day: number;
   chips: number;
   earned: boolean;
-  compact?: boolean;
 }) {
-  const box = compact
-    ? "w-[3.25rem] h-[3.25rem] sm:w-14 sm:h-14"
-    : "w-[3.5rem] h-[3.5rem] sm:w-[4rem] sm:h-[4rem]";
-  const labelClass = compact
-    ? "text-[11px] sm:text-xs font-bold text-gray-500"
-    : "text-xs sm:text-sm font-bold text-gray-300";
-
   return (
-    <div className="flex flex-col items-center gap-1.5 shrink-0 w-[3.5rem] sm:w-[4.25rem]">
-      <span className={labelClass}>{day}회</span>
+    <div className="flex flex-col items-center gap-2 shrink-0">
+      <span className="text-sm sm:text-base font-bold text-gray-300">{day}회</span>
       <div
-        className={`relative ${box} rounded-lg flex items-center justify-center border-2 transition-colors ${
+        className={`relative w-16 h-16 sm:w-[4.5rem] sm:h-[4.5rem] rounded-xl flex items-center justify-center border-2 transition-colors ${
           earned
             ? "border-red-500/90 bg-red-950/55 shadow-[0_0_14px_rgba(239,68,68,0.28)]"
             : "border-[#444] border-dashed bg-[#222] opacity-85"
@@ -59,8 +51,7 @@ function ParticipationStamp({
       >
         <ChipAmount
           amount={chips}
-          large={!compact}
-          compact={compact}
+          xlarge
           muted={!earned}
           className={earned ? "text-red-200" : ""}
         />
@@ -75,23 +66,25 @@ function ParticipationStamp({
   );
 }
 
-function StampRow({ days, compact }: { days: number; compact?: boolean }) {
+function StampRow({ days }: { days: number }) {
   return (
     <div
-      className={`flex items-end justify-between gap-2 sm:gap-2.5 ${compact ? "px-0.5" : "px-1"}`}
+      className="flex justify-center w-full overflow-x-auto overscroll-x-contain [-webkit-overflow-scrolling:touch]"
       role="list"
       aria-label="주간 설문 참여 도장"
     >
-      {WEEKLY_TIERS.map(({ day, chips }) => (
-        <div key={day} role="listitem" className="flex justify-center shrink-0">
-          <ParticipationStamp day={day} chips={chips} earned={days >= day} compact={compact} />
-        </div>
-      ))}
+      <div className="inline-flex items-end justify-center gap-2 sm:gap-2.5 px-0.5">
+        {WEEKLY_TIERS.map(({ day, chips }) => (
+          <div key={day} role="listitem">
+            <ParticipationStamp day={day} chips={chips} earned={days >= day} />
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
 
-export default function WeeklyParticipationCard({ status, compact }: Props) {
+export default function WeeklyParticipationCard({ status }: Props) {
   if (!status) return null;
 
   const days = status.days_this_week ?? 0;
@@ -100,25 +93,6 @@ export default function WeeklyParticipationCard({ status, compact }: Props) {
   const schedule = status.grant_schedule_label ?? "일요일 21:00";
   const stampSum = stampChipSumForDays(days);
   const allStamps = days >= max;
-
-  if (compact) {
-    return (
-      <div className="px-1 space-y-2.5">
-        <StampRow days={days} compact />
-        <p className="text-sm sm:text-base text-center text-amber-200/90 flex flex-col items-center gap-1.5">
-          <ChipAmountFraction current={stampSum} max={MAX_STAMP_CHIP_TOTAL} large />
-          <span className="flex items-center justify-center gap-2 flex-wrap text-base font-bold">
-            <span className="tabular-nums text-amber-300 text-lg">
-              {days}/{max}
-            </span>
-            <span>일 ·</span>
-            <span>{schedule}</span>
-            <ChipAmount amount={projected} large className="text-yellow-400" />
-          </span>
-        </p>
-      </div>
-    );
-  }
 
   return (
     <div className={surveyUi.card}>

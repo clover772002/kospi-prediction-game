@@ -942,11 +942,8 @@ function SurveyPageInner() {
       ) : null}
 
       {!isWeekendKST ? (
-        <div className="mt-2 mb-1">
-          <WeeklyParticipationCard
-            status={peekDashboardSnapshot()?.dash?.participation}
-            compact
-          />
+        <div className="mt-2 mb-3">
+          <WeeklyParticipationCard status={peekDashboardSnapshot()?.dash?.participation} />
         </div>
       ) : null}
 
