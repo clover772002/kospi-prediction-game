@@ -19,9 +19,6 @@ function riseToPercent(v: number): number {
   return Math.max(0, Math.min(100, v));
 }
 
-/** 대결 구도 막대: 한쪽 0%여도 양쪽 색이 보이도록 최소 비중 */
-const DUEL_BAR_MIN_PCT = 3;
-
 function formatKospiChangePctText(pct: number | null | undefined): string | null {
   if (pct == null || !Number.isFinite(Number(pct))) return null;
   const n = Number(pct);
@@ -155,7 +152,18 @@ function HorizontalSignedBox({
   );
 }
 
-function DirectionShareRibbon({
+function directionPieBackground(pctFall: number, pctRise: number): string {
+  const f = Math.min(100, Math.max(0, pctFall));
+  const r = Math.min(100, Math.max(0, pctRise));
+  if (f <= 0 && r <= 0) return "#2a2a2a";
+  if (f >= 99.95) return "#2563eb";
+  if (r >= 99.95) return "#dc2626";
+  const fallDeg = (f / 100) * 360;
+  return `conic-gradient(from -90deg, #3b82f6 0deg ${fallDeg}deg, #ef4444 ${fallDeg}deg 360deg)`;
+}
+
+/** 방향 비율 — 도넛 파이(하락=파랑 · 상승=빨강, 12시부터 시계방향) */
+function DirectionSharePie({
   pctRise,
   pctFall,
   nRise,
@@ -169,38 +177,51 @@ function DirectionShareRibbon({
   const r = Number.isFinite(pctRise) ? Math.max(0, pctRise) : 0;
   const f = Number.isFinite(pctFall) ? Math.max(0, pctFall) : 0;
   const total = nRise + nFall;
-  const showBar = total > 0 || r > 0 || f > 0;
-  const riseFlex = showBar ? Math.max(r, DUEL_BAR_MIN_PCT) : 0;
-  const fallFlex = showBar ? Math.max(f, DUEL_BAR_MIN_PCT) : 0;
+
+  if (total <= 0) {
+    return (
+      <div className="rounded-xl border border-dashed border-[#333] bg-[#101010]/90 px-3 py-4 mb-3 text-center">
+        <p className="text-sm text-gray-500">방향 응답이 아직 없어요</p>
+      </div>
+    );
+  }
+
+  const pieBg = directionPieBackground(f, r);
+  const dominant =
+    r > f ? { label: "상승", pct: r, color: "text-red-400" } : r < f ? { label: "하락", pct: f, color: "text-blue-400" } : { label: "동률", pct: 50, color: "text-gray-300" };
 
   return (
-    <div className="rounded-xl border border-[#333] bg-gradient-to-br from-[#151515] to-[#101010] px-3 py-2.5 mb-3 ring-1 ring-white/[0.04]">
-      <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 mb-2">
-        <div className="flex items-baseline gap-2 min-w-0">
-          <span className="text-sm font-black text-blue-400 tabular-nums tracking-tight">하락 {f}%</span>
-          <span className="text-sm text-white tabular-nums">({nFall}명)</span>
+    <div
+      className="rounded-xl border border-[#333] bg-gradient-to-br from-[#151515] to-[#101010] px-3 py-2.5 mb-3 ring-1 ring-white/[0.04]"
+      title={`예측 하락 ${f}%(${nFall}명) · 상승 ${r}%(${nRise}명)`}
+    >
+      <div className="flex items-center gap-3 sm:gap-4">
+        <div className="relative h-[4.75rem] w-[4.75rem] sm:h-20 sm:w-20 shrink-0">
+          <div
+            className="h-full w-full rounded-full border border-[#2a2a2a] shadow-[inset_0_2px_8px_rgba(0,0,0,.45)]"
+            style={{ background: pieBg }}
+            aria-hidden
+          />
+          <div className="absolute inset-[22%] flex flex-col items-center justify-center rounded-full bg-[#141414] border border-[#2a2a2a]/80 text-center leading-tight">
+            <span className={`text-sm sm:text-base font-black tabular-nums ${dominant.color}`}>
+              {dominant.label} {dominant.pct}%
+            </span>
+            <span className="text-[10px] sm:text-xs text-gray-500 tabular-nums mt-0.5">{total}명</span>
+          </div>
         </div>
-        <div className="flex items-baseline gap-2 min-w-0 justify-end">
-          <span className="text-sm text-white tabular-nums">({nRise}명)</span>
-          <span className="text-sm font-black text-red-400 tabular-nums tracking-tight">상승 {r}%</span>
+
+        <div className="flex-1 min-w-0 space-y-2">
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-blue-500" aria-hidden />
+            <span className="text-sm font-black text-blue-400 tabular-nums">하락 {f}%</span>
+            <span className="text-sm text-white/85 tabular-nums">({nFall}명)</span>
+          </div>
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-red-500" aria-hidden />
+            <span className="text-sm font-black text-red-400 tabular-nums">상승 {r}%</span>
+            <span className="text-sm text-white/85 tabular-nums">({nRise}명)</span>
+          </div>
         </div>
-      </div>
-      <div
-        className="flex h-8 w-full rounded-lg overflow-hidden border border-[#2a2a2a] shadow-[inset_0_1px_3px_rgba(0,0,0,.4)]"
-        title={`예측 하락 ${f}% · 상승 ${r}% (유효 응답 ${total}명)`}
-      >
-        {showBar && (
-          <>
-            <div
-              className="h-full min-w-[8px] shrink-0 bg-gradient-to-b from-blue-400/95 via-blue-500/90 to-blue-800/85"
-              style={{ flex: `${fallFlex} 1 0%` }}
-            />
-            <div
-              className="h-full min-w-[8px] shrink-0 bg-gradient-to-b from-red-400/95 via-red-500/90 to-red-800/80"
-              style={{ flex: `${riseFlex} 1 0%` }}
-            />
-          </>
-        )}
       </div>
     </div>
   );
@@ -269,7 +290,7 @@ function DayCard({
           <p className={resultCls}>{resultLabel}</p>
         </div>
       )}
-      <DirectionShareRibbon pctRise={pctRise} pctFall={pctFall} nRise={nRise} nFall={nFall} />
+      <DirectionSharePie pctRise={pctRise} pctFall={pctFall} nRise={nRise} nFall={nFall} />
 
       <div className="grid grid-cols-2 gap-x-3 sm:gap-x-4 gap-y-1 mb-1.5">
         <p className={`${colHead} text-blue-400 text-center`}>하락선택</p>
