@@ -89,15 +89,6 @@ function formatPreSurveyTarget(surveyDate: string) {
   };
 }
 
-function PreSurveyTargetBanner({ surveyDate }: { surveyDate: string }) {
-  const t = formatPreSurveyTarget(surveyDate);
-  return (
-    <p className={`text-center text-amber-300/90 ${surveyUi.body} mb-3`}>
-      사전 예측 · {t.dateLine}
-    </p>
-  );
-}
-
 /** 페이지 제목 — 상단 중앙·한 줄 (예: 오늘 예측) */
 function SurveyHeadingTitle({ label }: { label: string }) {
   return (
@@ -169,7 +160,9 @@ function SurveyCompletedPanel({
   if (!editing) {
     return (
       <div className="flex flex-col gap-3">
-        <p className={`text-center ${surveyUi.cardTitle} text-emerald-400`}>{headline}</p>
+        {headline ? (
+          <p className={`text-center ${surveyUi.cardTitle} text-emerald-400`}>{headline}</p>
+        ) : null}
         {subline ? <p className={`text-center ${surveyUi.cardMeta}`}>{subline}</p> : null}
         {justSaved ? (
           <div
@@ -285,10 +278,8 @@ function NextPreSurveyPanel({
   if (submitted || alreadyAnswered) {
     return (
       <>
-        <PreSurveyTargetBanner surveyDate={surveyDate} />
         <SurveyCompletedPanel
-          headline={`✓ ${target.dateIso} 사전 예측 설문 완료`}
-          subline="09:00 마감 전까지 확신도만 조정할 수 있어요"
+          headline=""
           gaugeValue={gaugeValue}
           userTokens={userTokens}
           editing={editingConfidence}
@@ -309,7 +300,6 @@ function NextPreSurveyPanel({
 
   return (
     <>
-      <PreSurveyTargetBanner surveyDate={surveyDate} />
       {!responseKnown ? (
         <p className={`text-center ${surveyUi.hint} mb-2`}>참여 여부 확인 중… (아래에서 바로 넣을 수 있어요)</p>
       ) : null}
