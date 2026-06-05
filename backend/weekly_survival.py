@@ -55,11 +55,13 @@ def _prediction_verdict(
     submitted: bool,
     correct: bool | None,
 ) -> str:
-    """none | pending | hit | miss"""
+    """none | not_submitted | pending | hit | miss"""
     if not is_trading:
         return "none"
     if not submitted:
-        return "none"
+        if cal > today:
+            return "none"
+        return "not_submitted"
     if cal > today:
         return "pending"
     if correct is None:

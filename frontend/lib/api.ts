@@ -237,7 +237,12 @@ export interface RecentTradingDaysResponse {
   days: RecentTradingDayRow[];
 }
 
-export type WeeklyPredictionVerdict = "none" | "pending" | "hit" | "miss";
+export type WeeklyPredictionVerdict =
+  | "none"
+  | "not_submitted"
+  | "pending"
+  | "hit"
+  | "miss";
 export type WeeklySurvivalStatus =
   | "not_trading"
   | "pending"
