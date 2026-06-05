@@ -15,6 +15,8 @@ KST = ZoneInfo("Asia/Seoul")
 from contextlib import asynccontextmanager
 
 from krx_calendar import (
+    is_krx_trading_day,
+    next_trading_day_from,
     next_trading_day_str,
     today_date_kst,
     korea_public_holiday_on,
@@ -4006,21 +4008,50 @@ async def get_crowd_gauge_boxplots(
     """
     lim = max(1, min(int(limit), 60))
     try:
+        today = today_date_kst()
+        today_str = today.isoformat()
+
+        date_set = {
+            d.isoformat()
+            for d in last_n_trading_days_inclusive_through(today, lim)
+        }
+
+        if is_krx_trading_day(today):
+            _ensure_daily_survey_row(supabase, today_str)
+            date_set.add(today_str)
+            _spawn_settlement_side_effects(supabase, today_str)
+
+        next_td = next_trading_day_from(today).isoformat()
+        try:
+            next_cnt = (
+                supabase.table("survey_responses")
+                .select("id", count="exact", head=True)
+                .eq("survey_date", next_td)
+                .execute()
+            )
+            if getattr(next_cnt, "count", 0):
+                date_set.add(next_td)
+        except Exception as e:
+            logger.warning("crowd-gauge: 다음 거래일 응답 수 조회 실패: %s", e)
+
+        date_keys = sorted(
+            [d for d in date_set if len(d) >= 8],
+            reverse=True,
+        )
+        if not date_keys:
+            return {"days": []}
+
         ds = (
             supabase.table("daily_surveys")
             .select("survey_date, kospi_result, kospi_change_pct")
-            .order("survey_date", desc=True)
-            .limit(lim)
+            .in_("survey_date", date_keys)
             .execute()
         )
-        day_rows = ds.data or []
-        if not day_rows:
-            return {"days": []}
-
-        date_keys = [_survey_date_key(r["survey_date"]) for r in day_rows if r.get("survey_date")]
-        date_keys = [d for d in date_keys if len(d) >= 8]
-        if not date_keys:
-            return {"days": []}
+        ds_by_date: dict[str, dict] = {}
+        for row in ds.data or []:
+            dk = _survey_date_key(row.get("survey_date"))
+            if dk:
+                ds_by_date[dk] = row
 
         resp = (
             supabase.table("survey_responses")
@@ -4035,19 +4066,25 @@ async def get_crowd_gauge_boxplots(
                 by_date[dk].append(row)
 
         out: list[dict] = []
-        for r in day_rows:
-            dk = _survey_date_key(r.get("survey_date"))
-            if not dk:
-                continue
+        for dk in date_keys:
+            r = ds_by_date.get(dk, {})
             kr = r.get("kospi_result")
-            result_bool = _cell_truthy_bool(kr)
+            result_bool = _cell_truthy_bool(kr) if kr is not None else None
 
             rise_vals: list[int] = []
             fall_vals: list[int] = []
+            n_rise = 0
+            n_fall = 0
             for row in by_date.get(dk, []):
-                g = _coerce_gauge_from_row(row)
                 ka = _cell_truthy_bool(row.get("kospi_answer"))
-                if g is None or ka is None:
+                if ka is None:
+                    continue
+                if ka:
+                    n_rise += 1
+                else:
+                    n_fall += 1
+                g = _coerce_gauge_from_row(row)
+                if g is None:
                     continue
                 gi = int(g)
                 if ka:
@@ -4055,12 +4092,10 @@ async def get_crowd_gauge_boxplots(
                 else:
                     fall_vals.append(max(-100, min(0, gi)))
 
-            if not rise_vals and not fall_vals:
+            n_dir = n_rise + n_fall
+            if n_dir == 0 and result_bool is None:
                 continue
 
-            n_rise = len(rise_vals)
-            n_fall = len(fall_vals)
-            n_dir = n_rise + n_fall
             if n_dir > 0:
                 rise_pct = round(100 * n_rise / n_dir, 1)
                 fall_pct = round(100 * n_fall / n_dir, 1)
@@ -4090,8 +4125,8 @@ async def get_crowd_gauge_boxplots(
                 "respondents_fall": n_fall,
                 "pct_rise": rise_pct,
                 "pct_fall": fall_pct,
-                "rise": _five_number_summary(rise_vals),
-                "fall": _five_number_summary(fall_vals),
+                "rise": _five_number_summary(rise_vals) if rise_vals else None,
+                "fall": _five_number_summary(fall_vals) if fall_vals else None,
             })
 
         return {"days": out}
