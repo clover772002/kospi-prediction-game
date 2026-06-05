@@ -13,6 +13,31 @@ import { clearAllTabSnapshots, peekDashboardSnapshot } from "@/lib/tab-session-c
 
 const BOT_USERNAME = process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME || "Profitchat123bot";
 
+/** 설정 화면에서 노출·조작하는 알림만 (나머지는 미제공 기능) */
+const PUSH_PREF_TOGGLES: {
+  key: "survey_open" | "survey_deadline" | "result";
+  icon: string;
+  label: string;
+  desc: string;
+}[] = [
+  { key: "survey_open", icon: "🌙", label: "설문 시작 알림", desc: "매일 밤 22:00" },
+  { key: "survey_deadline", icon: "⏰", label: "마감 임박 알림", desc: "오전 08:45" },
+  { key: "result", icon: "📊", label: "장 마감·결과 알림", desc: "오후 15:35" },
+];
+
+function normalizePushPrefs(p?: Partial<PushPreferences>): PushPreferences {
+  return {
+    survey_open: p?.survey_open ?? true,
+    survey_deadline: p?.survey_deadline ?? true,
+    result: p?.result ?? true,
+    challenge: false,
+    group_nudge: false,
+    expert_chat: false,
+    direction_chat: false,
+    fgi_digest: false,
+  };
+}
+
 function openInExternalBrowser() {
   const url = window.location.href;
   const ua = navigator.userAgent || "";
@@ -43,14 +68,7 @@ export default function SetupPage() {
   const [pushLinked, setPushLinked]   = useState(false);
   const [pushLoading, setPushLoading] = useState(false);
   const [pushError, setPushError]     = useState<string | null>(null);
-  const DEFAULT_PREFS: PushPreferences = {
-    survey_open: true, survey_deadline: true,
-    result: true, challenge: true, group_nudge: true,
-    expert_chat: true,
-    direction_chat: true,
-    fgi_digest: true,
-  };
-  const [prefs, setPrefs]             = useState<PushPreferences>(DEFAULT_PREFS);
+  const [prefs, setPrefs]             = useState<PushPreferences>(() => normalizePushPrefs());
   const [prefsSaving, setPrefsSaving] = useState(false);
   const [groups, setGroups]           = useState<Group[]>([]);
   const [groupsLoading, setGroupsLoading] = useState(false);
@@ -95,7 +113,7 @@ export default function SetupPage() {
     if (u.telegram_chat_id) setLinked(true);
     if (u.has_push) setPushLinked(true);
     if (u.push_preferences) {
-      setPrefs({ ...DEFAULT_PREFS, ...u.push_preferences });
+      setPrefs(normalizePushPrefs(u.push_preferences));
     }
     setLoading(false);
   }, []);
@@ -110,7 +128,7 @@ export default function SetupPage() {
       if (profile.has_push) setPushLinked(true);
       else setPushLinked(false);
       if (profile.push_preferences) {
-        setPrefs({ ...DEFAULT_PREFS, ...profile.push_preferences });
+        setPrefs(normalizePushPrefs(profile.push_preferences));
       }
     };
 
@@ -378,21 +396,12 @@ export default function SetupPage() {
           {/* 알림 종류 체크박스 */}
           <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-2xl p-5 space-y-4">
             <p className="font-black text-sm">🔔 알림 종류 설정</p>
-            <p className="text-[11px] text-gray-500">받고 싶은 알림만 켜두세요</p>
-            {([
-              { key: "survey_open",    icon: "🌙", label: "설문 시작 알림",    desc: "매일 밤 22:00" },
-              { key: "survey_deadline",icon: "⏰", label: "마감 임박 알림",    desc: "오전 08:45" },
-              { key: "result",         icon: "📊", label: "실적·정확도 알림",  desc: "오후 15:35" },
-              { key: "challenge",      icon: "⚔️", label: "대결 신청·결과 알림", desc: "수시" },
-              { key: "group_nudge",    icon: "📣", label: "그룹 독촉 알림",    desc: "수시" },
-              { key: "expert_chat",    icon: "🏆", label: "명예의 전당 알림",    desc: "초고수 질문·답장" },
-              { key: "direction_chat", icon: "🗨️", label: "소통방 메시지 알림",  desc: "같은 방 새 메시지 · iPhone은 홈 화면 앱 또는 텔레그램" },
-              { key: "fgi_digest", icon: "📊", label: "공포·탐욕 지수 알림", desc: "매일 16:10 · 시장 FGI + 인간지표" },
-            ] as { key: keyof PushPreferences; icon: string; label: string; desc: string }[]).map(({ key, icon, label, desc }) => (
+            <p className="text-[11px] text-gray-500">코스피 예측 설문·결과 알림만 설정할 수 있어요</p>
+            {PUSH_PREF_TOGGLES.map(({ key, icon, label, desc }) => (
               <label key={key} className="flex items-center gap-3 cursor-pointer group">
                 <div className={`w-11 h-6 rounded-full transition-all flex-shrink-0 relative ${prefs[key] ? "bg-purple-600" : "bg-[#333]"}`}
                   onClick={async () => {
-                    const next = { ...prefs, [key]: !prefs[key] };
+                    const next = normalizePushPrefs({ ...prefs, [key]: !prefs[key] });
                     setPrefs(next);
                     if (!token) return;
                     setPrefsSaving(true);
