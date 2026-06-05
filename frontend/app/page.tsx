@@ -146,7 +146,7 @@ export default function LoginPage() {
           {TOURNAMENT_LANDING.loginTitle}
         </h2>
         <p className="text-center text-gray-400 text-base sm:text-lg font-medium mb-6">
-          생존전 · 하드코어 — {TOURNAMENT_LANDING.ctaHint}
+          {TOURNAMENT_LANDING.ctaHint}
         </p>
 
         <div className="space-y-4">
@@ -204,9 +204,9 @@ export default function LoginPage() {
         <h3 className="text-xl sm:text-2xl font-black text-white mb-5">참가 흐름</h3>
         <ol className="space-y-4">
           {[
-            { step: "1", title: "생존전 참가", desc: "매일 09:00 전 방향 제출 — 제출은 생존 인증서 결과와 적중률 기록에 함께 반영됩니다." },
-            { step: "2", title: "로그인", desc: "Google·카카오로 가입 · 대회 참가로 진행합니다." },
-            { step: "3", title: "결과 확인", desc: "장 마감 후 생존 인증서와 경품 결과, 그리고 내 적중률을 확인할 수 있어요." },
+            { step: "1", title: "로그인", desc: "Google·카카오로 가입하면 이번 주 대회에 참가합니다." },
+            { step: "2", title: "매일 제출", desc: "거래일마다 09:00 전 코스피 방향을 제출합니다." },
+            { step: "3", title: "결과 확인", desc: "장 마감 후 탈락 여부·적중률·생존 인증서를 확인합니다." },
           ].map((item) => (
             <li key={item.step} className="flex gap-4">
               <span className="flex-shrink-0 w-9 h-9 rounded-full bg-[#222] border border-[#333] flex items-center justify-center text-white font-black text-lg">
@@ -227,12 +227,12 @@ export default function LoginPage() {
         <div className="space-y-3">
           {[
             {
-              q: "생존전은 어떻게 진행돼요?",
-              a: "매일 09:00 전 방향을 제출하면 기록이 쌓입니다. 한 번 틀리거나 미제출이면 탈락합니다.",
+              q: "대회는 어떻게 진행돼요?",
+              a: "대회는 주 단위로 진행됩니다. 해당 주 거래일마다 09:00 전 방향을 제출하고, 맞으면 생존·틀리거나 미제출이면 탈락합니다. 한 주가 끝날 때까지 버티면 주간 통과입니다.",
             },
             {
               q: "보상은 뭐예요?",
-              a: "생존자에게 생존 인증서를 드리고, 경품은 시즌 당첨자에게 지급돼요. (자세한 규칙은 공지에 따라 달라질 수 있습니다.)",
+              a: "주간 통과자에게 생존 인증서를 드리고, 경품은 주간 당첨자에게 지급됩니다. (자세한 규칙은 공지에 따라 달라질 수 있습니다.)",
             },
             {
               q: "참가비가 있나요?",
