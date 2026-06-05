@@ -98,6 +98,7 @@ from participation_rewards import (
     try_grant_signup_bonus,
 )
 from token_rankings import build_hall_of_fame_payload
+from weekly_survival import build_weekly_survival_board
 from accuracy_aggregate import clear_accuracy_cache, get_accuracy_data
 from expert_tier import (
     SEGMENT_PRED_COUNT_MIN,
@@ -3974,6 +3975,22 @@ async def get_recent_trading_days(
         raise HTTPException(
             status_code=500,
             detail="최근 거래일 목록을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.",
+        ) from e
+
+
+@app.get("/api/survey/weekly-survival-board")
+async def get_weekly_survival_board(
+    current_user=Depends(get_current_user),
+    supabase: Client = Depends(get_supabase),
+):
+    """이번 주 월~금 생존전 보드 — 코스피·내 적중·생존·일별 생존자 수."""
+    try:
+        return build_weekly_survival_board(supabase, str(current_user.id))
+    except Exception as e:
+        logger.exception("weekly-survival-board 실패 user=%s", current_user.id)
+        raise HTTPException(
+            status_code=500,
+            detail="주간 생존 보드를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.",
         ) from e
 
 

@@ -12,7 +12,7 @@ import ShareSheet from "@/components/ShareSheet";
 import AppAmbientBackground from "@/components/AppAmbientBackground";
 import AppTabNav from "@/components/AppTabNav";
 import CrowdGaugeBoxplotsSection from "@/components/CrowdGaugeBoxplotsSection";
-import PredictionVsCrowdTable from "@/components/PredictionVsCrowdTable";
+import WeeklySurvivalBoard from "@/components/WeeklySurvivalBoard";
 import StaleRefreshIndicator from "@/components/StaleRefreshIndicator";
 import WeeklyParticipationCard from "@/components/WeeklyParticipationCard";
 import { ChipAmount } from "@/components/ChipAmount";
@@ -806,11 +806,9 @@ export default function DashboardPage() {
         </button>
       </div>
 
-      {!isWeekendKST && (
-        <div className="mb-4 fade-up-1">
-          <WeeklyParticipationCard status={dash?.participation} />
-        </div>
-      )}
+      <div className="mb-5">
+        <WeeklySurvivalBoard token={token} />
+      </div>
 
       <div className="space-y-4">
         {/* ── 오늘의 집계 ─────────────────────────────────────── */}
@@ -973,10 +971,13 @@ export default function DashboardPage() {
                 </>
               )}
 
-              <PredictionVsCrowdTable userHistory={dash.history} />
             </div>
           ) : null}
         </div>
+
+        {!isWeekendKST && (
+          <WeeklyParticipationCard status={dash?.participation} />
+        )}
 
         <CrowdGaugeBoxplotsSection />
 

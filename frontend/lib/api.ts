@@ -237,6 +237,36 @@ export interface RecentTradingDaysResponse {
   days: RecentTradingDayRow[];
 }
 
+export type WeeklyPredictionVerdict = "none" | "pending" | "hit" | "miss";
+export type WeeklySurvivalStatus =
+  | "not_trading"
+  | "pending"
+  | "alive"
+  | "eliminated"
+  | "missed";
+
+export interface WeeklySurvivalColumn {
+  weekday_index: number;
+  label: string;
+  calendar_date: string;
+  is_trading_day: boolean;
+  is_future: boolean;
+  kospi_result: boolean | null;
+  survivor_count: number | null;
+  my_prediction: WeeklyPredictionVerdict;
+  my_survival: WeeklySurvivalStatus;
+}
+
+export interface WeeklySurvivalBoardData {
+  week_id: string;
+  week_start: string;
+  today: string;
+  current_survivors: number | null;
+  cohort_size: number | null;
+  my_alive: boolean;
+  columns: WeeklySurvivalColumn[];
+}
+
 // ─── API 함수 ────────────────────────────────────────────────
 
 export async function getMe(token: string): Promise<UserProfile> {
@@ -252,6 +282,10 @@ export async function getToday(): Promise<TodaySurvey> {
   } catch {
     throw new Error("오늘 데이터 응답 형식 오류");
   }
+}
+
+export async function getWeeklySurvivalBoard(token: string): Promise<WeeklySurvivalBoardData> {
+  return authFetch<WeeklySurvivalBoardData>("/api/survey/weekly-survival-board", token);
 }
 
 export async function getRecentTradingDays(n = 5): Promise<RecentTradingDaysResponse> {
