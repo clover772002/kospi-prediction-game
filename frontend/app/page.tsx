@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
-import ChipBalanceScalePlayground from "@/components/ChipBalanceScalePlayground";
 import SurveyConfidencePlayground from "@/components/SurveyConfidencePlayground";
 import ExpertMessageConceptPlayground from "@/components/ExpertMessageConceptPlayground";
 import LoadingPurposeSplash from "@/components/LoadingPurposeSplash";
@@ -136,10 +135,7 @@ export default function LoginPage() {
           <h2 className="text-[1.65rem] sm:text-[2.2rem] font-black text-white leading-tight mb-6 sm:mb-8 pb-4 border-b border-amber-500/25">
             코스피를 예측하고 칩을 얻어요
           </h2>
-          <div className="space-y-10">
-            <ChipBalanceScalePlayground />
-            <SurveyConfidencePlayground />
-          </div>
+          <SurveyConfidencePlayground />
         </section>
 
         <section className="min-w-0 rounded-3xl border-2 border-sky-500/35 bg-gradient-to-b from-[#081018]/95 to-[#121212]/90 p-5 sm:p-8">
