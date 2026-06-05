@@ -151,19 +151,14 @@ export default function LoginPage() {
     <main className="w-full max-w-2xl mx-auto min-h-screen flex flex-col px-4 sm:px-6 py-8 sm:py-12 pb-28 text-[1.0625rem] sm:text-xl">
       {/* 헤더 */}
       <header className="text-center mb-8 sm:mb-10">
-        <p className="text-sm sm:text-base font-black tracking-wide text-gray-500 uppercase mb-3">
-          {TOURNAMENT_LANDING.seasonNote}
-        </p>
-        <div className="flex items-center justify-center gap-3 mb-4" aria-hidden>
-          <span className="text-4xl sm:text-5xl">{SURVIVAL_MODE.emoji}</span>
-          <span className="text-2xl text-gray-600 font-black">×</span>
-          <span className="text-4xl sm:text-5xl">{ACCURACY_MODE.emoji}</span>
-        </div>
-        <h1 className="text-[2rem] sm:text-[2.5rem] font-black text-white leading-snug px-1 mb-3">
+        <h1 className="text-[2rem] sm:text-[2.65rem] font-black text-white leading-snug px-1 mb-3">
           {TOURNAMENT_LANDING.headline}
         </h1>
-        <p className="text-lg sm:text-xl text-gray-400 font-medium leading-relaxed px-2">
+        <p className="text-lg sm:text-xl text-gray-400 font-medium leading-relaxed px-2 mb-2">
           {TOURNAMENT_LANDING.subhead}
+        </p>
+        <p className="text-sm sm:text-base text-gray-500 font-medium px-2">
+          {TOURNAMENT_LANDING.disclaimer}
         </p>
       </header>
 
@@ -180,7 +175,7 @@ export default function LoginPage() {
           {TOURNAMENT_LANDING.loginTitle}
         </h2>
         <p className="text-center text-gray-400 text-base sm:text-lg font-medium mb-6">
-          {selectedMeta.emoji} {selectedMeta.name} · {selectedMeta.badge} — {ctaSubtext}
+          {selectedMeta.name} · {selectedMeta.badge} — {ctaSubtext}
         </p>
 
         <div className="space-y-4">
@@ -262,11 +257,11 @@ export default function LoginPage() {
           {[
             {
               q: "생존전과 적중대결 차이는?",
-              a: "생존전(하드코어)은 방향을 틀리거나 09:00 전 미제출 시 즉시 탈락합니다. 적중대결(일반)은 틀려도 시즌 끝까지 참여하며, 기간 적중률로 순위가 정해집니다. 제출은 하루 한 번이며 두 대회에 동시 반영됩니다.",
+              a: "생존전(하드코어)은 방향을 틀리거나 09:00 전 미제출 시 즉시 탈락합니다. 적중대결(일반)은 틀려도 대회가 끝날 때까지 참여하며, 기간 적중률로 순위가 정해집니다. 제출은 하루 한 번이며 두 대회에 동시 반영됩니다.",
             },
             {
               q: "참가비가 있나요?",
-              a: "파일럿 시즌은 무료로 참가합니다. 로그인 후 매일 설문에 참여하면 대회 기록이 쌓입니다. 유료 리그·경품 이벤트는 사전 공지 후 진행합니다.",
+              a: "현재는 무료로 참가합니다. 로그인 후 매일 설문에 참여하면 대회 기록이 쌓입니다. 유료 리그·경품 이벤트는 사전 공지 후 진행합니다.",
             },
             {
               q: "매일 꼭 해야 하나요?",

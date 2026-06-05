@@ -54,10 +54,7 @@ export default function TournamentModeLanding({ selected, onSelect }: Props) {
                     : "border-emerald-500/25 bg-gradient-to-b from-[#081210]/80 to-[#101010]/90 hover:border-emerald-500/45"
               }`}
             >
-              <div className="flex items-start justify-between gap-2 mb-3">
-                <span className="text-3xl" aria-hidden>
-                  {mode.emoji}
-                </span>
+              <div className="flex items-start justify-end gap-2 mb-3">
                 <span
                   className={`text-sm font-black px-2.5 py-1 rounded-full border ${
                     isSurvival
@@ -103,13 +100,13 @@ export default function TournamentModeLanding({ selected, onSelect }: Props) {
               ) : (
                 <div className="rounded-2xl border border-emerald-500/30 bg-black/30 px-4 py-3" aria-hidden>
                   <div className="flex items-end justify-between gap-2 mb-2">
-                    <p className="text-xs font-bold text-emerald-300/80 uppercase tracking-wide">예시 · 시즌 적중률</p>
+                    <p className="text-xs font-bold text-emerald-300/80 uppercase tracking-wide">예시 · 적중률</p>
                     <p className="text-2xl font-black text-emerald-300">72%</p>
                   </div>
                   <div className="h-2.5 rounded-full bg-[#1a1a1a] overflow-hidden">
                     <div className="h-full w-[72%] rounded-full bg-gradient-to-r from-emerald-600 to-emerald-400 tournament-accuracy-bar" />
                   </div>
-                  <p className="text-sm text-gray-500 mt-2 font-medium">5일 중 4일 적중 · 순위 3위</p>
+                  <p className="text-sm text-gray-500 mt-2 font-medium">맞춘 날 4 · 순위 3위</p>
                 </div>
               )}
 
