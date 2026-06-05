@@ -199,28 +199,6 @@ export default function LoginPage() {
         </p>
       </section>
 
-      {/* 참가 흐름 */}
-      <section className="w-full mb-12 rounded-3xl border-2 border-[#2A2A2A] bg-[#141414]/90 p-5 sm:p-7">
-        <h3 className="text-xl sm:text-2xl font-black text-white mb-5">참가 흐름</h3>
-        <ol className="space-y-4">
-          {[
-            { step: "1", title: "로그인", desc: "Google·카카오로 가입하면 이번 주 대회에 참가합니다." },
-            { step: "2", title: "매일 제출", desc: "거래일마다 09:00 전 코스피 방향을 제출합니다." },
-            { step: "3", title: "결과 확인", desc: "장 마감 후 탈락 여부·적중률·생존 인증서를 확인합니다." },
-          ].map((item) => (
-            <li key={item.step} className="flex gap-4">
-              <span className="flex-shrink-0 w-9 h-9 rounded-full bg-[#222] border border-[#333] flex items-center justify-center text-white font-black text-lg">
-                {item.step}
-              </span>
-              <div>
-                <p className="text-white font-black text-lg sm:text-xl">{item.title}</p>
-                <p className="text-gray-400 text-base sm:text-lg leading-relaxed">{item.desc}</p>
-              </div>
-            </li>
-          ))}
-        </ol>
-      </section>
-
       {/* FAQ */}
       <div className="w-full">
         <p className="text-gray-400 font-black text-2xl sm:text-3xl mb-5">자주 묻는 질문</p>
