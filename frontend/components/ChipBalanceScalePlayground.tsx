@@ -162,98 +162,93 @@ export default function ChipBalanceScalePlayground() {
           ))}
         </div>
 
-        {/* 저울 무대 */}
-        <div className="relative mx-auto max-w-md aspect-[4/3] min-h-[220px] sm:min-h-[260px]">
+        {/* 저울 무대 — 받침대 고정, 빔+접시 한 덩어리로 회전 */}
+        <div className="relative mx-auto w-full max-w-[360px] h-[272px] sm:h-[292px]">
+          <div className="absolute left-1/2 bottom-3 -translate-x-1/2 w-16 h-4 rounded-sm bg-[#2a2a2a] border border-[#444]" />
           <div
-            className={`absolute left-1/2 bottom-[18%] w-3 h-[42%] -translate-x-1/2 rounded-sm bg-gradient-to-r from-[#4a4a4a] via-[#888] to-[#4a4a4a] border border-[#aaa]/30 ${
+            className={`absolute left-1/2 bottom-7 -translate-x-1/2 w-2.5 h-[108px] sm:h-[118px] rounded-sm bg-gradient-to-r from-[#4a4a4a] via-[#9ca3af] to-[#4a4a4a] ${
               wobble ? "balance-scale-wobble" : ""
             }`}
+            style={{ transformOrigin: "bottom center" }}
           />
-          <div className="absolute left-1/2 bottom-[14%] -translate-x-1/2 w-0 h-0 border-l-[28px] border-r-[28px] border-b-[36px] border-l-transparent border-r-transparent border-b-[#3d3d3d]" />
+
+          <div className="absolute left-1/2 top-[74px] sm:top-[78px] -translate-x-1/2 z-20 w-5 h-5 rounded-full border-2 border-amber-200 bg-amber-500 shadow-[0_0_0_2px_#1a1008]" />
 
           <div
-            className="absolute left-1/2 top-[28%] w-[88%] max-w-[340px] h-3 -translate-x-1/2 origin-center transition-none"
+            className="absolute left-1/2 top-[84px] sm:top-[88px] w-[min(100%,300px)] -translate-x-1/2"
             style={{
               transform: `translateX(-50%) rotate(${displayTilt}deg)`,
+              transformOrigin: "center top",
             }}
           >
-            <div className="absolute inset-0 rounded-full bg-gradient-to-b from-[#c9a227] to-[#7a5c10] shadow-[0_2px_0_#f5e6a8,inset_0_-2px_0_#3d2e06]" />
+            <div className="h-3 w-full rounded-full bg-gradient-to-b from-amber-300 via-amber-500 to-amber-800 shadow-[0_2px_0_#fde68a,inset_0_-1px_0_#78350f]" />
+
+            <button
+              type="button"
+              disabled={walletLeft < unit}
+              onClick={() => addToPan("fall")}
+              className={`absolute left-0 top-2 flex w-[124px] sm:w-[132px] flex-col items-center disabled:opacity-50 active:scale-[0.97] ${
+                mySide === "fall" && myBet > 0 ? "balance-pan-glow-blue" : ""
+              }`}
+              style={{ transform: "translateX(-50%)" }}
+            >
+              <div className="w-0.5 h-9 sm:h-10 bg-amber-900/70" />
+              <div className="relative w-[108px] sm:w-[116px]">
+                <div className="h-11 sm:h-12 rounded-[50%] border-2 border-blue-400/70 bg-gradient-to-b from-blue-950/80 to-[#0a1020] shadow-[0_5px_0_#1e3a5f,inset_0_2px_6px_rgba(96,165,250,.12)]" />
+                <div className="absolute inset-x-3 bottom-3 top-4 flex items-end justify-center">
+                  <div
+                    className="w-12 sm:w-14 rounded-t-md bg-gradient-to-t from-blue-700 to-blue-400 balance-coin-stack-pulse transition-all duration-300"
+                    style={{ height: `${stackHeightPct(fallWeight, maxStack)}%`, minHeight: 8 }}
+                  />
+                </div>
+              </div>
+              <span className="mt-1 text-sm font-black text-blue-300">하락</span>
+              <span className="text-[11px] font-bold text-blue-200/75 tabular-nums">{fallWeight.toLocaleString()}</span>
+            </button>
+
+            <button
+              type="button"
+              disabled={walletLeft < unit}
+              onClick={() => addToPan("rise")}
+              className={`absolute right-0 top-2 flex w-[124px] sm:w-[132px] flex-col items-center disabled:opacity-50 active:scale-[0.97] ${
+                mySide === "rise" && myBet > 0 ? "balance-pan-glow-red" : ""
+              }`}
+              style={{ transform: "translateX(50%)" }}
+            >
+              <div className="w-0.5 h-9 sm:h-10 bg-amber-900/70" />
+              <div className="relative w-[108px] sm:w-[116px]">
+                <div className="h-11 sm:h-12 rounded-[50%] border-2 border-red-400/70 bg-gradient-to-b from-red-950/80 to-[#1a0808] shadow-[0_5px_0_#7f1d1d,inset_0_2px_6px_rgba(248,113,113,.12)]" />
+                <div className="absolute inset-x-3 bottom-3 top-4 flex items-end justify-center">
+                  <div
+                    className="w-12 sm:w-14 rounded-t-md bg-gradient-to-t from-red-800 to-red-400 balance-coin-stack-pulse transition-all duration-300"
+                    style={{ height: `${stackHeightPct(riseWeight, maxStack)}%`, minHeight: 8 }}
+                  />
+                </div>
+              </div>
+              <span className="mt-1 text-sm font-black text-red-300">상승</span>
+              <span className="text-[11px] font-bold text-red-200/75 tabular-nums">{riseWeight.toLocaleString()}</span>
+            </button>
           </div>
 
-          {/* 하락 접시 */}
-          <button
-            type="button"
-            disabled={walletLeft < unit}
-            onClick={() => addToPan("fall")}
-            className={`absolute left-[4%] sm:left-[8%] top-[38%] w-[38%] max-w-[140px] flex flex-col items-center gap-1 group disabled:opacity-50 transition-transform active:scale-95 ${
-              mySide === "fall" && myBet > 0 ? "balance-pan-glow-blue" : ""
-            }`}
-            style={{
-              transform: `rotate(${displayTilt}deg) translateY(${displayTilt * 1.8}px)`,
-              transformOrigin: "120% 0%",
-            }}
-          >
-            <div className="w-full h-14 sm:h-16 rounded-full border-2 border-blue-400/60 bg-gradient-to-b from-blue-900/50 to-[#0a1020] shadow-[0_6px_0_#1e3a5f,inset_0_2px_8px_rgba(96,165,250,.15)] group-hover:border-blue-300/80" />
-            <span className="text-sm sm:text-base font-black text-blue-300 drop-shadow-[0_1px_2px_rgba(0,0,0,.9)]">
-              하락
-            </span>
-            <div className="w-full h-16 sm:h-20 flex items-end justify-center px-2 pb-0">
-              <div
-                className="w-full max-w-[4.5rem] rounded-t-md bg-gradient-to-t from-blue-700 to-blue-400 balance-coin-stack-pulse transition-all duration-300"
-                style={{ height: `${stackHeightPct(fallWeight, maxStack)}%`, minHeight: 10 }}
-              />
-            </div>
-            <span className="text-xs font-bold text-blue-200/80 tabular-nums">{fallWeight.toLocaleString()}</span>
-          </button>
-
-          {/* 상승 접시 */}
-          <button
-            type="button"
-            disabled={walletLeft < unit}
-            onClick={() => addToPan("rise")}
-            className={`absolute right-[4%] sm:right-[8%] top-[38%] w-[38%] max-w-[140px] flex flex-col items-center gap-1 group disabled:opacity-50 transition-transform active:scale-95 ${
-              mySide === "rise" && myBet > 0 ? "balance-pan-glow-red" : ""
-            }`}
-            style={{
-              transform: `rotate(${displayTilt}deg) translateY(${-displayTilt * 1.8}px)`,
-              transformOrigin: "-20% 0%",
-            }}
-          >
-            <div className="w-full h-14 sm:h-16 rounded-full border-2 border-red-400/60 bg-gradient-to-b from-red-900/50 to-[#1a0808] shadow-[0_6px_0_#7f1d1d,inset_0_2px_8px_rgba(248,113,113,.15)] group-hover:border-red-300/80" />
-            <span className="text-sm sm:text-base font-black text-red-300 drop-shadow-[0_1px_2px_rgba(0,0,0,.9)]">
-              상승
-            </span>
-            <div className="w-full h-16 sm:h-20 flex items-end justify-center px-2 pb-0">
-              <div
-                className="w-full max-w-[4.5rem] rounded-t-md bg-gradient-to-t from-red-800 to-red-400 balance-coin-stack-pulse transition-all duration-300"
-                style={{ height: `${stackHeightPct(riseWeight, maxStack)}%`, minHeight: 10 }}
-              />
-            </div>
-            <span className="text-xs font-bold text-red-200/80 tabular-nums">{riseWeight.toLocaleString()}</span>
-          </button>
-
-          {/* 날아가는 코인 */}
           {flyCoins.map((c) => (
             <div
               key={c.id}
-              className={`absolute left-1/2 top-[8%] w-7 h-7 -ml-3.5 rounded-full border-2 border-amber-200/80 bg-gradient-to-br from-amber-300 to-amber-600 shadow-[0_2px_0_#92400e] balance-coin-fly ${
+              className={`absolute left-1/2 top-[52px] w-7 h-7 -ml-3.5 rounded-full border-2 border-amber-200/80 bg-gradient-to-br from-amber-300 to-amber-600 shadow-[0_2px_0_#92400e] balance-coin-fly z-30 ${
                 c.side === "rise" ? "balance-coin-fly-rise" : "balance-coin-fly-fall"
               }`}
             />
           ))}
 
           {phase === "win" && (
-            <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
+            <div className="absolute inset-0 pointer-events-none flex items-center justify-center z-40">
               <div className="balance-win-burst text-4xl sm:text-5xl font-black text-amber-300 drop-shadow-[0_0_12px_rgba(251,191,36,.8)]">
                 +{gain}
               </div>
             </div>
           )}
           {phase === "lose" && (
-            <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
-              <div className="balance-lose-sink text-3xl sm:text-4xl font-black text-gray-500">
-                −{myBet}
-              </div>
+            <div className="absolute inset-0 pointer-events-none flex items-center justify-center z-40">
+              <div className="balance-lose-sink text-3xl sm:text-4xl font-black text-gray-500">−{myBet}</div>
             </div>
           )}
         </div>

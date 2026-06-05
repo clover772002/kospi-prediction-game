@@ -1129,13 +1129,13 @@ body {
     opacity: 0;
     transform: translate(-50%, 0) scale(0.35);
   }
-  15% {
+  18% {
     opacity: 1;
-    transform: translate(-50%, 24px) scale(1.1);
+    transform: translate(-50%, 18px) scale(1.08);
   }
   100% {
-    opacity: 0.85;
-    transform: translate(88px, 118px) scale(0.75);
+    opacity: 0.9;
+    transform: translate(92px, 108px) scale(0.8);
   }
 }
 @keyframes balanceCoinFlyFall {
@@ -1143,13 +1143,13 @@ body {
     opacity: 0;
     transform: translate(-50%, 0) scale(0.35);
   }
-  15% {
+  18% {
     opacity: 1;
-    transform: translate(-50%, 24px) scale(1.1);
+    transform: translate(-50%, 18px) scale(1.08);
   }
   100% {
-    opacity: 0.85;
-    transform: translate(-108px, 118px) scale(0.75);
+    opacity: 0.9;
+    transform: translate(-92px, 108px) scale(0.8);
   }
 }
 .balance-coin-fly {
@@ -1166,8 +1166,8 @@ body {
 
 @keyframes balanceScaleWobble {
   0% { transform: translateX(-50%) rotate(0deg); }
-  25% { transform: translateX(-50%) rotate(-2.5deg); }
-  55% { transform: translateX(-50%) rotate(2deg); }
+  25% { transform: translateX(-50%) rotate(-1.8deg); }
+  55% { transform: translateX(-50%) rotate(1.4deg); }
   100% { transform: translateX(-50%) rotate(0deg); }
 }
 .balance-scale-wobble {
