@@ -199,69 +199,9 @@ export default function LoginPage() {
         </p>
       </section>
 
-      {/* FAQ */}
-      <div className="w-full">
-        <p className="text-gray-400 font-black text-2xl sm:text-3xl mb-5">자주 묻는 질문</p>
-        <div className="space-y-3">
-          {[
-            {
-              q: "대회는 어떻게 진행돼요?",
-              a: "대회는 주 단위로 진행됩니다. 해당 주 거래일마다 09:00 전 방향을 제출하고, 맞으면 생존·틀리거나 미제출이면 탈락합니다. 한 주가 끝날 때까지 버티면 주간 통과입니다.",
-            },
-            {
-              q: "보상은 뭐예요?",
-              a: "주간 통과자에게 생존 인증서를 발급하고, 경품 응모권을 드립니다. (당첨자는 사전 공지된 방식에 따라 선정됩니다.)",
-            },
-            {
-              q: "참가비가 있나요?",
-              a: "현재는 무료로 참가합니다. 로그인 후 매일 설문에 참여하면 대회 기록이 쌓입니다. 유료 리그·경품 이벤트는 사전 공지 후 진행합니다.",
-            },
-            {
-              q: "적중률은 어디서 봐요?",
-              a: "장 마감 후 대시보드에서 내 적중률과 순위를 확인할 수 있어요.",
-            },
-            {
-              q: "이걸로 실제 투자 결정을 해도 되나요?",
-              a: "본 서비스는 투자 조언·매매 권유가 아닙니다. 코스피 방향 예측 게임이며, 실제 투자는 본인 책임입니다.",
-            },
-            {
-              q: "결과는 어떻게 검증되나요?",
-              a: "장 마감 후 코스피 등락은 외부 금융 데이터에서 자동으로 가져옵니다. 제출 시각·방향·적중 여부가 서버에 기록되어 순위·인증서에 사용됩니다.",
-            },
-            {
-              q: "알림은 어떻게 받나요?",
-              a: "로그인 후 설정에서 브라우저 알림을 켜면 매일 밤 22:00에 설문 알림이 옵니다. 텔레그램 연동은 선택 사항입니다.",
-            },
-          ].map((item, i) => (
-            <FaqItem key={i} q={item.q} a={item.a} />
-          ))}
-        </div>
-      </div>
-
       <p className="text-base text-gray-600 text-center mt-10 pb-8">
         © 2026 오늘 장 예측
       </p>
     </main>
-  );
-}
-
-function FaqItem({ q, a }: { q: string; a: string }) {
-  const [open, setOpen] = useState(false);
-  return (
-    <div className="bg-[#1A1A1A] rounded-3xl border-2 border-[#2A2A2A] overflow-hidden">
-      <button
-        type="button"
-        className="w-full flex items-center justify-between gap-3 px-5 py-4 sm:py-5 text-left"
-        onClick={() => setOpen(!open)}
-      >
-        <span className="text-xl sm:text-2xl text-white font-black pr-2 leading-snug">{q}</span>
-        <span className={`text-gray-500 text-3xl flex-shrink-0 transition-transform duration-200 ${open ? "rotate-180" : ""}`}>▾</span>
-      </button>
-      {open && (
-        <div className="px-5 pb-5 border-t border-[#333] pt-4">
-          <p className="text-lg sm:text-xl text-gray-300 leading-relaxed font-medium">{a}</p>
-        </div>
-      )}
-    </div>
   );
 }
