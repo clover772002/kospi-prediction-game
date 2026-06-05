@@ -10,13 +10,9 @@ export default function TournamentModeLanding() {
           <h2 className="text-2xl sm:text-[1.65rem] font-black text-white leading-tight">
             {TOURNAMENT_RULES.title}
           </h2>
-          <span className="text-sm font-bold px-2.5 py-1 rounded-full border border-orange-400/40 bg-orange-500/15 text-orange-200">
-            {TOURNAMENT_RULES.period}
-          </span>
         </div>
 
-        <p className="text-base sm:text-lg font-bold mb-3 text-orange-200/90">{TOURNAMENT_RULES.summary}</p>
-        <p className="text-gray-400 text-base sm:text-lg leading-relaxed mb-4">{TOURNAMENT_RULES.intro}</p>
+        <p className="text-gray-300 text-base sm:text-lg leading-relaxed mb-4 font-bold">{TOURNAMENT_RULES.intro}</p>
 
         <p className="text-sm font-black text-gray-300 uppercase tracking-wide mb-2">규칙</p>
         <ul className="space-y-1.5 mb-5">
@@ -37,8 +33,6 @@ export default function TournamentModeLanding() {
             </li>
           ))}
         </ul>
-
-        <p className="text-sm text-gray-500 font-medium">{TOURNAMENT_RULES.footnote}</p>
       </div>
     </div>
   );
