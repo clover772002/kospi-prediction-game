@@ -4,12 +4,15 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
-import SurveyConfidencePlayground from "@/components/SurveyConfidencePlayground";
-import ExpertMessageConceptPlayground from "@/components/ExpertMessageConceptPlayground";
 import LoadingPurposeSplash from "@/components/LoadingPurposeSplash";
-import ExpertPickRevealPlayground from "@/components/ExpertPickRevealPlayground";
-import ExpertWeightedInsightPlayground from "@/components/ExpertWeightedInsightPlayground";
-import { OUR_ACCURACY_LABEL } from "@/lib/product-copy";
+import TournamentModeLanding from "@/components/TournamentModeLanding";
+import {
+  ACCURACY_MODE,
+  SURVIVAL_MODE,
+  TOURNAMENT_LANDING,
+  TOURNAMENT_MODE_STORAGE_KEY,
+  type TournamentMode,
+} from "@/lib/tournament-copy";
 
 function detectBrowser(): "kakao" | "inapp" | "normal" {
   if (typeof navigator === "undefined") return "normal";
@@ -33,13 +36,26 @@ function openInExternalBrowser() {
   }
 }
 
+function readStoredMode(): TournamentMode {
+  if (typeof window === "undefined") return "accuracy";
+  try {
+    const v = localStorage.getItem(TOURNAMENT_MODE_STORAGE_KEY);
+    if (v === "survival" || v === "accuracy") return v;
+  } catch {
+    /* ignore */
+  }
+  return "accuracy";
+}
+
 export default function LoginPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [signing, setSigning] = useState<"google" | "kakao" | null>(null);
   const [browserType, setBrowserType] = useState<"kakao" | "inapp" | "normal">("normal");
+  const [mode, setMode] = useState<TournamentMode>("accuracy");
 
   useEffect(() => {
+    setMode(readStoredMode());
     const type = detectBrowser();
     setBrowserType(type);
     if (type === "inapp") {
@@ -57,6 +73,11 @@ export default function LoginPage() {
 
   const handleLogin = async (provider: "google" | "kakao") => {
     setSigning(provider);
+    try {
+      localStorage.setItem(TOURNAMENT_MODE_STORAGE_KEY, mode);
+    } catch {
+      /* ignore */
+    }
     const { error } = await supabase.auth.signInWithOAuth({
       provider,
       options: {
@@ -73,8 +94,8 @@ export default function LoginPage() {
     return (
       <LoadingPurposeSplash
         mode="spinner"
-        label={signing ? "로그인 연결 중…" : "잠시만요…"}
-        accent="blue"
+        label={signing ? "대회 참가 연결 중…" : "잠시만요…"}
+        accent={mode === "survival" ? "amber" : "blue"}
       />
     );
   }
@@ -119,146 +140,149 @@ export default function LoginPage() {
     );
   }
 
+  const selectedMeta = mode === "survival" ? SURVIVAL_MODE : ACCURACY_MODE;
+  const ctaSubtext = `${selectedMeta.name}(${selectedMeta.badge}) 중심 · 두 대회 동시 참가`;
+  const loginAccent =
+    mode === "survival"
+      ? "from-orange-600/20 to-[#121212] border-orange-500/35"
+      : "from-emerald-600/15 to-[#121212] border-emerald-500/35";
+
   return (
-    <main className="w-full max-w-2xl mx-auto min-h-screen flex flex-col items-center justify-center px-4 sm:px-6 py-10 sm:py-14 pb-28 text-[1.0625rem] sm:text-xl">
-      <div className="text-center mb-10">
-        <div className="text-8xl sm:text-9xl mb-5 drop-shadow-lg" aria-hidden>
-          📊
+    <main className="w-full max-w-2xl mx-auto min-h-screen flex flex-col px-4 sm:px-6 py-8 sm:py-12 pb-28 text-[1.0625rem] sm:text-xl">
+      {/* 헤더 */}
+      <header className="text-center mb-8 sm:mb-10">
+        <p className="text-sm sm:text-base font-black tracking-wide text-gray-500 uppercase mb-3">
+          {TOURNAMENT_LANDING.seasonNote}
+        </p>
+        <div className="flex items-center justify-center gap-3 mb-4" aria-hidden>
+          <span className="text-4xl sm:text-5xl">{SURVIVAL_MODE.emoji}</span>
+          <span className="text-2xl text-gray-600 font-black">×</span>
+          <span className="text-4xl sm:text-5xl">{ACCURACY_MODE.emoji}</span>
         </div>
-        <h1 className="text-[2.1rem] sm:text-[2.45rem] font-black text-white leading-snug px-1">
-          오늘 코스피, 같이 맞혀요
+        <h1 className="text-[2rem] sm:text-[2.5rem] font-black text-white leading-snug px-1 mb-3">
+          {TOURNAMENT_LANDING.headline}
         </h1>
-      </div>
+        <p className="text-lg sm:text-xl text-gray-400 font-medium leading-relaxed px-2">
+          {TOURNAMENT_LANDING.subhead}
+        </p>
+      </header>
 
-      <div className="w-full mb-12 min-w-0 space-y-12">
-        <section className="min-w-0 rounded-3xl border-2 border-amber-500/35 bg-gradient-to-b from-[#161008]/95 to-[#121212]/90 p-5 sm:p-8">
-          <h2 className="text-[1.65rem] sm:text-[2.2rem] font-black text-white leading-tight mb-6 sm:mb-8 pb-4 border-b border-amber-500/25">
-            코스피를 예측하고 칩을 얻어요
-          </h2>
-          <SurveyConfidencePlayground />
-        </section>
+      {/* 모드 선택 */}
+      <section className="mb-8 sm:mb-10">
+        <TournamentModeLanding selected={mode} onSelect={setMode} />
+      </section>
 
-        <section className="min-w-0 rounded-3xl border-2 border-sky-500/35 bg-gradient-to-b from-[#081018]/95 to-[#121212]/90 p-5 sm:p-8">
-          <h2 className="text-[1.65rem] sm:text-[2.2rem] font-black text-white leading-tight mb-6 sm:mb-8 pb-4 border-b border-sky-500/25">
-            칩으로 초고수랑 소통해요
-          </h2>
+      {/* 로그인 · 대회 참가 */}
+      <section
+        className={`w-full rounded-3xl border-2 bg-gradient-to-b p-5 sm:p-8 mb-10 ${loginAccent}`}
+      >
+        <h2 className="text-[1.65rem] sm:text-[2rem] font-black text-white text-center mb-1">
+          {TOURNAMENT_LANDING.loginTitle}
+        </h2>
+        <p className="text-center text-gray-400 text-base sm:text-lg font-medium mb-6">
+          {selectedMeta.emoji} {selectedMeta.name} · {selectedMeta.badge} — {ctaSubtext}
+        </p>
 
-          <div className="space-y-10">
-            <ExpertPickRevealPlayground />
-            <ExpertMessageConceptPlayground />
-          </div>
-        </section>
-
-        <section className="min-w-0 rounded-3xl border-2 border-violet-500/35 bg-gradient-to-b from-[#100818]/95 to-[#121212]/90 p-5 sm:p-8">
-          <h2 className="text-[1.65rem] sm:text-[2.2rem] font-black text-white leading-tight mb-2 sm:mb-3 pb-4 border-b border-violet-500/25">
-            투표를 모아 더 잘 맞춰요
-          </h2>
-          <p className="text-lg sm:text-xl text-gray-400 font-medium leading-relaxed mb-6 sm:mb-8">
-            많은 참가자가 모일수록 집계가 강해지고, 잘 맞춘 사람은 가중을 키우고 틀린 사람은 낮춰{" "}
-            <span className="text-violet-200/95 font-bold">{OUR_ACCURACY_LABEL}</span> 지표로 확인해요.
-          </p>
-          <ExpertWeightedInsightPlayground />
-        </section>
-      </div>
-
-      {/* 로그인 버튼 그룹 */}
-      <div className="w-full space-y-4">
-        {browserType === "kakao" && (
-          <p className="text-center text-xl font-black text-yellow-400 mb-1">카톡 → 카카오 로그인</p>
-        )}
-        <button
-          type="button"
-          onClick={() => handleLogin("google")}
-          disabled={signing !== null || browserType === "kakao"}
-          className={`w-full flex items-center justify-center gap-3 bg-white hover:bg-gray-100 disabled:opacity-30 text-gray-900 text-xl font-black py-6 rounded-2xl transition-all active:scale-[0.98] shadow-md ${browserType === "kakao" ? "hidden" : ""}`}
-        >
-          {signing === "google" ? (
-            <div className="w-6 h-6 border-2 border-gray-400/30 border-t-gray-600 rounded-full animate-spin" />
-          ) : (
-            <svg width="30" height="30" viewBox="0 0 48 48" aria-hidden>
-              <path fill="#4285F4" d="M47.5 24.5c0-1.6-.1-3.1-.4-4.5H24v8.5h13.1c-.6 3-2.3 5.5-4.9 7.2v6h7.9c4.6-4.3 7.4-10.6 7.4-17.2z"/>
-              <path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.8-5.8l-7.9-6c-2.1 1.4-4.8 2.3-7.9 2.3-6.1 0-11.2-4.1-13-9.6H2.9v6.2C6.8 42.5 14.8 48 24 48z"/>
-              <path fill="#FBBC05" d="M11 28.9c-.5-1.4-.7-2.9-.7-4.4s.2-3 .7-4.4v-6.2H2.9C1.1 17.1 0 20.4 0 24s1.1 6.9 2.9 9.9l8.1-5z"/>
-              <path fill="#EA4335" d="M24 9.5c3.4 0 6.5 1.2 8.9 3.5l6.6-6.6C35.9 2.4 30.5 0 24 0 14.8 0 6.8 5.5 2.9 14.1l8.1 6.2c1.8-5.5 6.9-10.8 13-10.8z"/>
-            </svg>
+        <div className="space-y-4">
+          {browserType === "kakao" && (
+            <p className="text-center text-xl font-black text-yellow-400">카톡 → 카카오 로그인</p>
           )}
-          {signing === "google" ? "연결 중…" : "Google로 시작"}
-        </button>
+          <button
+            type="button"
+            onClick={() => handleLogin("google")}
+            disabled={signing !== null || browserType === "kakao"}
+            className={`w-full flex items-center justify-center gap-3 bg-white hover:bg-gray-100 disabled:opacity-30 text-gray-900 text-xl font-black py-5 sm:py-6 rounded-2xl transition-all active:scale-[0.98] shadow-md ${browserType === "kakao" ? "hidden" : ""}`}
+          >
+            {signing === "google" ? (
+              <div className="w-6 h-6 border-2 border-gray-400/30 border-t-gray-600 rounded-full animate-spin" />
+            ) : (
+              <svg width="30" height="30" viewBox="0 0 48 48" aria-hidden>
+                <path fill="#4285F4" d="M47.5 24.5c0-1.6-.1-3.1-.4-4.5H24v8.5h13.1c-.6 3-2.3 5.5-4.9 7.2v6h7.9c4.6-4.3 7.4-10.6 7.4-17.2z"/>
+                <path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.8-5.8l-7.9-6c-2.1 1.4-4.8 2.3-7.9 2.3-6.1 0-11.2-4.1-13-9.6H2.9v6.2C6.8 42.5 14.8 48 24 48z"/>
+                <path fill="#FBBC05" d="M11 28.9c-.5-1.4-.7-2.9-.7-4.4s.2-3 .7-4.4v-6.2H2.9C1.1 17.1 0 20.4 0 24s1.1 6.9 2.9 9.9l8.1-5z"/>
+                <path fill="#EA4335" d="M24 9.5c3.4 0 6.5 1.2 8.9 3.5l6.6-6.6C35.9 2.4 30.5 0 24 0 14.8 0 6.8 5.5 2.9 14.1l8.1 6.2c1.8-5.5 6.9-10.8 13-10.8z"/>
+              </svg>
+            )}
+            {signing === "google" ? "연결 중…" : "Google로 대회 참가"}
+          </button>
 
-        <button
-          type="button"
-          onClick={() => handleLogin("kakao")}
-          disabled={signing !== null}
-          className="w-full flex items-center justify-center gap-3 disabled:opacity-60 text-xl font-black py-6 rounded-2xl transition-all active:scale-[0.98] shadow-md"
-          style={{ backgroundColor: "#FEE500", color: "#191919" }}
-        >
-          {signing === "kakao" ? (
-            <div className="w-6 h-6 border-2 border-yellow-700/30 border-t-yellow-800 rounded-full animate-spin" />
-          ) : (
-            <svg width="30" height="30" viewBox="0 0 24 24" fill="#191919" aria-hidden>
-              <path d="M12 3C6.477 3 2 6.477 2 10.8c0 2.74 1.612 5.155 4.07 6.638l-.9 3.358c-.08.296.247.535.503.37L9.93 18.8c.676.1 1.37.15 2.07.15 5.523 0 10-3.477 10-7.8S17.523 3 12 3z"/>
-            </svg>
-          )}
-          {signing === "kakao" ? "연결 중…" : "카카오로 시작"}
-        </button>
-      </div>
+          <button
+            type="button"
+            onClick={() => handleLogin("kakao")}
+            disabled={signing !== null}
+            className="w-full flex items-center justify-center gap-3 disabled:opacity-60 text-xl font-black py-5 sm:py-6 rounded-2xl transition-all active:scale-[0.98] shadow-md"
+            style={{ backgroundColor: "#FEE500", color: "#191919" }}
+          >
+            {signing === "kakao" ? (
+              <div className="w-6 h-6 border-2 border-yellow-700/30 border-t-yellow-800 rounded-full animate-spin" />
+            ) : (
+              <svg width="30" height="30" viewBox="0 0 24 24" fill="#191919" aria-hidden>
+                <path d="M12 3C6.477 3 2 6.477 2 10.8c0 2.74 1.612 5.155 4.07 6.638l-.9 3.358c-.08.296.247.535.503.37L9.93 18.8c.676.1 1.37.15 2.07.15 5.523 0 10-3.477 10-7.8S17.523 3 12 3z"/>
+              </svg>
+            )}
+            {signing === "kakao" ? "연결 중…" : "카카오로 대회 참가"}
+          </button>
+        </div>
 
-      <p className="text-lg text-gray-500 text-center mt-5 px-2">
-        시작 ={" "}
-        <Link href="/privacy" className="underline text-gray-400 hover:text-gray-200 font-bold">
-          개인정보처리방침
-        </Link>{" "}
-        동의
-      </p>
+        <p className="text-base text-gray-500 text-center mt-5 px-2">
+          시작 ={" "}
+          <Link href="/privacy" className="underline text-gray-400 hover:text-gray-200 font-bold">
+            개인정보처리방침
+          </Link>{" "}
+          동의 · {TOURNAMENT_LANDING.ctaHint}
+        </p>
+      </section>
+
+      {/* 참가 흐름 */}
+      <section className="w-full mb-12 rounded-3xl border-2 border-[#2A2A2A] bg-[#141414]/90 p-5 sm:p-7">
+        <h3 className="text-xl sm:text-2xl font-black text-white mb-5">참가 흐름</h3>
+        <ol className="space-y-4">
+          {[
+            { step: "1", title: "모드 고르기", desc: "생존전(하드코어) 또는 적중대결(일반) — 둘 다 자동 참가" },
+            { step: "2", title: "로그인", desc: "Google·카카오로 가입 · 매일 09:00 전 방향 제출" },
+            { step: "3", title: "결과·인증", desc: "장 마감 후 생존/탈락·적중률 순위 · 인증서 공유" },
+          ].map((item) => (
+            <li key={item.step} className="flex gap-4">
+              <span className="flex-shrink-0 w-9 h-9 rounded-full bg-[#222] border border-[#333] flex items-center justify-center text-white font-black text-lg">
+                {item.step}
+              </span>
+              <div>
+                <p className="text-white font-black text-lg sm:text-xl">{item.title}</p>
+                <p className="text-gray-400 text-base sm:text-lg leading-relaxed">{item.desc}</p>
+              </div>
+            </li>
+          ))}
+        </ol>
+      </section>
 
       {/* FAQ */}
-      <div className="w-full mt-12">
+      <div className="w-full">
         <p className="text-gray-400 font-black text-2xl sm:text-3xl mb-5">자주 묻는 질문</p>
         <div className="space-y-3">
           {[
             {
-              q: "완전 무료인가요?",
-              a: "시작하고 설문 참여 같은 기본 흐름은 무료로 시작해요. 칩은 적중 등으로 쌓이고, 초고수 선택픽이나 명예의 전당 소통에 쓰일 수 있어요. 유료 과금이 생기면 사전 공지합니다.",
+              q: "생존전과 적중대결 차이는?",
+              a: "생존전(하드코어)은 방향을 틀리거나 09:00 전 미제출 시 즉시 탈락합니다. 적중대결(일반)은 틀려도 시즌 끝까지 참여하며, 기간 적중률로 순위가 정해집니다. 제출은 하루 한 번이며 두 대회에 동시 반영됩니다.",
             },
             {
-              q: "매일 해야 하나요? 빠지면 불이익이 있나요?",
-              a: "전혀요. 빠진 날은 그냥 기록이 없는 것뿐이에요. 가능한 날만 참여해도 되고, 참여할수록 내 누적 정확도가 쌓이는 구조라 부담 없이 시작할 수 있어요.",
+              q: "참가비가 있나요?",
+              a: "파일럿 시즌은 무료로 참가합니다. 로그인 후 매일 설문에 참여하면 대회 기록이 쌓입니다. 유료 리그·경품 이벤트는 사전 공지 후 진행합니다.",
             },
             {
-              q: "정확도가 낮으면 어떻게 되나요?",
-              a: `서비스 이용에는 아무 제한이 없어요. 다만 정확도가 낮으면 ${OUR_ACCURACY_LABEL}에 반영되는 내 가중치가 낮아지고, 높으면 무리 예측에 내 의견이 더 많이 반영됩니다. 잘 못 맞춰도 계속 참여하는 것 자체가 의미 있어요.`,
+              q: "매일 꼭 해야 하나요?",
+              a: "생존전은 매 거래일 09:00 전 제출이 필수입니다. 적중대결은 빠진 날은 순위 계산에서 제외되지만, 많이 참여할수록 순위에 유리합니다.",
             },
             {
               q: "이걸로 실제 투자 결정을 해도 되나요?",
-              a: "본 서비스는 투자 조언이 아닙니다. 무리 예측 데이터를 재미로 확인하는 서비스예요. 실제 투자 결정은 반드시 본인의 판단과 책임 하에 하세요.",
+              a: "본 서비스는 투자 조언·매매 권유가 아닙니다. 코스피 방향 예측 게임이며, 실제 투자는 본인 책임입니다.",
             },
             {
-              q: `${OUR_ACCURACY_LABEL}은 언제부터 믿을 수 있나요?`,
-              a: "참여자가 많고 누적 데이터가 쌓일수록 신뢰도가 올라갑니다. 잘 맞추는 사람의 의견은 더 크게, 항상 틀리는 사람의 의견은 반대 방향으로 반영되기 때문에 단순 참여 집계보다 정교해요.",
-            },
-            {
-              q: "초고수랑 어떻게 소통하나요?",
-              a: "시작 시 100칩이 주어지고, 명예의 전당(초고수 소통)은 보유 칩이 210개 이상일 때 열립니다. 「초고수」는 전체 참가자 중 칩이 가장 많은 1명이며, 상단 순위를 확인한 뒤 대시보드·명예의 전당에서 질문을 보낼 수 있어요. 질문 1통당 25칩이 차감되며, 초고수가 팁을 수락할 때 전달됩니다.",
-            },
-            {
-              q: "예측 결과가 조작될 수 있나요?",
-              a: "장 마감 후 코스피 등락은 외부 금융 데이터(yfinance)에서 자동으로 가져옵니다. 운영자가 임의로 결과를 수정할 수 없는 구조예요.",
-            },
-            {
-              q: "개인정보가 수집되나요?",
-              a: "소셜 로그인 시 이름·이메일이 저장됩니다. 명예의 전당(초고수 소통)을 사용하면 메시지 내용도 서버에 저장돼요. 자세한 항목·보관은 개인정보처리방침을 확인해 주세요. 위치정보 등은 수집하지 않아요.",
+              q: "결과는 어떻게 검증되나요?",
+              a: "장 마감 후 코스피 등락은 외부 금융 데이터에서 자동으로 가져옵니다. 제출 시각·방향·적중 여부가 서버에 기록되어 순위·인증서에 사용됩니다.",
             },
             {
               q: "알림은 어떻게 받나요?",
-              a: "로그인 후 설정 페이지에서 '브라우저 알림 허용'을 탭하면 바로 연결돼요. 매일 밤 22:00에 알림이 오고, 탭하면 설문 페이지로 이동해요. 앱 설치 없이 바로 사용 가능합니다.",
-            },
-            {
-              q: "텔레그램이 꼭 필요한가요?",
-              a: "아니에요! 브라우저 알림만으로 충분해요. 텔레그램은 선택 사항이에요. 매번 앱을 열기 귀찮다면 텔레그램 봇을 연결하면 메시지에서 바로 참여할 수 있어서 더 편리하긴 해요.",
-            },
-            {
-              q: "알림이 안 와요",
-              a: "① 설정 → 브라우저 알림이 '연동됨'인지 확인해주세요. ② 기기 설정에서 브라우저 알림이 허용돼 있는지 확인해주세요. ③ iPhone은 Safari에서 홈 화면에 추가 후 알림이 작동해요. 해결이 안 되면 forsmartonly@gmail.com으로 문의해 주세요.",
+              a: "로그인 후 설정에서 브라우저 알림을 켜면 매일 밤 22:00에 설문 알림이 옵니다. 텔레그램 연동은 선택 사항입니다.",
             },
           ].map((item, i) => (
             <FaqItem key={i} q={item.q} a={item.a} />
