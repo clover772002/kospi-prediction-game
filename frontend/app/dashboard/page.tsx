@@ -14,6 +14,7 @@ import AppTabNav from "@/components/AppTabNav";
 import CrowdGaugeBoxplotsSection from "@/components/CrowdGaugeBoxplotsSection";
 import PredictionVsCrowdTable from "@/components/PredictionVsCrowdTable";
 import StaleRefreshIndicator from "@/components/StaleRefreshIndicator";
+import WeeklyParticipationCard from "@/components/WeeklyParticipationCard";
 import { ChipAmount } from "@/components/ChipAmount";
 import { OUR_ACCURACY_LABEL, OUR_PREDICTION_LABEL } from "@/lib/product-copy";
 import { clearAllTabSnapshots, peekAnsweredToday, peekDashboardSnapshot, saveAnsweredToday, saveDashboardSnapshot, saveGroupsSnapshot } from "@/lib/tab-session-cache";
@@ -804,6 +805,12 @@ export default function DashboardPage() {
           로그아웃
         </button>
       </div>
+
+      {!isWeekendKST && (
+        <div className="mb-4 fade-up-1">
+          <WeeklyParticipationCard status={dash?.participation} />
+        </div>
+      )}
 
       <div className="space-y-4">
         {/* ── 오늘의 집계 ─────────────────────────────────────── */}

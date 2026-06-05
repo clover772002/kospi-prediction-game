@@ -46,7 +46,7 @@ import AppAmbientBackground from "@/components/AppAmbientBackground";
 import PageLoadProgress from "@/components/PageLoadProgress";
 import AppTabNav from "@/components/AppTabNav";
 import StaleRefreshIndicator from "@/components/StaleRefreshIndicator";
-import WeeklyParticipationCard from "@/components/WeeklyParticipationCard";
+import SurveySimpleFlow from "@/components/SurveySimpleFlow";
 import CrowdGaugeBoxplotsSection, {
   SurveyDayCrowdFoot,
 } from "@/components/CrowdGaugeBoxplotsSection";
@@ -164,7 +164,7 @@ function SurveyCompletedPanel({
   onGaugeChange,
   error,
   submitBtnClass = "bg-emerald-600 hover:bg-emerald-500 disabled:bg-[#333] disabled:text-gray-500 text-white",
-  completedLabel = "설문 완료",
+  completedLabel = "제출완료",
 }: {
   headline: string;
   subline?: string;
@@ -207,6 +207,7 @@ function SurveyCompletedPanel({
   }
 
   if (!editing) {
+    const dirUp = gaugeValue > 0;
     return (
       <div className="flex flex-col gap-3">
         {headline ? (
@@ -219,18 +220,20 @@ function SurveyCompletedPanel({
           >
             ✓ 확신도가 저장되었어요
           </div>
-        ) : null}
-        <div className="space-y-3">
-          <GaugeBar
-            value={gaugeValue}
-            onChange={() => {}}
-            tokens={userTokens}
-            disabled
-            beginnerTips={false}
-            surveyCompleted
-            completedLabel={completedLabel}
-          />
-        </div>
+        ) : (
+          <div
+            className="rounded-2xl border border-emerald-500/45 bg-emerald-500/15 px-5 py-6 text-center"
+            role="status"
+          >
+            <p className="text-2xl sm:text-3xl font-black text-emerald-300">{completedLabel}</p>
+            <p className={`mt-2 ${surveyUi.bodyMuted}`}>
+              <span className={dirUp ? "text-red-400 font-bold" : "text-blue-400 font-bold"}>
+                {dirUp ? "상승" : "하락"}
+              </span>
+              {" · "}확신 {Math.abs(gaugeValue)}%
+            </p>
+          </div>
+        )}
         <button
           type="button"
           onClick={onStartEdit}
@@ -287,6 +290,9 @@ function NextPreSurveyPanel({
   submitted,
   alreadyAnswered,
   pendingGrantRedo,
+  direction,
+  onDirectionSelect,
+  onDirectionReset,
   gaugeValue,
   onGaugeChange,
   userTokens,
@@ -305,6 +311,9 @@ function NextPreSurveyPanel({
   submitted: boolean;
   alreadyAnswered: boolean;
   pendingGrantRedo: boolean;
+  direction: boolean | null;
+  onDirectionSelect: (up: boolean) => void;
+  onDirectionReset: () => void;
   gaugeValue: number;
   onGaugeChange: (v: number) => void;
   userTokens: number;
@@ -354,14 +363,17 @@ function NextPreSurveyPanel({
       {!responseKnown ? (
         <p className={`text-center ${surveyUi.hint} mb-2`}>참여 여부 확인 중… (아래에서 바로 넣을 수 있어요)</p>
       ) : null}
-      <SurveyGaugeSubmit
+      <SurveySimpleFlow
+        direction={direction}
+        onDirectionSelect={onDirectionSelect}
+        onDirectionReset={onDirectionReset}
         gaugeValue={gaugeValue}
         onGaugeChange={onGaugeChange}
         userTokens={userTokens}
         submitting={submitting || !responseKnown}
         submitDisabled={submitDisabled}
         submitBtnClass="bg-amber-500 hover:bg-amber-400 disabled:bg-[#333] disabled:text-gray-500 text-white"
-        submitLabel={`${target.dateIso} 사전 예측 제출`}
+        confirmLabel={`${target.dateIso} 사전 예측 확정`}
         onSubmit={onSubmit}
       />
       {error ? (
@@ -455,7 +467,7 @@ function SurveyPageInner() {
 
   // 다음 거래일 설문 (장마감 후 미리 참여)
   const [nextSurvey, setNextSurvey] = useState<{ survey_date: string; is_open: boolean } | null>(null);
-  const [nextKospiAnswer, setNextKospiAnswer] = useState<boolean | null>(true);
+  const [nextKospiAnswer, setNextKospiAnswer] = useState<boolean | null>(null);
   const [nextGaugePosition, setNextGaugePosition] = useState<number>(10);
   const [nextAlreadyAnswered, setNextAlreadyAnswered] = useState(false);
   const [nextPreviousAnswer, setNextPreviousAnswer] = useState<boolean | null>(null);
@@ -590,8 +602,8 @@ function SurveyPageInner() {
       setNextPreviousAnswer(null);
       setNextSubmitted(false);
       setEditingNextConfidence(false);
-      setNextGaugePosition(10);
-      setNextKospiAnswer(true);
+      setNextGaugePosition(50);
+      setNextKospiAnswer(null);
     }
   }, []);
 
@@ -969,12 +981,6 @@ function SurveyPageInner() {
       <StaleRefreshIndicator show={(awaitingToday || revalidating) && !!today} tone="violet" />
       <AppAmbientBackground />
       <div className="relative z-10">
-      {!isWeekendKST ? (
-        <div className="mb-4 fade-up-1">
-          <WeeklyParticipationCard status={peekDashboardSnapshot()?.dash?.participation} />
-        </div>
-      ) : null}
-
       {/* 독촉 토스트 */}
       {nudgeToast && (
         <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[100] px-5 py-4 bg-orange-500 text-white text-base font-bold rounded-2xl shadow-xl animate-bounce-in max-w-sm text-center">
@@ -1054,6 +1060,15 @@ function SurveyPageInner() {
               submitted={nextSubmitted}
               alreadyAnswered={nextAlreadyAnswered}
               pendingGrantRedo={pendingGrantNext === "redo_full"}
+              direction={nextKospiAnswer}
+              onDirectionSelect={(up) => {
+                setNextKospiAnswer(up);
+                setNextGaugePosition(up ? 50 : -50);
+              }}
+              onDirectionReset={() => {
+                setNextKospiAnswer(null);
+                setNextGaugePosition(50);
+              }}
               gaugeValue={nextGaugePosition}
               onGaugeChange={(v) => {
                 setNextGaugePosition(v);
@@ -1106,7 +1121,7 @@ function SurveyPageInner() {
           <SurveySectionDateHeader
             dateLabel={formatSurveySectionDate(today.survey_date)}
             roleLabel="오늘 설문"
-            hint="제출 완료 · 확신도만 변경 가능"
+            hint="09:00 마감 전까지 확신도 변경 가능"
             accent="emerald"
           />
           <SurveyCompletedPanel
@@ -1142,6 +1157,15 @@ function SurveyPageInner() {
                 submitted={nextSubmitted}
                 alreadyAnswered={nextAlreadyAnswered}
                 pendingGrantRedo={pendingGrantNext === "redo_full"}
+                direction={nextKospiAnswer}
+                onDirectionSelect={(up) => {
+                  setNextKospiAnswer(up);
+                  setNextGaugePosition(up ? 50 : -50);
+                }}
+                onDirectionReset={() => {
+                  setNextKospiAnswer(null);
+                  setNextGaugePosition(50);
+                }}
                 gaugeValue={nextGaugePosition}
                 onGaugeChange={(v) => {
                   setNextGaugePosition(v);
@@ -1177,18 +1201,30 @@ function SurveyPageInner() {
           <SurveySectionDateHeader
             dateLabel={formatSurveySectionDate(today.survey_date)}
             roleLabel="오늘 설문"
-            hint="09:00 마감 · 게이지로 방향·확신도 선택"
+            hint="09:00 마감"
             accent="emerald"
           />
           <div className="w-full min-w-0">
-            <SurveyGaugeSubmit
+            <SurveySimpleFlow
+              direction={kospiAnswer}
+              onDirectionSelect={(up) => {
+                setKospiAnswer(up);
+                setGaugePosition(up ? 50 : -50);
+              }}
+              onDirectionReset={() => {
+                setKospiAnswer(null);
+                setGaugePosition(50);
+              }}
               gaugeValue={gaugePosition}
-              onGaugeChange={(v) => { setGaugePosition(v); setKospiAnswer(v > 0); }}
+              onGaugeChange={(v) => {
+                setGaugePosition(v);
+                setKospiAnswer(v > 0);
+              }}
               userTokens={userTokens}
               submitting={submitting}
               submitDisabled={surveyUiLocked}
-              submitBtnClass="bg-blue-600 hover:bg-blue-500 disabled:bg-[#333] disabled:text-gray-500 text-white"
-              submitLabel="예측 제출하기"
+              submitBtnClass="bg-emerald-600 hover:bg-emerald-500 disabled:bg-[#333] disabled:text-gray-500 text-white"
+              confirmLabel="확정"
               onSubmit={handleSubmit}
             />
           </div>
@@ -1254,6 +1290,15 @@ function SurveyPageInner() {
                   submitted={nextSubmitted}
                   alreadyAnswered={nextAlreadyAnswered}
                   pendingGrantRedo={pendingGrantNext === "redo_full"}
+                  direction={nextKospiAnswer}
+                  onDirectionSelect={(up) => {
+                    setNextKospiAnswer(up);
+                    setNextGaugePosition(up ? 50 : -50);
+                  }}
+                  onDirectionReset={() => {
+                    setNextKospiAnswer(null);
+                    setNextGaugePosition(50);
+                  }}
                   gaugeValue={nextGaugePosition}
                   onGaugeChange={(v) => {
                     setNextGaugePosition(v);
