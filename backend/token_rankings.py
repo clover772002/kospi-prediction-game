@@ -10,6 +10,7 @@ from supabase import Client
 
 from accuracy_aggregate import get_accuracy_data
 from participation_rewards import is_seed_bot_email, today_kst_date, week_bounds_containing
+from weekly_survival import list_current_weekly_survivors
 
 logger = logging.getLogger(__name__)
 
@@ -517,10 +518,15 @@ def build_hall_of_fame_payload(
         week_start=week_start,
         week_end=week_end,
     )
+    weekly_survivors = list_current_weekly_survivors(
+        supabase,
+        current_user_id=current_user_id,
+    )
     return {
         "week_id": week_id,
         "week_start": week_start,
         "week_end": week_end,
+        "weekly_survivors": weekly_survivors,
         "cumulative": cumulative,
         "weekly": weekly,
         "accuracy_cumulative": accuracy_cumulative,

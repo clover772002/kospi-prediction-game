@@ -7,6 +7,7 @@ import {
   getHallOfFameRankings,
   type HallOfFameRankingEntry,
   type HallOfFameRankings,
+  type WeeklySurvivorsRoster,
 } from "@/lib/api";
 
 type Tab = "weekly" | "cumulative";
@@ -170,6 +171,70 @@ function RankingList({
   );
 }
 
+function WeeklySurvivorsSection({
+  roster,
+  loading,
+}: {
+  roster: WeeklySurvivorsRoster | null | undefined;
+  loading: boolean;
+}) {
+  if (loading && !roster) {
+    return (
+      <section className="mb-5 rounded-2xl border border-emerald-500/25 bg-gradient-to-b from-emerald-950/30 to-[#141414] p-4 sm:p-5">
+        <p className="text-sm text-gray-500">생존자 명단 불러오는 중…</p>
+      </section>
+    );
+  }
+  if (!roster) return null;
+
+  const asOfLabel = roster.as_of_date
+    ? `${roster.as_of_date.slice(5).replace("-", "/")} 기준`
+    : "집계 대기";
+
+  return (
+    <section className="mb-5 rounded-2xl border border-emerald-500/25 bg-gradient-to-b from-emerald-950/30 to-[#141414] p-4 sm:p-5">
+      <div className="mb-4 flex items-end justify-between gap-3">
+        <div>
+          <h2 className="text-base sm:text-lg font-black text-emerald-100">이번 주 생존자</h2>
+          <p className="mt-1 text-xs sm:text-sm text-gray-500">{asOfLabel}</p>
+        </div>
+        <p className="shrink-0 text-right">
+          <span className="text-3xl sm:text-4xl font-black text-emerald-400 tabular-nums leading-none">
+            {roster.count}
+          </span>
+          <span className="ml-0.5 text-base font-bold text-emerald-400/80">명</span>
+        </p>
+      </div>
+
+      {roster.my_included ? (
+        <p className="mb-3 text-xs sm:text-sm text-emerald-300/80 text-center">
+          아직 생존 중이에요 · 명단에 나도 포함
+        </p>
+      ) : roster.count > 0 ? (
+        <p className="mb-3 text-xs sm:text-sm text-white/45 text-center">
+          이번 주 생존전에서 탈락했거나 아직 명단에 없어요
+        </p>
+      ) : null}
+
+      {roster.count === 0 ? (
+        <p className="text-sm sm:text-base text-gray-500 py-1">
+          아직 생존자가 없어요. 이번 주 거래일이 지나면 집계돼요.
+        </p>
+      ) : (
+        <ul className="flex flex-wrap gap-2" aria-label={`생존자 ${roster.count}명`}>
+          {roster.members.map((m) => (
+            <li key={m.user_id}>
+              <span className="inline-flex items-center rounded-full border border-emerald-500/25 bg-emerald-500/10 px-3 py-1.5 text-sm font-bold text-emerald-100/95">
+                {m.masked_name}
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+}
+
 function RankBlock({
   title,
   variant,
@@ -311,6 +376,7 @@ export default function TokenHallOfFameRankings({
 
   return (
     <div className="mb-2">
+      <WeeklySurvivorsSection roster={data?.weekly_survivors} loading={loading} />
       <RankBlock
         title="칩 순위"
         variant="token"

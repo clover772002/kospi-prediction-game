@@ -962,10 +962,25 @@ export interface HallOfFameRankingEntry {
 /** @deprecated HallOfFameRankingEntry 사용 */
 export type TokenRankingEntry = HallOfFameRankingEntry;
 
+export interface WeeklySurvivorMember {
+  user_id: string;
+  masked_name: string;
+}
+
+export interface WeeklySurvivorsRoster {
+  week_id: string;
+  week_start: string;
+  as_of_date: string | null;
+  count: number;
+  members: WeeklySurvivorMember[];
+  my_included: boolean;
+}
+
 export interface HallOfFameRankings {
   week_id: string;
   week_start: string;
   week_end: string;
+  weekly_survivors?: WeeklySurvivorsRoster;
   cumulative: HallOfFameRankingEntry[];
   weekly: HallOfFameRankingEntry[];
   accuracy_cumulative: HallOfFameRankingEntry[];

@@ -164,7 +164,12 @@ def _user_week_survival_days(
     return not eliminated, days_out
 
 
-def build_weekly_survival_board(supabase: Client, user_id: str) -> dict[str, Any]:
+def _masked_name(name: str | None) -> str:
+    n = (name or "").strip()
+    return (n[0] + "**") if n else "익명"
+
+
+def _load_weekly_survival_core(supabase: Client) -> dict[str, Any]:
     today = today_kst_date()
     monday, _sunday, week_id = week_bounds_containing(today)
 
@@ -269,7 +274,7 @@ def build_weekly_survival_board(supabase: Client, user_id: str) -> dict[str, Any
 
     real_users = [uid for uid in all_user_ids if uid not in seed_uids]
 
-    def _day_fully_settled(td: str) -> bool:
+    def day_fully_settled(td: str) -> bool:
         if td > today.isoformat():
             return False
         if kospi_by_date.get(td) is None:
@@ -277,7 +282,7 @@ def build_weekly_survival_board(supabase: Client, user_id: str) -> dict[str, Any
         prior = [d for d in trading_days_ordered if d <= td]
         return all(kospi_by_date.get(d) is not None for d in prior if d <= today.isoformat())
 
-    def _user_alive_through(uid: str, through_date: str) -> bool:
+    def user_alive_through(uid: str, through_date: str) -> bool:
         for d in trading_days_ordered:
             if d > through_date:
                 break
@@ -294,11 +299,11 @@ def build_weekly_survival_board(supabase: Client, user_id: str) -> dict[str, Any
 
     survivor_count_by_date: dict[str, int | None] = {}
     for td in trading_days_ordered:
-        if not _day_fully_settled(td):
+        if not day_fully_settled(td):
             survivor_count_by_date[td] = None
             continue
         survivor_count_by_date[td] = sum(
-            1 for uid in real_users if _user_alive_through(uid, td)
+            1 for uid in real_users if user_alive_through(uid, td)
         )
 
     for col in columns:
@@ -306,11 +311,13 @@ def build_weekly_survival_board(supabase: Client, user_id: str) -> dict[str, Any
         if is_trading_map.get(dk):
             col["survivor_count"] = survivor_count_by_date.get(dk)
 
+    as_of_date: str | None = None
     current_survivors: int | None = None
     for td in reversed(trading_days_ordered):
         sc = survivor_count_by_date.get(td)
         if sc is not None:
             current_survivors = sc
+            as_of_date = td
             break
 
     cohort_size: int | None = None
@@ -321,6 +328,85 @@ def build_weekly_survival_board(supabase: Client, user_id: str) -> dict[str, Any
                 1 for uid in real_users
                 if responses_by_user.get(uid, {}).get(first_td)
             )
+
+    return {
+        "today": today,
+        "week_id": week_id,
+        "monday": monday,
+        "cal_dates": cal_dates,
+        "is_trading_map": is_trading_map,
+        "columns": columns,
+        "trading_days_ordered": trading_days_ordered,
+        "responses_by_user": responses_by_user,
+        "correct_by_user": correct_by_user,
+        "real_users": real_users,
+        "user_alive_through": user_alive_through,
+        "current_survivors": current_survivors,
+        "as_of_date": as_of_date,
+        "cohort_size": cohort_size,
+    }
+
+
+def list_current_weekly_survivors(
+    supabase: Client,
+    *,
+    current_user_id: str | None = None,
+) -> dict[str, Any]:
+    """명예의 전당 — 이번 주 현재 생존자 명단(전원 마스킹)."""
+    core = _load_weekly_survival_core(supabase)
+    as_of_date = core["as_of_date"]
+    through = as_of_date or core["today"].isoformat()
+    alive_uids = [
+        uid for uid in core["real_users"]
+        if core["user_alive_through"](uid, through)
+    ]
+    alive_uids.sort()
+
+    name_by_uid: dict[str, str] = {}
+    if alive_uids:
+        try:
+            users_r = (
+                supabase.table("users")
+                .select("id, name, email")
+                .in_("id", alive_uids)
+                .execute()
+            )
+            for row in users_r.data or []:
+                if is_seed_bot_email(row.get("email")):
+                    continue
+                uid = str(row["id"])
+                name_by_uid[uid] = _masked_name(row.get("name"))
+        except Exception as e:
+            logger.warning("생존자 명단: 이름 조회 실패: %s", e)
+
+    members = [
+        {
+            "user_id": uid,
+            "masked_name": name_by_uid.get(uid, "익명"),
+        }
+        for uid in alive_uids
+    ]
+    alive_set = set(alive_uids)
+    return {
+        "week_id": core["week_id"],
+        "week_start": core["monday"].isoformat(),
+        "as_of_date": as_of_date,
+        "count": len(members),
+        "members": members,
+        "my_included": bool(current_user_id and current_user_id in alive_set),
+    }
+
+
+def build_weekly_survival_board(supabase: Client, user_id: str) -> dict[str, Any]:
+    core = _load_weekly_survival_core(supabase)
+    today = core["today"]
+    monday = core["monday"]
+    week_id = core["week_id"]
+    cal_dates = core["cal_dates"]
+    is_trading_map = core["is_trading_map"]
+    columns = core["columns"]
+    responses_by_user = core["responses_by_user"]
+    correct_by_user = core["correct_by_user"]
 
     my_responses = responses_by_user.get(user_id, {})
     my_correct = correct_by_user.get(user_id, {})
@@ -343,8 +429,8 @@ def build_weekly_survival_board(supabase: Client, user_id: str) -> dict[str, Any
         "week_id": week_id,
         "week_start": monday.isoformat(),
         "today": today.isoformat(),
-        "current_survivors": current_survivors,
-        "cohort_size": cohort_size,
+        "current_survivors": core["current_survivors"],
+        "cohort_size": core["cohort_size"],
         "my_alive": my_alive,
         "columns": columns,
     }

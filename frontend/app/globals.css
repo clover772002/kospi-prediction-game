@@ -435,9 +435,9 @@ body {
   box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.42);
 }
 
-/* 2단 탭(설문·단톡 + 보조 메뉴) 하단 여백 */
+/* 하단 탭(설문·대시보드·명예의 전당·설정) 여백 */
 .app-page-tab-pad {
-  padding-bottom: calc(6.25rem + env(safe-area-inset-bottom, 0px));
+  padding-bottom: calc(4.75rem + env(safe-area-inset-bottom, 0px));
 }
 
 /* 상승·하락: LG Red / POSCO Blue */

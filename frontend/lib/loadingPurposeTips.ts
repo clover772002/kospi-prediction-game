@@ -15,7 +15,7 @@ export const LOADING_PURPOSE_TIPS: LoadingPurposeTip[] = [
   { id: "dashboard", emoji: "📊", text: "대시보드에서 이번 주 생존 여부를 확인해요" },
   { id: "dashboard_rank", emoji: "📊", text: "대시보드에서 생존자 수·내 적중을 비교해요" },
   { id: "gauge", emoji: "📈", text: "집단지성 게이지로 오늘 시장 분위기를 봐요" },
-  { id: "expert_tab", emoji: "🏆", text: "명예의 전당에서 칩·적중률 순위를 볼 수 있어요" },
+  { id: "expert_tab", emoji: "🏆", text: "명예의 전당에서 이번 주 생존자 명단을 볼 수 있어요" },
   { id: "expert_chat_unlock", emoji: "🔓", text: "칩 210개 이상이면 초고수에게 질문할 수 있어요" },
   { id: "notify", emoji: "🔔", text: "알림을 켜두면 설문 시간을 놓치지 않아요" },
   { id: "weight", emoji: "⚖️", text: "적중률이 높을수록 내 의견이 더 반영돼요" },
