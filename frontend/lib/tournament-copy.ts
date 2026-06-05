@@ -2,7 +2,6 @@
 
 export const TOURNAMENT_RULES = {
   title: "대회 규칙",
-  intro: "한 주 동안 코스피를 맞추고, 실력을 증명하세요.",
   rules: [
     "주 단위 · 해당 주 거래일(월~금)",
     "매 거래일 09:00 전, 코스피 방향 1회 제출",
