@@ -15,6 +15,5 @@ export const TOURNAMENT_LANDING = {
   headline: "투자 실력 검증",
   subhead: "매주 코스피 방향을 맞히고, 기록으로 실력을 증명하세요",
   disclaimer: "투자 조언·매매 권유가 아닙니다",
-  ctaHint: "로그인하면 이번 주 대회 참가가 시작됩니다",
   loginTitle: "대회 참가하기",
 } as const;

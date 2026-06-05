@@ -142,12 +142,9 @@ export default function LoginPage() {
       <section
         className={`w-full rounded-3xl border-2 bg-gradient-to-b p-5 sm:p-8 mb-10 ${loginAccent}`}
       >
-        <h2 className="text-[1.65rem] sm:text-[2rem] font-black text-white text-center mb-1">
+        <h2 className="text-[1.65rem] sm:text-[2rem] font-black text-white text-center mb-6">
           {TOURNAMENT_LANDING.loginTitle}
         </h2>
-        <p className="text-center text-gray-400 text-base sm:text-lg font-medium mb-6">
-          {TOURNAMENT_LANDING.ctaHint}
-        </p>
 
         <div className="space-y-4">
           {browserType === "kakao" && (
@@ -191,11 +188,10 @@ export default function LoginPage() {
         </div>
 
         <p className="text-base text-gray-500 text-center mt-5 px-2">
-          시작 ={" "}
           <Link href="/privacy" className="underline text-gray-400 hover:text-gray-200 font-bold">
             개인정보처리방침
           </Link>{" "}
-          동의 · {TOURNAMENT_LANDING.ctaHint}
+          동의
         </p>
       </section>
 
