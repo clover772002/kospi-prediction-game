@@ -66,21 +66,21 @@ function getSurveyDayLabel(surveyDate: string): { isNextDay: boolean; label: str
   const kst = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Seoul" }));
   const todayStr = `${kst.getFullYear()}-${String(kst.getMonth()+1).padStart(2,"0")}-${String(kst.getDate()).padStart(2,"0")}`;
 
-  if (surveyDate <= todayStr) return { isNextDay: false, label: "오늘 예측", shortLabel: "오늘" };
+  if (surveyDate <= todayStr) return { isNextDay: false, label: "오늘 선택", shortLabel: "오늘" };
 
   // 진짜 내일인지 확인
   const tom = new Date(kst); tom.setDate(tom.getDate() + 1);
   const tomorrowStr = `${tom.getFullYear()}-${String(tom.getMonth()+1).padStart(2,"0")}-${String(tom.getDate()).padStart(2,"0")}`;
 
   if (surveyDate === tomorrowStr) {
-    return { isNextDay: true, label: "내일 예측", shortLabel: "내일" };
+    return { isNextDay: true, label: "내일 선택", shortLabel: "내일" };
   }
   // 주말/연휴 넘어 다음 거래일
   const [, mm, dd] = surveyDate.split("-");
   const days = ["일","월","화","수","목","금","토"];
   const d = new Date(surveyDate + "T00:00:00+09:00");
   const dayKor = days[d.getDay()];
-  return { isNextDay: true, label: `다음 거래일 예측 (${mm}/${dd} ${dayKor})`, shortLabel: `${mm}/${dd}(${dayKor})` };
+  return { isNextDay: true, label: `다음 거래일 선택 (${mm}/${dd} ${dayKor})`, shortLabel: `${mm}/${dd}(${dayKor})` };
 }
 
 /** 섹션 제목용 — 연도 없이 M월 D일 (요일) */
@@ -334,15 +334,15 @@ function NextPreSurveyPanel({
     <div className="flex flex-col gap-3">
       <SurveySectionDateHeader
         dateLabel={sectionDate}
-        roleLabel="사전 예측"
-        hint="다음 거래일 방향·확신도 (오늘 설문과 별도)"
+        roleLabel="사전 선택"
+        hint="다음 거래일 방향·확신도 (오늘 선택과 별도)"
         accent="amber"
       />
       {submitted || alreadyAnswered ? (
       <>
         <SurveyCompletedPanel
           headline=""
-          completedLabel="사전 예측 완료"
+          completedLabel="사전 선택 완료"
           gaugeValue={gaugeValue}
           userTokens={userTokens}
           editing={editingConfidence}
@@ -373,7 +373,7 @@ function NextPreSurveyPanel({
         submitting={submitting || !responseKnown}
         submitDisabled={submitDisabled}
         submitBtnClass="bg-amber-500 hover:bg-amber-400 disabled:bg-[#333] disabled:text-gray-500 text-white"
-        confirmLabel={`${target.dateIso} 사전 예측 확정`}
+        confirmLabel={`${target.dateIso} 사전 선택 확정`}
         onSubmit={onSubmit}
       />
       {error ? (
@@ -508,7 +508,7 @@ function SurveyPageInner() {
       setError(null);
       setAwaitingToday(false);
     } catch {
-      setError("설문 정보를 불러오지 못했습니다.");
+      setError("선택 정보를 불러오지 못했습니다.");
     } finally {
       setRevalidating(false);
     }
@@ -1017,7 +1017,7 @@ function SurveyPageInner() {
             return (
               <>
                 <h1 className="text-3xl sm:text-4xl md:text-[2.75rem] font-black text-white leading-[1.15] tracking-tight">
-                  {dayNames[next.getDay()]}요일 예측
+                  {dayNames[next.getDay()]}요일 선택
                 </h1>
                 <p className="text-base sm:text-lg text-gray-500 mt-2 tabular-nums">{nextDateStr} (KST)</p>
               </>
@@ -1108,7 +1108,7 @@ function SurveyPageInner() {
           <div className="flex flex-col gap-5 mt-10">
             <div className="flex flex-col items-center gap-3 text-center">
               <div className="text-5xl">⏳</div>
-              <p className="text-2xl sm:text-3xl font-bold text-white leading-snug">설문 준비 중입니다</p>
+              <p className="text-2xl sm:text-3xl font-bold text-white leading-snug">선택 준비 중입니다</p>
               <p className="text-base text-gray-400 px-2">잠시 후 화면을 새로 고침해 주십시오.</p>
             </div>
           </div>
@@ -1120,7 +1120,7 @@ function SurveyPageInner() {
         <div className="flex flex-col gap-4 mt-6 fade-up">
           <SurveySectionDateHeader
             dateLabel={formatSurveySectionDate(today.survey_date)}
-            roleLabel="오늘 설문"
+            roleLabel="오늘 선택"
             hint="09:00 마감 전까지 확신도 변경 가능"
             accent="emerald"
           />
@@ -1200,7 +1200,7 @@ function SurveyPageInner() {
         <div className="space-y-4 mt-4 fade-up">
           <SurveySectionDateHeader
             dateLabel={formatSurveySectionDate(today.survey_date)}
-            roleLabel="오늘 설문"
+            roleLabel="오늘 선택"
             hint="09:00 마감"
             accent="emerald"
           />
@@ -1241,9 +1241,9 @@ function SurveyPageInner() {
         <div className="flex flex-col gap-4 mt-6 fade-up">
           {!alreadyAnswered && previousAnswer === null && (
             <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 px-4 py-4 text-center space-y-2">
-              <p className="text-amber-200 font-bold text-base">이 거래일 설문에 참여하지 않았습니다</p>
+              <p className="text-amber-200 font-bold text-base">이 거래일 선택에 참여하지 않았습니다</p>
               <p className="text-sm text-gray-400 leading-snug">
-                09:00 마감 전에 제출했거나, 전날 사전 예측으로 미리 넣었어야 합니다.
+                09:00 마감 전에 제출했거나, 전날 사전 선택으로 미리 넣었어야 합니다.
               </p>
             </div>
           )}
@@ -1251,8 +1251,8 @@ function SurveyPageInner() {
             <div className="space-y-2">
               <SurveySectionDateHeader
                 dateLabel={formatSurveySectionDate(today.survey_date)}
-                roleLabel="오늘 설문"
-                hint={status === "result" ? "제출한 예측 · 결과 확정" : "제출한 예측 · 결과 대기"}
+                roleLabel="오늘 선택"
+                hint={status === "result" ? "제출한 선택 · 결과 확정" : "제출한 선택 · 결과 대기"}
                 accent="emerald"
               />
               <GaugeBar

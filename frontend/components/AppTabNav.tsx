@@ -12,7 +12,7 @@ type TabDef = {
 };
 
 const TABS: TabDef[] = [
-  { href: "/survey", label: "설문", icon: "📝", activeClass: "app-tab-survey" },
+  { href: "/survey", label: "선택", icon: "📝", activeClass: "app-tab-survey" },
   { href: "/dashboard", label: "대시보드", icon: "📊", activeClass: "app-tab-dashboard" },
   { href: "/expert-chat", label: "명예의 전당", icon: "🏆", activeClass: "app-tab-expert-chat" },
   { href: "/setup", label: "설정", icon: "⚙️", activeClass: "app-tab-setup" },

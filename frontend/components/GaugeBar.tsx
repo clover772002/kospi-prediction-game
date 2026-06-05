@@ -75,7 +75,7 @@ export default function GaugeBar({
   lockDirection = false,
   beginnerTips,
   surveyCompleted = false,
-  completedLabel = "설문 완료",
+  completedLabel = "선택 완료",
 }: GaugeBarProps) {
   const tipsEnabled = beginnerTips !== false;
   const tipsInteractive = tipsEnabled && !disabled;
@@ -162,7 +162,7 @@ export default function GaugeBar({
             </summary>
             <div className="mt-1.5 text-sm text-gray-500 leading-relaxed space-y-1.5 pb-0.5 w-full min-w-0">
               <p>
-                ±숫자는 <strong className="text-gray-300">확신도</strong>이며 등락률 예측이 아닙니다.
+                ±숫자는 <strong className="text-gray-300">확신도</strong>이며 등락률 선택이 아닙니다.
               </p>
               <p>
                 <strong className="text-gray-400">배팅 칩</strong>은 확신도·보유량에 따라 자동 산출됩니다.
@@ -182,7 +182,7 @@ export default function GaugeBar({
           </span>
         ) : (
           <p className="text-sm sm:text-base font-bold text-amber-100/90 leading-snug min-w-0">
-            방향과 확신도로 예측하세요
+            방향과 확신도로 선택하세요
           </p>
         )}
         <div className={`flex items-baseline gap-2.5 shrink-0 tabular-nums ${dirColor}`}>

@@ -42,8 +42,8 @@ function getCountdown(): CountdownInfo {
     target.setHours(22, 0, 0, 0);
     return {
       seconds: Math.max(0, Math.floor((target.getTime() - kst.getTime()) / 1000)),
-      label: "설문 시작까지",
-      sublabel: "22:00 설문 발송",
+      label: "선택 시작까지",
+      sublabel: "22:00 선택 알림",
     };
   }
 

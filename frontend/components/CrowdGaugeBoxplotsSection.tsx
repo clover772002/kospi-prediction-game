@@ -278,7 +278,7 @@ function DirectionSharePie({
   return (
     <div
       className="rounded-xl bg-gradient-to-br from-[#151515]/90 to-[#101010]/90 px-3 py-2.5 mb-3"
-      title={`예측 상승 ${r}% · 하락 ${f}%`}
+      title={`상승 ${r}% · 하락 ${f}%`}
     >
       <div className="flex items-center gap-3 sm:gap-4">
         <div className="flex-1 min-w-0 space-y-2">
@@ -495,7 +495,7 @@ export default function CrowdGaugeBoxplotsSection({
       ) : null}
 
       {isSurvey && !err && days !== null && openKeys.length === 0 ? (
-        <p className={surveyUi.bodyMuted}>지금 집계할 진행 중 설문이 없어요.</p>
+        <p className={surveyUi.bodyMuted}>지금 집계할 진행 중 선택이 없어요.</p>
       ) : null}
 
       {isSurvey && !err && days !== null && liveEntries.length > 0 ? (
@@ -581,7 +581,7 @@ export function SurveyDayCrowdFoot({
         <div
           className={`mx-2 mb-2 rounded-xl border border-dashed border-[#444] px-4 py-6 text-center ${surveyUi.hint}`}
         >
-          아직 이 거래일 설문 응답이 없어요. 첫 참여가 들어오면 여기에 무리 분포가 표시됩니다.
+          아직 이 거래일 선택이 없어요. 첫 참여가 들어오면 여기에 무리 분포가 표시됩니다.
         </div>
       )}
     </div>

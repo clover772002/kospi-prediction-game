@@ -750,19 +750,19 @@ export default function DashboardPage() {
             ) : (
               <>
                 <div className="text-5xl">📝</div>
-                <p className="font-black text-xl text-white">오늘 설문을 해야 볼 수 있어요</p>
+                <p className="font-black text-xl text-white">오늘 선택을 해야 볼 수 있어요</p>
                 <p className="text-sm text-white leading-relaxed">
-                  오늘의 코스피 예측에 먼저 참여해야<br />집계 결과와 {OUR_ACCURACY_LABEL}을 확인할 수 있어요.
+                  오늘 코스피 방향을 먼저 선택해야<br />집계 결과와 {OUR_ACCURACY_LABEL}을 확인할 수 있어요.
                 </p>
                 <p className="text-sm text-white/90 leading-relaxed">
-                  설문에 참여하지 않으셨나요?<br />
+                  아직 선택하지 않으셨나요?<br />
                   <span className="text-white">장 마감(15:35) 후에는 누구나 열람 가능합니다.</span>
                 </p>
                 <button
                   onClick={() => router.push("/survey")}
                   className="w-full py-4 bg-amber-500 hover:bg-amber-400 text-white font-black text-base rounded-2xl transition-all active:scale-95"
                 >
-                  설문하러 가기 →
+                  선택하러 가기 →
                 </button>
               </>
             )}

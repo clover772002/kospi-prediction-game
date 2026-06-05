@@ -388,7 +388,7 @@ export default function SetupPage() {
             <span className="text-2xl flex-shrink-0">🔔</span>
             <div className="flex-1 min-w-0">
               <p className="font-black text-sm text-purple-400">브라우저 알림 연결 완료!</p>
-              <p className="text-[11px] text-gray-400 mt-0.5">매일 밤 <span className="text-white font-bold">22:00</span> 알림 · 탭하면 바로 설문으로</p>
+              <p className="text-[11px] text-gray-400 mt-0.5">매일 밤 <span className="text-white font-bold">22:00</span> 알림 · 탭하면 바로 선택으로</p>
             </div>
             <span className="text-green-400 text-lg flex-shrink-0">✅</span>
           </div>
@@ -445,7 +445,7 @@ export default function SetupPage() {
                 <span className="text-base flex-shrink-0">💡</span>
                 <p className="text-xs text-blue-300 leading-relaxed">
                   브라우저 알림은 설문 시간을 <span className="text-white font-bold">알려주는 역할</span>만 해요.<br />
-                  알림을 탭하면 앱으로 이동하고, <span className="text-white font-bold">설문 탭에서 예측</span>하면 돼요.
+                  알림을 탭하면 앱으로 이동하고, <span className="text-white font-bold">선택 탭에서 방향을 고르면</span> 돼요.
                 </p>
               </div>
 
