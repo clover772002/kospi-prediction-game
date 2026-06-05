@@ -126,7 +126,11 @@ export default function LoginPage() {
           {TOURNAMENT_LANDING.headline}
         </h1>
         <p className="text-lg sm:text-xl text-gray-400 font-medium leading-relaxed px-2 mb-2">
-          {TOURNAMENT_LANDING.subhead}
+          {TOURNAMENT_LANDING.subhead.map((line) => (
+            <span key={line} className="block">
+              {line}
+            </span>
+          ))}
         </p>
         <p className="text-sm sm:text-base text-gray-500 font-medium px-2">
           {TOURNAMENT_LANDING.disclaimer}
