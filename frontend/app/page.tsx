@@ -169,7 +169,7 @@ export default function LoginPage() {
                 <path fill="#EA4335" d="M24 9.5c3.4 0 6.5 1.2 8.9 3.5l6.6-6.6C35.9 2.4 30.5 0 24 0 14.8 0 6.8 5.5 2.9 14.1l8.1 6.2c1.8-5.5 6.9-10.8 13-10.8z"/>
               </svg>
             )}
-            {signing === "google" ? "연결 중…" : "Google로 대회 참가"}
+            {signing === "google" ? "연결 중…" : "Google 로그인"}
           </button>
 
           <button
@@ -186,7 +186,7 @@ export default function LoginPage() {
                 <path d="M12 3C6.477 3 2 6.477 2 10.8c0 2.74 1.612 5.155 4.07 6.638l-.9 3.358c-.08.296.247.535.503.37L9.93 18.8c.676.1 1.37.15 2.07.15 5.523 0 10-3.477 10-7.8S17.523 3 12 3z"/>
               </svg>
             )}
-            {signing === "kakao" ? "연결 중…" : "카카오로 대회 참가"}
+            {signing === "kakao" ? "연결 중…" : "카카오 로그인"}
           </button>
         </div>
 
