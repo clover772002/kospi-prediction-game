@@ -17,10 +17,8 @@ const PRIMARY_TABS: TabDef[] = [
   { href: "/expert-chat", label: "명예의 전당", icon: "🏆", activeClass: "app-tab-expert-chat" },
 ];
 
-/** 보조: 도구·설정 */
+/** 보조: 설정 */
 const SECONDARY_TABS: TabDef[] = [
-  { href: "/shop", label: "아이템", icon: "🪙", activeClass: "app-tab-shop" },
-  { href: "/groups", label: "그룹", icon: "👥", activeClass: "app-tab-groups" },
   { href: "/setup", label: "설정", icon: "⚙️", activeClass: "app-tab-setup" },
 ];
 
@@ -115,7 +113,7 @@ export default function AppTabNav() {
             ))}
           </div>
 
-          {/* 보조: 아이템 · 그룹 · 설정 */}
+          {/* 보조: 설정 */}
           <div
             className={`flex items-stretch gap-0.5 border-t px-1.5 py-1 ${
               secondaryActive ? "border-white/10 bg-white/[0.03]" : "border-white/[0.05] bg-black/20"
