@@ -6,13 +6,7 @@ import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import LoadingPurposeSplash from "@/components/LoadingPurposeSplash";
 import TournamentModeLanding from "@/components/TournamentModeLanding";
-import {
-  ACCURACY_MODE,
-  SURVIVAL_MODE,
-  TOURNAMENT_LANDING,
-  TOURNAMENT_MODE_STORAGE_KEY,
-  type TournamentMode,
-} from "@/lib/tournament-copy";
+import { TOURNAMENT_LANDING } from "@/lib/tournament-copy";
 
 function detectBrowser(): "kakao" | "inapp" | "normal" {
   if (typeof navigator === "undefined") return "normal";
@@ -36,26 +30,13 @@ function openInExternalBrowser() {
   }
 }
 
-function readStoredMode(): TournamentMode {
-  if (typeof window === "undefined") return "accuracy";
-  try {
-    const v = localStorage.getItem(TOURNAMENT_MODE_STORAGE_KEY);
-    if (v === "survival" || v === "accuracy") return v;
-  } catch {
-    /* ignore */
-  }
-  return "accuracy";
-}
-
 export default function LoginPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [signing, setSigning] = useState<"google" | "kakao" | null>(null);
   const [browserType, setBrowserType] = useState<"kakao" | "inapp" | "normal">("normal");
-  const [mode, setMode] = useState<TournamentMode>("accuracy");
 
   useEffect(() => {
-    setMode(readStoredMode());
     const type = detectBrowser();
     setBrowserType(type);
     if (type === "inapp") {
@@ -73,11 +54,6 @@ export default function LoginPage() {
 
   const handleLogin = async (provider: "google" | "kakao") => {
     setSigning(provider);
-    try {
-      localStorage.setItem(TOURNAMENT_MODE_STORAGE_KEY, mode);
-    } catch {
-      /* ignore */
-    }
     const { error } = await supabase.auth.signInWithOAuth({
       provider,
       options: {
@@ -95,7 +71,7 @@ export default function LoginPage() {
       <LoadingPurposeSplash
         mode="spinner"
         label={signing ? "대회 참가 연결 중…" : "잠시만요…"}
-        accent={mode === "survival" ? "amber" : "blue"}
+        accent="amber"
       />
     );
   }
@@ -140,12 +116,7 @@ export default function LoginPage() {
     );
   }
 
-  const selectedMeta = mode === "survival" ? SURVIVAL_MODE : ACCURACY_MODE;
-  const ctaSubtext = `${selectedMeta.name}(${selectedMeta.badge}) 중심 · 두 대회 동시 참가`;
-  const loginAccent =
-    mode === "survival"
-      ? "from-orange-600/20 to-[#121212] border-orange-500/35"
-      : "from-emerald-600/15 to-[#121212] border-emerald-500/35";
+  const loginAccent = "from-orange-600/20 to-[#121212] border-orange-500/35";
 
   return (
     <main className="w-full max-w-2xl mx-auto min-h-screen flex flex-col px-4 sm:px-6 py-8 sm:py-12 pb-28 text-[1.0625rem] sm:text-xl">
@@ -162,9 +133,9 @@ export default function LoginPage() {
         </p>
       </header>
 
-      {/* 모드 선택 */}
+      {/* 대회 소개 */}
       <section className="mb-8 sm:mb-10">
-        <TournamentModeLanding selected={mode} onSelect={setMode} />
+        <TournamentModeLanding />
       </section>
 
       {/* 로그인 · 대회 참가 */}
@@ -175,7 +146,7 @@ export default function LoginPage() {
           {TOURNAMENT_LANDING.loginTitle}
         </h2>
         <p className="text-center text-gray-400 text-base sm:text-lg font-medium mb-6">
-          {selectedMeta.name} · {selectedMeta.badge} — {ctaSubtext}
+          생존전 · 하드코어 — {TOURNAMENT_LANDING.ctaHint}
         </p>
 
         <div className="space-y-4">
@@ -233,9 +204,9 @@ export default function LoginPage() {
         <h3 className="text-xl sm:text-2xl font-black text-white mb-5">참가 흐름</h3>
         <ol className="space-y-4">
           {[
-            { step: "1", title: "모드 고르기", desc: "생존전(하드코어) 또는 적중대결(일반) — 둘 다 자동 참가" },
-            { step: "2", title: "로그인", desc: "Google·카카오로 가입 · 매일 09:00 전 방향 제출" },
-            { step: "3", title: "결과·인증", desc: "장 마감 후 생존/탈락·적중률 순위 · 인증서 공유" },
+            { step: "1", title: "생존전 참가", desc: "매일 09:00 전 방향 제출 — 제출은 생존 인증서 결과와 적중률 기록에 함께 반영됩니다." },
+            { step: "2", title: "로그인", desc: "Google·카카오로 가입 · 대회 참가로 진행합니다." },
+            { step: "3", title: "결과 확인", desc: "장 마감 후 생존 인증서와 경품 결과, 그리고 내 적중률을 확인할 수 있어요." },
           ].map((item) => (
             <li key={item.step} className="flex gap-4">
               <span className="flex-shrink-0 w-9 h-9 rounded-full bg-[#222] border border-[#333] flex items-center justify-center text-white font-black text-lg">
@@ -256,16 +227,20 @@ export default function LoginPage() {
         <div className="space-y-3">
           {[
             {
-              q: "생존전과 적중대결 차이는?",
-              a: "생존전(하드코어)은 방향을 틀리거나 09:00 전 미제출 시 즉시 탈락합니다. 적중대결(일반)은 틀려도 대회가 끝날 때까지 참여하며, 기간 적중률로 순위가 정해집니다. 제출은 하루 한 번이며 두 대회에 동시 반영됩니다.",
+              q: "생존전은 어떻게 진행돼요?",
+              a: "매일 09:00 전 방향을 제출하면 기록이 쌓입니다. 한 번 틀리거나 미제출이면 탈락합니다.",
+            },
+            {
+              q: "보상은 뭐예요?",
+              a: "생존자에게 생존 인증서를 드리고, 경품은 시즌 당첨자에게 지급돼요. (자세한 규칙은 공지에 따라 달라질 수 있습니다.)",
             },
             {
               q: "참가비가 있나요?",
               a: "현재는 무료로 참가합니다. 로그인 후 매일 설문에 참여하면 대회 기록이 쌓입니다. 유료 리그·경품 이벤트는 사전 공지 후 진행합니다.",
             },
             {
-              q: "매일 꼭 해야 하나요?",
-              a: "생존전은 매 거래일 09:00 전 제출이 필수입니다. 적중대결은 빠진 날은 순위 계산에서 제외되지만, 많이 참여할수록 순위에 유리합니다.",
+              q: "적중률은 어디서 봐요?",
+              a: "장 마감 후 대시보드에서 내 적중률과 순위를 확인할 수 있어요.",
             },
             {
               q: "이걸로 실제 투자 결정을 해도 되나요?",
