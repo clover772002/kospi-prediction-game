@@ -12,11 +12,15 @@ import ShareSheet from "@/components/ShareSheet";
 import AppAmbientBackground from "@/components/AppAmbientBackground";
 import AppTabNav from "@/components/AppTabNav";
 import CrowdGaugeBoxplotsSection from "@/components/CrowdGaugeBoxplotsSection";
-import WeeklySurvivalBoard from "@/components/WeeklySurvivalBoard";
+import {
+  TournamentResultsTable,
+  WeeklyMyStatusCard,
+  useWeeklySurvivalBoard,
+} from "@/components/WeeklySurvivalBoard";
 import StaleRefreshIndicator from "@/components/StaleRefreshIndicator";
 import WeeklyParticipationCard from "@/components/WeeklyParticipationCard";
 import { ChipAmount } from "@/components/ChipAmount";
-import { OUR_ACCURACY_LABEL, OUR_PREDICTION_LABEL } from "@/lib/product-copy";
+import { OUR_ACCURACY_LABEL } from "@/lib/product-copy";
 import { clearAllTabSnapshots, peekAnsweredToday, peekDashboardSnapshot, saveAnsweredToday, saveDashboardSnapshot, saveGroupsSnapshot } from "@/lib/tab-session-cache";
 import {
   isNotificationConnected,
@@ -97,6 +101,7 @@ export default function DashboardPage() {
   /** null=미확인 — 로딩 중 설문 게이트 오표시 방지 */
   const [answeredToday, setAnsweredToday] = useState<boolean | null>(null);
   const dashboardFetchSeq = useRef(0);
+  const { board: weeklyBoard, loading: weeklyBoardLoading } = useWeeklySurvivalBoard(token);
 
   useLayoutEffect(() => {
     const cached = peekDashboardSnapshot();
@@ -512,27 +517,7 @@ export default function DashboardPage() {
     !respondedToday ? "no_survey" :
     null;
 
-  const statusColor: Record<string, string> = {
-    no_survey: "#6B7280",
-    open: "#F59E0B",
-    closed: "#06B6D4",
-    result: "#22C55E",
-  };
-
   const status = today?.status ?? "no_survey";
-
-  // 현재 시각 기준 장 상태 배너 (주말 별도 처리)
-  function getMarketStatus(): { label: string; color: string } {
-    const now = new Date();
-    const kst = new Date(now.toLocaleString("en-US", { timeZone: "Asia/Seoul" }));
-    const day = kst.getDay();
-    if (day === 0 || day === 6) return { label: "휴장", color: "#6B7280" };
-    const mins = kst.getHours() * 60 + kst.getMinutes();
-    if (mins < 9 * 60) return { label: "장시작전", color: "#6B7280" };
-    if (mins < 15 * 60 + 30) return { label: "장중", color: "#F59E0B" };
-    return { label: "장마감", color: "#22C55E" };
-  }
-  const marketStatus = getMarketStatus();
 
   // 오늘 결과 공유용 데이터
   const todayEntry = dash?.history?.find((h) => sameSurveyDate(h.date, today?.survey_date));
@@ -807,121 +792,11 @@ export default function DashboardPage() {
       </div>
 
       <div className="mb-5">
-        <WeeklySurvivalBoard token={token} />
+        <TournamentResultsTable board={weeklyBoard} loading={weeklyBoardLoading} />
       </div>
 
       <div className="space-y-4">
-        {/* ── 오늘의 집계 ─────────────────────────────────────── */}
-        <div
-          className="rounded-2xl p-5 border fade-up-1"
-          style={{
-            borderColor: `${statusColor[status]}40`,
-            backgroundColor: `${statusColor[status]}08`,
-          }}
-        >
-          {(() => {
-            const kst = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Seoul" }));
-            const day = kst.getDay();
-            const mins = kst.getHours() * 60 + kst.getMinutes();
-            const isWeekend = day === 0 || day === 6;
-            // 09:00~22:00 사이만 "설문 대기중", 00:00~09:00은 전날 22:00에 이미 열림
-            const isPreSurvey = status === "no_survey" && !isWeekend && mins >= 9 * 60 && mins < 22 * 60;
-            // 주말이면 API status 무관하게 휴장 처리 (백엔드가 잘못된 status를 반환해도 안전)
-            const isHoliday = isWeekend || (status === "no_survey" && !isPreSurvey && mins >= 22 * 60);
-            return (
-              <>
-                <div className="flex items-center justify-between mb-4">
-                  <p className="font-bold text-base">
-                    {isPreSurvey ? "설문 대기중" : isHoliday ? "오늘 휴장" : "오늘 코스피"}
-                  </p>
-                  {!isHoliday && !isPreSurvey && (
-                    <span
-                      className="flex items-center gap-1.5 text-sm px-2.5 py-1 rounded-full font-bold"
-                      style={{ backgroundColor: `${marketStatus.color}20`, color: marketStatus.color }}
-                    >
-                      {status === "open" && (
-                        <span className="relative flex h-2 w-2">
-                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75" style={{ backgroundColor: marketStatus.color }} />
-                          <span className="relative inline-flex rounded-full h-2 w-2" style={{ backgroundColor: marketStatus.color }} />
-                        </span>
-                      )}
-                      {marketStatus.label}
-                    </span>
-                  )}
-                  {isPreSurvey && (
-                    <span className="text-sm px-2.5 py-1 rounded-full font-bold bg-blue-500/20 text-blue-400">
-                      설문 준비중
-                    </span>
-                  )}
-                </div>
-
-                {isPreSurvey && (
-                  <div className="flex flex-col items-center gap-3 py-4 text-center">
-                    <span className="text-4xl">⏳</span>
-                    <p className="text-white font-bold">오늘 설문이 곧 열려요</p>
-                    <p className="text-sm text-white">밤 22:00에 알림이 발송됩니다</p>
-                  </div>
-                )}
-
-                {isHoliday && (
-                  <div className="flex flex-col items-center gap-3 py-4 text-center">
-                    <span className="text-4xl">🏖️</span>
-                    <p className="text-white font-bold">오늘은 장이 열리지 않아요</p>
-                    <p className="text-sm text-white">주말·공휴일엔 설문이 발송되지 않습니다</p>
-                  </div>
-                )}
-              </>
-            );
-          })()}
-
-          {(status === "open" || status === "closed" || status === "result") && !isWeekendKST && today && (
-              <>
-              {/* 📊 우리 예측 VS (상승 vs 하락) */}
-              {today.kospi_yes_pct !== null && (() => {
-                const up = today.kospi_yes_pct;
-                const dn = Math.max(0, Math.min(100, 100 - up));
-                return (
-                  <div className="mt-4 space-y-2">
-                    <div className="text-center">
-                      <p className="text-base font-bold text-white tracking-wide">{OUR_PREDICTION_LABEL}</p>
-                      <p className="text-xs text-white/75 mt-0.5">참여자 중 상승·하락 선택 비율 (등락률 아님)</p>
-                    </div>
-                    <div className="flex items-stretch gap-2 min-h-[100px]">
-                      <div
-                        className={`flex-1 flex flex-col items-center justify-center rounded-2xl border-2 px-2 py-3 ${
-                          up >= dn
-                            ? "border-red-500/50 bg-gradient-to-b from-red-500/15 to-red-900/10"
-                            : "border-red-600/25 bg-red-950/20"
-                        }`}
-                      >
-                        <span className="text-2xl mb-1">📈</span>
-                        <span className="text-sm font-black text-red-400/90 uppercase tracking-tighter">상승</span>
-                        <span className="text-2xl font-black text-red-400 tabular-nums leading-tight">{up}<span className="text-sm">%</span></span>
-                      </div>
-                      <div className="flex flex-col items-center justify-center px-1 shrink-0">
-                        <span className="text-lg font-black text-white/90 italic tracking-widest drop-shadow-[0_0_8px_rgba(255,255,255,0.15)]">
-                          VS
-                        </span>
-                        <span className="text-sm text-white/90 mt-0.5 whitespace-nowrap">대결</span>
-                      </div>
-                      <div
-                        className={`flex-1 flex flex-col items-center justify-center rounded-2xl border-2 px-2 py-3 ${
-                          dn > up
-                            ? "border-blue-500/50 bg-gradient-to-b from-blue-500/15 to-blue-900/10"
-                            : "border-blue-600/25 bg-blue-950/20"
-                        }`}
-                      >
-                        <span className="text-2xl mb-1">📉</span>
-                        <span className="text-sm font-black text-blue-400/90 uppercase tracking-tighter">하락</span>
-                        <span className="text-2xl font-black text-blue-400 tabular-nums leading-tight">{dn}<span className="text-sm">%</span></span>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })()}
-              </>
-          )}
-        </div>
+        <WeeklyMyStatusCard board={weeklyBoard} loading={weeklyBoardLoading} />
 
         {/* ── 내 예측 ──────────────────────────── */}
         <div className="bg-[#1A1A1A] rounded-2xl p-5 border border-[#2A2A2A] fade-up-3">

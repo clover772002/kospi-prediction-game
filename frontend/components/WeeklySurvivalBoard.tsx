@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { getWeeklySurvivalBoard, type WeeklySurvivalBoardData, type WeeklyPredictionVerdict } from "@/lib/api";
+import type { WeeklySurvivalBoardData, WeeklyPredictionVerdict } from "@/lib/api";
+import { useWeeklySurvivalBoard } from "@/hooks/useWeeklySurvivalBoard";
 
 function KospiDirection({ value }: { value: boolean | null }) {
   if (value === null) return null;
@@ -60,35 +60,13 @@ function SurvivorCountCell({
   );
 }
 
-type Props = {
-  token: string | null;
-};
-
-export default function WeeklySurvivalBoard({ token }: Props) {
-  const [board, setBoard] = useState<WeeklySurvivalBoardData | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    if (!token) {
-      setLoading(false);
-      return;
-    }
-    let cancelled = false;
-    void (async () => {
-      try {
-        const data = await getWeeklySurvivalBoard(token);
-        if (!cancelled) setBoard(data);
-      } catch {
-        if (!cancelled) setBoard(null);
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [token]);
-
+export function TournamentResultsTable({
+  board,
+  loading,
+}: {
+  board: WeeklySurvivalBoardData | null;
+  loading: boolean;
+}) {
   if (loading) {
     return (
       <div className="rounded-2xl border border-[#2A2A2A] bg-[#141414]/60 p-5 animate-pulse">
@@ -103,22 +81,9 @@ export default function WeeklySurvivalBoard({ token }: Props) {
   const rowLabelCls = "text-left text-sm font-bold text-white/85 py-3 pr-2 whitespace-nowrap";
   const cellCls = "py-2.5 px-1 sm:px-2 text-center align-middle border-l border-[#2a2a2a]/70 first:border-l-0";
 
-  const myStatusLabel = board.my_alive ? "생존" : "탈락";
-  const myStatusCls = board.my_alive
-    ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-300"
-    : "border-red-500/30 bg-red-500/10 text-red-300";
-
   return (
     <div className="space-y-3 fade-up-1">
-      <div className="flex items-center justify-between gap-3">
-        <p className="text-base font-black text-white">이번 주 생존전</p>
-        <span
-          className={`shrink-0 px-3 py-1 rounded-full text-sm font-black border ${myStatusCls}`}
-        >
-          {myStatusLabel}
-        </span>
-      </div>
-
+      <p className="text-base font-black text-white">이번 주 대회 결과</p>
       <div className="rounded-xl border border-[#2A2A2A] bg-[#141414]/60 overflow-hidden">
         <table className="w-full border-collapse table-fixed">
           <thead>
@@ -145,7 +110,7 @@ export default function WeeklySurvivalBoard({ token }: Props) {
               ))}
             </tr>
             <tr className="border-b border-[#2A2A2A]/80 bg-[#0f0f0f]/30">
-              <td className={`${rowLabelCls} pl-3`}>내 예측</td>
+              <td className={`${rowLabelCls} pl-3`}>내 선택</td>
               {board.columns.map((col) => (
                 <td key={`p-${col.calendar_date}`} className={cellCls}>
                   {col.is_trading_day ? (
@@ -155,7 +120,7 @@ export default function WeeklySurvivalBoard({ token }: Props) {
               ))}
             </tr>
             <tr>
-              <td className={`${rowLabelCls} pl-3`}>생존</td>
+              <td className={`${rowLabelCls} pl-3`}>생존자</td>
               {board.columns.map((col) => (
                 <td key={`s-${col.calendar_date}`} className={`${cellCls} py-3`}>
                   <SurvivorCountCell
@@ -171,3 +136,67 @@ export default function WeeklySurvivalBoard({ token }: Props) {
     </div>
   );
 }
+
+export function WeeklyMyStatusCard({
+  board,
+  loading,
+}: {
+  board: WeeklySurvivalBoardData | null;
+  loading: boolean;
+}) {
+  if (loading) {
+    return (
+      <div className="rounded-2xl border border-[#2A2A2A] bg-[#1A1A1A] p-5 animate-pulse fade-up-1">
+        <div className="h-5 w-24 bg-[#2A2A2A] rounded mb-4" />
+        <div className="h-16 bg-[#252525] rounded-xl" />
+      </div>
+    );
+  }
+
+  if (!board) return null;
+
+  const alive = board.my_alive;
+  const borderCls = alive
+    ? "border-emerald-500/35 bg-emerald-500/8"
+    : "border-red-500/35 bg-red-500/8";
+  const labelCls = alive ? "text-emerald-300" : "text-red-300";
+  const statusLabel = alive ? "생존" : "탈락";
+  const subline = alive
+    ? board.current_survivors != null
+      ? `현재 ${board.current_survivors}명이 대회에 남아 있어요`
+      : "이번 주 대회에 아직 참가 중이에요"
+    : "이번 주 대회에서 탈락했어요";
+
+  return (
+    <div className={`rounded-2xl border p-5 fade-up-1 ${borderCls}`}>
+      <p className="text-sm font-bold text-white/70 mb-3">내 대회 상태</p>
+      <div className="flex items-center justify-between gap-4">
+        <p className={`text-4xl sm:text-5xl font-black tracking-tight ${labelCls}`}>
+          {statusLabel}
+        </p>
+        {board.current_survivors != null && (
+          <div className="text-right shrink-0">
+            <p className="text-[10px] text-white/45 uppercase tracking-wide">생존자</p>
+            <p className="text-2xl font-black text-emerald-400 tabular-nums">
+              {board.current_survivors}
+              <span className="text-sm text-white/50 font-bold ml-0.5">명</span>
+            </p>
+          </div>
+        )}
+      </div>
+      <p className="text-sm text-white/55 mt-3">{subline}</p>
+    </div>
+  );
+}
+
+type Props = {
+  token: string | null;
+};
+
+/** 상단 주간 대회 결과 표 */
+export default function WeeklySurvivalBoard({ token }: Props) {
+  const { board, loading } = useWeeklySurvivalBoard(token);
+  return <TournamentResultsTable board={board} loading={loading} />;
+}
+
+export { useWeeklySurvivalBoard };
